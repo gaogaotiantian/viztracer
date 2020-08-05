@@ -1,0 +1,32 @@
+/* Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+   For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt */
+.func-block {
+    border: 1px solid #444;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    color: #222;
+    font-size: 14px;
+    width: 100%;
+    height: 20px;
+}
+
+.func-block:hover {
+    overflow-x: visible;
+    overflow-y: visible;
+}
+
+.func-container {
+    position: absolute;
+}
+
+#root {
+    position: absolute;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0px;
+}
