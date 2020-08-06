@@ -5,7 +5,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name = "codesnap",
-    version = "0.0.1",
+    version = "0.0.2",
     author = "Tian Gao",
     author_email = "gaogaotiantian@hotmail.com",
     description = "A profiling tool that can visualize python code running",
@@ -13,6 +13,12 @@ setuptools.setup(
     long_description_content_type = "text/markdown",
     url = "https://github.com/gaogaotiantian/codesnap",
     packages = setuptools.find_packages(),
+    package_data = {
+        "codesnap": [
+            "html/control.js",
+            "html/style.css"
+        ]
+    },
     classifiers = [
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
