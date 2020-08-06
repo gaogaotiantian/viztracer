@@ -4,6 +4,7 @@
 import unittest
 from codesnap import CodeSnapTracer
 
+
 class TestTracer(unittest.TestCase):
     def test_double_parse(self):
         def fib(n):

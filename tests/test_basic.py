@@ -5,6 +5,7 @@ import unittest
 from codesnap import CodeSnapTracer
 from codesnap import CodeSnap
 
+
 class TestTracerBasic(unittest.TestCase):
     def test_construct(self):
         def fib(n):
@@ -17,7 +18,7 @@ class TestTracerBasic(unittest.TestCase):
         t.stop()
         t.parse()
         t.generate_report()
-    
+
     def test_builtin_func(self):
         def fun(n):
             import random
@@ -28,6 +29,7 @@ class TestTracerBasic(unittest.TestCase):
         fun(10)
         t.stop()
         t.parse()
+
 
 class TestCodeSnapBasic(unittest.TestCase):
     def test_run(self):

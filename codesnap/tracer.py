@@ -3,8 +3,8 @@
 
 import sys
 import time
-import os
 from .snaptree import SnapTree
+
 
 class CodeSnapTracer:
     def __init__(self):
@@ -17,7 +17,7 @@ class CodeSnapTracer:
         self.enable = True
         self.parsed = False
         sys.setprofile(self.tracer)
-    
+
     def stop(self):
         self.enable = False
         sys.setprofile(None)
@@ -32,7 +32,7 @@ class CodeSnapTracer:
                 class_name = type(f_locals["self"]).__name__ + "."
             else:
                 class_name = ""
-                
+
             if event == "call":
                 name = "{}.{}{}".format(frame.f_globals['__name__'], class_name, frame.f_code.co_name)
                 self.buffer.append(("entry", name, time.perf_counter()))

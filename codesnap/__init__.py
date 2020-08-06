@@ -3,3 +3,9 @@
 
 from .tracer import CodeSnapTracer
 from .codesnap import CodeSnap
+
+
+__all__ = [
+    "CodeSnapTracer",
+    "CodeSnap"
+]
