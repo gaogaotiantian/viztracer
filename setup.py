@@ -1,4 +1,5 @@
 import setuptools
+from distutils.core import Extension
 
 with open("README.md") as f:
     long_description = f.read()
@@ -12,13 +13,22 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/gaogaotiantian/codesnap",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages("src"),
+    package_dir={"":"src"},
     package_data={
         "codesnap": [
-            "html/control.js",
-            "html/style.css"
+            "html/*.js",
+            "html/*.css"
         ]
     },
+    ext_modules=[
+        Extension(
+            "codesnap.snaptrace",
+            sources = [
+                "src/codesnap/modules/snaptrace.c",
+            ]
+        )
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

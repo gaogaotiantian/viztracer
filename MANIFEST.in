@@ -3,4 +3,4 @@ include NOTICE
 include README.md
 include setup.py
 
-recursive-include codesnap/html *.css *.js
+recursive-include src/codesnap/html *.css *.js
