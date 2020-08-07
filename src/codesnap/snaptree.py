@@ -10,14 +10,17 @@ class SnapTreeNode:
         self.function_name = name
         self.t_entry = t_entry
         self.t_exit = t_exit
+        self.exited = False
         self.children = []
 
     def html(self, parent_entry=None, parent_exit=None):
         if parent_entry is None and parent_exit is None:
             # This is root
             return snap_tree_root_node_html(self)
-        else:
+        elif self.exited:
             return snap_tree_node_html(self, parent_entry, parent_exit)
+        else:
+            return ""
 
 
 class SnapTree:
@@ -35,8 +38,13 @@ class SnapTree:
 
     def add_exit(self, name, t):
         self.curr.t_exit = t
+        if self.curr == self.root:
+            # If we are out of the first stack, just ignore
+            # This will actually help the exit of start() function
+            return
         if name != self.curr.function_name:
-            raise Exception("Function Entry/Exit did not match.{} vs {}", name, self.curr.function_name)
+            raise Exception("Function Entry/Exit did not match. {} vs {}".format(name, self.curr.function_name))
+        self.curr.exited = True
         self.curr = self.curr.parent
         if t > self.root.t_exit:
             self.root.t_exit = t

@@ -4,25 +4,39 @@
 import sys
 import time
 from .snaptree import SnapTree
+import codesnap.snaptrace as snaptrace
 
 
 class CodeSnapTracer:
-    def __init__(self):
+    def __init__(self, tracer="python"):
         self.buffer = []
         self.enable = False
         self.parsed = False
         self.snaptree = SnapTree()
+        self.tracer = tracer
 
     def start(self):
         self.enable = True
         self.parsed = False
-        sys.setprofile(self.tracer)
+        if self.tracer == "python":
+            sys.setprofile(self.tracefunc)
+        elif self.tracer == "c":
+            snaptrace.start()
 
     def stop(self):
         self.enable = False
-        sys.setprofile(None)
+        if self.tracer == "python":
+            sys.setprofile(None)
+        elif self.tracer == "c":
+            snaptrace.stop()
 
-    def tracer(self, frame, event, arg):
+    def clear(self):
+        if self.tracer == "python":
+            self.buffer = []
+        elif self.tracer == "c":
+            snaptrace.clear()
+
+    def tracefunc(self, frame, event, arg):
         if event == "call" or event == "return":
             f_locals = frame.f_locals
             if "self" in f_locals:
@@ -41,17 +55,37 @@ class CodeSnapTracer:
                 self.buffer.append(("exit", name, time.perf_counter()))
 
     def parse(self):
+        total_entries = 0
         self.stop()
         if not self.parsed:
-            for data in self.buffer:
-                if data[0] == "entry":
-                    self.snaptree.add_entry(data[1], data[2])
-                elif data[0] == "exit":
-                    self.snaptree.add_exit(data[1], data[2])
-            self.buffer = []
+            if self.tracer == "python":
+                for data in self.buffer:
+                    if data[0] == "entry":
+                        self.snaptree.add_entry(data[1], data[2])
+                    elif data[0] == "exit":
+                        self.snaptree.add_exit(data[1], data[2])
+                    else:
+                        raise Exception("Unexpected data type")
+                    total_entries += 1
+                self.buffer = []
+            elif self.tracer == "c":
+                buffer = snaptrace.load()
+                for data in buffer:
+                    # [type, ts, file_name, class_name, func_name]
+                    # type is an integer, 0 for entry and 3 for exit
+                    # class_name could be None
+                    if data[0] == 0:
+                        self.snaptree.add_entry(data[4], data[1])
+                    elif data[0] == 3:
+                        self.snaptree.add_exit(data[4], data[1])
+                    else:
+                        raise Exception("Unexpected data type")
+                    total_entries += 1
             self.parsed = True
         if self.enable:
             self.start()
+
+        return total_entries
 
     def generate_report(self):
         return self.snaptree.generate_html_report()

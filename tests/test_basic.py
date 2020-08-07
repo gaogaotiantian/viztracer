@@ -14,9 +14,10 @@ class TestTracerBasic(unittest.TestCase):
             return fib(n-1) + fib(n-2)
         t = CodeSnapTracer()
         t.start()
-        fib(12)
+        fib(5)
         t.stop()
-        t.parse()
+        entries = t.parse()
+        self.assertEqual(entries, 30)
         t.generate_report()
 
     def test_builtin_func(self):
@@ -28,7 +29,8 @@ class TestTracerBasic(unittest.TestCase):
         t.start()
         fun(10)
         t.stop()
-        t.parse()
+        entries = t.parse()
+        self.assertEqual(entries, 42)
 
 
 class TestCodeSnapBasic(unittest.TestCase):

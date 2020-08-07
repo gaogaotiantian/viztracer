@@ -1,36 +1,126 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <frameobject.h>
+#include <time.h>
+
+// We need to ignore the first event because it's return of start() function
+int first_event = 1;
+int collecting = 0;
+
+struct FEENode {
+    PyObject* file_name;
+    PyObject* class_name;
+    PyObject* func_name;
+    int type;
+    double ts;
+    struct FEENode* next;
+    struct FEENode* prev;
+} *buffer_head, *buffer_tail;
 
 int
-snaptrace_tracefunc(PyObject *obj, PyFrameObject *frame, int what, PyObject *arg)
+snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
-    if (what == PyTrace_CALL) {
-        printf("Call\n");
+    if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+        if (first_event) {
+            first_event = 0;
+            return 0;
+        }
+        struct FEENode* node = (struct FEENode*)malloc(sizeof(struct FEENode));
+        struct timespec t;
+        node->file_name = PyDict_GetItemString(frame->f_globals, "__name__");
+        Py_INCREF(node->file_name);
+        node->class_name = Py_None;
+        Py_INCREF(Py_None);
+        PyFrame_FastToLocals(frame);
+        if (frame->f_locals) {
+            PyObject* self = PyDict_GetItemString(frame->f_locals, "self");
+            if (self) {
+                node->class_name = PyUnicode_FromString(self->ob_type->tp_name);
+                Py_DECREF(Py_None);
+            }
+        }
+        node->func_name = frame->f_code->co_name;
+        Py_INCREF(node->func_name);
+        node->type = what;
+        node->next = NULL;
+        clock_gettime(CLOCK_REALTIME, &t);
+        node->ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
+        buffer_tail->next = node;
+        node->prev = buffer_tail;
+        buffer_tail = node;
     }
 
     return 0;
 }
 
 static PyObject*
-snaptrace_start(PyObject* self, PyObject *args)
+snaptrace_start(PyObject* self, PyObject* args)
 {
     PyEval_SetProfile(snaptrace_tracefunc, NULL);
+    first_event = 1;
+    collecting = 1;
 
     Py_RETURN_NONE;
 }
 
 static PyObject*
-snaptrace_stop(PyObject* self, PyObject *args)
+snaptrace_stop(PyObject* self, PyObject* args)
 {
     PyEval_SetProfile(NULL, NULL);
+    if (collecting == 1) {
+        // If we are collecting, throw away the last event
+        // because it's entry of stop() function
+        struct FEENode* node = buffer_tail;
+        Py_DECREF(node->file_name);
+        Py_DECREF(node->class_name);
+        Py_DECREF(node->func_name);
+        buffer_tail = buffer_tail->prev;
+        free(node);
+        buffer_tail->next = NULL;
+        collecting = 0;
+    }
     
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_load(PyObject* self, PyObject* args)
+{
+    PyObject* lst = PyList_New(0);
+    struct FEENode* curr = buffer_head;
+    while (curr->next) {
+        struct FEENode* node = curr->next;
+        struct FEENode* after = node->next;
+        PyObject* tuple = PyTuple_Pack(5, PyLong_FromLong(node->type), PyFloat_FromDouble(node->ts) ,node->file_name, node->class_name, node->func_name);
+        PyList_Append(lst, tuple);
+        free(node);
+        curr->next = after;
+    }
+    buffer_tail = buffer_head;
+    return lst;
+}
+
+static PyObject*
+snaptrace_clear(PyObject* self, PyObject* args)
+{
+    while (buffer_head->next) {
+        struct FEENode* node = buffer_head->next;
+        Py_DECREF(node->file_name);
+        Py_DECREF(node->class_name);
+        Py_DECREF(node->func_name);
+        buffer_head->next = node->next;
+        free(node);
+    }
+    buffer_tail = buffer_head;
+
     Py_RETURN_NONE;
 }
 
 static PyMethodDef SnaptraceMethods[] = {
     {"start", snaptrace_start, METH_VARARGS, "start profiling"},
-    {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"}
+    {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
+    {"load", snaptrace_load, METH_VARARGS, "load buffer"},
+    {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"}
 };
 
 static struct PyModuleDef snaptracemodule = {
@@ -44,5 +134,15 @@ static struct PyModuleDef snaptracemodule = {
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 
 {
+    buffer_head = (struct FEENode*) malloc (sizeof(struct FEENode));
+    buffer_head->class_name = NULL;
+    buffer_head->file_name = NULL;
+    buffer_head->func_name = NULL;
+    buffer_head->next = NULL;
+    buffer_head->prev = NULL;
+    buffer_head->type = 0;
+    buffer_tail = buffer_head; 
+    first_event = 1;
+    collecting = 0;
     return PyModule_Create(&snaptracemodule);
 }
