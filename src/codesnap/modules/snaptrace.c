@@ -21,12 +21,23 @@ int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+        struct FEENode* node = NULL;
+        struct timespec t;
+
         if (first_event) {
             first_event = 0;
             return 0;
         }
-        struct FEENode* node = (struct FEENode*)malloc(sizeof(struct FEENode));
-        struct timespec t;
+
+        clock_gettime(CLOCK_MONOTONIC, &t);
+        if (buffer_tail->next) {
+            node = buffer_tail->next;
+        } else {
+            node = (struct FEENode*)malloc(sizeof(struct FEENode));
+            node->next = NULL;
+            buffer_tail->next = node;
+            node->prev = buffer_tail;
+        }
         node->file_name = PyDict_GetItemString(frame->f_globals, "__name__");
         Py_INCREF(node->file_name);
         node->class_name = Py_None;
@@ -42,11 +53,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         node->func_name = frame->f_code->co_name;
         Py_INCREF(node->func_name);
         node->type = what;
-        node->next = NULL;
-        clock_gettime(CLOCK_REALTIME, &t);
         node->ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
-        buffer_tail->next = node;
-        node->prev = buffer_tail;
         buffer_tail = node;
     }
 
@@ -75,8 +82,6 @@ snaptrace_stop(PyObject* self, PyObject* args)
         Py_DECREF(node->class_name);
         Py_DECREF(node->func_name);
         buffer_tail = buffer_tail->prev;
-        free(node);
-        buffer_tail->next = NULL;
         collecting = 0;
     }
     
@@ -88,13 +93,11 @@ snaptrace_load(PyObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
     struct FEENode* curr = buffer_head;
-    while (curr->next) {
+    while (curr != buffer_tail && curr->next) {
         struct FEENode* node = curr->next;
-        struct FEENode* after = node->next;
         PyObject* tuple = PyTuple_Pack(5, PyLong_FromLong(node->type), PyFloat_FromDouble(node->ts) ,node->file_name, node->class_name, node->func_name);
         PyList_Append(lst, tuple);
-        free(node);
-        curr->next = after;
+        curr = curr->next;
     }
     buffer_tail = buffer_head;
     return lst;
@@ -103,13 +106,13 @@ snaptrace_load(PyObject* self, PyObject* args)
 static PyObject*
 snaptrace_clear(PyObject* self, PyObject* args)
 {
-    while (buffer_head->next) {
-        struct FEENode* node = buffer_head->next;
+    struct FEENode* curr = buffer_head;
+    while (curr != buffer_tail && curr->next) {
+        struct FEENode* node = curr->next;
         Py_DECREF(node->file_name);
         Py_DECREF(node->class_name);
         Py_DECREF(node->func_name);
-        buffer_head->next = node->next;
-        free(node);
+        curr = curr->next;
     }
     buffer_tail = buffer_head;
 

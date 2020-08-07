@@ -1,6 +1,7 @@
 import unittest
 import random
 import time
+import cProfile
 from codesnap import CodeSnap
 
 class TestPerformance(unittest.TestCase):
@@ -27,17 +28,27 @@ class TestPerformance(unittest.TestCase):
         func()
         c_instrumented_end = time.perf_counter()
         snap.stop()
-        entires2 = snap.parse()
+        entries2 = snap.parse()
         snap.clear()
 
+        # With cProfiler
+        pr = cProfile.Profile()
+        pr.enable()
+        cprofile_start = time.perf_counter()
+        func()
+        cprofile_end = time.perf_counter()
+        pr.disable()
+
         if func.__name__ != "qsort":
-            self.assertEqual(entries1, entires2)
+            self.assertEqual(entries1, entries2)
 
         origin = origin_end - origin_start
         instrumented = instrumented_end - instrumented_start
         c_instrumented = c_instrumented_end - c_instrumented_start
-        print("{}: {} vs {}({})[py] vs {}({})[c]".format(func.__name__, 
-            origin, instrumented, instrumented / origin, c_instrumented, c_instrumented / origin))
+        cprofile = cprofile_end - cprofile_start
+        print("{:10}({}, {}): {:.9f} vs {:.9f}({:.2f})[py] vs {:.9f}({:.2f})[c] vs {:.9f}({:.2f})[cProfile]".format(func.__name__, 
+            entries1, entries2, origin, instrumented, instrumented / origin, c_instrumented, c_instrumented / origin,
+            cprofile, cprofile / origin))
     
     def test_fib(self):
         def fib():
