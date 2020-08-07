@@ -2,7 +2,7 @@
 
 [![build](https://github.com/gaogaotiantian/codesnap/workflows/build/badge.svg)](https://github.com/gaogaotiantian/codesnap/actions?query=workflow%3Abuild)  [![pypi](https://img.shields.io/pypi/v/codesnap.svg)](https://pypi.org/project/codesnap/)
 
-CodeSnap is a pure-python, light-weighted profiling tool that can visualize python code running result. The major data CodeSnap displays is FEE(function entry/exit), or equivalently, the call stack. 
+CodeSnap is a light-weighted profiling tool that can visualize python code running result in flame graph. The major data CodeSnap displays is FEE(function entry/exit), or equivalently, the call stack. 
 
 With CodeSnap, the programmer can intuitively understand what their code is doing and how long each function takes.  
 
