@@ -33,21 +33,21 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         if (buffer_tail->next) {
             node = buffer_tail->next;
         } else {
-            node = (struct FEENode*)malloc(sizeof(struct FEENode));
+            node = (struct FEENode*)PyMem_Malloc(sizeof(struct FEENode));
             node->next = NULL;
             buffer_tail->next = node;
             node->prev = buffer_tail;
         }
-        node->file_name = PyDict_GetItemString(frame->f_globals, "__name__");
+        node->file_name = frame->f_code->co_filename;
         Py_INCREF(node->file_name);
         node->class_name = Py_None;
         Py_INCREF(Py_None);
-        PyFrame_FastToLocals(frame);
-        if (frame->f_locals) {
-            PyObject* self = PyDict_GetItemString(frame->f_locals, "self");
-            if (self) {
-                node->class_name = PyUnicode_FromString(self->ob_type->tp_name);
+        for (int i = 0; i < frame->f_code->co_nlocals; i++) {
+            PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
+            if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
+                node->class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
                 Py_DECREF(Py_None);
+                break;
             }
         }
         node->func_name = frame->f_code->co_name;
@@ -137,7 +137,7 @@ static struct PyModuleDef snaptracemodule = {
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 
 {
-    buffer_head = (struct FEENode*) malloc (sizeof(struct FEENode));
+    buffer_head = (struct FEENode*) PyMem_Malloc (sizeof(struct FEENode));
     buffer_head->class_name = NULL;
     buffer_head->file_name = NULL;
     buffer_head->func_name = NULL;

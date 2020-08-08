@@ -48,10 +48,10 @@ class CodeSnapTracer:
                 class_name = ""
 
             if event == "call":
-                name = "{}.{}{}".format(frame.f_globals['__name__'], class_name, frame.f_code.co_name)
+                name = "{}.{}{}".format(frame.f_code.co_filename, class_name, frame.f_code.co_name)
                 self.buffer.append(("entry", name, time.perf_counter()))
             elif event == "return":
-                name = "{}.{}{}".format(frame.f_globals['__name__'], class_name, frame.f_code.co_name)
+                name = "{}.{}{}".format(frame.f_code.co_filename, class_name, frame.f_code.co_name)
                 self.buffer.append(("exit", name, time.perf_counter()))
 
     def parse(self):
@@ -74,10 +74,14 @@ class CodeSnapTracer:
                     # [type, ts, file_name, class_name, func_name]
                     # type is an integer, 0 for entry and 3 for exit
                     # class_name could be None
+                    if data[3]:
+                        name = ".".join([data[2], data[3], data[4]])
+                    else:
+                        name = ".".join([data[2], data[4]])
                     if data[0] == 0:
-                        self.snaptree.add_entry(data[4], data[1])
+                        self.snaptree.add_entry(name, data[1])
                     elif data[0] == 3:
-                        self.snaptree.add_exit(data[4], data[1])
+                        self.snaptree.add_exit(name, data[1])
                     else:
                         raise Exception("Unexpected data type")
                     total_entries += 1
