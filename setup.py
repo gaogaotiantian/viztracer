@@ -6,7 +6,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="codesnap",
-    version="0.0.2",
+    version="0.0.3",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
     description="A profiling tool that can visualize python code running",
