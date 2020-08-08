@@ -5,7 +5,10 @@ install:
 	python setup.py install
 
 build_dist:
+	make clean
 	python setup.py sdist bdist_wheel
+	pip install dist/*.whl
+	make test
 
 release:
 	python -m twine upload dist/*
