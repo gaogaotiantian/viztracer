@@ -53,3 +53,16 @@ class TestCTracer(unittest.TestCase):
         report2 = tracer.generate_report()
         self.assertEqual(entries1, entries2)
         self.assertNotEqual(report1, report2)
+
+    def test_c_cleanup(self):
+        def fib(n):
+            if n <= 1:
+                return 1
+            return fib(n-1) + fib(n-2)
+        tracer = CodeSnapTracer(tracer="c")
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.cleanup()
+        tracer.clear()
+        tracer.cleanup()

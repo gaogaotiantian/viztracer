@@ -119,11 +119,24 @@ snaptrace_clear(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
+PyObject* 
+snaptrace_cleanup(PyObject* self, PyObject* args)
+{
+    snaptrace_clear(self, args);
+    while (buffer_head->next) {
+        struct FEENode* node = buffer_head->next;
+        buffer_head->next = node->next;
+        PyMem_FREE(node);
+    } 
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef SnaptraceMethods[] = {
     {"start", snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
     {"load", snaptrace_load, METH_VARARGS, "load buffer"},
-    {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"}
+    {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
+    {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"}
 };
 
 static struct PyModuleDef snaptracemodule = {

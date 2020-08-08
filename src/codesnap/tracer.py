@@ -35,6 +35,10 @@ class CodeSnapTracer:
             self.buffer = []
         elif self.tracer == "c":
             snaptrace.clear()
+    
+    def cleanup(self):
+        if self.tracer == "c":
+            snaptrace.cleanup()
 
     def tracefunc(self, frame, event, arg):
         if event == "call" or event == "return":

@@ -101,6 +101,41 @@ snap.save()
 
 **It is higly recommended that ```start()``` and ```stop()``` function should be in the same frame(same level on call stack). Problem might happen if the condition is not met**
 
+### Choose tracer
+
+The default tracer for current version is a pure-python tracer, which works fine with any OS/Interpreter. However, the overhead it introduces is pretty large. In the worst case(a lot of FEEs), it might be 20-30x. 
+
+To deal with this problem, the c tracer is under development and is currently available for CPython on Linux. It might work on Windows, but I've never tested it. 
+
+To use c tracer, set the optional argument ```tracer``` to ```"c"``` when you initialize ```CodeSnap``` object.
+
+```python
+snap = CodeSnap(tracer="c")
+```
+
+#### Cleanup of c tracer
+
+The interface for c trace is almost exactly the same as python tracer, except for the fact that c tracer does not support command line run now. However, to achieve lower overhead, some optimization is applied to c tracer so it will withhold the memory it allocates for future use to reduce the time it calls ```malloc()```. If you want the c trace to free all the memory it allocates while collecting trace, use
+
+```python
+snap.cleanup()
+```
+
+## Performance
+
+Overhead is a big consideration when people choose profilers. CodeSnap now has a similar overhead as native cProfiler. It works slightly worse in the worst case(Pure FEE) and better in easier case because even though it collects some extra information than cProfiler, the structure is lighter. 
+
+Admittedly, CodeSnap is only focusing on FEE now, so cProfiler also gets other information that CodeSnap does not acquire.
+
+An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github VM
+
+```
+fib       (10336, 10336): 0.000852800 vs 0.013735200(16.11)[py] vs 0.001585900(1.86)[c] vs 0.001628400(1.91)[cProfile]
+hanoi     (8192, 8192): 0.000621400 vs 0.012924899(20.80)[py] vs 0.001801800(2.90)[c] vs 0.001292900(2.08)[cProfile]
+qsort     (10586, 10676): 0.003457500 vs 0.042572898(12.31)[py] vs 0.005594100(1.62)[c] vs 0.007573200(2.19)[cProfile]
+slow_fib  (1508, 1508): 0.033606299 vs 0.038840998(1.16)[py] vs 0.033270399(0.99)[c] vs 0.032577599(0.97)[cProfile]
+```
+
 ## Limitations
 
 CodeSnap uses ```sys.setprofile()``` for its profiler capabilities, so it will conflict with other profiling tools which also use this function. Be aware of it when using CodeSnap.
