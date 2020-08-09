@@ -49,5 +49,5 @@ class TestCodeSnapOutput(unittest.TestCase):
         fib(10)
         t.stop()
         entries = t.parse()
-        print(t.generate_json())
+        t.generate_json()
     
