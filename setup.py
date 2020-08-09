@@ -6,10 +6,10 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="codesnap",
-    version="0.0.3",
+    version="0.0.4",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
-    description="A profiling tool that can visualize python code running",
+    description="A profiling tool that can visualize python code in flame graph",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/gaogaotiantian/codesnap",
@@ -18,7 +18,8 @@ setuptools.setup(
     package_data={
         "codesnap": [
             "html/*.js",
-            "html/*.css"
+            "html/*.css",
+            "html/*.html"
         ]
     },
     ext_modules=[

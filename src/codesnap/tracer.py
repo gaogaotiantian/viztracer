@@ -3,6 +3,7 @@
 
 import sys
 import time
+import json
 from .snaptree import SnapTree
 import codesnap.snaptrace as snaptrace
 
@@ -35,7 +36,7 @@ class CodeSnapTracer:
             self.buffer = []
         elif self.tracer == "c":
             snaptrace.clear()
-    
+
     def cleanup(self):
         if self.tracer == "c":
             snaptrace.cleanup()
@@ -64,10 +65,11 @@ class CodeSnapTracer:
         if not self.parsed:
             if self.tracer == "python":
                 for data in self.buffer:
+                    # convert seconds to nano seconds
                     if data[0] == "entry":
-                        self.snaptree.add_entry(data[1], data[2])
+                        self.snaptree.add_entry(data[1], data[2] * 1000000000)
                     elif data[0] == "exit":
-                        self.snaptree.add_exit(data[1], data[2])
+                        self.snaptree.add_exit(data[1], data[2] * 1000000000)
                     else:
                         raise Exception("Unexpected data type")
                     total_entries += 1
@@ -77,6 +79,7 @@ class CodeSnapTracer:
                 for data in buffer:
                     # [type, ts, file_name, class_name, func_name]
                     # type is an integer, 0 for entry and 3 for exit
+                    # ts is count of nano seconds
                     # class_name could be None
                     if data[3]:
                         name = ".".join([data[2], data[3], data[4]])
@@ -97,3 +100,6 @@ class CodeSnapTracer:
 
     def generate_report(self):
         return self.snaptree.generate_html_report()
+
+    def generate_json(self):
+        return json.dumps(self.snaptree.get_json())

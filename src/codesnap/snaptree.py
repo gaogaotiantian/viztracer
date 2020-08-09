@@ -21,6 +21,17 @@ class SnapTreeNode:
             return snap_tree_node_html(self, parent_entry, parent_exit)
         else:
             return ""
+    
+    def json_object(self):
+        data = {
+            "name": self.function_name,
+            "value": self.t_exit - self.t_entry,
+            "entry": self.t_entry,
+            "exit": self.t_exit,
+            "children": [child.json_object() for child in self.children]
+        }
+
+        return data
 
 
 class SnapTree:
@@ -51,3 +62,6 @@ class SnapTree:
 
     def generate_html_report(self):
         return generate_html_report_from_snap_tree(self)
+
+    def get_json(self):
+        return self.root.json_object()

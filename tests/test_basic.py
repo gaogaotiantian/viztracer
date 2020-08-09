@@ -37,3 +37,17 @@ class TestCodeSnapBasic(unittest.TestCase):
     def test_run(self):
         snap = CodeSnap()
         snap.run("import random; random.randrange(10)")
+
+class TestCodeSnapOutput(unittest.TestCase):
+    def test_json(self):
+        def fib(n):
+            if n == 1 or n == 0:
+                return 1
+            return fib(n-1) + fib(n-2)
+        t = CodeSnapTracer()
+        t.start()
+        fib(10)
+        t.stop()
+        entries = t.parse()
+        print(t.generate_json())
+    

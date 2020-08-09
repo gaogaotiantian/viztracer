@@ -3,6 +3,8 @@
 
 import os
 import html
+import json
+from string import Template
 
 
 colors = ['#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#42d4f4',
@@ -39,20 +41,13 @@ def snap_tree_root_node_html(node):
 
 
 def generate_html_report_from_snap_tree(tree):
-    ret = "<html>"
-    ret += "<head>"
-    ret += "<script>"
-    with open(os.path.join(os.path.dirname(__file__), "html/control.js")) as f:
-        ret += f.read()
-    ret += "</script>"
-    ret += "<style>"
-    with open(os.path.join(os.path.dirname(__file__), "html/style.css")) as f:
-        ret += f.read()
-    ret += "</style>"
-    ret += "</head>"
-    ret += "<body>"
-    ret += tree.root.html()
-    ret += "</body>"
-    ret += "</html>"
-
-    return ret
+    sub = {}
+    with open(os.path.join(os.path.dirname(__file__), "html/index.html")) as f:
+        tmpl = f.read()
+    with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.min.js")) as f:
+        sub["d3flamegraph_js"] = f.read()
+    with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.css")) as f:
+        sub["d3flamegraph_css"] = f.read()
+    sub["json_data"] = json.dumps(tree.get_json())
+    
+    return Template(tmpl).substitute(sub)

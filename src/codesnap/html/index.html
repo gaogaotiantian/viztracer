@@ -1,0 +1,53 @@
+<html>
+<head>
+  <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  <script>$d3flamegraph_js</script>
+  <style>$d3flamegraph_css</style>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+<body>
+  <div class="container text-center">
+    <div id="chart">
+    </div>
+  </div>
+  <script type="text/javascript">
+
+    var labelHandler = function(d) {
+      let per = (100*(d.x1 - d.x0)).toFixed(5)
+      return `$${d.data.name} $${per}%, $${(d.value / 1000).toFixed(3)} us)`
+    }
+    var chart = flamegraph()
+      .width(1200)
+      .cellHeight(18)
+      .transitionDuration(750)
+      .minFrameSize(5)
+      .transitionEase(d3.easeCubic)
+      .sort(true)
+      //Example to sort in reverse order
+      //.sort(function(a,b){ return d3.descending(a.name, b.name);})
+      .title("")
+      .differential(false)
+      .elided(false)
+      .selfValue(false)
+      .label(labelHandler)
+      .resetHeightOnZoom(true)
+      .inverted(true)
+      .setColorMapper((d, originalColor) =>
+        d.highlight ? "#6aff8f" : originalColor);
+
+    const data = $json_data
+
+    d3.select("#chart")
+        .datum(data)
+        .call(chart);
+      
+    document.onkeydown = function(event) {
+      if (event.keyCode == 37) {
+        chart.zoomToSibling("prev")
+      } else if (event.keyCode == 39) {
+        chart.zoomToSibling("next")
+      }
+    }
+  </script>
+</body>
+</html>
