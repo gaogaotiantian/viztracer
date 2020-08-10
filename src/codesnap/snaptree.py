@@ -41,6 +41,7 @@ class SnapTree:
         self.end = 0
 
     def add_entry(self, name, t):
+        #print("entry: {}, {}".format(name, t))
         node = SnapTreeNode(self.curr, name, t, 0)
         self.curr.children.append(node)
         self.curr = node
@@ -48,13 +49,21 @@ class SnapTree:
             self.root.t_entry = t
 
     def add_exit(self, name, t):
+        #print("exit: {}, {}".format(name, t))
         self.curr.t_exit = t
         if self.curr == self.root:
             # If we are out of the first stack, just ignore
             # This will actually help the exit of start() function
             return
         if name != self.curr.function_name:
-            raise Exception("Function Entry/Exit did not match. {} vs {}".format(name, self.curr.function_name))
+            # if this is a class function, self will be built in the method
+            # we check if the only difference is that the exit function has 
+            # a self object with a class name now
+            name_lst = name.split(".")
+            if self.curr.function_name == ".".join(name_lst[:-2] + name_lst[-1:]):
+                pass
+            else:
+                raise Exception("Function Entry/Exit did not match. {} vs {}".format(name, self.curr.function_name))
         self.curr.exited = True
         self.curr = self.curr.parent
         if t > self.root.t_exit:

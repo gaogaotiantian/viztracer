@@ -45,8 +45,11 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         for (int i = 0; i < frame->f_code->co_nlocals; i++) {
             PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
             if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
-                node->class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
-                Py_DECREF(Py_None);
+                // When self object is just created in __new__, it's possible that the value is NULL
+                if (frame->f_localsplus[i]) {
+                    node->class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
+                    Py_DECREF(Py_None);
+                }
                 break;
             }
         }
