@@ -7,7 +7,7 @@ from .tracer import CodeSnapTracer
 # This is the interface of the package. Almost all user should use this
 # class for the functions
 class CodeSnap(CodeSnapTracer):
-    def __init__(self, tracer="python"):
+    def __init__(self, tracer="c"):
         super().__init__(tracer=tracer)
 
     def run(self, command, output_file="./result.html"):
@@ -19,5 +19,12 @@ class CodeSnap(CodeSnapTracer):
     def save(self, output_file="./result.html"):
         if not self.parsed:
             self.parse()
-        with open(output_file, "w") as f:
-            f.write(self.generate_report())
+        file_type = output_file.split(".")[-1]
+        if file_type == "html":
+            with open(output_file, "w") as f:
+                f.write(self.generate_report())
+        elif file_type == "json":
+            with open(output_file, "w") as f:
+                f.write(self.generate_json())
+        else:
+            raise Exception("Only html and json are supported")

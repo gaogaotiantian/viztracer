@@ -23,15 +23,28 @@ class SnapTreeNode:
             return ""
     
     def json_object(self):
-        data = {
-            "name": self.function_name,
-            "value": self.t_exit - self.t_entry,
-            "entry": self.t_entry,
-            "exit": self.t_exit,
-            "children": [child.json_object() for child in self.children]
-        }
+        stack = [self]
+        ret = []
 
-        return data
+        while stack:
+            node = stack.pop()
+            data = {
+                "name": node.function_name,
+                "cat": "FEE",
+                "ts": node.t_entry,
+                "pid": 1,
+                "tid": 1,
+                "dur": node.t_exit-node.t_entry,
+                "ph": "X",
+                "value": node.t_exit - node.t_entry,
+                "entry": node.t_entry,
+                "exit": node.t_exit,
+            }
+            ret.append(data)
+            if node.children:
+                stack.extend(node.children[::-1])
+        return ret
+
 
 
 class SnapTree:
@@ -39,17 +52,30 @@ class SnapTree:
         self.root = SnapTreeNode(None, "__root__", 0, 0)
         self.curr = self.root
         self.end = 0
+        # whether to normalize the timestamp so it will start at 0
+        self.normalize = True
+        self.start_ts = None
 
     def add_entry(self, name, t):
         #print("entry: {}, {}".format(name, t))
+        if self.normalize:
+            if not self.start_ts:
+                self.start_ts = t
+            t -= self.start_ts
+        else:
+            if self.root.t_entry == 0:
+                self.root.t_entry = t
+
         node = SnapTreeNode(self.curr, name, t, 0)
         self.curr.children.append(node)
         self.curr = node
-        if self.root.t_entry == 0:
-            self.root.t_entry = t
 
     def add_exit(self, name, t):
         #print("exit: {}, {}".format(name, t))
+        if self.normalize:
+            if not self.start_ts:
+                self.start_ts = t
+            t -= self.start_ts
         self.curr.t_exit = t
         if self.curr == self.root:
             # If we are out of the first stack, just ignore

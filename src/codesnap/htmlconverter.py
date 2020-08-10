@@ -42,12 +42,18 @@ def snap_tree_root_node_html(node):
 
 def generate_html_report_from_snap_tree(tree):
     sub = {}
-    with open(os.path.join(os.path.dirname(__file__), "html/index.html")) as f:
+    #with open(os.path.join(os.path.dirname(__file__), "html/index.html")) as f:
+    #    tmpl = f.read()
+    #with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.min.js")) as f:
+    #    sub["d3flamegraph_js"] = f.read()
+    #with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.css")) as f:
+    #    sub["d3flamegraph_css"] = f.read()
+    #sub["json_data"] = json.dumps(tree.get_json())
+
+    with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html")) as f:
         tmpl = f.read()
-    with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.min.js")) as f:
-        sub["d3flamegraph_js"] = f.read()
-    with open(os.path.join(os.path.dirname(__file__), "html/d3-flamegraph.css")) as f:
-        sub["d3flamegraph_css"] = f.read()
+    with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html")) as f:
+        sub["trace_viewer_full"] = f.read()
     sub["json_data"] = json.dumps(tree.get_json())
     
     return Template(tmpl).substitute(sub)

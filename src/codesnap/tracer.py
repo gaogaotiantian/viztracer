@@ -65,11 +65,11 @@ class CodeSnapTracer:
         if not self.parsed:
             if self.tracer == "python":
                 for data in self.buffer:
-                    # convert seconds to nano seconds
+                    # convert seconds to micro seconds
                     if data[0] == "entry":
-                        self.snaptree.add_entry(data[1], data[2] * 1000000000)
+                        self.snaptree.add_entry(data[1], data[2] * 1000000)
                     elif data[0] == "exit":
-                        self.snaptree.add_exit(data[1], data[2] * 1000000000)
+                        self.snaptree.add_exit(data[1], data[2] * 1000000)
                     else:
                         raise Exception("Unexpected data type")
                     total_entries += 1
@@ -85,10 +85,11 @@ class CodeSnapTracer:
                         name = ".".join([data[2], data[3], data[4]])
                     else:
                         name = ".".join([data[2], data[4]])
+                    # Convert to us for frontend
                     if data[0] == 0:
-                        self.snaptree.add_entry(name, data[1])
+                        self.snaptree.add_entry(name, data[1] / 1000)
                     elif data[0] == 3:
-                        self.snaptree.add_exit(name, data[1])
+                        self.snaptree.add_exit(name, data[1] / 1000)
                     else:
                         raise Exception("Unexpected data type")
                     total_entries += 1
