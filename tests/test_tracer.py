@@ -21,6 +21,7 @@ class TestTracer(unittest.TestCase):
         result2 = tracer.generate_report()
         self.assertEqual(result1, result2)
 
+
 class TestCTracer(unittest.TestCase):
     def test_c_load(self):
         def fib(n):
@@ -34,7 +35,7 @@ class TestCTracer(unittest.TestCase):
         tracer.parse()
         with open("result.html", "w") as f:
             f.write(tracer.generate_report())
-    
+
     def test_c_run_after_clear(self):
         def fib(n):
             if n <= 1:

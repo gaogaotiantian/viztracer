@@ -21,7 +21,7 @@ class SnapTreeNode:
             return snap_tree_node_html(self, parent_entry, parent_exit)
         else:
             return ""
-    
+
     def json_object(self):
         stack = [self]
         ret = []
@@ -46,7 +46,6 @@ class SnapTreeNode:
         return ret
 
 
-
 class SnapTree:
     def __init__(self):
         self.root = SnapTreeNode(None, "__root__", 0, 0)
@@ -57,7 +56,7 @@ class SnapTree:
         self.start_ts = None
 
     def add_entry(self, name, t):
-        #print("entry: {}, {}".format(name, t))
+        # print("entry: {}, {}".format(name, t))
         if self.normalize:
             if not self.start_ts:
                 self.start_ts = t
@@ -71,7 +70,7 @@ class SnapTree:
         self.curr = node
 
     def add_exit(self, name, t):
-        #print("exit: {}, {}".format(name, t))
+        # print("exit: {}, {}".format(name, t))
         if self.normalize:
             if not self.start_ts:
                 self.start_ts = t
@@ -83,7 +82,7 @@ class SnapTree:
             return
         if name != self.curr.function_name:
             # if this is a class function, self will be built in the method
-            # we check if the only difference is that the exit function has 
+            # we check if the only difference is that the exit function has
             # a self object with a class name now
             name_lst = name.split(".")
             if self.curr.function_name == ".".join(name_lst[:-2] + name_lst[-1:]):

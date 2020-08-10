@@ -38,6 +38,7 @@ class TestCodeSnapBasic(unittest.TestCase):
         snap = CodeSnap()
         snap.run("import random; random.randrange(10)")
 
+
 class TestCodeSnapOutput(unittest.TestCase):
     def test_json(self):
         def fib(n):
@@ -48,6 +49,5 @@ class TestCodeSnapOutput(unittest.TestCase):
         t.start()
         fib(10)
         t.stop()
-        entries = t.parse()
+        t.parse()
         t.generate_json()
-    

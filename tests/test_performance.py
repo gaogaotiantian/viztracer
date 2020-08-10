@@ -4,6 +4,7 @@ import time
 import cProfile
 from codesnap import CodeSnap
 
+
 class TestPerformance(unittest.TestCase):
     def do_one_function(self, func):
         # the original speed
@@ -46,10 +47,11 @@ class TestPerformance(unittest.TestCase):
         instrumented = instrumented_end - instrumented_start
         c_instrumented = c_instrumented_end - c_instrumented_start
         cprofile = cprofile_end - cprofile_start
-        print("{:10}({}, {}): {:.9f} vs {:.9f}({:.2f})[py] vs {:.9f}({:.2f})[c] vs {:.9f}({:.2f})[cProfile]".format(func.__name__, 
-            entries1, entries2, origin, instrumented, instrumented / origin, c_instrumented, c_instrumented / origin,
-            cprofile, cprofile / origin))
-    
+        print("{:10}({}, {}): {:.9f} vs {:.9f}({:.2f})[py] vs {:.9f}({:.2f})[c] vs {:.9f}({:.2f})[cProfile]"
+              .format(func.__name__,
+                      entries1, entries2, origin, instrumented, instrumented / origin, c_instrumented, c_instrumented / origin,
+                      cprofile, cprofile / origin))
+
     def test_fib(self):
         def fib():
             def _fib(n):
@@ -68,7 +70,7 @@ class TestPerformance(unittest.TestCase):
                 return _fib(n-1) + _fib(n-2)
             return _fib(13)
         self.do_one_function(slow_fib)
-        
+
     def test_qsort(self):
         def qsort():
             def quicksort(array):
@@ -94,11 +96,10 @@ class TestPerformance(unittest.TestCase):
 
     def test_hanoi(self):
         def hanoi():
-            def TowerOfHanoi(n , source, destination, auxiliary): 
-                if n==1: 
+            def TowerOfHanoi(n, source, destination, auxiliary):
+                if n == 1:
                     return
-                TowerOfHanoi(n-1, source, auxiliary, destination) 
-                TowerOfHanoi(n-1, auxiliary, destination, source) 
+                TowerOfHanoi(n-1, source, auxiliary, destination)
+                TowerOfHanoi(n-1, auxiliary, destination, source)
             TowerOfHanoi(12, "A", "B", "C")
         self.do_one_function(hanoi)
-        

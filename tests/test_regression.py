@@ -1,14 +1,13 @@
 import unittest
 import codesnap
 
-class TestIssue1:
-    def test_datetime(self):
-        import datetime
 
+class TestIssue1(unittest.TestCase):
+    def test_datetime(self):
         snap = codesnap.CodeSnap()
         snap.start()
         from datetime import timedelta
-        a = timedelta(hours = 5)
-        snap.end()
+        timedelta(hours=5)
+        snap.stop()
         snap.parse()
         snap.generate_json()
