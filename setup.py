@@ -6,10 +6,10 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="codesnap",
-    version="0.0.5",
+    version="0.1.0",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
-    description="A profiling tool that can visualize python code in flame graph",
+    description="A debugging and profiling tool that can trace and visualize python code",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/gaogaotiantian/codesnap",
