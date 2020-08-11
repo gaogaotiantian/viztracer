@@ -1,7 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
-from .htmlconverter import snap_tree_node_html, snap_tree_root_node_html, generate_html_report_from_snap_tree
+from .htmlconverter import generate_html_report_from_snap_tree
 
 
 class SnapTreeNode:
@@ -12,15 +12,6 @@ class SnapTreeNode:
         self.t_exit = t_exit
         self.exited = False
         self.children = []
-
-    def html(self, parent_entry=None, parent_exit=None):
-        if parent_entry is None and parent_exit is None:
-            # This is root
-            return snap_tree_root_node_html(self)
-        elif self.exited:
-            return snap_tree_node_html(self, parent_entry, parent_exit)
-        else:
-            return ""
 
     def json_object(self):
         stack = [self]

@@ -12,8 +12,8 @@ class TestPerformance(unittest.TestCase):
         func()
         origin_end = time.perf_counter()
 
-        # With codesnap
-        snap = CodeSnap()
+        # With codesnap + python tracer
+        snap = CodeSnap("python")
         snap.start()
         instrumented_start = time.perf_counter()
         func()

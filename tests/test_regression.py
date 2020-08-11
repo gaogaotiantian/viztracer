@@ -11,3 +11,11 @@ class TestIssue1(unittest.TestCase):
         snap.stop()
         snap.parse()
         snap.generate_json()
+
+        snap = codesnap.CodeSnap(tracer="python")
+        snap.start()
+        from datetime import timedelta
+        timedelta(hours=5)
+        snap.stop()
+        snap.parse()
+        snap.generate_json()
