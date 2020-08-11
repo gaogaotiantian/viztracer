@@ -2,10 +2,14 @@
 #include <Python.h>
 #include <frameobject.h>
 #include <time.h>
+#include "snaptrace.h"
 
 // We need to ignore the first event because it's return of start() function
 int first_event = 1;
 int collecting = 0;
+int max_stack_depth = -1;
+int curr_stack_depth = 0;
+unsigned int check_flags = 0;
 
 struct FEENode {
     PyObject* file_name;
@@ -27,6 +31,20 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         if (first_event) {
             first_event = 0;
             return 0;
+        }
+
+        if (CHECK_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
+            if (what == PyTrace_CALL) {
+                curr_stack_depth += 1;
+                if (curr_stack_depth > max_stack_depth) {
+                    return 0;
+                }
+            } else if (what == PyTrace_RETURN) {
+                curr_stack_depth -= 1;
+                if (curr_stack_depth + 1 > max_stack_depth) {
+                    return 0;
+                }
+            }
         }
 
         clock_gettime(CLOCK_MONOTONIC, &t);
@@ -69,6 +87,7 @@ snaptrace_start(PyObject* self, PyObject* args)
     PyEval_SetProfile(snaptrace_tracefunc, NULL);
     first_event = 1;
     collecting = 1;
+    curr_stack_depth = 0;
 
     Py_RETURN_NONE;
 }
@@ -122,7 +141,7 @@ snaptrace_clear(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
-PyObject* 
+static PyObject* 
 snaptrace_cleanup(PyObject* self, PyObject* args)
 {
     snaptrace_clear(self, args);
@@ -134,12 +153,31 @@ snaptrace_cleanup(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
+static PyObject*
+snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
+{
+    static char* kwlist[] = {"max_stack_depth"};
+    int kw_max_stack_depth = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|i", kwlist, &kw_max_stack_depth)) {
+        return NULL;
+    }
+    if (kw_max_stack_depth >= 0) {
+        SET_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH);       
+        max_stack_depth = kw_max_stack_depth;
+    } else {
+        UNSET_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH);
+    }
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef SnaptraceMethods[] = {
     {"start", snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
     {"load", snaptrace_load, METH_VARARGS, "load buffer"},
     {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
-    {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"}
+    {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
+    {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"}
 };
 
 static struct PyModuleDef snaptracemodule = {

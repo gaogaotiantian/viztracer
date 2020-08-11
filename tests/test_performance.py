@@ -5,52 +5,76 @@ import cProfile
 from codesnap import CodeSnap
 
 
+class Timer:
+    def __init__(self):
+        self.timer = 0
+
+    def __enter__(self):
+        self.timer = time.perf_counter()
+        return self
+
+    def __exit__(self, type, value, trace):
+        pass
+    
+    def get_time(self):
+        return time.perf_counter() - self.timer
+
 class TestPerformance(unittest.TestCase):
     def do_one_function(self, func):
         # the original speed
-        origin_start = time.perf_counter()
-        func()
-        origin_end = time.perf_counter()
+        with Timer() as t:
+            func()
+            origin = t.get_time()
 
         # With codesnap + python tracer
         snap = CodeSnap("python")
         snap.start()
-        instrumented_start = time.perf_counter()
-        func()
-        instrumented_end = time.perf_counter()
+        with Timer() as t:
+            func()
+            instrumented = t.get_time()
         snap.stop()
-        entries1 = snap.parse()
+        with Timer() as t:
+            entries1 = snap.parse()
+            instrumented_parse = t.get_time()
+        with Timer() as t:
+            snap.generate_json()
+            instrumented_json = t.get_time()
         snap.clear()
 
         # With codesnap + c tracer
         snap = CodeSnap("c")
         snap.start()
-        c_instrumented_start = time.perf_counter()
-        func()
-        c_instrumented_end = time.perf_counter()
+        with Timer() as t:
+            func()
+            instrumented_c = t.get_time()
         snap.stop()
-        entries2 = snap.parse()
+        with Timer() as t:
+            entries2 = snap.parse()
+            instrumented_c_parse = t.get_time()
+        with Timer() as t:
+            snap.generate_json()
+            instrumented_c_json = t.get_time()
         snap.clear()
 
         # With cProfiler
         pr = cProfile.Profile()
         pr.enable()
-        cprofile_start = time.perf_counter()
-        func()
-        cprofile_end = time.perf_counter()
+        with Timer() as t:
+            func()
+            cprofile = t.get_time()
         pr.disable()
 
         if func.__name__ != "qsort":
             self.assertEqual(entries1, entries2)
+        
+        def time_str(name, origin, instrumented):
+            return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 
-        origin = origin_end - origin_start
-        instrumented = instrumented_end - instrumented_start
-        c_instrumented = c_instrumented_end - c_instrumented_start
-        cprofile = cprofile_end - cprofile_start
-        print("{:10}({}, {}): {:.9f} vs {:.9f}({:.2f})[py] vs {:.9f}({:.2f})[c] vs {:.9f}({:.2f})[cProfile]"
-              .format(func.__name__,
-                      entries1, entries2, origin, instrumented, instrumented / origin, c_instrumented, c_instrumented / origin,
-                      cprofile, cprofile / origin))
+        print("{:10}({}, {}):".format(func.__name__, entries1, entries2))
+        print(time_str("origin", origin, origin))
+        print(time_str("py", origin, instrumented) + time_str("parse", origin, instrumented_parse) + time_str("json", origin, instrumented_json))
+        print(time_str("c", origin, instrumented_c) + time_str("parse", origin, instrumented_c_parse) + time_str("json", origin, instrumented_c_json))
+        print(time_str("cProfile", origin, cprofile))
 
     def test_fib(self):
         def fib():

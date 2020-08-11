@@ -7,8 +7,9 @@ from .tracer import CodeSnapTracer
 # This is the interface of the package. Almost all user should use this
 # class for the functions
 class CodeSnap(CodeSnapTracer):
-    def __init__(self, tracer="c"):
-        super().__init__(tracer=tracer)
+    def __init__(self, tracer="c", verbose=1, max_stack_depth=-1):
+        super().__init__(tracer=tracer, max_stack_depth=max_stack_depth)
+        self.verbose = verbose
 
     def run(self, command, output_file="./result.html"):
         self.start()

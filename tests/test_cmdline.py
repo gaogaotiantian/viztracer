@@ -21,10 +21,11 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def template(self, cmd_list, expected_output_file="result.html", success=True):
         self.build_script()
-        result = subprocess.run(cmd_list)
+        result = subprocess.run(cmd_list, stdout=subprocess.PIPE, encoding="utf8")
         self.assertTrue(success ^ (result.returncode != 0))
         self.assertTrue(os.path.exists(expected_output_file))
         self.cleanup(output_file=expected_output_file)
+        return result
 
     def test_run(self):
         self.template(["python", "-m", "codesnap", "cmdline_test.py"])
@@ -38,3 +39,13 @@ class TestCommandLineBasic(unittest.TestCase):
     def test_tracer(self):
         self.template(["python", "-m", "codesnap", "--tracer", "c", "cmdline_test.py"])
         self.template(["python", "-m", "codesnap", "--tracer", "python", "cmdline_test.py"])
+    
+    def test_verbose(self):
+        result = self.template(["python", "-m", "codesnap", "cmdline_test.py"])
+        self.assertTrue("#" in result.stdout)
+        result = self.template(["python", "-m", "codesnap", "--quiet", "cmdline_test.py"])
+        self.assertFalse("#" in result.stdout)
+
+    def test_max_stack_depth(self):
+        self.template(["python", "-m", "codesnap", "--max_stack_depth", "5", "cmdline_test.py"])
+

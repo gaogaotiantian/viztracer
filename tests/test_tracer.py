@@ -67,3 +67,23 @@ class TestCTracer(unittest.TestCase):
         tracer.cleanup()
         tracer.clear()
         tracer.cleanup()
+
+
+class TestTracerFilter(unittest.TestCase):
+    def test_max_stack_depth(self):
+        def fib(n):
+            if n <= 1:
+                return 1
+            return fib(n-1) + fib(n-2)
+        tracer = CodeSnapTracer(tracer="c", max_stack_depth=3)
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 14)
+        tracer = CodeSnapTracer(tracer="python", max_stack_depth=3)
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 14)
