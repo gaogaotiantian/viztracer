@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
 from .tracer import _VizTracer
-from .codesnap import VizTracer 
+from .viztracer import VizTracer 
 
 
 __all__ = [
