@@ -130,6 +130,73 @@ However, you can generate json file as well, which complies to the chrome trace 
 
 At the moment, perfetto did not support locally stand alone HTML file generation, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
 
+
+### Trace Filter
+
+Sometimes your code is really complicated or you need to run you program for a long time, which means the parsing time would be too long and the HTML/JSON file would be too large. There are ways in viztrace to filter out the data you don't need. 
+
+The filter mechanism only works in C tracer, and it works at tracing time, not parsing time. That means, using filters will introduce some extra overhead while your tracing, but will save significant memory, parsing time and disk space. 
+
+Currently we support two kinds of filters:
+
+#### max_stack_depth
+
+```max_stack_depth``` is a straight forward way to filter your data. It limits the stack depth viztracer will trace, which cuts out deep call stacks, including some nasty recursive calls. 
+
+You can specify ```max_stack_depth``` in command line:
+
+```
+python3 -m viztracer --max_stack_depth 10 my_script.py
+```
+
+Or you can pass it as an argument to the ```VizTracer``` object:
+
+```python
+from viztracer import VizTracer
+
+tracer = VizTracer(max_stack_depth=10)
+```
+
+
+#### include_files and exclude_files
+
+There are cases when you are only interested in functions in certain files. You can use ```include_files``` and ```exclude_files``` feature to filter out data you are not insterested in. 
+
+When you are using ```include_files```, only the files and directories you specify are recorded. Similarly, when you are using ```exclude_files```, files and directories you specify will not be recorded. 
+
+**IMPORTANT: ```include_files``` and ```exclude_files``` can't be both spcified. You can only use one of them.**
+
+**If a function is not recorded based on ```include_files``` or ```exclude_files``` rules, none of its descendent functions will be recorded, even if they match the rules**
+
+You can specify ```include_files``` and ```exclude_files``` in command line, but they can take more than one argument, which will make the following command ambiguous:
+
+```
+# Ambiguous command which should NOT be used
+python3 -m viztracer --include_files ./src my_script.py
+```
+
+Instead, when you are using ```--include_files``` or ```--exclude_files```, ```--run``` should be passed for the command that you actually want to execute:
+
+```
+# --run is used to solve ambiguity
+python3 -m viztracer --include_files ./src --run my_script.py
+```
+
+However, if you have some other commands that can separate them and solve ambiguity, that works as well:
+
+```
+# This will work too
+python3 -m viztracer --include_files ./src --max_stack_depth 5 my_script.py
+```
+
+You can also pass a ```list``` as an argument to ```VizTracer```:
+
+```python
+from viztracer import VizTracer
+
+tracer = VizTracer(include_files=["./src", "./test/test1.py"])
+```
+
 ### Choose Tracer
 
 The default tracer for current version is c tracer, which introduce a relatively small overhead(worst case 2-3x) but only works for CPython on Linux. However, if there's other reason that you would prefer a pure-python tracer, you can use python tracer using ```tracer``` argument when you initialize ```VizTracer``` object.
@@ -137,6 +204,8 @@ The default tracer for current version is c tracer, which introduce a relatively
 ```python
 tracer = VizTracer(tracer="python")
 ```
+
+**python tracer will be deprecated because of the performance issue in the future**
 
 #### Cleanup of c Tracer
 

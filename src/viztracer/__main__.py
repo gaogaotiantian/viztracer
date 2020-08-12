@@ -11,15 +11,27 @@ if __name__ == '__main__':
     parser.add_argument("--output_file", "-o", nargs="?", default="result.html")
     parser.add_argument("--quiet", action="store_true", default=False)
     parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1)
+    parser.add_argument("--exclude_files", nargs="*", default=None)
+    parser.add_argument("--include_files", nargs="*", default=None)
+    parser.add_argument("--run", nargs="*", default=[])
     parser.add_argument("command", nargs=argparse.REMAINDER)
     options = parser.parse_args(sys.argv[1:])
+
+    if options.command:
+        command = options.command
+    elif options.run:
+        command = options.run
+    else:
+        parser.print_help()
+        exit(0)
+
     try:
-        f = options.command[0]
+        f = command[0]
         code_string = open(f).read()
     except FileNotFoundError:
         print("No such file as {}".format(f))
         exit(1)
-    sys.argv = options.command[1:]
+    sys.argv = command[1:]
     if options.quiet:
         verbose = 0
     else:
@@ -27,7 +39,9 @@ if __name__ == '__main__':
     tracer = VizTracer(
         tracer=options.tracer, 
         verbose=verbose,
-        max_stack_depth=options.max_stack_depth
+        max_stack_depth=options.max_stack_depth,
+        exclude_files=options.exclude_files,
+        include_files=options.include_files
     )
     tracer.start()
     exec(code_string)

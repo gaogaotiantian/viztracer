@@ -35,7 +35,10 @@ class _VizTracer:
         if include_files == None:
             self.__include_files = None
         elif type(include_files) == list:
-            self.__include_files = [os.path.abspath(f) for f in include_files]
+            if include_files:
+                self.__include_files = [os.path.abspath(f) for f in include_files]
+            else:
+                self.__include_files = None
         else:
             raise Exception("include_files has to be a list")
 
@@ -48,7 +51,10 @@ class _VizTracer:
         if exclude_files == None:
             self.__exclude_files = None
         elif type(exclude_files) == list:
-            self.__exclude_files = [os.path.abspath(f) for f in exclude_files]
+            if exclude_files:
+                self.__exclude_files = [os.path.abspath(f) for f in exclude_files]
+            else:
+                self.__exclude_files = None
         else:
             raise Exception("exclude_files has to be a list")
 
@@ -63,8 +69,8 @@ class _VizTracer:
                 raise Exception("include_files and exclude_files can't be both specified!")
             snaptrace.config(
                 max_stack_depth=self.max_stack_depth,
-                include_files = self.include_files,
-                exclude_files = self.exclude_files
+                include_files=self.include_files,
+                exclude_files=self.exclude_files
             )
             snaptrace.start()
 
