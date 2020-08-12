@@ -14,7 +14,7 @@ import codesnap.snaptrace as snaptrace
 
 
 class CodeSnapTracer:
-    def __init__(self, tracer="python", max_stack_depth=-1):
+    def __init__(self, tracer="python", max_stack_depth=-1, include_files=None, exclude_files=None):
         self.buffer = []
         self.enable = False
         self.parsed = False
@@ -23,6 +23,34 @@ class CodeSnapTracer:
         self.data = []
         self.max_stack_depth = max_stack_depth
         self.curr_stack_depth = 0
+        self.include_files = include_files
+        self.exclude_files = exclude_files
+    
+    @property
+    def include_files(self):
+        return self.__include_files
+
+    @include_files.setter
+    def include_files(self, include_files):
+        if include_files == None:
+            self.__include_files = None
+        elif type(include_files) == list:
+            self.__include_files = [os.path.abspath(f) for f in include_files]
+        else:
+            raise Exception("include_files has to be a list")
+
+    @property
+    def exclude_files(self):
+        return self.__exclude_files
+
+    @exclude_files.setter
+    def exclude_files(self, exclude_files):
+        if exclude_files == None:
+            self.__exclude_files = None
+        elif type(exclude_files) == list:
+            self.__exclude_files = [os.path.abspath(f) for f in exclude_files]
+        else:
+            raise Exception("exclude_files has to be a list")
 
     def start(self):
         self.enable = True
@@ -31,10 +59,14 @@ class CodeSnapTracer:
             self.curr_stack_depth = 0
             sys.setprofile(self.tracefunc)
         elif self.tracer == "c":
-            snaptrace.start()
+            if self.include_files is not None and self.exclude_files is not None:
+                raise Exception("include_files and exclude_files can't be both specified!")
             snaptrace.config(
-                max_stack_depth=self.max_stack_depth
+                max_stack_depth=self.max_stack_depth,
+                include_files = self.include_files,
+                exclude_files = self.exclude_files
             )
+            snaptrace.start()
 
     def stop(self):
         self.enable = False
@@ -65,6 +97,18 @@ class CodeSnapTracer:
                     if self.curr_stack_depth + 1 > self.max_stack_depth:
                         return
 
+            if self.include_files:
+                for f in self.include_files:
+                    if frame.f_code.co_filename.startswith(f):
+                        break
+                else:
+                    return
+
+            if self.exclude_files:
+                for f in self.exclude_files:
+                    if frame.f_code.co_filename.startswith(f):
+                        return
+
             f_locals = frame.f_locals
             if "self" in f_locals:
                 if issubclass(f_locals["self"].__class__, self.__class__):
@@ -86,6 +130,7 @@ class CodeSnapTracer:
         # in buffer, so try not to add any overhead when parsing
         # We parse the buffer into Chrome Trace Event Format
         total_entries = 0
+        pid = os.getpid()
         self.stop()
         if not self.parsed:
             if self.tracer == "python":
@@ -107,7 +152,7 @@ class CodeSnapTracer:
                         "name": data[1],
                         "cat": "FEE",
                         "ph": ph,
-                        "pid": 1,
+                        "pid": pid,
                         "tid": 1,
                         "ts": data[2] * 1000000
                     }
@@ -143,7 +188,7 @@ class CodeSnapTracer:
                         "name": name,
                         "cat": "FEE",
                         "ph": ph,
-                        "pid": 1,
+                        "pid": pid,
                         "tid": 1,
                         "ts": data[1] / 1000
                     }

@@ -4,13 +4,13 @@
 import unittest
 from codesnap import CodeSnapTracer
 
+def fib(n):
+    if n <= 1:
+        return 1
+    return fib(n-1) + fib(n-2)
 
 class TestTracer(unittest.TestCase):
     def test_double_parse(self):
-        def fib(n):
-            if n <= 1:
-                return 1
-            return fib(n-1) + fib(n-2)
         tracer = CodeSnapTracer()
         tracer.start()
         fib(10)
@@ -24,10 +24,6 @@ class TestTracer(unittest.TestCase):
 
 class TestCTracer(unittest.TestCase):
     def test_c_load(self):
-        def fib(n):
-            if n <= 1:
-                return 1
-            return fib(n-1) + fib(n-2)
         tracer = CodeSnapTracer(tracer="c")
         tracer.start()
         fib(5)
@@ -37,10 +33,6 @@ class TestCTracer(unittest.TestCase):
             f.write(tracer.generate_report())
 
     def test_c_run_after_clear(self):
-        def fib(n):
-            if n <= 1:
-                return 1
-            return fib(n-1) + fib(n-2)
         tracer = CodeSnapTracer(tracer="c")
         tracer.start()
         fib(5)
@@ -56,10 +48,6 @@ class TestCTracer(unittest.TestCase):
         self.assertNotEqual(report1, report2)
 
     def test_c_cleanup(self):
-        def fib(n):
-            if n <= 1:
-                return 1
-            return fib(n-1) + fib(n-2)
         tracer = CodeSnapTracer(tracer="c")
         tracer.start()
         fib(5)
@@ -71,10 +59,6 @@ class TestCTracer(unittest.TestCase):
 
 class TestTracerFilter(unittest.TestCase):
     def test_max_stack_depth(self):
-        def fib(n):
-            if n <= 1:
-                return 1
-            return fib(n-1) + fib(n-2)
         tracer = CodeSnapTracer(tracer="c", max_stack_depth=3)
         tracer.start()
         fib(10)
@@ -87,3 +71,45 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 14)
+
+    def test_include_files(self):
+        tracer = CodeSnapTracer(tracer="c", include_files=["./src/"])
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 0)
+
+        tracer.include_files = ["./"]
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 354)
+
+    def test_exclude_files(self):
+        tracer = CodeSnapTracer(tracer="c", exclude_files=["./src/"])
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 354)
+
+        tracer.exclude_files = ["./"]
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 0)
+
+    def test_include_exclude_exception(self):
+        tracer = CodeSnapTracer(tracer="c", exclude_files=["./src/"], include_files=["./"])
+        with self.assertRaises(Exception):
+            tracer.start()
+        tracer = CodeSnapTracer(tracer="c", exclude_files=["./src/"])
+        tracer.include_files = ["./"]
+        with self.assertRaises(Exception):
+            tracer.start()
+        tracer.exclude_files = None
+        tracer.start()
+        tracer.stop()
