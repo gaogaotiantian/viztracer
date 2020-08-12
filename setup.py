@@ -6,10 +6,10 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="viztracer",
-    version="0.1.0",
+    version="0.1.1",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
-    description="A debugging and profiling tool that can trace and visualize python code",
+    description="A debugging and profiling tool that can trace and visualize python code execution",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/gaogaotiantian/viztracer",
