@@ -5,18 +5,18 @@ with open("README.md") as f:
     long_description = f.read()
 
 setuptools.setup(
-    name="codesnap",
+    name="viztracer",
     version="0.1.0",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
     description="A debugging and profiling tool that can trace and visualize python code",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/gaogaotiantian/codesnap",
+    url="https://github.com/gaogaotiantian/viztracer",
     packages=setuptools.find_packages("src"),
     package_dir={"":"src"},
     package_data={
-        "codesnap": [
+        "viztracer": [
             "html/*.js",
             "html/*.css",
             "html/*.html"
@@ -24,9 +24,9 @@ setuptools.setup(
     },
     ext_modules=[
         Extension(
-            "codesnap.snaptrace",
+            "viztracer.snaptrace",
             sources = [
-                "src/codesnap/modules/snaptrace.c",
+                "src/viztracer/modules/snaptrace.c",
             ]
         )
     ],

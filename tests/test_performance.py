@@ -2,7 +2,7 @@ import unittest
 import random
 import time
 import cProfile
-from codesnap import CodeSnap
+from viztracer import VizTracer
 
 
 class Timer:
@@ -26,35 +26,35 @@ class TestPerformance(unittest.TestCase):
             func()
             origin = t.get_time()
 
-        # With codesnap + python tracer
-        snap = CodeSnap("python")
-        snap.start()
+        # With viztracer + python tracer
+        tracer = VizTracer("python")
+        tracer.start()
         with Timer() as t:
             func()
             instrumented = t.get_time()
-        snap.stop()
+        tracer.stop()
         with Timer() as t:
-            entries1 = snap.parse()
+            entries1 = tracer.parse()
             instrumented_parse = t.get_time()
         with Timer() as t:
-            snap.generate_json()
+            tracer.generate_json()
             instrumented_json = t.get_time()
-        snap.clear()
+        tracer.clear()
 
-        # With codesnap + c tracer
-        snap = CodeSnap("c")
-        snap.start()
+        # With viztracer + c tracer
+        tracer = VizTracer("c")
+        tracer.start()
         with Timer() as t:
             func()
             instrumented_c = t.get_time()
-        snap.stop()
+        tracer.stop()
         with Timer() as t:
-            entries2 = snap.parse()
+            entries2 = tracer.parse()
             instrumented_c_parse = t.get_time()
         with Timer() as t:
-            snap.generate_json()
+            tracer.generate_json()
             instrumented_c_json = t.get_time()
-        snap.clear()
+        tracer.clear()
 
         # With cProfiler
         pr = cProfile.Profile()

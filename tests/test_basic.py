@@ -2,8 +2,8 @@
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
 import unittest
-from codesnap import CodeSnapTracer
-from codesnap import CodeSnap
+from viztracer.tracer import _VizTracer 
+from viztracer import VizTracer 
 
 
 class TestTracerBasic(unittest.TestCase):
@@ -12,7 +12,7 @@ class TestTracerBasic(unittest.TestCase):
             if n == 1 or n == 0:
                 return 1
             return fib(n-1) + fib(n-2)
-        t = CodeSnapTracer()
+        t = _VizTracer()
         t.start()
         fib(5)
         t.stop()
@@ -25,7 +25,7 @@ class TestTracerBasic(unittest.TestCase):
             import random
             for _ in range(n):
                 random.randrange(n)
-        t = CodeSnapTracer()
+        t = _VizTracer()
         t.start()
         fun(10)
         t.stop()
@@ -35,7 +35,7 @@ class TestTracerBasic(unittest.TestCase):
 
 class TestCodeSnapBasic(unittest.TestCase):
     def test_run(self):
-        snap = CodeSnap()
+        snap = VizTracer()
         snap.run("import random; random.randrange(10)")
 
 
@@ -45,7 +45,7 @@ class TestCodeSnapOutput(unittest.TestCase):
             if n == 1 or n == 0:
                 return 1
             return fib(n-1) + fib(n-2)
-        t = CodeSnapTracer()
+        t = _VizTracer()
         t.start()
         fib(10)
         t.stop()

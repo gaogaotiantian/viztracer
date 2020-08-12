@@ -10,10 +10,10 @@ except ImportError:
     import json
 from string import Template
 from .util import ProgressBar
-import codesnap.snaptrace as snaptrace
+import viztracer.snaptrace as snaptrace
 
 
-class CodeSnapTracer:
+class _VizTracer:
     def __init__(self, tracer="python", max_stack_depth=-1, include_files=None, exclude_files=None):
         self.buffer = []
         self.enable = False

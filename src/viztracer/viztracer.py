@@ -6,7 +6,7 @@ from .tracer import CodeSnapTracer
 
 # This is the interface of the package. Almost all user should use this
 # class for the functions
-class CodeSnap(CodeSnapTracer):
+class VizTracer(_VizTracer):
     def __init__(self, tracer="c", verbose=1, max_stack_depth=-1, include_files=None, exclude_files=None):
         super().__init__(
                 tracer=tracer,

@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-from . import CodeSnap
+from . import VizTracer
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -24,12 +24,12 @@ if __name__ == '__main__':
         verbose = 0
     else:
         verbose = 1
-    snap = CodeSnap(
+    tracer = VizTracer(
         tracer=options.tracer, 
         verbose=verbose,
         max_stack_depth=options.max_stack_depth
     )
-    snap.start()
+    tracer.start()
     exec(code_string)
-    snap.stop()
-    snap.save(output_file=options.output_file)
+    tracer.stop()
+    tracer.save(output_file=options.output_file)

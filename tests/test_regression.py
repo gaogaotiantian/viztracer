@@ -1,21 +1,21 @@
 import unittest
-import codesnap
+import viztracer 
 
 
 class TestIssue1(unittest.TestCase):
     def test_datetime(self):
-        snap = codesnap.CodeSnap()
-        snap.start()
+        tracer = viztracer.VizTracer()
+        tracer.start()
         from datetime import timedelta
         timedelta(hours=5)
-        snap.stop()
-        snap.parse()
-        snap.generate_json()
+        tracer.stop()
+        tracer.parse()
+        tracer.generate_json()
 
-        snap = codesnap.CodeSnap(tracer="python")
-        snap.start()
+        tracer = viztracer.VizTracer(tracer="python")
+        tracer.start()
         from datetime import timedelta
         timedelta(hours=5)
-        snap.stop()
-        snap.parse()
-        snap.generate_json()
+        tracer.stop()
+        tracer.parse()
+        tracer.generate_json()

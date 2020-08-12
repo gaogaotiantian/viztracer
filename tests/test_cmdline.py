@@ -28,24 +28,24 @@ class TestCommandLineBasic(unittest.TestCase):
         return result
 
     def test_run(self):
-        self.template(["python", "-m", "codesnap", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "cmdline_test.py"])
     
     def test_outputfile(self):
-        self.template(["python", "-m", "codesnap", "-o", "result.html", "cmdline_test.py"])
-        self.template(["python", "-m", "codesnap", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
-        self.template(["python", "-m", "codesnap", "--output_file", "result.html", "cmdline_test.py"])
-        self.template(["python", "-m", "codesnap", "--output_file", "result.json", "cmdline_test.py"], expected_output_file="result.json")
+        self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
+        self.template(["python", "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"], expected_output_file="result.json")
     
     def test_tracer(self):
-        self.template(["python", "-m", "codesnap", "--tracer", "c", "cmdline_test.py"])
-        self.template(["python", "-m", "codesnap", "--tracer", "python", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--tracer", "c", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--tracer", "python", "cmdline_test.py"])
     
     def test_verbose(self):
-        result = self.template(["python", "-m", "codesnap", "cmdline_test.py"])
+        result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
         self.assertTrue("#" in result.stdout.decode("utf8"))
-        result = self.template(["python", "-m", "codesnap", "--quiet", "cmdline_test.py"])
+        result = self.template(["python", "-m", "viztracer", "--quiet", "cmdline_test.py"])
         self.assertFalse("#" in result.stdout.decode("utf8"))
 
     def test_max_stack_depth(self):
-        self.template(["python", "-m", "codesnap", "--max_stack_depth", "5", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
 
