@@ -37,7 +37,7 @@ if __name__ == '__main__':
     else:
         verbose = 1
     tracer = VizTracer(
-        tracer=options.tracer, 
+        tracer=options.tracer,
         verbose=verbose,
         max_stack_depth=options.max_stack_depth,
         exclude_files=options.exclude_files,

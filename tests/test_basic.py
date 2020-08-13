@@ -2,8 +2,8 @@
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
 import unittest
-from viztracer.tracer import _VizTracer 
-from viztracer import VizTracer 
+from viztracer.tracer import _VizTracer
+from viztracer import VizTracer
 
 
 class TestTracerBasic(unittest.TestCase):

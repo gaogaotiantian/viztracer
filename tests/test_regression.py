@@ -1,5 +1,5 @@
 import unittest
-import viztracer 
+import viztracer
 
 
 class TestIssue1(unittest.TestCase):

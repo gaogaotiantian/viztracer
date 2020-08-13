@@ -15,9 +15,10 @@ class Timer:
 
     def __exit__(self, type, value, trace):
         pass
-    
+
     def get_time(self):
         return time.perf_counter() - self.timer
+
 
 class TestPerformance(unittest.TestCase):
     def do_one_function(self, func):
@@ -66,7 +67,7 @@ class TestPerformance(unittest.TestCase):
 
         if func.__name__ != "qsort":
             self.assertEqual(entries1, entries2)
-        
+
         def time_str(name, origin, instrumented):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 

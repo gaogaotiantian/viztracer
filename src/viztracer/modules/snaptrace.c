@@ -3,32 +3,72 @@
 #include <Python.h>
 #include <frameobject.h>
 #include <time.h>
+#include <pthread.h>
 #include "snaptrace.h"
 
+// Function declarations
+
+int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
+static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
+static PyObject* snaptrace_start(PyObject* self, PyObject* args);
+static PyObject* snaptrace_stop(PyObject* self, PyObject* args);
+static PyObject* snaptrace_load(PyObject* self, PyObject* args);
+static PyObject* snaptrace_clear(PyObject* self, PyObject* args);
+static PyObject* snaptrace_cleanup(PyObject* self, PyObject* args);
+static PyObject* snaptrace_config(PyObject* self, PyObject* args, PyObject* kw);
+static void snaptrace_threaddestructor(void* key);
+static struct ThreadInfo* snaptrace_createthreadinfo(void);
+
+// the key is used to locate thread specific info
+static pthread_key_t thread_key = 0;
 // We need to ignore the first event because it's return of start() function
 int first_event = 1;
 int collecting = 0;
 unsigned int check_flags = 0;
 int max_stack_depth = -1;
-int curr_stack_depth = 0;
-int ignore_stack_depth = 0;
 PyObject* include_files = NULL;
 PyObject* exclude_files = NULL;
+PyObject* thread_module = NULL;
 
 struct FEENode {
     PyObject* file_name;
     PyObject* class_name;
     PyObject* func_name;
     int type;
+    long tid;
     double ts;
     struct FEENode* next;
     struct FEENode* prev;
 } *buffer_head, *buffer_tail;
 
+struct ThreadInfo {
+    int curr_stack_depth;
+    int ignore_stack_depth;
+};
+
 static void Print_Py(PyObject* o)
 {
     printf("%s\n", PyUnicode_AsUTF8(PyObject_Repr(o)));
 }
+
+
+static PyMethodDef SnaptraceMethods[] = {
+    {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
+    {"start", snaptrace_start, METH_VARARGS, "start profiling"},
+    {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
+    {"load", snaptrace_load, METH_VARARGS, "load buffer"},
+    {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
+    {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
+    {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"}
+};
+
+static struct PyModuleDef snaptracemodule = {
+    PyModuleDef_HEAD_INIT,
+    "codesnap.snaptrace",
+    NULL,
+    -1,
+    SnaptraceMethods
+};
 
 int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
@@ -36,6 +76,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     if (what == PyTrace_CALL || what == PyTrace_RETURN) {
         struct FEENode* node = NULL;
         struct timespec t;
+        struct ThreadInfo* info = pthread_getspecific(thread_key);
 
         if (first_event) {
             first_event = 0;
@@ -45,13 +86,13 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         // Check max stack depth
         if (CHECK_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
             if (what == PyTrace_CALL) {
-                curr_stack_depth += 1;
-                if (curr_stack_depth > max_stack_depth) {
+                info->curr_stack_depth += 1;
+                if (info->curr_stack_depth > max_stack_depth) {
                     return 0;
                 }
             } else if (what == PyTrace_RETURN) {
-                curr_stack_depth -= 1;
-                if (curr_stack_depth + 1 > max_stack_depth) {
+                info->curr_stack_depth -= 1;
+                if (info->curr_stack_depth + 1 > max_stack_depth) {
                     return 0;
                 }
             }
@@ -59,14 +100,14 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
 
         // Check include/exclude files
         if (CHECK_FLAG(check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES)) {
-            if (what == PyTrace_CALL && ignore_stack_depth > 0) {
-                ignore_stack_depth += 1;
+            if (what == PyTrace_CALL && info->ignore_stack_depth > 0) {
+                info->ignore_stack_depth += 1;
                 return 0;
-            } else if (what == PyTrace_RETURN && ignore_stack_depth > 0) {
-                ignore_stack_depth -= 1;
+            } else if (what == PyTrace_RETURN && info->ignore_stack_depth > 0) {
+                info->ignore_stack_depth -= 1;
                 return 0;
             }
-            if (ignore_stack_depth == 0) {
+            if (info->ignore_stack_depth == 0) {
                 PyObject* files = NULL;
                 int record = 0;
                 int is_include = CHECK_FLAG(check_flags, SNAPTRACE_INCLUDE_FILES);
@@ -91,7 +132,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     free(path);
                 }
                 if (record == 0) {
-                    ignore_stack_depth += 1;
+                    info->ignore_stack_depth += 1;
                     return 0;
                 }
             } else {
@@ -127,6 +168,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         Py_INCREF(node->func_name);
         node->type = what;
         node->ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
+        node->tid = pthread_self();
         buffer_tail = node;
     }
 
@@ -134,14 +176,39 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     return 0;
 }
 
+static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyFrameObject* frame,
+    int what, PyObject* arg) {
+
+    snaptrace_createthreadinfo();
+    PyEval_SetProfile(snaptrace_tracefunc, NULL);
+    snaptrace_tracefunc(obj, frame, what, arg);
+    Py_RETURN_NONE;
+}
+
+
 static PyObject*
 snaptrace_start(PyObject* self, PyObject* args)
 {
+    snaptrace_createthreadinfo();
+    // Python: threading.setprofile(Fprofile_FunctionTrace)
+    {
+        PyObject* threading = PyImport_ImportModule("threading");
+        assert(threading != NULL);
+        PyObject* setprofile = PyObject_GetAttrString(threading, "setprofile");
+
+        PyObject* handler = PyCFunction_New(&SnaptraceMethods[0], NULL);
+        PyObject* callback = Py_BuildValue("(N)", handler);
+        Py_INCREF(callback);
+
+        if (PyObject_CallObject(setprofile, callback) == NULL) {
+            perror("Failed to call threading.setprofile() properly");
+            exit(-1);
+        }
+    }
     PyEval_SetProfile(snaptrace_tracefunc, NULL);
+
     first_event = 1;
     collecting = 1;
-    curr_stack_depth = 0;
-    ignore_stack_depth = 0;
 
     Py_RETURN_NONE;
 }
@@ -161,6 +228,8 @@ snaptrace_stop(PyObject* self, PyObject* args)
             buffer_tail = buffer_tail->prev;
             collecting = 0;
         }
+        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        snaptrace_threaddestructor(info);
     }
     
     Py_RETURN_NONE;
@@ -173,7 +242,13 @@ snaptrace_load(PyObject* self, PyObject* args)
     struct FEENode* curr = buffer_head;
     while (curr != buffer_tail && curr->next) {
         struct FEENode* node = curr->next;
-        PyObject* tuple = PyTuple_Pack(5, PyLong_FromLong(node->type), PyFloat_FromDouble(node->ts) ,node->file_name, node->class_name, node->func_name);
+        PyObject* tuple = PyTuple_Pack(6, 
+                PyLong_FromLong(node->type), 
+                PyFloat_FromDouble(node->ts),
+                node->file_name, 
+                node->class_name,
+                node->func_name,
+                PyLong_FromLong(node->tid));
         PyList_Append(lst, tuple);
         curr = curr->next;
     }
@@ -256,22 +331,21 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
     Py_RETURN_NONE;
 }
 
-static PyMethodDef SnaptraceMethods[] = {
-    {"start", snaptrace_start, METH_VARARGS, "start profiling"},
-    {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
-    {"load", snaptrace_load, METH_VARARGS, "load buffer"},
-    {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
-    {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
-    {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"}
-};
+static struct ThreadInfo* snaptrace_createthreadinfo(void) {
+    struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
-static struct PyModuleDef snaptracemodule = {
-    PyModuleDef_HEAD_INIT,
-    "codesnap.snaptrace",
-    NULL,
-    -1,
-    SnaptraceMethods
-};
+    pthread_setspecific(thread_key, info);
+
+    return info;
+}
+
+static void snaptrace_threaddestructor(void* key) {
+    struct ThreadInfo* info = key;
+    if (info) {
+        info->curr_stack_depth = 0;
+        info->ignore_stack_depth = 0;
+    }
+}
 
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 
@@ -286,5 +360,11 @@ PyInit_snaptrace(void)
     buffer_tail = buffer_head; 
     first_event = 1;
     collecting = 0;
+    if (pthread_key_create(&thread_key, snaptrace_threaddestructor)) {
+        perror("Failed to create Tss_Key");
+        exit(-1);
+    }
+
+    thread_module = PyImport_ImportModule("threading");
     return PyModule_Create(&snaptracemodule);
 }

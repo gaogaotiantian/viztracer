@@ -10,6 +10,8 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 fib(5)
 """
+
+
 class TestCommandLineBasic(unittest.TestCase):
     def build_script(self):
         with open("cmdline_test.py", "w") as f:
@@ -35,17 +37,17 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_run(self):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"])
-    
+
     def test_outputfile(self):
         self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["python", "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"], expected_output_file="result.json")
-    
+
     def test_tracer(self):
         self.template(["python", "-m", "viztracer", "--tracer", "c", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--tracer", "python", "cmdline_test.py"])
-    
+
     def test_verbose(self):
         result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
         self.assertTrue("#" in result.stdout.decode("utf8"))
@@ -54,7 +56,7 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_max_stack_depth(self):
         self.template(["python", "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
-    
+
     def test_include_files(self):
         result = self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"], expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))

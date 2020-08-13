@@ -25,14 +25,14 @@ class _VizTracer:
         self.curr_stack_depth = 0
         self.include_files = include_files
         self.exclude_files = exclude_files
-    
+
     @property
     def include_files(self):
         return self.__include_files
 
     @include_files.setter
     def include_files(self, include_files):
-        if include_files == None:
+        if include_files is None:
             self.__include_files = None
         elif type(include_files) == list:
             if include_files:
@@ -48,7 +48,7 @@ class _VizTracer:
 
     @exclude_files.setter
     def exclude_files(self, exclude_files):
-        if exclude_files == None:
+        if exclude_files is None:
             self.__exclude_files = None
         elif type(exclude_files) == list:
             if exclude_files:
@@ -132,7 +132,7 @@ class _VizTracer:
                 self.buffer.append(("exit", name, time.perf_counter()))
 
     def parse(self):
-        # parse() is also performance sensitive. We could have a lot of entries 
+        # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
         # We parse the buffer into Chrome Trace Event Format
         total_entries = 0
@@ -189,13 +189,13 @@ class _VizTracer:
                         ph = "E"
                     else:
                         raise Exception("Unexpected data type")
-                    
+
                     event = {
                         "name": name,
                         "cat": "FEE",
                         "ph": ph,
                         "pid": pid,
-                        "tid": 1,
+                        "tid": data[5],
                         "ts": data[1] / 1000
                     }
                     self.data.append(event)
