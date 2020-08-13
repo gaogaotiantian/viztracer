@@ -190,15 +190,14 @@ static PyObject*
 snaptrace_start(PyObject* self, PyObject* args)
 {
     snaptrace_createthreadinfo();
-    // Python: threading.setprofile(Fprofile_FunctionTrace)
+    // Python: threading.setprofile(tracefunc)
     {
         PyObject* threading = PyImport_ImportModule("threading");
         assert(threading != NULL);
         PyObject* setprofile = PyObject_GetAttrString(threading, "setprofile");
 
         PyObject* handler = PyCFunction_New(&SnaptraceMethods[0], NULL);
-        PyObject* callback = Py_BuildValue("(N)", handler);
-        Py_INCREF(callback);
+        PyObject* callback = Py_BuildValue("(O)", handler);
 
         if (PyObject_CallObject(setprofile, callback) == NULL) {
             perror("Failed to call threading.setprofile() properly");
