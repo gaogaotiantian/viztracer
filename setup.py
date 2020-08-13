@@ -36,5 +36,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Quality Assurance",
     ],
-    python_requires=">=3.5",
+    python_requires=">=3.6",
 )
