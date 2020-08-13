@@ -38,4 +38,5 @@ class TestMultithread(unittest.TestCase):
 
         tracer.stop()
         entries = tracer.parse()
-        self.assertEqual(entries, 300)
+        tracer.save("testres.html")
+        self.assertGreater(entries, 298)
