@@ -50,9 +50,9 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_verbose(self):
         result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
-        self.assertTrue("#" in result.stdout.decode("utf8"))
+        self.assertTrue("Dumping trace data" in result.stdout.decode("utf8"))
         result = self.template(["python", "-m", "viztracer", "--quiet", "cmdline_test.py"])
-        self.assertFalse("#" in result.stdout.decode("utf8"))
+        self.assertFalse("Dumping trace data" in result.stdout.decode("utf8"))
 
     def test_max_stack_depth(self):
         self.template(["python", "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])

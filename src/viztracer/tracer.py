@@ -68,6 +68,7 @@ class _VizTracer:
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
             snaptrace.config(
+                verbose=self.verbose,
                 max_stack_depth=self.max_stack_depth,
                 include_files=self.include_files,
                 exclude_files=self.exclude_files
@@ -167,40 +168,8 @@ class _VizTracer:
                     buffer_count += 1
                 self.buffer = []
             elif self.tracer == "c":
-                buffer = snaptrace.load()
-                buffer_size = len(buffer)
-                pbar = ProgressBar("Parsing data")
-                buffer_count = 1
-                for data in buffer:
-                    if self.verbose > 0:
-                        pbar.update(float(buffer_count) / buffer_size)
-                    # [type, ts, file_name, class_name, func_name]
-                    # type is an integer, 0 for entry and 3 for exit
-                    # ts is count of nano seconds
-                    # class_name could be None
-                    if data[3]:
-                        name = ".".join([data[2], data[3], data[4]])
-                    else:
-                        name = ".".join([data[2], data[4]])
-
-                    if data[0] == 0:
-                        ph = "B"
-                    elif data[0] == 3:
-                        ph = "E"
-                    else:
-                        raise Exception("Unexpected data type")
-
-                    event = {
-                        "name": name,
-                        "cat": "FEE",
-                        "ph": ph,
-                        "pid": pid,
-                        "tid": data[5],
-                        "ts": data[1] / 1000
-                    }
-                    self.data.append(event)
-                    total_entries += 1
-                    buffer_count += 1
+                self.data = snaptrace.load()
+                total_entries = len(self.data)
             self.parsed = True
         if self.enable:
             self.start()

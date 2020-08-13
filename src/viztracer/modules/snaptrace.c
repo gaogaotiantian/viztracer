@@ -24,7 +24,10 @@ static pthread_key_t thread_key = 0;
 // We need to ignore the first event because it's return of start() function
 int first_event = 1;
 int collecting = 0;
+unsigned long total_entries = 0;
 unsigned int check_flags = 0;
+
+int verbose = 0;
 int max_stack_depth = -1;
 PyObject* include_files = NULL;
 PyObject* exclude_files = NULL;
@@ -51,6 +54,15 @@ static void Print_Py(PyObject* o)
     printf("%s\n", PyUnicode_AsUTF8(PyObject_Repr(o)));
 }
 
+static void verbose_printf(int v, const char* fmt, ...)
+{
+    va_list args;
+    if (verbose >= v) {
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
+    }
+}
 
 static PyMethodDef SnaptraceMethods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
@@ -170,6 +182,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         node->ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
         node->tid = pthread_self();
         buffer_tail = node;
+        total_entries += 1;
     }
 
 
@@ -239,18 +252,65 @@ snaptrace_load(PyObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
     struct FEENode* curr = buffer_head;
+    PyObject* pid = PyLong_FromLong(getpid());
+    PyObject* cat = PyUnicode_FromString("FEE");
+    PyObject* ph_B = PyUnicode_FromString("B");
+    PyObject* ph_E = PyUnicode_FromString("E");
+    unsigned long counter = 0;
+    unsigned long prev_counter = 0;
     while (curr != buffer_tail && curr->next) {
         struct FEENode* node = curr->next;
-        PyObject* tuple = PyTuple_Pack(6, 
-                PyLong_FromLong(node->type), 
-                PyFloat_FromDouble(node->ts),
-                node->file_name, 
-                node->class_name,
-                node->func_name,
-                PyLong_FromLong(node->tid));
-        PyList_Append(lst, tuple);
+        PyObject* dict = PyDict_New();
+        PyObject* name = NULL;
+        PyObject* tid = PyLong_FromLong(node->tid);
+        PyObject* ts = PyFloat_FromDouble(node->ts);
+
+        if (node->class_name == Py_None) {
+            name = PyUnicode_FromFormat("%s.%s", 
+                    PyUnicode_AsUTF8(node->file_name), 
+                    PyUnicode_AsUTF8(node->func_name));
+        } else {
+            name = PyUnicode_FromFormat("%s.%s.%s", 
+                    PyUnicode_AsUTF8(node->file_name), 
+                    PyUnicode_AsUTF8(node->class_name), 
+                    PyUnicode_AsUTF8(node->func_name));
+        }
+
+        switch (node->type) {
+            case 0:
+                // Entry
+                PyDict_SetItemString(dict, "ph", ph_B);
+                break;
+            case 3:
+                //Exit
+                PyDict_SetItemString(dict, "ph", ph_E);
+                break;
+            default:
+                printf("Unknown Type!\n");
+                exit(1);
+        }
+        PyDict_SetItemString(dict, "name", name);
+        Py_DECREF(name);
+        PyDict_SetItemString(dict, "cat", cat);
+        PyDict_SetItemString(dict, "pid", pid);
+        PyDict_SetItemString(dict, "tid", tid);
+        Py_DECREF(tid);
+        PyDict_SetItemString(dict, "ts", ts);
+        Py_DECREF(ts);
+        PyList_Append(lst, dict);
         curr = curr->next;
+
+        counter += 1;
+        if (counter - prev_counter > 10000 && 100 * (counter - prev_counter) / (1 + total_entries) > 0) {
+            verbose_printf(1, "Loading data, %lu / %lu\r", counter, total_entries);
+            prev_counter = counter;
+        }
     }
+    verbose_printf(1, "Loading finish                                        \n");
+    Py_DECREF(pid);
+    Py_DECREF(cat);
+    Py_DECREF(ph_B);
+    Py_DECREF(ph_E);
     buffer_tail = buffer_head;
     return lst;
 }
@@ -286,11 +346,13 @@ snaptrace_cleanup(PyObject* self, PyObject* args)
 static PyObject*
 snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 {
-    static char* kwlist[] = {"max_stack_depth", "include_files", "exclude_files"};
+    static char* kwlist[] = {"verbose", "max_stack_depth", "include_files", "exclude_files", NULL};
+    int kw_verbose = -1;
     int kw_max_stack_depth = 0;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|iOO", kwlist, 
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|iiOO", kwlist, 
+            &kw_verbose,
             &kw_max_stack_depth,
             &kw_include_files,
             &kw_exclude_files)) {
@@ -298,6 +360,11 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
     }
 
     check_flags = 0;
+
+    if (kw_verbose >= 0) {
+        verbose = kw_verbose;
+    }
+
     if (kw_max_stack_depth >= 0) {
         SET_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH);       
         max_stack_depth = kw_max_stack_depth;

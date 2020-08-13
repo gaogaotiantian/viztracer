@@ -28,7 +28,7 @@ class TestPerformance(unittest.TestCase):
             origin = t.get_time()
 
         # With viztracer + python tracer
-        tracer = VizTracer("python")
+        tracer = VizTracer("python", verbose=0)
         tracer.start()
         with Timer() as t:
             func()
@@ -43,7 +43,7 @@ class TestPerformance(unittest.TestCase):
         tracer.clear()
 
         # With viztracer + c tracer
-        tracer = VizTracer("c")
+        tracer = VizTracer("c", verbose=0)
         tracer.start()
         with Timer() as t:
             func()
