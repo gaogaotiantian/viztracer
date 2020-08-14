@@ -6,7 +6,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="viztracer",
-    version="0.1.1",
+    version="0.1.2",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
     description="A debugging and profiling tool that can trace and visualize python code execution",
