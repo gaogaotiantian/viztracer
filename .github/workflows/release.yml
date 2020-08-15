@@ -5,7 +5,7 @@ on:
     types: [created]
 
 jobs:
-  deploy:
+  deploy-linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -16,7 +16,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine flake8
+        pip install twine flake8 setuptools wheel
+    - name: Build source tar
+      run: |
+        python setup.py sdist
     - name: Lint with flake8 for syntax errors
       run: |
         pip install flake8
@@ -31,4 +34,26 @@ jobs:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        twine upload dist/*-manylinux*.whl
+        twine upload dist/*-manylinux*.whl dist/*tar*
+  deploy-mac:
+    runs-on: macos-latest 
+    strategy: 
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies and build
+      run: |
+        python -m pip install --upgrade pip
+        pip install wheel setuptools twine
+        python setup.py sdist bdist_wheel
+    - name: Publish wheels to PyPI
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        twine upload dist/*.whl
