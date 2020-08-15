@@ -124,7 +124,8 @@ static PyMethodDef SnaptraceMethods[] = {
     {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
     {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
-    {"addinstant", snaptrace_addinstant, METH_VARARGS, "add instant event"}
+    {"addinstant", snaptrace_addinstant, METH_VARARGS, "add instant event"},
+    {NULL, NULL, 0, NULL}
 };
 
 static struct PyModuleDef snaptracemodule = {
