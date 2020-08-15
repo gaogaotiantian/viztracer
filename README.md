@@ -122,6 +122,13 @@ tracer.stop()
 tracer.save()
 ```
 
+Or, you can do it with ```with``` statement
+
+```python
+with VizTracer(output_file="optional.html") as tracer:
+    # Something happens here
+```
+
 **It is higly recommended that ```start()``` and ```stop()``` function should be in the same frame(same level on call stack). Problem might happen if the condition is not met**
 
 ### Display Result

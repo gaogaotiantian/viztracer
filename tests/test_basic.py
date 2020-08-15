@@ -2,8 +2,15 @@
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
 import unittest
+import os
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer
+
+
+def fib(n):
+    if n == 1 or n == 0:
+        return 1
+    return fib(n-1) + fib(n-2)
 
 
 class TestTracerBasic(unittest.TestCase):
@@ -37,14 +44,16 @@ class TestCodeSnapBasic(unittest.TestCase):
     def test_run(self):
         snap = VizTracer()
         snap.run("import random; random.randrange(10)")
+    
+    def test_with(self):
+        with VizTracer(output_file="test_with.json") as tracer:
+            fib(10)
+        self.assertTrue(os.path.exists("test_with.json"))
+        os.remove("test_with.json")
 
 
 class TestCodeSnapOutput(unittest.TestCase):
     def test_json(self):
-        def fib(n):
-            if n == 1 or n == 0:
-                return 1
-            return fib(n-1) + fib(n-2)
         t = _VizTracer()
         t.start()
         fib(10)

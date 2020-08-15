@@ -22,6 +22,15 @@ class VizTracer(_VizTracer):
         )
         self.verbose = verbose
         self.output_file=output_file
+    
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, trace):
+        self.stop()
+        if type is None:
+            self.save()
 
     def run(self, command, output_file=None):
         self.start()
