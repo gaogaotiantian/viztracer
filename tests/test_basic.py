@@ -51,3 +51,15 @@ class TestCodeSnapOutput(unittest.TestCase):
         t.stop()
         t.parse()
         t.generate_json()
+
+
+class TestInstant(unittest.TestCase):
+    def test_addinstant(self):
+        tracer = VizTracer(tracer="c")
+        tracer.start()
+        tracer.add_instant("instant", {"karma": True})
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertGreater(entries, 2)
+        with open("testres.html", "w") as f:
+            f.write(tracer.generate_report())

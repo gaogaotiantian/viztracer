@@ -132,6 +132,10 @@ class _VizTracer:
                 name = "{}.{}{}".format(frame.f_code.co_filename, class_name, frame.f_code.co_name)
                 self.buffer.append(("exit", name, time.perf_counter()))
 
+    def add_instant(self, name, args, scope="g"):
+        if self.tracer == "c":
+            snaptrace.addinstant(name, args, scope)
+
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
