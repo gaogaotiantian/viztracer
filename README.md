@@ -10,6 +10,8 @@ With VizTracer, the programmer can intuitively understand what their code is doi
 
 You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of an example program running recursive merge and quick sort algorithm.
 
+[![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
+
 [trace viewer](https://chromium.googlesource.com/catapult) is used to display the stand alone html data.
 
 VizTracer also supports json output that complies with Chrome trace event format, which can be loaded using [perfetto](https://ui.perfetto.dev/)
@@ -235,6 +237,8 @@ to add an event that will be shown in the report. In trace viewer, you would be 
 ### Multi Thread Support
 
 ```VizTracer``` supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
+
+[![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
 ## Performance
 
