@@ -23,8 +23,8 @@ test:
 clean:
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
-	rm -rf src/codesnap/__pycache__
+	rm -rf src/viztracer/__pycache__
 	rm -rf build
 	rm -rf dist
-	rm -rf codesnap.egg-info 
-	pip uninstall -y codesnap
+	rm -rf viztracer.egg-info 
+	pip uninstall -y viztracer
