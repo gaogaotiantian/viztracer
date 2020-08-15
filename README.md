@@ -215,6 +215,27 @@ The interface for c trace is almost exactly the same as python tracer, except fo
 tracer.cleanup()
 ```
 
+### Add Custom Event
+
+```VizTracer``` supports custom event added while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
+
+When your code is running with ```VizTracer``` on, you can use 
+
+```python
+tracer.add_instant(name, args, scope)
+```
+
+to add an event that will be shown in the report. In trace viewer, you would be able to see what ```args``` is.
+
+```name``` should be a ```string``` for this event. 
+```args``` should be a json serializable object(dict, list, string, number).
+```scope``` is an optional argument, default is ```"g"``` for global. You can use ```p``` for process or ```t``` for thread. This affects how long the event shows in the final report.
+
+
+### Multi Thread Support
+
+```VizTracer``` supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
+
 ## Performance
 
 Overhead is a big consideration when people choose profilers. VizTracer now has a similar overhead as native cProfiler. It works slightly worse in the worst case(Pure FEE) and better in easier case because even though it collects some extra information than cProfiler, the structure is lighter. 

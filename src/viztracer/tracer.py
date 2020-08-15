@@ -134,6 +134,9 @@ class _VizTracer:
 
     def add_instant(self, name, args, scope="g"):
         if self.tracer == "c":
+            if scope not in ["g", "p", "t"]:
+                print("Scope has to be one of g, p, t")
+                return
             snaptrace.addinstant(name, args, scope)
 
     def parse(self):
