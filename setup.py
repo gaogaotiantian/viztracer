@@ -6,7 +6,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="viztracer",
-    version="0.1.2",
+    version="0.1.3",
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
     description="A debugging and profiling tool that can trace and visualize python code execution",
@@ -31,9 +31,13 @@ setuptools.setup(
         )
     ],
     classifiers=[
-        "Programming Language :: Python :: 3",
+        "Development Status :: 4 - Beta",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
+        "Operating System :: MacOS",
+        "Operating System :: POSIX :: Linux",
         "Topic :: Software Development :: Quality Assurance",
     ],
     python_requires=">=3.6",

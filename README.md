@@ -18,7 +18,7 @@ VizTracer also supports json output that complies with Chrome trace event format
 
 ## Requirements
 
-VizTracer requires python 3.6+. No other package is needed. For now, VizTracer binary on pip only supports CPython + Linux. However, in theory the source code can build on Windows/MacOS.
+VizTracer requires python 3.6+. No other package is needed. For now, VizTracer only supports CPython + Linux/MacOS. 
 
 ## Install
 
