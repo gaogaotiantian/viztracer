@@ -14,7 +14,12 @@ import viztracer.snaptrace as snaptrace
 
 
 class _VizTracer:
-    def __init__(self, tracer="python", max_stack_depth=-1, include_files=None, exclude_files=None):
+    def __init__(self, 
+            tracer="python", 
+            max_stack_depth=-1, 
+            include_files=None, 
+            exclude_files=None,
+            ignore_c_function=False):
         self.buffer = []
         self.enable = False
         self.parsed = False
@@ -25,6 +30,7 @@ class _VizTracer:
         self.curr_stack_depth = 0
         self.include_files = include_files
         self.exclude_files = exclude_files
+        self.ignore_c_function = ignore_c_function
 
     @property
     def include_files(self):
@@ -71,7 +77,8 @@ class _VizTracer:
                 verbose=self.verbose,
                 max_stack_depth=self.max_stack_depth,
                 include_files=self.include_files,
-                exclude_files=self.exclude_files
+                exclude_files=self.exclude_files,
+                ignore_c_function=self.ignore_c_function
             )
             snaptrace.start()
 

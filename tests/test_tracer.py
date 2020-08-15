@@ -117,3 +117,20 @@ class TestTracerFilter(unittest.TestCase):
         tracer.exclude_files = None
         tracer.start()
         tracer.stop()
+
+    def test_ignore_c_function(self):
+        tracer = _VizTracer(tracer="c")
+        tracer.start()
+        lst = []
+        lst.append(1)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 2)
+
+        tracer.ignore_c_function = True
+        tracer.start()
+        lst = []
+        lst.append(1)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 0)

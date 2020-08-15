@@ -108,7 +108,14 @@ tracer.stop()
 tracer.save() # also takes output_file as an optional argument
 ```
 
-With this method, you can only record the part that you are interested in
+Or, you can do it with ```with``` statement
+
+```python
+with VizTracer(output_file="optional.html") as tracer:
+    # Something happens here
+```
+
+You can record only the part that you are interested in
 
 ```python
 # Some code that I don't care
@@ -120,13 +127,6 @@ tracer.start()
 # Important code again
 tracer.stop()
 tracer.save()
-```
-
-Or, you can do it with ```with``` statement
-
-```python
-with VizTracer(output_file="optional.html") as tracer:
-    # Something happens here
 ```
 
 **It is higly recommended that ```start()``` and ```stop()``` function should be in the same frame(same level on call stack). Problem might happen if the condition is not met**
@@ -146,7 +146,7 @@ Sometimes your code is really complicated or you need to run you program for a l
 
 The filter mechanism only works in C tracer, and it works at tracing time, not parsing time. That means, using filters will introduce some extra overhead while your tracing, but will save significant memory, parsing time and disk space. 
 
-Currently we support two kinds of filters:
+Currently we support the following kinds of filters:
 
 #### max_stack_depth
 
@@ -206,6 +206,20 @@ from viztracer import VizTracer
 tracer = VizTracer(include_files=["./src", "./test/test1.py"])
 ```
 
+#### ignore_c_function
+
+By default, ```VizTracer``` will record all the C functions called by python script. You can turn it off by:
+
+```
+python3 -m viztracer --ignore_c_function my_script.py
+```
+
+You can turn it off in your script as well:
+
+```python
+tracer = VizTracer(ignore_c_function=True)
+```
+
 ### Choose Tracer
 
 The default tracer for current version is c tracer, which introduce a relatively small overhead(worst case 2-3x) but only works for CPython on Linux. However, if there's other reason that you would prefer a pure-python tracer, you can use python tracer using ```tracer``` argument when you initialize ```VizTracer``` object.
@@ -215,6 +229,7 @@ tracer = VizTracer(tracer="python")
 ```
 
 **python tracer will be deprecated because of the performance issue in the future**
+**No filter feature is supported with python tracer**
 
 #### Cleanup of c Tracer
 

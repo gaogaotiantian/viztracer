@@ -32,6 +32,7 @@ int verbose = 0;
 int max_stack_depth = -1;
 PyObject* include_files = NULL;
 PyObject* exclude_files = NULL;
+
 PyObject* thread_module = NULL;
 
 enum NodeType {
@@ -130,7 +131,7 @@ static PyMethodDef SnaptraceMethods[] = {
 
 static struct PyModuleDef snaptracemodule = {
     PyModuleDef_HEAD_INIT,
-    "codesnap.snaptrace",
+    "viztracer.snaptrace",
     NULL,
     -1,
     SnaptraceMethods
@@ -143,7 +144,8 @@ static struct PyModuleDef snaptracemodule = {
 int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
-    if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+    if (what == PyTrace_CALL || what == PyTrace_RETURN || 
+            (!CHECK_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN))) {
         struct EventNode* node = NULL;
         struct ThreadInfo* info = pthread_getspecific(thread_key);
 
@@ -154,12 +156,12 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
 
         // Check max stack depth
         if (CHECK_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
-            if (what == PyTrace_CALL) {
+            if (what == PyTrace_CALL || what == PyTrace_C_CALL) {
                 info->curr_stack_depth += 1;
                 if (info->curr_stack_depth > max_stack_depth) {
                     return 0;
                 }
-            } else if (what == PyTrace_RETURN) {
+            } else if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
                 info->curr_stack_depth -= 1;
                 if (info->curr_stack_depth + 1 > max_stack_depth) {
                     return 0;
@@ -209,27 +211,49 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
+        // Exclude Self
+        if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN) {
+            PyCFunctionObject* func = (PyCFunctionObject*) arg;
+            if (func->m_module) {
+                if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
+                    return 0;
+                }
+            }
+        }
+
         node = get_next_node();
         node->ntype = FEE_NODE;
         node->ts = get_ts();
 
-        node->data.fee.file_name = frame->f_code->co_filename;
-        Py_INCREF(node->data.fee.file_name);
-        node->data.fee.class_name = Py_None;
-        Py_INCREF(Py_None);
-        for (int i = 0; i < frame->f_code->co_nlocals; i++) {
-            PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
-            if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
-                // When self object is just created in __new__, it's possible that the value is NULL
-                if (frame->f_localsplus[i]) {
-                    node->data.fee.class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
-                    Py_DECREF(Py_None);
+        if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+            node->data.fee.file_name = frame->f_code->co_filename;
+            Py_INCREF(node->data.fee.file_name);
+            node->data.fee.class_name = Py_None;
+            Py_INCREF(Py_None);
+            for (int i = 0; i < frame->f_code->co_nlocals; i++) {
+                PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
+                if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
+                    // When self object is just created in __new__, it's possible that the value is NULL
+                    if (frame->f_localsplus[i]) {
+                        node->data.fee.class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
+                        Py_DECREF(Py_None);
+                    }
+                    break;
                 }
-                break;
             }
+            node->data.fee.func_name = frame->f_code->co_name;
+            Py_INCREF(node->data.fee.func_name);
+        } else if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN) {
+            PyCFunctionObject* func = (PyCFunctionObject*) arg;
+            node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
+            if (func->m_module) {
+                node->data.fee.class_name = func->m_module;
+            } else {
+                node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
+            }
+        } else {
+            printf("Unexpected event!\n");
         }
-        node->data.fee.func_name = frame->f_code->co_name;
-        Py_INCREF(node->data.fee.func_name);
         node->data.fee.type = what;
         node->data.fee.tid = pthread_self();
         total_entries += 1;
@@ -327,23 +351,29 @@ snaptrace_load(PyObject* self, PyObject* args)
 
         switch (node->ntype) {
         case FEE_NODE:
-            if (node->data.fee.class_name == Py_None) {
-                name = PyUnicode_FromFormat("%s.%s", 
-                        PyUnicode_AsUTF8(node->data.fee.file_name), 
-                        PyUnicode_AsUTF8(node->data.fee.func_name));
+            if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
+                    if (node->data.fee.class_name == Py_None) {
+                        name = PyUnicode_FromFormat("%s.%s", 
+                                PyUnicode_AsUTF8(node->data.fee.file_name), 
+                                PyUnicode_AsUTF8(node->data.fee.func_name));
+                    } else {
+                        name = PyUnicode_FromFormat("%s.%s.%s", 
+                                PyUnicode_AsUTF8(node->data.fee.file_name), 
+                                PyUnicode_AsUTF8(node->data.fee.class_name), 
+                                PyUnicode_AsUTF8(node->data.fee.func_name));
+                    }
             } else {
-                name = PyUnicode_FromFormat("%s.%s.%s", 
-                        PyUnicode_AsUTF8(node->data.fee.file_name), 
-                        PyUnicode_AsUTF8(node->data.fee.class_name), 
-                        PyUnicode_AsUTF8(node->data.fee.func_name));
+                name = node->data.fee.func_name;
             }
 
             switch (node->data.fee.type) {
-                case 0:
+                case PyTrace_CALL:
+                case PyTrace_C_CALL:
                     // Entry
                     PyDict_SetItemString(dict, "ph", ph_B);
                     break;
-                case 3:
+                case PyTrace_RETURN:
+                case PyTrace_C_RETURN:
                     //Exit
                     PyDict_SetItemString(dict, "ph", ph_E);
                     break;
@@ -427,16 +457,18 @@ snaptrace_cleanup(PyObject* self, PyObject* args)
 static PyObject*
 snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 {
-    static char* kwlist[] = {"verbose", "max_stack_depth", "include_files", "exclude_files", NULL};
+    static char* kwlist[] = {"verbose", "max_stack_depth", "include_files", "exclude_files", "ignore_c_function", NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|iiOO", kwlist, 
+    int kw_ignore_c_function = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|iiOOp", kwlist, 
             &kw_verbose,
             &kw_max_stack_depth,
             &kw_include_files,
-            &kw_exclude_files)) {
+            &kw_exclude_files,
+            &kw_ignore_c_function)) {
         return NULL;
     }
 
@@ -444,6 +476,12 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 
     if (kw_verbose >= 0) {
         verbose = kw_verbose;
+    }
+
+    if (kw_ignore_c_function == 1) {
+        SET_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
+    } else if (kw_ignore_c_function == 0) {
+        UNSET_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
     }
 
     if (kw_max_stack_depth >= 0) {

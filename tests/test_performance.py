@@ -43,7 +43,7 @@ class TestPerformance(unittest.TestCase):
         tracer.clear()
 
         # With viztracer + c tracer
-        tracer = VizTracer("c", verbose=0)
+        tracer = VizTracer("c", verbose=0, ignore_c_function=True)
         tracer.start()
         with Timer() as t:
             func()

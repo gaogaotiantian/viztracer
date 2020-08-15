@@ -13,6 +13,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1)
     parser.add_argument("--exclude_files", nargs="*", default=None)
     parser.add_argument("--include_files", nargs="*", default=None)
+    parser.add_argument("--ignore_c_function", action="store_true", default=False)
     parser.add_argument("--run", nargs="*", default=[])
     parser.add_argument("command", nargs=argparse.REMAINDER)
     options = parser.parse_args(sys.argv[1:])
@@ -41,7 +42,8 @@ if __name__ == '__main__':
         verbose=verbose,
         max_stack_depth=options.max_stack_depth,
         exclude_files=options.exclude_files,
-        include_files=options.include_files
+        include_files=options.include_files,
+        ignore_c_function=options.ignore_c_function
     )
     tracer.start()
     exec(code_string)

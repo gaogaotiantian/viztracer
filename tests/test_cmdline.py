@@ -2,7 +2,7 @@ import unittest
 import subprocess
 import os
 
-file_content = \
+file_fib = \
 """
 def fib(n):
     if n < 2:
@@ -11,19 +11,25 @@ def fib(n):
 fib(5)
 """
 
+file_c_function = \
+"""
+lst = []
+lst.append(1)
+"""
+
 
 class TestCommandLineBasic(unittest.TestCase):
-    def build_script(self):
+    def build_script(self, script):
         with open("cmdline_test.py", "w") as f:
-            f.write(file_content)
+            f.write(script)
 
     def cleanup(self, output_file="result.html"):
         os.remove("cmdline_test.py")
         if output_file:
             os.remove(output_file)
 
-    def template(self, cmd_list, expected_output_file="result.html", success=True):
-        self.build_script()
+    def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib):
+        self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE)
         self.assertTrue(success ^ (result.returncode != 0))
         if expected_output_file:
@@ -69,3 +75,6 @@ class TestCommandLineBasic(unittest.TestCase):
         self.assertIn("help", result.stdout.decode("utf8"))
         self.template(["python", "-m", "viztracer", "--exclude_files", "./", "--run", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--exclude_files", "./abcd", "--run", "cmdline_test.py"])
+
+    def test_ignore_c_function(self):
+        self.template(["python", "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)
