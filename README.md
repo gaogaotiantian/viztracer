@@ -38,7 +38,7 @@ There are a couple ways to use VizTracer
 
 ### Command Line
 
-The easiest way to use VizTracer it through command line. Assume you have a python script to profile and the normal way to run it is:
+The easiest way to use VizTracer is through command line. Assume you have a python script to profile and the normal way to run it is:
 
 ```
 python3 my_script.py
@@ -64,7 +64,7 @@ Just feed it as it is to VizTracer
 python3 -m viztracer my_script.py arg1 arg2
 ```
 
-You can also specify the tracer to be used in command line by passing --tracer argument. c tracer is the default value, you can use python tracer instead
+You can also specify the tracer to be used in command line by passing --tracer argument. c tracer is the default value, you can use python tracer(deprecated) instead
 
 ```
 python3 -m viztracer --tracer c my_script.py
@@ -104,7 +104,7 @@ tracer.run("import random;random.randrange(10)")
 This will as well generate a ```result.html``` file in your current directory. You can pass other file path to the function if you do not like the name ```result.html```
 
 ```python
-tracer.run("import random; random.randrange(10)", output_file = "better_name.html")
+tracer.run("import random; random.randrange(10)", output_file="better_name.html")
 ```
 
 When you need a more delicate profiler, you can manually enable/disable the profile using ```start()``` and ```stop()``` function.
@@ -145,12 +145,12 @@ By default, VizTracer will generate a stand alone HTML file which you can simply
 
 However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. 
 
-At the moment, perfetto did not support locally stand alone HTML file generation, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
+At the moment, perfetto does not support locally stand alone HTML file generation, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
 
 
 ### Trace Filter
 
-Sometimes your code is really complicated or you need to run you program for a long time, which means the parsing time would be too long and the HTML/JSON file would be too large. There are ways in viztrace to filter out the data you don't need. 
+Sometimes your code is really complicated or you need to run you program for a long time, which means the parsing time would be too long and the HTML/JSON file would be too large. There are ways in VizTracer to filter out the data you don't need. 
 
 The filter mechanism only works in C tracer, and it works at tracing time, not parsing time. That means, using filters will introduce some extra overhead while your tracing, but will save significant memory, parsing time and disk space. 
 
@@ -158,7 +158,7 @@ Currently we support the following kinds of filters:
 
 #### max_stack_depth
 
-```max_stack_depth``` is a straight forward way to filter your data. It limits the stack depth viztracer will trace, which cuts out deep call stacks, including some nasty recursive calls. 
+```max_stack_depth``` is a straight forward way to filter your data. It limits the stack depth VizTracer will trace, which cuts out deep call stacks, including some nasty recursive calls. 
 
 You can specify ```max_stack_depth``` in command line:
 
@@ -230,7 +230,7 @@ tracer = VizTracer(ignore_c_function=True)
 
 ### Choose Tracer
 
-The default tracer for current version is c tracer, which introduce a relatively small overhead(worst case 2-3x) but only works for CPython on Linux. However, if there's other reason that you would prefer a pure-python tracer, you can use python tracer using ```tracer``` argument when you initialize ```VizTracer``` object.
+The default tracer for current version is c tracer, which introduces a relatively small overhead(worst case 2-3x) but only works for CPython on Linux. However, if there's other reason that you would prefer a pure-python tracer, you can use python tracer using ```tracer``` argument when you initialize ```VizTracer``` object.
 
 ```python
 tracer = VizTracer(tracer="python")
@@ -241,7 +241,7 @@ tracer = VizTracer(tracer="python")
 
 #### Cleanup of c Tracer
 
-The interface for c trace is almost exactly the same as python tracer, except for the fact that c tracer does not support command line run now. However, to achieve lower overhead, some optimization is applied to c tracer so it will withhold the memory it allocates for future use to reduce the time it calls ```malloc()```. If you want the c trace to free all the memory it allocates while collecting trace, use
+The interface for c trace is almost exactly the same as python tracer. However, to achieve lower overhead, some optimization is applied to c tracer so it will withhold the memory it allocates for future use to reduce the time it calls ```malloc()```. If you want the c trace to free all the memory it allocates while collecting trace, use
 
 ```python
 tracer.cleanup()
