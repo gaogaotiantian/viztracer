@@ -1,0 +1,34 @@
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/d3-flame-graph@3.1.1/dist/d3-flamegraph.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+</head>
+<body>
+  <div id="chart" class="container text-center"></div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+  <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/d3-flame-graph@3.1.1/dist/d3-flamegraph.min.js"></script>
+  <script type="text/javascript">
+  var data = $data;
+
+  var charts = [];
+  for (var thread in data) {
+    var chart = flamegraph()
+      .width(1000)
+      .title(thread)
+      .minFrameSize(5)
+      .resetHeightOnZoom(true)
+      .setColorMapper((d, originalColor) =>
+        d.highlight ? "#6aff8f" : originalColor)
+      .label(function(d) {
+        return "name: " + d.data.name + " time: " + d.data.value.toString() + " ns"
+      });
+    var div = document.createElement("div");
+    div.setAttribute("id", thread);
+    document.getElementById("chart").appendChild(div);
+    d3.select("#" + thread)
+      .datum(data[thread])
+      .call(chart);
+  }
+  </script>
+</body>

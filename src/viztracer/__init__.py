@@ -3,9 +3,11 @@
 
 from .tracer import _VizTracer
 from .viztracer import VizTracer
+from .flamegraph import FlameGraph
 
 
 __all__ = [
     "_VizTracer",
-    "VizTracer"
+    "VizTracer",
+    "FlameGraph"
 ]

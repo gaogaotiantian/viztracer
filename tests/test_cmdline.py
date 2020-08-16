@@ -26,14 +26,24 @@ class TestCommandLineBasic(unittest.TestCase):
     def cleanup(self, output_file="result.html"):
         os.remove("cmdline_test.py")
         if output_file:
-            os.remove(output_file)
+            if type(output_file) is list:
+                for f in output_file:
+                    os.remove(f)
+            elif type(output_file) is str:
+                os.remove(output_file)
+            else:
+                raise Exception("Unexpected output file argument")
 
     def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib):
         self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE)
         self.assertTrue(success ^ (result.returncode != 0))
         if expected_output_file:
-            self.assertTrue(os.path.exists(expected_output_file))
+            if type(expected_output_file) is list:
+                for f in expected_output_file:
+                    self.assertTrue(os.path.exists(f))
+            elif type(expected_output_file) is str:
+                self.assertTrue(os.path.exists(expected_output_file))
         self.cleanup(output_file=expected_output_file)
         return result
 
@@ -78,3 +88,6 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_ignore_c_function(self):
         self.template(["python", "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)
+
+    def test_flamegraph(self):
+        self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"], expected_output_file=["result.html", "result_flamegraph.html"])

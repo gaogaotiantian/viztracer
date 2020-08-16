@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/codesnap/blob/master/NOTICE.txt
 
 from .tracer import _VizTracer
+from .flamegraph import FlameGraph
 
 
 # This is the interface of the package. Almost all user should use this
@@ -40,7 +41,7 @@ class VizTracer(_VizTracer):
         self.stop()
         self.save(output_file)
 
-    def save(self, output_file=None):
+    def save(self, output_file=None, save_flamegraph=False):
         if not self.parsed:
             self.parse()
         if output_file is None:
@@ -54,3 +55,13 @@ class VizTracer(_VizTracer):
                 f.write(self.generate_json())
         else:
             raise Exception("Only html and json are supported")
+        
+        if save_flamegraph:
+            self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
+    
+    def save_flamegraph(self, output_file=None):
+        flamegraph = FlameGraph(self.data)
+        if output_file is None:
+            name_list = self.output_file.split(".")
+            output_file = ".".join(name_list[:-1]) + "_flamegraph." + name_list[-1]
+        flamegraph.save(output_file)
