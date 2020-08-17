@@ -24,7 +24,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(void);
 
 // the key is used to locate thread specific info
 static pthread_key_t thread_key = 0;
-// We need to ignore the first event because it's return of start() function
+// We need to ignore the first events until we get an entry
 int first_event = 1;
 int collecting = 0;
 unsigned long total_entries = 0;
@@ -155,8 +155,11 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         struct ThreadInfo* info = pthread_getspecific(thread_key);
 
         if (first_event) {
-            first_event = 0;
-            return 0;
+            if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
+                return 0;
+            } else {
+                first_event = 0;
+            }
         }
 
         if (info->paused) {
