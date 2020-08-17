@@ -4,10 +4,12 @@
 from .tracer import _VizTracer
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
+from .decorator import ignore_function
 
 
 __all__ = [
     "_VizTracer",
     "VizTracer",
-    "FlameGraph"
+    "FlameGraph",
+    "ignore_function"
 ]

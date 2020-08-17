@@ -228,6 +228,17 @@ You can turn it off in your script as well:
 tracer = VizTracer(ignore_c_function=True)
 ```
 
+#### ignore_function
+
+Unlike ```ignore_c_function```, ```ignore_function``` is a decorator which you can apply to any function to skip tracing it and its descendants. 
+
+```
+from viztracer import ignore_function
+@ignore_function
+def some_function():
+    # nothing inside will be traced
+```
+
 ### Choose Tracer
 
 The default tracer for current version is c tracer, which introduces a relatively small overhead(worst case 2-3x) but only works for CPython on Linux. However, if there's other reason that you would prefer a pure-python tracer, you can use python tracer using ```tracer``` argument when you initialize ```VizTracer``` object.

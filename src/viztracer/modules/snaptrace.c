@@ -12,6 +12,8 @@ int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject*
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
 static PyObject* snaptrace_start(PyObject* self, PyObject* args);
 static PyObject* snaptrace_stop(PyObject* self, PyObject* args);
+static PyObject* snaptrace_pause(PyObject* self, PyObject* args);
+static PyObject* snaptrace_resume(PyObject* self, PyObject* args);
 static PyObject* snaptrace_load(PyObject* self, PyObject* args);
 static PyObject* snaptrace_clear(PyObject* self, PyObject* args);
 static PyObject* snaptrace_cleanup(PyObject* self, PyObject* args);
@@ -68,6 +70,7 @@ struct EventNode {
 
 
 struct ThreadInfo {
+    int paused;
     int curr_stack_depth;
     int ignore_stack_depth;
 };
@@ -121,6 +124,8 @@ static PyMethodDef SnaptraceMethods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
     {"start", snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
+    {"pause", snaptrace_pause, METH_VARARGS, "pause profiling"},
+    {"resume", snaptrace_resume, METH_VARARGS, "resume profiling"},
     {"load", snaptrace_load, METH_VARARGS, "load buffer"},
     {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
     {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
@@ -151,6 +156,10 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
 
         if (first_event) {
             first_event = 0;
+            return 0;
+        }
+
+        if (info->paused) {
             return 0;
         }
 
@@ -320,6 +329,32 @@ snaptrace_stop(PyObject* self, PyObject* args)
         snaptrace_threaddestructor(info);
     }
     
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_pause(PyObject* self, PyObject* args)
+{
+    if (collecting) {
+        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        if (info) {
+            info->paused += 1;
+        }
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_resume(PyObject* self, PyObject* args)
+{
+    if (collecting) {
+        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        if (info && info->paused > 0) {
+            info->paused -= 1;
+        }
+    }
+
     Py_RETURN_NONE;
 }
 
@@ -552,6 +587,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(void) {
 static void snaptrace_threaddestructor(void* key) {
     struct ThreadInfo* info = key;
     if (info) {
+        info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
     }

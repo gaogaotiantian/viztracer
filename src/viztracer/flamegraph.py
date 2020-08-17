@@ -26,7 +26,7 @@ class _FlameTree:
     def __init__(self):
         self.root = _FlameNode(None, "__root__")
         self.curr = self.root
-    
+
     def add_entry(self, data):
         if self.root.last_entry == -1:
             self.root.last_entry = data["ts"]

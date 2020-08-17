@@ -4,7 +4,7 @@
 import unittest
 import os
 from viztracer.tracer import _VizTracer
-from viztracer import VizTracer
+from viztracer import VizTracer, ignore_function
 
 
 def fib(n):
@@ -44,7 +44,7 @@ class TestCodeSnapBasic(unittest.TestCase):
     def test_run(self):
         snap = VizTracer()
         snap.run("import random; random.randrange(10)")
-    
+
     def test_with(self):
         with VizTracer(output_file="test_with.json") as _:
             fib(10)
@@ -72,3 +72,19 @@ class TestInstant(unittest.TestCase):
         self.assertGreater(entries, 2)
         with open("testres.html", "w") as f:
             f.write(tracer.generate_report())
+
+
+class TestDecorator(unittest.TestCase):
+    def test_pause_resume(self):
+        @ignore_function
+        def ignore(n):
+            if n == 0:
+                return 1
+            return ignore(n-1) + 1
+        tracer = VizTracer(tracer="c")
+        tracer.start()
+        ignore(10)
+        tracer.stop()
+        entries = tracer.parse()
+        tracer.save()
+        self.assertEqual(entries, 2)

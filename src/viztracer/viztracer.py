@@ -8,7 +8,7 @@ from .flamegraph import FlameGraph
 # This is the interface of the package. Almost all user should use this
 # class for the functions
 class VizTracer(_VizTracer):
-    def __init__(self, 
+    def __init__(self,
                  tracer="c",
                  verbose=1,
                  max_stack_depth=-1,
@@ -25,7 +25,7 @@ class VizTracer(_VizTracer):
         )
         self.verbose = verbose
         self.output_file = output_file
-    
+
     def __enter__(self):
         self.start()
         return self
@@ -55,10 +55,10 @@ class VizTracer(_VizTracer):
                 f.write(self.generate_json())
         else:
             raise Exception("Only html and json are supported")
-        
+
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
-    
+
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)
         if output_file is None:

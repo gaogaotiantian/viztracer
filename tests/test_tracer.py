@@ -66,8 +66,6 @@ class TestTracerFilter(unittest.TestCase):
         fib(10)
         tracer.stop()
         entries = tracer.parse()
-        with open("testres.html", "w") as f:
-            f.write(tracer.generate_report())
         self.assertEqual(entries, 14)
         tracer = _VizTracer(tracer="python", max_stack_depth=3)
         tracer.start()
