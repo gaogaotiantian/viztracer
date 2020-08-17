@@ -1,5 +1,5 @@
 import os
-try: 
+try:
     import orjson as json
 except ImportError:
     import json
@@ -13,7 +13,7 @@ class _FlameNode:
         self.last_entry = -1
         self.parent = parent
         self.children = {}
-    
+
     def json(self):
         return {
             "name": self.name,
@@ -37,7 +37,7 @@ class _FlameTree:
             self.curr.children[data["name"]] = node
             self.curr = node
         self.curr.last_entry = data["ts"]
-    
+
     def add_exit(self, data):
         if self.curr != self.root:
             self.curr.value += data["ts"] - self.curr.last_entry
@@ -48,11 +48,12 @@ class _FlameTree:
     def json(self):
         return self.root.json()
 
+
 class FlameGraph:
     def __init__(self, trace_data=None):
         if trace_data:
             self._data = self.parse(trace_data)
-    
+
     def parse(self, trace_data):
         trees = {}
         ret = {}
@@ -74,7 +75,7 @@ class FlameGraph:
     def load(self, input_file):
         with open(input_file) as f:
             self._data = self.parse(json.loads(f.read()))
-    
+
     def save(self, output_file="result_flamegraph.html"):
         sub = {}
         with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html")) as f:

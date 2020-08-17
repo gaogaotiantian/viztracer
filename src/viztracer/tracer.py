@@ -14,12 +14,12 @@ import viztracer.snaptrace as snaptrace
 
 
 class _VizTracer:
-    def __init__(self, 
-            tracer="python", 
-            max_stack_depth=-1, 
-            include_files=None, 
-            exclude_files=None,
-            ignore_c_function=False):
+    def __init__(self,
+                 tracer="python",
+                 max_stack_depth=-1,
+                 include_files=None,
+                 exclude_files=None,
+                 ignore_c_function=False):
         self.buffer = []
         self.enable = False
         self.parsed = False

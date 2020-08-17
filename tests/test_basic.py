@@ -46,7 +46,7 @@ class TestCodeSnapBasic(unittest.TestCase):
         snap.run("import random; random.randrange(10)")
     
     def test_with(self):
-        with VizTracer(output_file="test_with.json") as tracer:
+        with VizTracer(output_file="test_with.json") as _:
             fib(10)
         self.assertTrue(os.path.exists("test_with.json"))
         os.remove("test_with.json")
