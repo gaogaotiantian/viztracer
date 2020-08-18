@@ -252,7 +252,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             if (verbose >= 3) {
                 Print_Py(file_name);
                 printf("as utf8: %s\n", PyUnicode_AsUTF8(file_name));
-                printf("lib_file_path: %s\n",lib_file_path);
+                printf("lib_file_path: %s %ul\n",lib_file_path, lib_file_path);
                 printf("match: %d\n", startswith(PyUnicode_AsUTF8(file_name), lib_file_path));
             }
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
@@ -568,7 +568,8 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
     }
 
     if (kw_lib_file_path) {
-        lib_file_path = kw_lib_file_path;
+        lib_file_path = PyMem_Calloc((strlen(kw_lib_file_path) + 1), sizeof(char));
+        strcpy(lib_file_path, kw_lib_file_path);
         if (verbose >= 3) {
             printf("lib_file_path: %s\n", lib_file_path);
         }
