@@ -251,6 +251,9 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             PyObject* file_name = frame->f_code->co_filename;
             if (verbose >= 3) {
                 Print_Py(file_name);
+                printf("as utf8: %s\n", PyUnicode_AsUTF8(file_name));
+                printf("lib_file_path: %s\n",lib_file_path);
+                printf("match: %d\n", startswith(PyUnicode_AsUTF8(file_name), lib_file_path));
             }
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
                 verbose_printf(3, "skipped\n");
