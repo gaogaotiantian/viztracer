@@ -248,12 +248,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         } else if (what == PyTrace_CALL || what == PyTrace_RETURN) {
             PyObject* file_name = frame->f_code->co_filename;
-            char* path = realpath(PyUnicode_AsUTF8(file_name), NULL);
-            if (path) {
-                if (lib_file_path && startswith(path, lib_file_path)) {
-                    return 0;
-                }
-                free(path);
+            if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
+                return 0;
             }
         }
 
