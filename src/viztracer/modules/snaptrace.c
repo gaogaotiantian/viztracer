@@ -9,7 +9,7 @@
 // Function declarations
 
 int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
-static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
+static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
 static PyObject* snaptrace_start(PyObject* self, PyObject* args);
 static PyObject* snaptrace_stop(PyObject* self, PyObject* args);
 static PyObject* snaptrace_pause(PyObject* self, PyObject* args);
@@ -136,7 +136,7 @@ static int startswith(const char* target, const char* prefix)
 // ================================================================
 
 static PyMethodDef SnaptraceMethods[] = {
-    {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
+    {"threadtracefunc", snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
     {"start", snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", snaptrace_stop, METH_VARARGS, "stop profiling"},
     {"pause", snaptrace_pause, METH_VARARGS, "pause profiling"},
@@ -296,12 +296,30 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     return 0;
 }
 
-static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyFrameObject* frame,
-    int what, PyObject* arg) {
-
+static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args) 
+{
+    PyFrameObject* frame = NULL;
+    char* event = NULL;
+    PyObject* trace_args = NULL;
+    int what = 0;
+    if (!PyArg_ParseTuple(args, "OsO", &frame, &event, &trace_args)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
     snaptrace_createthreadinfo();
     PyEval_SetProfile(snaptrace_tracefunc, NULL);
-    snaptrace_tracefunc(obj, frame, what, arg);
+    if (!strcmp(event, "call")) {
+        what = PyTrace_CALL;
+    } else if (!strcmp(event, "c_call")) {
+        what = PyTrace_C_CALL;
+    } else if (!strcmp(event, "return")) {
+        what = PyTrace_RETURN;
+    } else if (!strcmp(event, "c_return")) {
+        what = PyTrace_C_RETURN;
+    } else {
+        printf("Unexpected event type: %s\n", event);
+    }
+    snaptrace_tracefunc(obj, frame, what, trace_args);
     Py_RETURN_NONE;
 }
 
