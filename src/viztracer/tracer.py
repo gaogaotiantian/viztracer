@@ -168,6 +168,7 @@ class _VizTracer:
                 buffer_size = len(self.buffer)
                 pbar = ProgressBar("Parsing data")
                 buffer_count = 1
+                events = []
                 for data in self.buffer:
                     if self.verbose > 0:
                         pbar.update(float(buffer_count) / buffer_size)
@@ -187,13 +188,19 @@ class _VizTracer:
                         "tid": 1,
                         "ts": data[2] * 1000000
                     }
-                    self.data.append(event)
+                    events.append(event)
                     total_entries += 1
                     buffer_count += 1
+                self.data = {
+                    "traceEvents": events,
+                }
                 self.buffer = []
             elif self.tracer == "c":
-                self.data = snaptrace.load()
-                total_entries = len(self.data)
+                self.data = {
+                    "traceEvents": snaptrace.load(),
+                    "displayTimeUnit": "ns"
+                }
+                total_entries = len(self.data["traceEvents"])
             self.parsed = True
         if self.enable:
             self.start()

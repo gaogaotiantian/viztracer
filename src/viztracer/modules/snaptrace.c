@@ -165,7 +165,7 @@ int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     if (what == PyTrace_CALL || what == PyTrace_RETURN || 
-            (!CHECK_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN))) {
+            (!CHECK_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
         struct EventNode* node = NULL;
         struct ThreadInfo* info = pthread_getspecific(thread_key);
 
@@ -188,7 +188,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 if (info->curr_stack_depth > max_stack_depth) {
                     return 0;
                 }
-            } else if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
+            } else if (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
                 info->curr_stack_depth -= 1;
                 if (info->curr_stack_depth + 1 > max_stack_depth) {
                     return 0;
@@ -239,7 +239,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         }
 
         // Exclude Self
-        if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN) {
+        if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
             if (func->m_module) {
                 if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
@@ -275,7 +275,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
             node->data.fee.func_name = frame->f_code->co_name;
             Py_INCREF(node->data.fee.func_name);
-        } else if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN) {
+        } else if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
             node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
             if (func->m_module) {
@@ -450,6 +450,7 @@ snaptrace_load(PyObject* self, PyObject* args)
                     break;
                 case PyTrace_RETURN:
                 case PyTrace_C_RETURN:
+                case PyTrace_C_EXCEPTION:
                     //Exit
                     PyDict_SetItemString(dict, "ph", ph_E);
                     break;
