@@ -97,4 +97,5 @@ class TestLogPrint(unittest.TestCase):
         print("hello")
         tracer.stop()
         entries = tracer.parse()
+        print(tracer.data)
         self.assertEqual(entries, 4)
