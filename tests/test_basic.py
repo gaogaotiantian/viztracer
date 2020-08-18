@@ -69,9 +69,7 @@ class TestInstant(unittest.TestCase):
         tracer.add_instant("instant", {"karma": True})
         tracer.stop()
         entries = tracer.parse()
-        self.assertGreater(entries, 2)
-        with open("testres.html", "w") as f:
-            f.write(tracer.generate_report())
+        self.assertEqual(entries, 1)
 
 
 class TestDecorator(unittest.TestCase):
@@ -87,4 +85,4 @@ class TestDecorator(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         tracer.save()
-        self.assertEqual(entries, 2)
+        self.assertEqual(entries, 0)

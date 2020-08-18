@@ -31,6 +31,7 @@ unsigned long total_entries = 0;
 unsigned int check_flags = 0;
 
 int verbose = 0;
+char* lib_file_path = NULL;
 int max_stack_depth = -1;
 PyObject* include_files = NULL;
 PyObject* exclude_files = NULL;
@@ -114,6 +115,20 @@ static void verbose_printf(int v, const char* fmt, ...)
         vprintf(fmt, args);
         va_end(args);
     }
+}
+
+// target and prefix has to be NULL-terminated
+static int startswith(char* target, char* prefix)
+{
+    while(*target != 0 && *prefix != 0) {
+        if (*target != *prefix) {
+            return 0;
+        }
+        target++;
+        prefix++;
+    }
+
+    return (*prefix) == 0;
 }
 
 // ================================================================
@@ -207,7 +222,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 if (path) {
                     for (int i = 0; i < length; i++) {
                         PyObject* f = PyList_GET_ITEM(files, i);
-                        if (strstr(path, PyUnicode_AsUTF8(f))) {
+                        if (startswith(path, PyUnicode_AsUTF8(f))) {
                             record = 1 - record;
                             break;
                         }
@@ -231,7 +246,14 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     return 0;
                 }
             }
+        } else if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+            PyObject* file_name = frame->f_code->co_filename;
+            if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
+                return 0;
+            }
         }
+
+
 
         node = get_next_node();
         node->ntype = FEE_NODE;
@@ -318,7 +340,7 @@ snaptrace_stop(PyObject* self, PyObject* args)
 {
     PyEval_SetProfile(NULL, NULL);
     if (collecting == 1) {
-        // If we are collecting, throw away the last event
+        // If we are collecting, throw away the last event if it's a call
         // if it's an entry. because it's entry of stop() function
         struct EventNode* node = buffer_tail;
         if (node->ntype == FEE_NODE && node->data.fee.type == PyTrace_CALL) {
@@ -495,14 +517,17 @@ snaptrace_cleanup(PyObject* self, PyObject* args)
 static PyObject*
 snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 {
-    static char* kwlist[] = {"verbose", "max_stack_depth", "include_files", "exclude_files", "ignore_c_function", NULL};
+    static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
+            "include_files", "exclude_files", "ignore_c_function", NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
+    char* kw_lib_file_path = NULL;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|iiOOp", kwlist, 
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOp", kwlist, 
             &kw_verbose,
+            &kw_lib_file_path,
             &kw_max_stack_depth,
             &kw_include_files,
             &kw_exclude_files,
@@ -514,6 +539,10 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 
     if (kw_verbose >= 0) {
         verbose = kw_verbose;
+    }
+
+    if (kw_lib_file_path) {
+        lib_file_path = kw_lib_file_path;
     }
 
     if (kw_ignore_c_function == 1) {

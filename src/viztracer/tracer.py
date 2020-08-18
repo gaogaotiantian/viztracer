@@ -75,6 +75,7 @@ class _VizTracer:
                 raise Exception("include_files and exclude_files can't be both specified!")
             snaptrace.config(
                 verbose=self.verbose,
+                lib_file_path=os.path.dirname(__file__),
                 max_stack_depth=self.max_stack_depth,
                 include_files=self.include_files,
                 exclude_files=self.exclude_files,
