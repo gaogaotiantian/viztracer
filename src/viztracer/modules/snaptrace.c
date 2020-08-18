@@ -241,7 +241,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         // Exclude Self
         if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
-            verbose_printf(3, "We have a c call/return\n");
             if (func->m_module) {
                 if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
                     return 0;
@@ -249,19 +248,10 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         } else if (what == PyTrace_CALL || what == PyTrace_RETURN) {
             PyObject* file_name = frame->f_code->co_filename;
-            if (verbose >= 3) {
-                Print_Py(file_name);
-                printf("as utf8: %s\n", PyUnicode_AsUTF8(file_name));
-                printf("lib_file_path: %s %ul\n",lib_file_path, lib_file_path);
-                printf("match: %d\n", startswith(PyUnicode_AsUTF8(file_name), lib_file_path));
-            }
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
-                verbose_printf(3, "skipped\n");
                 return 0;
             }
         }
-
-
 
         node = get_next_node();
         node->ntype = FEE_NODE;
@@ -568,11 +558,12 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
     }
 
     if (kw_lib_file_path) {
+        // Obviously we need to copy the string here or it would fail on
+        // MacOS + python3.8
+        // The documentation did not say whether the value persists on "s"
+        // so we should copy it anyway. 
         lib_file_path = PyMem_Calloc((strlen(kw_lib_file_path) + 1), sizeof(char));
         strcpy(lib_file_path, kw_lib_file_path);
-        if (verbose >= 3) {
-            printf("lib_file_path: %s\n", lib_file_path);
-        }
     }
 
     if (kw_ignore_c_function == 1) {
