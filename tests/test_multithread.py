@@ -18,7 +18,7 @@ class MyThread(threading.Thread):
 
 class TestMultithread(unittest.TestCase):
     def test_basic(self):
-        tracer = VizTracer(max_stack_depth=4)
+        tracer = VizTracer(verbose=5, max_stack_depth=4)
         tracer.start()
 
         thread1 = MyThread()

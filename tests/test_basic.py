@@ -89,7 +89,7 @@ class TestDecorator(unittest.TestCase):
 
 class TestLogPrint(unittest.TestCase):
     def test_log_print(self):
-        tracer = VizTracer(log_print=True)
+        tracer = VizTracer(verbose=5,log_print=True)
         tracer.start()
         print("hello")
         print("hello")

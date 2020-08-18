@@ -248,6 +248,9 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         } else if (what == PyTrace_CALL || what == PyTrace_RETURN) {
             PyObject* file_name = frame->f_code->co_filename;
+            if (verbose >= 3) {
+                Print_Py(file_name);
+            }
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
                 return 0;
             }
@@ -561,6 +564,9 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 
     if (kw_lib_file_path) {
         lib_file_path = kw_lib_file_path;
+        if (verbose >= 3) {
+            printf("lib_file_path: %s\n", lib_file_path);
+        }
     }
 
     if (kw_ignore_c_function == 1) {
