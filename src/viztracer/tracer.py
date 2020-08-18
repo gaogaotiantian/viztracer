@@ -4,6 +4,8 @@
 import sys
 import os
 import time
+import builtins
+from io import StringIO
 try:
     import orjson as json
 except ImportError:
@@ -19,7 +21,8 @@ class _VizTracer:
                  max_stack_depth=-1,
                  include_files=None,
                  exclude_files=None,
-                 ignore_c_function=False):
+                 ignore_c_function=False,
+                 log_print=False):
         self.buffer = []
         self.enable = False
         self.parsed = False
@@ -31,6 +34,8 @@ class _VizTracer:
         self.include_files = include_files
         self.exclude_files = exclude_files
         self.ignore_c_function = ignore_c_function
+        self.log_print = log_print
+        self.system_print = builtins.print
 
     @property
     def include_files(self):
@@ -67,6 +72,8 @@ class _VizTracer:
     def start(self):
         self.enable = True
         self.parsed = False
+        if self.log_print:
+            self.overload_print()
         if self.tracer == "python":
             self.curr_stack_depth = 0
             sys.setprofile(self.tracefunc)
@@ -85,6 +92,8 @@ class _VizTracer:
 
     def stop(self):
         self.enable = False
+        if self.log_print:
+            self.restore_print()
         if self.tracer == "python":
             sys.setprofile(None)
         elif self.tracer == "c":
@@ -190,6 +199,20 @@ class _VizTracer:
             self.start()
 
         return total_entries
+
+    def overload_print(self):
+        self.system_print = builtins.print
+        def new_print(*args, **kwargs):
+            snaptrace.pause()
+            io = StringIO()
+            kwargs["file"] = io
+            self.system_print(*args, **kwargs)
+            self.add_instant("print", {"string":io.getvalue()})
+            snaptrace.resume()
+        builtins.print = new_print
+
+    def restore_print(self):
+        builtins.print = self.system_print
 
     def generate_report(self):
         sub = {}

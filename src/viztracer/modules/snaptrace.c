@@ -118,7 +118,7 @@ static void verbose_printf(int v, const char* fmt, ...)
 }
 
 // target and prefix has to be NULL-terminated
-static int startswith(char* target, char* prefix)
+static int startswith(const char* target, const char* prefix)
 {
     while(*target != 0 && *prefix != 0) {
         if (*target != *prefix) {

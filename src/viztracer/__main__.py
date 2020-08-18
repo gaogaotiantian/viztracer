@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser.add_argument("--exclude_files", nargs="*", default=None)
     parser.add_argument("--include_files", nargs="*", default=None)
     parser.add_argument("--ignore_c_function", action="store_true", default=False)
+    parser.add_argument("--log_print", action="store_true", default=False)
     parser.add_argument("--save_flamegraph", action="store_true", default=False)
     parser.add_argument("--generate_flamegraph", nargs="?", default=None)
     parser.add_argument("--run", nargs="*", default=[])
@@ -56,7 +57,8 @@ if __name__ == '__main__':
         max_stack_depth=options.max_stack_depth,
         exclude_files=options.exclude_files,
         include_files=options.include_files,
-        ignore_c_function=options.ignore_c_function
+        ignore_c_function=options.ignore_c_function,
+        log_print=options.log_print
     )
     tracer.start()
     exec(code_string)

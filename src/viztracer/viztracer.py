@@ -15,16 +15,19 @@ class VizTracer(_VizTracer):
                  include_files=None,
                  exclude_files=None,
                  ignore_c_function=False,
+                 log_print=False,
                  output_file="result.html"):
         super().__init__(
                 tracer=tracer,
                 max_stack_depth=max_stack_depth,
                 include_files=include_files,
                 exclude_files=exclude_files,
-                ignore_c_function=ignore_c_function
+                ignore_c_function=ignore_c_function,
+                log_print=log_print
         )
         self.verbose = verbose
         self.output_file = output_file
+        self.system_print = None
 
     def __enter__(self):
         self.start()

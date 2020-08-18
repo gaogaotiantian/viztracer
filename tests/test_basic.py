@@ -84,5 +84,17 @@ class TestDecorator(unittest.TestCase):
         ignore(10)
         tracer.stop()
         entries = tracer.parse()
-        tracer.save()
         self.assertEqual(entries, 0)
+
+
+class TestLogPrint(unittest.TestCase):
+    def test_log_print(self):
+        tracer = VizTracer(log_print=True)
+        tracer.start()
+        print("hello")
+        print("hello")
+        print("hello")
+        print("hello")
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 4)

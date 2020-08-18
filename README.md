@@ -274,6 +274,21 @@ to add an event that will be shown in the report. In trace viewer, you would be 
 ```args``` should be a json serializable object(dict, list, string, number).
 ```scope``` is an optional argument, default is ```"g"``` for global. You can use ```p``` for process or ```t``` for thread. This affects how long the event shows in the final report.
 
+### Log Print
+
+```VizTracer``` can log your print to the report using instant events. In this way, you can simply add ```print``` functions in your code just like you are doing print debug and see what happens on the timeline.
+
+You can specify ```--log_print``` on the command line
+
+```
+python -m viztracer --log_print my_script.py
+```
+
+Or do it when you initialize your ```VizTracer``` object
+
+```python
+tracer = VizTracer(log_print=True)
+```
 
 ### Multi Thread Support
 
