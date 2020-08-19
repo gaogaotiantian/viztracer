@@ -25,7 +25,6 @@ static struct ThreadInfo* snaptrace_createthreadinfo(void);
 // the key is used to locate thread specific info
 static pthread_key_t thread_key = 0;
 // We need to ignore the first events until we get an entry
-int first_event = 1;
 int collecting = 0;
 unsigned long total_entries = 0;
 unsigned int check_flags = 0;
@@ -172,14 +171,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             (!CHECK_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
         struct EventNode* node = NULL;
         struct ThreadInfo* info = pthread_getspecific(thread_key);
-
-        //if (first_event) {
-        //    if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
-        //        return 0;
-        //    } else {
-        //        first_event = 0;
-        //    }
-        //}
 
         if (info->paused) {
             return 0;
@@ -367,7 +358,6 @@ snaptrace_start(PyObject* self, PyObject* args)
     }
     PyEval_SetProfile(snaptrace_tracefunc, NULL);
 
-    first_event = 1;
     collecting = 1;
 
     Py_RETURN_NONE;
@@ -438,24 +428,6 @@ snaptrace_load(PyObject* self, PyObject* args)
     PyObject* prev_dict = NULL;
     while (curr != buffer_tail && curr->next) {
         struct EventNode* node = curr->next;
-        // If this is the immediate exit of the previous node, change the previous node
-        //if (node->ntype == FEE_NODE && 
-        //        (node->data.fee.type == PyTrace_RETURN ||
-        //         node->data.fee.type == PyTrace_C_RETURN ||
-        //         node->data.fee.type == PyTrace_C_EXCEPTION )) {
-        //    if (prev_dict && node->prev->ntype == FEE_NODE && 
-        //            (node->prev->data.fee.type == PyTrace_CALL || 
-        //             node->prev->data.fee.type == PyTrace_C_CALL) && 
-        //            (node->data.fee.tid == node->prev->data.fee.tid)) {
-        //        PyObject* dur = PyFloat_FromDouble(node->ts - node->prev->ts);
-        //        PyDict_SetItemString(prev_dict, "ph", ph_X);
-        //        PyDict_SetItemString(prev_dict, "dur", dur);
-        //        prev_dict = NULL;
-        //        curr = curr->next;
-        //        continue;
-        //    }
-        //}
-
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->data.fee.tid);
@@ -703,7 +675,6 @@ PyInit_snaptrace(void)
     buffer_head->next = NULL;
     buffer_head->prev = NULL;
     buffer_tail = buffer_head; 
-    first_event = 1;
     collecting = 0;
     if (pthread_key_create(&thread_key, snaptrace_threaddestructor)) {
         perror("Failed to create Tss_Key");

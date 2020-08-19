@@ -215,12 +215,13 @@ class _VizTracer:
 
     def overload_print(self):
         self.system_print = builtins.print
+
         def new_print(*args, **kwargs):
             snaptrace.pause()
             io = StringIO()
             kwargs["file"] = io
             self.system_print(*args, **kwargs)
-            self.add_instant("print", {"string":io.getvalue()})
+            self.add_instant("print", {"string": io.getvalue()})
             snaptrace.resume()
         builtins.print = new_print
 
