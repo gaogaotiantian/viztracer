@@ -411,10 +411,30 @@ snaptrace_load(PyObject* self, PyObject* args)
     PyObject* ph_B = PyUnicode_FromString("B");
     PyObject* ph_E = PyUnicode_FromString("E");
     PyObject* ph_I = PyUnicode_FromString("I");
+    PyObject* ph_X = PyUnicode_FromString("X");
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
+    PyObject* prev_dict = NULL;
     while (curr != buffer_tail && curr->next) {
         struct EventNode* node = curr->next;
+        // If this is the immediate exit of the previous node, change the previous node
+        if (node->ntype == FEE_NODE && 
+                (node->data.fee.type == PyTrace_RETURN ||
+                 node->data.fee.type == PyTrace_C_RETURN ||
+                 node->data.fee.type == PyTrace_C_EXCEPTION )) {
+            if (prev_dict && node->prev->ntype == FEE_NODE && 
+                    (node->prev->data.fee.type == PyTrace_CALL || 
+                     node->prev->data.fee.type == PyTrace_C_CALL) && 
+                    (node->data.fee.tid == node->prev->data.fee.tid)) {
+                PyObject* dur = PyFloat_FromDouble(node->ts - node->prev->ts);
+                PyDict_SetItemString(prev_dict, "ph", ph_X);
+                PyDict_SetItemString(prev_dict, "dur", dur);
+                prev_dict = NULL;
+                curr = curr->next;
+                continue;
+            }
+        }
+
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->data.fee.tid);
@@ -478,6 +498,7 @@ snaptrace_load(PyObject* self, PyObject* args)
             exit(1);
         }
         PyList_Append(lst, dict);
+        prev_dict = dict;
         curr = curr->next;
 
         counter += 1;
@@ -493,6 +514,7 @@ snaptrace_load(PyObject* self, PyObject* args)
     Py_DECREF(ph_B);
     Py_DECREF(ph_E);
     Py_DECREF(ph_I);
+    Py_DECREF(ph_X);
     buffer_tail = buffer_head;
     return lst;
 }

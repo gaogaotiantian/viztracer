@@ -179,6 +179,11 @@ class _VizTracer:
                         ph = "E"
                     else:
                         raise Exception("Unexpected data type")
+
+                    if data[0] == "exit" and events[-1]["ph"] == "B" and data[1] == events[-1]["name"]:
+                        events[-1]["ph"] = "X"
+                        events[-1]["dur"] = data[2] * 1000000 - events[-1]["ts"]
+                        continue
                     # convert seconds to micro seconds
                     event = {
                         "name": data[1],
