@@ -11,7 +11,7 @@ try:
 except ImportError:
     import json
 from string import Template
-from .util import ProgressBar
+from .util import ProgressBar, size_fmt
 import viztracer.snaptrace as snaptrace
 
 
@@ -36,6 +36,7 @@ class _VizTracer:
         self.ignore_c_function = ignore_c_function
         self.log_print = log_print
         self.system_print = builtins.print
+        self.total_entries = 0
 
     @property
     def include_files(self):
@@ -160,7 +161,7 @@ class _VizTracer:
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
         # We parse the buffer into Chrome Trace Event Format
-        total_entries = 0
+        self.total_entries = 0
         pid = os.getpid()
         self.stop()
         if not self.parsed:
@@ -194,7 +195,7 @@ class _VizTracer:
                         "ts": data[2] * 1000000
                     }
                     events.append(event)
-                    total_entries += 1
+                    self.total_entries += 1
                     buffer_count += 1
                 self.data = {
                     "traceEvents": events,
@@ -205,12 +206,12 @@ class _VizTracer:
                     "traceEvents": snaptrace.load(),
                     "displayTimeUnit": "ns"
                 }
-                total_entries = len(self.data["traceEvents"])
+                self.total_entries = len(self.data["traceEvents"])
             self.parsed = True
         if self.enable:
             self.start()
 
-        return total_entries
+        return self.total_entries
 
     def overload_print(self):
         self.system_print = builtins.print
@@ -228,6 +229,8 @@ class _VizTracer:
 
     def generate_report(self):
         sub = {}
+        if self.verbose > 0:
+            print("Generating HTML report")
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html")) as f:
             tmpl = f.read()
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html")) as f:
@@ -238,7 +241,7 @@ class _VizTracer:
 
     def generate_json(self):
         if self.verbose > 0:
-            print("Dumping trace data to json")
+            print("Dumping trace data to json, total entries: {}, estimated json file size: {}".format(self.total_entries, size_fmt(120*self.total_entries)))
         if json.__name__ == "orjson":
             return json.dumps(self.data).decode("utf8")
         else:

@@ -20,3 +20,10 @@ class ProgressBar:
             print('\r{} {} {}'.format(self.pre_string, self._bar(), self.post_string), end="")
             if self.progress == 100:
                 print("")
+
+def size_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
