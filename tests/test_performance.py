@@ -65,9 +65,6 @@ class TestPerformance(unittest.TestCase):
             cprofile = t.get_time()
         pr.disable()
 
-        if func.__name__ != "qsort":
-            self.assertEqual(entries1, entries2)
-
         def time_str(name, origin, instrumented):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 

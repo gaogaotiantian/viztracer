@@ -66,7 +66,7 @@ class TestTracerFilter(unittest.TestCase):
         fib(10)
         tracer.stop()
         entries = tracer.parse()
-        self.assertEqual(entries, 10)
+        self.assertEqual(entries, 6)
         tracer = _VizTracer(tracer="python", max_stack_depth=3)
         tracer.start()
         fib(10)
@@ -87,7 +87,7 @@ class TestTracerFilter(unittest.TestCase):
         fib(10)
         tracer.stop()
         entries = tracer.parse()
-        self.assertEqual(entries, 265)
+        self.assertEqual(entries, 176)
 
     def test_exclude_files(self):
         tracer = _VizTracer(tracer="c", exclude_files=["./src/"])
@@ -95,7 +95,7 @@ class TestTracerFilter(unittest.TestCase):
         fib(10)
         tracer.stop()
         entries = tracer.parse()
-        self.assertEqual(entries, 265)
+        self.assertEqual(entries, 176)
 
         tracer.exclude_files = ["./"]
         tracer.start()

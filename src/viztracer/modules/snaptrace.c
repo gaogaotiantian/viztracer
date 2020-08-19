@@ -50,6 +50,8 @@ struct FEEData {
     PyObject* func_name;
     int type;
     long tid;
+    double dur;
+    struct EventNode* parent;
 };
 
 struct InstantData {
@@ -74,6 +76,7 @@ struct ThreadInfo {
     int paused;
     int curr_stack_depth;
     int ignore_stack_depth;
+    struct EventNode* stack_top;
 };
 
 // Utility functions
@@ -97,7 +100,7 @@ static inline struct EventNode* get_next_node()
     if (buffer_tail->next) {
         node = buffer_tail->next;
     } else {
-        node = (struct EventNode*)PyMem_Malloc(sizeof(struct EventNode));
+        node = (struct EventNode*)PyMem_Calloc(1, sizeof(struct EventNode));
         node->next = NULL;
         buffer_tail->next = node;
         node->prev = buffer_tail;
@@ -170,15 +173,19 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         struct EventNode* node = NULL;
         struct ThreadInfo* info = pthread_getspecific(thread_key);
 
-        if (first_event) {
-            if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
-                return 0;
-            } else {
-                first_event = 0;
-            }
-        }
+        //if (first_event) {
+        //    if (what == PyTrace_RETURN || what == PyTrace_C_RETURN) {
+        //        return 0;
+        //    } else {
+        //        first_event = 0;
+        //    }
+        //}
 
         if (info->paused) {
+            return 0;
+        }
+
+        if (!info->stack_top && (what == PyTrace_C_RETURN || what == PyTrace_RETURN || what == PyTrace_C_EXCEPTION)) {
             return 0;
         }
 
@@ -254,41 +261,55 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
-        node = get_next_node();
-        node->ntype = FEE_NODE;
-        node->ts = get_ts();
-
-        if (what == PyTrace_CALL || what == PyTrace_RETURN) {
-            node->data.fee.file_name = frame->f_code->co_filename;
-            Py_INCREF(node->data.fee.file_name);
-            node->data.fee.class_name = Py_None;
-            Py_INCREF(Py_None);
-            for (int i = 0; i < frame->f_code->co_nlocals; i++) {
-                PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
-                if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
-                    // When self object is just created in __new__, it's possible that the value is NULL
-                    if (frame->f_localsplus[i]) {
-                        node->data.fee.class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
-                        Py_DECREF(Py_None);
+        if (what == PyTrace_CALL || what == PyTrace_C_CALL) {
+            // If it's a call, we need a new node, and we need to update the stack
+            node = get_next_node();
+            node->ntype = FEE_NODE;
+            node->ts = get_ts();
+            node->data.fee.dur = 0;
+            node->data.fee.parent = info->stack_top;
+            info->stack_top = node;
+            node->data.fee.type = what;
+            node->data.fee.tid = pthread_self();
+            if (what == PyTrace_CALL) {
+                node->data.fee.file_name = frame->f_code->co_filename;
+                Py_INCREF(node->data.fee.file_name);
+                node->data.fee.class_name = Py_None;
+                Py_INCREF(Py_None);
+                for (int i = 0; i < frame->f_code->co_nlocals; i++) {
+                    PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
+                    if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
+                        // When self object is just created in __new__, it's possible that the value is NULL
+                        if (frame->f_localsplus[i]) {
+                            node->data.fee.class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
+                            Py_DECREF(Py_None);
+                        }
+                        break;
                     }
-                    break;
                 }
-            }
-            node->data.fee.func_name = frame->f_code->co_name;
-            Py_INCREF(node->data.fee.func_name);
-        } else if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
-            PyCFunctionObject* func = (PyCFunctionObject*) arg;
-            node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
-            if (func->m_module) {
-                node->data.fee.class_name = func->m_module;
+                node->data.fee.func_name = frame->f_code->co_name;
+                Py_INCREF(node->data.fee.func_name);
+            } else if (what == PyTrace_C_CALL) {
+                PyCFunctionObject* func = (PyCFunctionObject*) arg;
+                node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
+                if (func->m_module) {
+                    node->data.fee.class_name = func->m_module;
+                } else {
+                    node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
+                }
+            } 
+        } else if (what == PyTrace_RETURN || PyTrace_C_EXCEPTION || PyTrace_C_RETURN) {
+            struct EventNode* stack_top = info->stack_top;
+            if (stack_top) {
+                stack_top->data.fee.dur = get_ts() - stack_top->ts;
+                info->stack_top = stack_top->data.fee.parent;
             } else {
-                node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
+                printf("return out of stack\n");
             }
+            return 0;
         } else {
             printf("Unexpected event!\n");
         }
-        node->data.fee.type = what;
-        node->data.fee.tid = pthread_self();
         total_entries += 1;
     }
 
@@ -418,33 +439,36 @@ snaptrace_load(PyObject* self, PyObject* args)
     while (curr != buffer_tail && curr->next) {
         struct EventNode* node = curr->next;
         // If this is the immediate exit of the previous node, change the previous node
-        if (node->ntype == FEE_NODE && 
-                (node->data.fee.type == PyTrace_RETURN ||
-                 node->data.fee.type == PyTrace_C_RETURN ||
-                 node->data.fee.type == PyTrace_C_EXCEPTION )) {
-            if (prev_dict && node->prev->ntype == FEE_NODE && 
-                    (node->prev->data.fee.type == PyTrace_CALL || 
-                     node->prev->data.fee.type == PyTrace_C_CALL) && 
-                    (node->data.fee.tid == node->prev->data.fee.tid)) {
-                PyObject* dur = PyFloat_FromDouble(node->ts - node->prev->ts);
-                PyDict_SetItemString(prev_dict, "ph", ph_X);
-                PyDict_SetItemString(prev_dict, "dur", dur);
-                prev_dict = NULL;
-                curr = curr->next;
-                continue;
-            }
-        }
+        //if (node->ntype == FEE_NODE && 
+        //        (node->data.fee.type == PyTrace_RETURN ||
+        //         node->data.fee.type == PyTrace_C_RETURN ||
+        //         node->data.fee.type == PyTrace_C_EXCEPTION )) {
+        //    if (prev_dict && node->prev->ntype == FEE_NODE && 
+        //            (node->prev->data.fee.type == PyTrace_CALL || 
+        //             node->prev->data.fee.type == PyTrace_C_CALL) && 
+        //            (node->data.fee.tid == node->prev->data.fee.tid)) {
+        //        PyObject* dur = PyFloat_FromDouble(node->ts - node->prev->ts);
+        //        PyDict_SetItemString(prev_dict, "ph", ph_X);
+        //        PyDict_SetItemString(prev_dict, "dur", dur);
+        //        prev_dict = NULL;
+        //        curr = curr->next;
+        //        continue;
+        //    }
+        //}
 
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->data.fee.tid);
         PyObject* ts = PyFloat_FromDouble(node->ts);
+        PyObject* dur = PyFloat_FromDouble(node->data.fee.dur);
 
         PyDict_SetItemString(dict, "pid", pid);
         PyDict_SetItemString(dict, "tid", tid);
         Py_DECREF(tid);
         PyDict_SetItemString(dict, "ts", ts);
         Py_DECREF(ts);
+        PyDict_SetItemString(dict, "dur", dur);
+        Py_DECREF(dur);
 
         switch (node->ntype) {
         case FEE_NODE:
@@ -467,7 +491,7 @@ snaptrace_load(PyObject* self, PyObject* args)
                 case PyTrace_CALL:
                 case PyTrace_C_CALL:
                     // Entry
-                    PyDict_SetItemString(dict, "ph", ph_B);
+                    PyDict_SetItemString(dict, "ph", ph_X);
                     break;
                 case PyTrace_RETURN:
                 case PyTrace_C_RETURN:
@@ -667,6 +691,7 @@ static void snaptrace_threaddestructor(void* key) {
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
+        info->stack_top = NULL;
     }
 }
 

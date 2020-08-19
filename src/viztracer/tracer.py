@@ -229,13 +229,13 @@ class _VizTracer:
 
     def generate_report(self):
         sub = {}
-        if self.verbose > 0:
-            print("Generating HTML report")
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html")) as f:
             tmpl = f.read()
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html")) as f:
             sub["trace_viewer_full"] = f.read()
         sub["json_data"] = self.generate_json()
+        if self.verbose > 0:
+            print("Generating HTML report")
 
         return Template(tmpl).substitute(sub)
 
