@@ -172,22 +172,27 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         struct EventNode* node = NULL;
         struct ThreadInfo* info = pthread_getspecific(thread_key);
 
+        int is_call = (what == PyTrace_CALL || what == PyTrace_C_CALL);
+        int is_return = (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
+        int is_python = (what == PyTrace_CALL || what == PyTrace_RETURN);
+        int is_c = (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
+
         if (info->paused) {
             return 0;
         }
 
-        if (!info->stack_top && (what == PyTrace_C_RETURN || what == PyTrace_RETURN || what == PyTrace_C_EXCEPTION)) {
+        if (!info->stack_top && is_return) {
             return 0;
         }
 
         // Check max stack depth
         if (CHECK_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
-            if (what == PyTrace_CALL || what == PyTrace_C_CALL) {
+            if (is_call) {
                 info->curr_stack_depth += 1;
                 if (info->curr_stack_depth > max_stack_depth) {
                     return 0;
                 }
-            } else if (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
+            } else if (is_return) {
                 info->curr_stack_depth -= 1;
                 if (info->curr_stack_depth + 1 > max_stack_depth) {
                     return 0;
@@ -238,21 +243,21 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         }
 
         // Exclude Self
-        if (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION) {
+        if (is_c) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
             if (func->m_module) {
                 if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
                     return 0;
                 }
             }
-        } else if (what == PyTrace_CALL || what == PyTrace_RETURN) {
+        } else if (is_python) {
             PyObject* file_name = frame->f_code->co_filename;
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
                 return 0;
             }
         }
 
-        if (what == PyTrace_CALL || what == PyTrace_C_CALL) {
+        if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
             node = get_next_node();
             node->ntype = FEE_NODE;
@@ -289,7 +294,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
                 }
             } 
-        } else if (what == PyTrace_RETURN || PyTrace_C_EXCEPTION || PyTrace_C_RETURN) {
+        } else if (is_return) {
             struct EventNode* stack_top = info->stack_top;
             if (stack_top) {
                 stack_top->data.fee.dur = get_ts() - stack_top->ts;
@@ -425,7 +430,6 @@ snaptrace_load(PyObject* self, PyObject* args)
     PyObject* ph_X = PyUnicode_FromString("X");
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
-    PyObject* prev_dict = NULL;
     while (curr != buffer_tail && curr->next) {
         struct EventNode* node = curr->next;
         PyObject* dict = PyDict_New();
@@ -494,7 +498,6 @@ snaptrace_load(PyObject* self, PyObject* args)
             exit(1);
         }
         PyList_Append(lst, dict);
-        prev_dict = dict;
         curr = curr->next;
 
         counter += 1;
