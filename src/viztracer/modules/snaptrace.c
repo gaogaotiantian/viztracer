@@ -114,6 +114,7 @@ static void verbose_printf(int v, const char* fmt, ...)
         va_start(args, fmt);
         vprintf(fmt, args);
         va_end(args);
+        fflush(stdout);
     }
 }
 
@@ -480,7 +481,7 @@ snaptrace_load(PyObject* self, PyObject* args)
         curr = curr->next;
 
         counter += 1;
-        if (counter - prev_counter > 10000 && 100 * (counter - prev_counter) / (1 + total_entries) > 0) {
+        if (counter - prev_counter > 10000 && (counter - prev_counter) / ((1 + total_entries)/100) > 0) {
             verbose_printf(1, "Loading data, %lu / %lu\r", counter, total_entries);
             prev_counter = counter;
         }
