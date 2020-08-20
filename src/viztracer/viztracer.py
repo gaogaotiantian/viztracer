@@ -29,6 +29,17 @@ class VizTracer(_VizTracer):
         self.output_file = output_file
         self.system_print = None
 
+    @property
+    def verbose(self):
+        return self.__verbose
+
+    @verbose.setter
+    def verbose(self, verbose):
+        try:
+            self.__verbose = int(verbose)
+        except Exception as _:
+            raise Exception("Verbose needs to be an integer, not {}".format(verbose))
+
     def __enter__(self):
         self.start()
         return self

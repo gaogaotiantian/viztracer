@@ -39,6 +39,29 @@ class _VizTracer:
         self.total_entries = 0
 
     @property
+    def tracer(self):
+        return self.__tracer
+
+    @tracer.setter
+    def tracer(self, tracer):
+        if tracer.lower() in ["c", "python"]:
+            self.__tracer = tracer.lower()
+        else:
+            raise Exception("tracer can only be c or python, not {}".format(tracer))
+
+    @property
+    def max_stack_depth(self):
+        return self.__max_stack_depth
+
+    @max_stack_depth.setter
+    def max_stack_depth(self, max_stack_depth):
+        try:
+            self.__max_stack_depth = int(max_stack_depth)
+        except Exception as e:
+            print("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
+            raise e
+
+    @property
     def include_files(self):
         return self.__include_files
 
@@ -69,6 +92,28 @@ class _VizTracer:
                 self.__exclude_files = None
         else:
             raise Exception("exclude_files has to be a list")
+
+    @property
+    def ignore_c_function(self):
+        return self.__ignore_c_function
+
+    @ignore_c_function.setter
+    def ignore_c_function(self, ignore_c_function):
+        if type(ignore_c_function) is bool:
+            self.__ignore_c_function = ignore_c_function
+        else:
+            raise Exception("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
+
+    @property
+    def log_print(self):
+        return self.__log_print
+
+    @log_print.setter
+    def log_print(self, log_print):
+        if type(log_print) is bool:
+            self.__log_print = log_print
+        else:
+            raise Exception("log_print needs to be True or False, not {}".format(log_print))
 
     def start(self):
         self.enable = True
