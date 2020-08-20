@@ -7,7 +7,9 @@ with open("README.md") as f:
 with open("./src/viztracer/__init__.py") as f:
     for line in f.readlines():
         if line.startswith("__version__"):
-            version = line.split("=")[-1].strip()
+            # __version__ = "0.9"
+            delim = '"' if '"' in line else "'"
+            version = line.split(delim)[1]
             break
     else:
         print("Can't find version! Stop Here!")
