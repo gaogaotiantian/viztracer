@@ -4,9 +4,18 @@ from distutils.core import Extension
 with open("README.md") as f:
     long_description = f.read()
 
+with open("./src/viztracer/__init__.py") as f:
+    for line in f.readlines():
+        if line.startswith("__version__"):
+            version = line.split("=")[-1].strip()
+            break
+    else:
+        print("Can't find version! Stop Here!")
+        exit(1)
+
 setuptools.setup(
     name="viztracer",
-    version="0.2.2",
+    version=version,
     author="Tian Gao",
     author_email="gaogaotiantian@hotmail.com",
     description="A debugging and profiling tool that can trace and visualize python code execution",
