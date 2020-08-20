@@ -6,12 +6,8 @@ import os
 import time
 import builtins
 from io import StringIO
-try:
-    import orjson as json
-except ImportError:
-    import json
-from string import Template
-from .util import ProgressBar, size_fmt
+from .util import ProgressBar
+from .report_builder import ReportBuilder
 import viztracer.snaptrace as snaptrace
 
 
@@ -274,21 +270,9 @@ class _VizTracer:
         builtins.print = self.system_print
 
     def generate_report(self):
-        sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html")) as f:
-            tmpl = f.read()
-        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html")) as f:
-            sub["trace_viewer_full"] = f.read()
-        sub["json_data"] = self.generate_json()
-        if self.verbose > 0:
-            print("Generating HTML report")
-
-        return Template(tmpl).substitute(sub)
+        builder = ReportBuilder(self.data, verbose=self.verbose)
+        return builder.generate_report()
 
     def generate_json(self):
-        if self.verbose > 0:
-            print("Dumping trace data to json, total entries: {}, estimated json file size: {}".format(self.total_entries, size_fmt(120*self.total_entries)))
-        if json.__name__ == "orjson":
-            return json.dumps(self.data).decode("utf8")
-        else:
-            return json.dumps(self.data)
+        builder = ReportBuilder(self.data)
+        return builder.generate_json()

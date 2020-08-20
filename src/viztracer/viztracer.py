@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import os
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 
@@ -16,6 +17,7 @@ class VizTracer(_VizTracer):
                  exclude_files=None,
                  ignore_c_function=False,
                  log_print=False,
+                 pid_suffix=False,
                  output_file="result.html"):
         super().__init__(
                 tracer=tracer,
@@ -26,6 +28,7 @@ class VizTracer(_VizTracer):
                 log_print=log_print
         )
         self.verbose = verbose
+        self.pid_suffix = pid_suffix
         self.output_file = output_file
         self.system_print = None
 
@@ -37,8 +40,19 @@ class VizTracer(_VizTracer):
     def verbose(self, verbose):
         try:
             self.__verbose = int(verbose)
-        except Exception as _:
+        except Exception:
             raise Exception("Verbose needs to be an integer, not {}".format(verbose))
+
+    @property
+    def pid_suffix(self):
+        return self.__pid_suffix
+
+    @pid_suffix.setter
+    def pid_suffix(self, pid_suffix):
+        try:
+            self.__pid_suffix = int(pid_suffix)
+        except Exception:
+            raise Exception("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
 
     def __enter__(self):
         self.start()
@@ -60,6 +74,10 @@ class VizTracer(_VizTracer):
             self.parse()
         if output_file is None:
             output_file = self.output_file
+        if self.pid_suffix:
+            output_file_parts = output_file.split(".")
+            output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
+            output_file = ".".join(output_file_parts)
         file_type = output_file.split(".")[-1]
         if file_type == "html":
             with open(output_file, "w") as f:
