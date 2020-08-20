@@ -37,11 +37,11 @@ PyObject* exclude_files = NULL;
 
 PyObject* thread_module = NULL;
 
-enum NodeType {
+typedef enum _NodeType {
     EVENT_NODE = 0,
     FEE_NODE = 1,
     INSTANT_NODE = 2
-};
+} NodeType;
 
 struct FEEData {
     PyObject* file_name;
@@ -60,7 +60,7 @@ struct InstantData {
 };
 
 struct EventNode {
-    int ntype;
+    NodeType ntype;
     struct EventNode* next;
     struct EventNode* prev;
     double ts;
@@ -185,6 +185,21 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             return 0;
         }
 
+        // Exclude Self
+        if (is_c) {
+            PyCFunctionObject* func = (PyCFunctionObject*) arg;
+            if (func->m_module) {
+                if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
+                    return 0;
+                }
+            }
+        } else if (is_python) {
+            PyObject* file_name = frame->f_code->co_filename;
+            if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
+                return 0;
+            }
+        }
+
         // Check max stack depth
         if (CHECK_FLAG(check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
             if (is_call) {
@@ -242,21 +257,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
-        // Exclude Self
-        if (is_c) {
-            PyCFunctionObject* func = (PyCFunctionObject*) arg;
-            if (func->m_module) {
-                if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
-                    return 0;
-                }
-            }
-        } else if (is_python) {
-            PyObject* file_name = frame->f_code->co_filename;
-            if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
-                return 0;
-            }
-        }
-
         if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
             node = get_next_node();
@@ -290,6 +290,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
                 if (func->m_module) {
                     node->data.fee.class_name = func->m_module;
+                    Py_INCREF(node->data.fee.class_name);
                 } else {
                     node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
                 }
@@ -373,16 +374,6 @@ snaptrace_stop(PyObject* self, PyObject* args)
 {
     PyEval_SetProfile(NULL, NULL);
     if (collecting == 1) {
-        // If we are collecting, throw away the last event if it's a call
-        // if it's an entry. because it's entry of stop() function
-        struct EventNode* node = buffer_tail;
-        if (node->ntype == FEE_NODE && node->data.fee.type == PyTrace_CALL) {
-            Py_DECREF(node->data.fee.file_name);
-            Py_DECREF(node->data.fee.class_name);
-            Py_DECREF(node->data.fee.func_name);
-            buffer_tail = buffer_tail->prev;
-            collecting = 0;
-        }
         struct ThreadInfo* info = pthread_getspecific(thread_key);
         snaptrace_threaddestructor(info);
     }
@@ -449,19 +440,25 @@ snaptrace_load(PyObject* self, PyObject* args)
         switch (node->ntype) {
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-                    if (node->data.fee.class_name == Py_None) {
-                        name = PyUnicode_FromFormat("%s.%s", 
-                                PyUnicode_AsUTF8(node->data.fee.file_name), 
-                                PyUnicode_AsUTF8(node->data.fee.func_name));
-                    } else {
-                        name = PyUnicode_FromFormat("%s.%s.%s", 
-                                PyUnicode_AsUTF8(node->data.fee.file_name), 
-                                PyUnicode_AsUTF8(node->data.fee.class_name), 
-                                PyUnicode_AsUTF8(node->data.fee.func_name));
-                    }
+                if (node->data.fee.class_name == Py_None) {
+                    name = PyUnicode_FromFormat("%s.%s", 
+                            PyUnicode_AsUTF8(node->data.fee.file_name), 
+                            PyUnicode_AsUTF8(node->data.fee.func_name));
+                } else {
+                    name = PyUnicode_FromFormat("%s.%s.%s", 
+                            PyUnicode_AsUTF8(node->data.fee.file_name), 
+                            PyUnicode_AsUTF8(node->data.fee.class_name), 
+                            PyUnicode_AsUTF8(node->data.fee.func_name));
+                }
+                Py_DECREF(node->data.fee.file_name);
+                Py_DECREF(node->data.fee.class_name);
+                Py_DECREF(node->data.fee.func_name);
             } else {
                 name = node->data.fee.func_name;
             }
+
+            PyDict_SetItemString(dict, "name", name);
+            Py_DECREF(name);
 
             switch (node->data.fee.type) {
                 case PyTrace_CALL:
@@ -479,8 +476,6 @@ snaptrace_load(PyObject* self, PyObject* args)
                     printf("Unknown Type!\n");
                     exit(1);
             }
-            PyDict_SetItemString(dict, "name", name);
-            Py_DECREF(name);
             PyDict_SetItemString(dict, "cat", cat_fee);
             break;
         case INSTANT_NODE:
@@ -529,6 +524,11 @@ snaptrace_clear(PyObject* self, PyObject* args)
             Py_DECREF(node->data.fee.file_name);
             Py_DECREF(node->data.fee.class_name);
             Py_DECREF(node->data.fee.func_name);
+            break;
+        case INSTANT_NODE:
+            Py_DECREF(node->data.instant.name);
+            Py_DECREF(node->data.instant.args);
+            Py_DECREF(node->data.instant.scope);
             break;
         default:
             printf("Unknown Node Type!\n");

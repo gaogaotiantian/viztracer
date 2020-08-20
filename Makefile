@@ -1,3 +1,5 @@
+refresh: clean build install
+
 build:
 	python setup.py build
 

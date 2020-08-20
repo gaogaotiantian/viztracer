@@ -17,7 +17,7 @@ import viztracer.snaptrace as snaptrace
 
 class _VizTracer:
     def __init__(self,
-                 tracer="python",
+                 tracer="c",
                  max_stack_depth=-1,
                  include_files=None,
                  exclude_files=None,

@@ -24,7 +24,7 @@ class TestTracerBasic(unittest.TestCase):
         fib(5)
         t.stop()
         entries = t.parse()
-        self.assertEqual(entries, 22)
+        self.assertEqual(entries, 15)
         t.generate_report()
 
     def test_builtin_func(self):
@@ -32,12 +32,25 @@ class TestTracerBasic(unittest.TestCase):
             import random
             for _ in range(n):
                 random.randrange(n)
-        t = _VizTracer()
+        t = _VizTracer(ignore_c_function=True)
         t.start()
         fun(10)
         t.stop()
         entries = t.parse()
-        self.assertEqual(entries, 32)
+        self.assertEqual(entries, 21)
+
+    def test_cleanup(self):
+        def fib(n):
+            if n == 1 or n == 0:
+                return 1
+            return fib(n-1) + fib(n-2)
+        t = _VizTracer()
+        t.start()
+        fib(5)
+        t.stop()
+        t.cleanup()
+        entries = t.parse()
+        self.assertEqual(entries, 0)
 
 
 class TestCodeSnapBasic(unittest.TestCase):
