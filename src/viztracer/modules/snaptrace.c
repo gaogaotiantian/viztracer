@@ -435,8 +435,8 @@ snaptrace_load(PyObject* self, PyObject* args)
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->data.fee.tid);
-        PyObject* ts = PyFloat_FromDouble(node->ts);
-        PyObject* dur = PyFloat_FromDouble(node->data.fee.dur);
+        PyObject* ts = PyFloat_FromDouble(node->ts / 1000);
+        PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
 
         PyDict_SetItemString(dict, "pid", pid);
         PyDict_SetItemString(dict, "tid", tid);
