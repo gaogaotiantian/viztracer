@@ -67,6 +67,8 @@ if __name__ == '__main__':
 
     if options.output_file:
         ofile = options.output_file
+    elif options.pid_suffix:
+        ofile = "result.json"
     else:
         ofile = "result.html"
 
