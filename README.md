@@ -288,6 +288,28 @@ Or do it when you initialize your ```VizTracer``` object
 tracer = VizTracer(log_print=True)
 ```
 
+
+### Counter Event
+
+```VizTracer``` provides Counter Event to track variables through time. It is useful to track CPU usage, memory usage, or any other numeric variable that means something to your program.
+
+To use Counter Event, you should register a counter to ```VizTracer``` first
+
+```python
+tracer = VizTracer()
+counter = tracer.register_counter("name of the counter")
+```
+
+You can store the counter to a variable, or you can directly update values of the counter with ```VizTracer```. The ```update()``` function(or ```update_counter()```) takes a ```dict``` or a ```(key, value)``` pair as an argument
+
+```python
+# These statements are equivalent
+tracer.update_counter("name of the counter", {"var_name": 1})
+tracer.update_counter("name of the counter", "var_name", 1)
+counter.update({"var_name": 1})
+counter.update("var_name", 1)
+```
+
 ### Multi Thread Support
 
 ```VizTracer``` supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
