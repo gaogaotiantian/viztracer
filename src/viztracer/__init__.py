@@ -4,6 +4,7 @@
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
 from .decorator import ignore_function
+from .counter import Counter
 
 __version__ = "0.3.0"
 
@@ -11,5 +12,6 @@ __all__ = [
     "__version__",
     "VizTracer",
     "FlameGraph",
-    "ignore_function"
+    "ignore_function",
+    "Counter"
 ]

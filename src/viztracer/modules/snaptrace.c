@@ -1,3 +1,6 @@
+// Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+// For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
 #define PY_SSIZE_T_CLEAN
 #include <stdlib.h>
 #include <Python.h>
@@ -19,6 +22,7 @@ static PyObject* snaptrace_clear(PyObject* self, PyObject* args);
 static PyObject* snaptrace_cleanup(PyObject* self, PyObject* args);
 static PyObject* snaptrace_config(PyObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addinstant(PyObject* self, PyObject* args);
+static PyObject* snaptrace_addcounter(PyObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(void);
 
@@ -40,7 +44,8 @@ PyObject* thread_module = NULL;
 typedef enum _NodeType {
     EVENT_NODE = 0,
     FEE_NODE = 1,
-    INSTANT_NODE = 2
+    INSTANT_NODE = 2,
+    COUNTER_NODE = 3
 } NodeType;
 
 struct FEEData {
@@ -59,6 +64,11 @@ struct InstantData {
     PyObject* scope;
 };
 
+struct CounterData {
+    PyObject* name;
+    PyObject* args;
+};
+
 struct EventNode {
     NodeType ntype;
     struct EventNode* next;
@@ -67,6 +77,7 @@ struct EventNode {
     union {
         struct FEEData fee;
         struct InstantData instant;
+        struct CounterData counter;
     } data;
 } *buffer_head, *buffer_tail;
 
@@ -149,6 +160,7 @@ static PyMethodDef SnaptraceMethods[] = {
     {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"addinstant", snaptrace_addinstant, METH_VARARGS, "add instant event"},
+    {"addcounter", snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -185,17 +197,29 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             return 0;
         }
 
+        if (info->ignore_stack_depth > 0) {
+            if (is_call) {
+                info->ignore_stack_depth += 1;
+                return 0;
+            } else if (is_return) {
+                info->ignore_stack_depth -= 1;
+                return 0;
+            }
+        }
+
         // Exclude Self
-        if (is_c) {
+        if (is_c && is_call) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
             if (func->m_module) {
                 if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
+                    info->ignore_stack_depth += 1;
                     return 0;
                 }
             }
-        } else if (is_python) {
+        } else if (is_python && is_call) {
             PyObject* file_name = frame->f_code->co_filename;
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
+                info->ignore_stack_depth += 1;
                 return 0;
             }
         }
@@ -217,13 +241,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
 
         // Check include/exclude files
         if (CHECK_FLAG(check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES)) {
-            if (what == PyTrace_CALL && info->ignore_stack_depth > 0) {
-                info->ignore_stack_depth += 1;
-                return 0;
-            } else if (what == PyTrace_RETURN && info->ignore_stack_depth > 0) {
-                info->ignore_stack_depth -= 1;
-                return 0;
-            }
             if (info->ignore_stack_depth == 0) {
                 PyObject* files = NULL;
                 int record = 0;
@@ -419,6 +436,7 @@ snaptrace_load(PyObject* self, PyObject* args)
     PyObject* ph_E = PyUnicode_FromString("E");
     PyObject* ph_I = PyUnicode_FromString("I");
     PyObject* ph_X = PyUnicode_FromString("X");
+    PyObject* ph_C = PyUnicode_FromString("C");
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
     while (curr != buffer_tail && curr->next) {
@@ -488,6 +506,13 @@ snaptrace_load(PyObject* self, PyObject* args)
             Py_DECREF(node->data.instant.args);
             Py_DECREF(node->data.instant.scope);
             break;
+        case COUNTER_NODE:
+            PyDict_SetItemString(dict, "ph", ph_C);
+            PyDict_SetItemString(dict, "name", node->data.counter.name);
+            PyDict_SetItemString(dict, "args", node->data.counter.args);
+            Py_DECREF(node->data.counter.name);
+            Py_DECREF(node->data.counter.args);
+            break;
         default:
             printf("Unknown Node Type!\n");
             exit(1);
@@ -509,6 +534,7 @@ snaptrace_load(PyObject* self, PyObject* args)
     Py_DECREF(ph_E);
     Py_DECREF(ph_I);
     Py_DECREF(ph_X);
+    Py_DECREF(ph_C);
     buffer_tail = buffer_head;
     return lst;
 }
@@ -529,6 +555,10 @@ snaptrace_clear(PyObject* self, PyObject* args)
             Py_DECREF(node->data.instant.name);
             Py_DECREF(node->data.instant.args);
             Py_DECREF(node->data.instant.scope);
+            break;
+        case COUNTER_NODE:
+            Py_DECREF(node->data.counter.name);
+            Py_DECREF(node->data.counter.args);
             break;
         default:
             printf("Unknown Node Type!\n");
@@ -648,6 +678,28 @@ snaptrace_addinstant(PyObject* self, PyObject* args)
     Py_INCREF(name);
     Py_INCREF(args);
     Py_INCREF(scope);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_addcounter(PyObject* self, PyObject* args)
+{
+    PyObject* name = NULL;
+    PyObject* counter_args = NULL;
+    struct EventNode* node = NULL;
+    if (!PyArg_ParseTuple(args, "OO", &name, &counter_args)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    node = get_next_node();
+    node->ntype = COUNTER_NODE;
+    node->ts = get_ts();
+    node->data.counter.name = name;
+    node->data.counter.args = counter_args;
+    Py_INCREF(name);
+    Py_INCREF(args);
 
     Py_RETURN_NONE;
 }

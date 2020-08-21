@@ -8,6 +8,7 @@ import builtins
 from io import StringIO
 from .util import ProgressBar
 from .report_builder import ReportBuilder
+from .counter import Counter
 import viztracer.snaptrace as snaptrace
 
 
@@ -33,6 +34,7 @@ class _VizTracer:
         self.log_print = log_print
         self.system_print = builtins.print
         self.total_entries = 0
+        self.counters = {}
 
     @property
     def tracer(self):
@@ -197,6 +199,29 @@ class _VizTracer:
                 print("Scope has to be one of g, p, t")
                 return
             snaptrace.addinstant(name, args, scope)
+
+    def add_counter(self, name, args):
+        if self.tracer == "c":
+            snaptrace.addcounter(name, args)
+
+    def register_counter(self, name, value={}):
+        if type(name) is not str:
+            raise Exception("name of counter has to be string")
+
+        if name in self.counters:
+            raise Exception("name {} already exists in counters".format(name))
+
+        self.counters[name] = Counter(self.add_counter, name, value)
+
+        return self.counters[name]
+
+    def get_counter(self, name):
+        return self.counters.get(name, None)
+
+    def update_counter(self, name, *args):
+        if name not in self.counters:
+            raise Exception("No counter named {}".format(name))
+        self.counters[name].update(*args)
 
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
