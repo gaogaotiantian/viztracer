@@ -310,6 +310,61 @@ counter.update({"var_name": 1})
 counter.update("var_name", 1)
 ```
 
+
+### Object Logging
+
+```VizTracer``` can log objects while your code is running, which is helpful to track complicated objects through time. 
+
+The way ```VizTracer``` achieve object logging is through a class ```LogObject```. You can derive a class from ```LogObject``` and set it up correctly to log your object automatically. 
+
+```python
+from viztracer import LogObject
+class MyClass(LogObject):
+    # Your Class
+```
+
+The next thing you need to do is to instantiate your object with ```VizTracer``` and a ```name``` which will show in the result
+
+```python
+tracer = VizTracer()
+obj = MyClass(tracer, "name I like")
+```
+
+If you wrote your own ```__init__``` function of the class, remember to call the base ```__init__``` with arguments required
+
+```python
+class MyClass(LogObject):
+    def __init__(self, tracer, name, *args, **kwargs):
+        super().__init__(tracer, name)
+        # Do your init stuff after
+```
+
+Now you have a class/object attached to ```VizTracer```. The next thing is to set which attribute you want to log by ```set_viztracer_attributes```
+
+```python
+obj.set_viztracer_attributes(["attr1", "attr2"])
+```
+
+```set_viztracer_attributes``` takes a list of string and each string is an attribute that you want to log. ```VizTracer``` will use ```__getattribute__``` function to access the attributes. 
+
+The last thing you need to do, is using ```LogObject.snapshot``` decorator to tell your class, before/after which method, the class should be logged(snapshot). The ```LogObject.snapshot``` decorator takes an optional keyword argument ```when```, which could be ```after```(default), ```before``` or ```both```, to indicate when ```VizTracer``` should take a snapshot of the object.
+
+```python
+class MyClass(LogObject):
+    @LogObject.snapshot
+    def snapshot_this_function(self, *arg, **kwargs):
+        # this is the function to trigger the log
+
+    @LogObject.snapshot(when="before")
+    def snapshot_before_this_function(self, *arg, **kwargs):
+        # this is the function to trigger the log
+
+    @LogObject.snapshot(when="both")
+    def snapshot_before_and_after_this_function(self, *arg, **kwargs):
+        # this is the function to trigger the log
+
+```
+
 ### Multi Thread Support
 
 ```VizTracer``` supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.

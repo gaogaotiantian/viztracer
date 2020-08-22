@@ -5,6 +5,7 @@ from .viztracer import VizTracer
 from .flamegraph import FlameGraph
 from .decorator import ignore_function
 from .counter import Counter
+from .logobject import LogObject
 
 __version__ = "0.3.0"
 

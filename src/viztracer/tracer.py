@@ -223,6 +223,10 @@ class _VizTracer:
             raise Exception("No counter named {}".format(name))
         self.counters[name].update(*args)
 
+    def add_object(self, ph, obj_id, name, args=None):
+        if self.tracer == "c":
+            snaptrace.addobject(ph, obj_id, name, args)
+
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing

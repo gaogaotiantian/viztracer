@@ -23,6 +23,7 @@ static PyObject* snaptrace_cleanup(PyObject* self, PyObject* args);
 static PyObject* snaptrace_config(PyObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addinstant(PyObject* self, PyObject* args);
 static PyObject* snaptrace_addcounter(PyObject* self, PyObject* args);
+static PyObject* snaptrace_addobject(PyObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(void);
 
@@ -45,7 +46,8 @@ typedef enum _NodeType {
     EVENT_NODE = 0,
     FEE_NODE = 1,
     INSTANT_NODE = 2,
-    COUNTER_NODE = 3
+    COUNTER_NODE = 3,
+    OBJECT_NODE = 4
 } NodeType;
 
 struct FEEData {
@@ -69,6 +71,13 @@ struct CounterData {
     PyObject* args;
 };
 
+struct ObjectData {
+    PyObject* name;
+    PyObject* args;
+    PyObject* id;
+    PyObject* ph;
+};
+
 struct EventNode {
     NodeType ntype;
     struct EventNode* next;
@@ -78,6 +87,7 @@ struct EventNode {
         struct FEEData fee;
         struct InstantData instant;
         struct CounterData counter;
+        struct ObjectData object;
     } data;
 } *buffer_head, *buffer_tail;
 
@@ -161,6 +171,7 @@ static PyMethodDef SnaptraceMethods[] = {
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"addinstant", snaptrace_addinstant, METH_VARARGS, "add instant event"},
     {"addcounter", snaptrace_addcounter, METH_VARARGS, "add counter event"},
+    {"addobject", snaptrace_addobject, METH_VARARGS, "add object event"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -364,7 +375,6 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
 static PyObject*
 snaptrace_start(PyObject* self, PyObject* args)
 {
-    snaptrace_createthreadinfo();
     // Python: threading.setprofile(tracefunc)
     {
         PyObject* threading = PyImport_ImportModule("threading");
@@ -513,6 +523,18 @@ snaptrace_load(PyObject* self, PyObject* args)
             Py_DECREF(node->data.counter.name);
             Py_DECREF(node->data.counter.args);
             break;
+        case OBJECT_NODE:
+            PyDict_SetItemString(dict, "ph", node->data.object.ph);
+            PyDict_SetItemString(dict, "id", node->data.object.id);
+            PyDict_SetItemString(dict, "name", node->data.object.name);
+            if (!(node->data.object.args == Py_None)) {
+                PyDict_SetItemString(dict, "args", node->data.object.args);
+            }
+            Py_DECREF(node->data.object.ph);
+            Py_DECREF(node->data.object.id);
+            Py_DECREF(node->data.object.name);
+            Py_DECREF(node->data.object.args);
+            break;
         default:
             printf("Unknown Node Type!\n");
             exit(1);
@@ -559,6 +581,12 @@ snaptrace_clear(PyObject* self, PyObject* args)
         case COUNTER_NODE:
             Py_DECREF(node->data.counter.name);
             Py_DECREF(node->data.counter.args);
+            break;
+        case OBJECT_NODE:
+            Py_DECREF(node->data.object.ph);
+            Py_DECREF(node->data.object.id);
+            Py_DECREF(node->data.object.name);
+            Py_DECREF(node->data.object.args);
             break;
         default:
             printf("Unknown Node Type!\n");
@@ -704,6 +732,34 @@ snaptrace_addcounter(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
+static PyObject*
+snaptrace_addobject(PyObject* self, PyObject* args)
+{
+    PyObject* ph = NULL;
+    PyObject* id = NULL;
+    PyObject* name = NULL;
+    PyObject* object_args = NULL;
+    struct EventNode* node = NULL;
+    if (!PyArg_ParseTuple(args, "OOOO", &ph, &id, &name, &object_args)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    node = get_next_node();
+    node->ntype = OBJECT_NODE;
+    node->ts = get_ts();
+    node->data.object.ph = ph;
+    node->data.object.id = id;
+    node->data.object.name = name;
+    node->data.object.args = object_args;
+    Py_INCREF(ph);
+    Py_INCREF(id);
+    Py_INCREF(name);
+    Py_INCREF(args);
+
+    Py_RETURN_NONE;
+}
+
 static struct ThreadInfo* snaptrace_createthreadinfo(void) {
     struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
@@ -735,6 +791,7 @@ PyInit_snaptrace(void)
         perror("Failed to create Tss_Key");
         exit(-1);
     }
+    snaptrace_createthreadinfo();
 
     thread_module = PyImport_ImportModule("threading");
     return PyModule_Create(&snaptracemodule);
