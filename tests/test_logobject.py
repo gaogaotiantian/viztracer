@@ -8,7 +8,7 @@ class Hello(LogObject):
         super().__init__(tracer, "name")
         self.a = 1
         self.b = "lol"
-    
+
     @LogObject.snapshot
     def change_val(self):
         self.a += 1
@@ -18,6 +18,7 @@ class Hello(LogObject):
     def change_val2(self):
         self.a += 2
         self.b += "b"
+
 
 class TestLogObject(unittest.TestCase):
     def test_basic(self):
