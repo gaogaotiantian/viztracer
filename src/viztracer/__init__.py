@@ -7,7 +7,7 @@ from .decorator import ignore_function
 from .vizcounter import VizCounter
 from .vizobject import VizObject
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 __all__ = [
     "__version__",
