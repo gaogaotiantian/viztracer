@@ -193,18 +193,18 @@ class _VizTracer:
                 self.buffer.append(("exit", name, time.perf_counter()))
 
     def add_instant(self, name, args, scope="g"):
-        if self.tracer == "c":
+        if self.tracer == "c" and self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
             snaptrace.addinstant(name, args, scope)
 
     def add_counter(self, name, args):
-        if self.tracer == "c":
+        if self.tracer == "c" and self.enable:
             snaptrace.addcounter(name, args)
 
     def add_object(self, ph, obj_id, name, args=None):
-        if self.tracer == "c":
+        if self.tracer == "c" and self.enable:
             snaptrace.addobject(ph, obj_id, name, args)
 
     def parse(self):
