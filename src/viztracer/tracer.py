@@ -8,7 +8,6 @@ import builtins
 from io import StringIO
 from .util import ProgressBar
 from .report_builder import ReportBuilder
-from .counter import Counter
 import viztracer.snaptrace as snaptrace
 
 
@@ -203,25 +202,6 @@ class _VizTracer:
     def add_counter(self, name, args):
         if self.tracer == "c":
             snaptrace.addcounter(name, args)
-
-    def register_counter(self, name, value={}):
-        if type(name) is not str:
-            raise Exception("name of counter has to be string")
-
-        if name in self.counters:
-            raise Exception("name {} already exists in counters".format(name))
-
-        self.counters[name] = Counter(self.add_counter, name, value)
-
-        return self.counters[name]
-
-    def get_counter(self, name):
-        return self.counters.get(name, None)
-
-    def update_counter(self, name, *args):
-        if name not in self.counters:
-            raise Exception("No counter named {}".format(name))
-        self.counters[name].update(*args)
 
     def add_object(self, ph, obj_id, name, args=None):
         if self.tracer == "c":

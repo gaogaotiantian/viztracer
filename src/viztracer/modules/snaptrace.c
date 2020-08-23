@@ -204,10 +204,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             return 0;
         }
 
-        if (!info->stack_top && is_return) {
-            return 0;
-        }
-
         if (info->ignore_stack_depth > 0) {
             if (is_call) {
                 info->ignore_stack_depth += 1;
@@ -216,6 +212,10 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 info->ignore_stack_depth -= 1;
                 return 0;
             }
+        }
+
+        if (!info->stack_top && is_return) {
+            return 0;
         }
 
         // Exclude Self
@@ -569,9 +569,15 @@ snaptrace_clear(PyObject* self, PyObject* args)
         struct EventNode* node = curr->next;
         switch (node->ntype) {
         case FEE_NODE:
-            Py_DECREF(node->data.fee.file_name);
-            Py_DECREF(node->data.fee.class_name);
-            Py_DECREF(node->data.fee.func_name);
+            if (node->data.fee.type == PyTrace_C_CALL || 
+                    node->data.fee.type == PyTrace_C_RETURN || 
+                    node->data.fee.type == PyTrace_C_EXCEPTION) {
+                Py_DECREF(node->data.fee.func_name);
+            } else {
+                Py_DECREF(node->data.fee.file_name);
+                Py_DECREF(node->data.fee.class_name);
+                Py_DECREF(node->data.fee.func_name);
+            }
             break;
         case INSTANT_NODE:
             Py_DECREF(node->data.instant.name);
