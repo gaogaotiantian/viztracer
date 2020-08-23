@@ -258,7 +258,12 @@ tracer.cleanup()
 
 ### Add Custom Event
 
-```VizTracer``` supports custom event added while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
+```VizTracer``` supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
+
+
+#### Instant Event
+
+Instant event is used to bookmark time point with arbitrary data. 
 
 When your code is running with ```VizTracer``` on, you can use 
 
@@ -271,6 +276,121 @@ to add an event that will be shown in the report. In trace viewer, you would be 
 ```name``` should be a ```string``` for this event. 
 ```args``` should be a json serializable object(dict, list, string, number).
 ```scope``` is an optional argument, default is ```"g"``` for global. You can use ```p``` for process or ```t``` for thread. This affects how long the event shows in the final report.
+
+#### Counter Event
+
+Counter event is used to track a numeric variable through time. You can track CPU usage, memory usage, or any numeric variable you are interested in using Counter event.
+
+To use Counter event, you need to instantiate a ```VizCounter``` object with a valid ```VizTracer``` and a name 
+
+
+```python
+from viztraer import VizTracer, VizCounter
+tracer = VizTracer()
+tracer.start()
+counter = VizCounter(tracer, "counter name")
+```
+
+Then you can assign any attributes with numeric value and the counter will log it
+
+```python
+counter.a = 2
+counter.b = 1.2
+```
+
+```VizCounter``` will only log attributes when it does NOT start with ```_```. Everytime you write to an attribute of ```VizCounter```, it will generate a log that contains ALL attributes in the object.
+
+You can turn the automatic trigger off by setting ```trigger_on_change``` to ```False```
+
+```python
+counter = VizCounter(tracer, "counter name", trigger_on_change=False)
+# OR
+counter = VizCounter(tracer, "counter name")
+counter.config("trigger_on_change", False)
+```
+
+Then writing to the attributes will NOT trigger the log, you need to manually trigger it using ```log``` function
+```python
+counter = VizCounter(tracer, "counter name")
+counter.config("trigger_on_change", False)
+counter.a = 1
+counter.b = 1
+# Until here, nothing happens
+counter.log() # trigger the log
+```
+
+You can also specify ```include_attributes``` and ```exclude_attributes``` to limit the attributes you want to log(or trigger on). They both take a ```list``` of ```string```
+
+```python
+counter = VizCounter(tracer, "counter name", include_attributes=["a", "b"])
+# OR
+counter = VizCounter(tracer, "counter name")
+counter.config("include_attributes", ["a", "b"])
+
+counter.a = 1 # Will trigger log
+counter.c = 2 # Will NOT trigger log
+counter.b = 3 # Will trigger log and log {"a": 1, "b": 2}, c is not logged
+```
+
+```VizCounter``` will check ```include_attributes``` first, if it's not an empty list(default), then it will behave like whitelist, ```exclude_attributes``` is ignore. If ```include_attributes``` is an empty list, it will use ```exclude_attributes``` as blacklist, which could also be empty(default)
+
+
+#### Object Event
+
+Object event is almost exactly the same as Counter Event, with the exeption that Object Event logs an jsonifiable Object(```dict```, ```list```, ```string```, ```int```, ```float```)
+
+Instead of ```VizCounter```, you should use ```VizObject```. The other usage is the same. 
+
+```python
+from viztracer import VizTracer, VizObject
+tracer = VizTracer()
+tracer.start()
+obj = VizObject(tracer, "my object")
+obj.a = ["a", "b", "c"]
+```
+
+However, there are a couple things you need to be careful of.
+
+First, when you are on ```trigger_on_change```, the log is triggered by ```__setattr__```, which means it will only be triggered by ```obj.a = <something>```, but not ```obj.a["a"] = 1```. 
+
+Second, the object you logged could be complicated with many variables, so it's a good idea to turn off ```trigger_on_change``` and log it manually.
+
+#### Inherit ```VizCounter``` and ```VizObject```
+
+In practice, you can inherit from ```VizCounter``` or ```VizObject``` class and build your own class so it will be much easier to track the data in your class. Remember you need to do ```__init__``` function of the base class! If your class has a lot of attributes and they are frequently being written to, it is wise to turn off ```trigger_on_change```
+
+```python
+class MyClass(VizObject):
+    def __init__(self, tracer):
+        super().__init__(tracer, "my name", trigger_on_change=False)
+```
+
+You can manually do log by
+
+```python
+obj = MyClass(tracer)
+obj.log()
+```
+
+or you can decorate your class method with ```triggerlog``` to trigger log on function call
+
+```python
+class MyClass(VizObject):
+    @VizObject.triggerlog
+    def log_on_this_function():
+        #function
+```
+
+```triggerlog``` takes an optional keyword argument ```when```, which could be ```"before"```, ```"after"``` or ```"both"``` to specify when the log should be triggered. ```"after"``` is the default value
+
+```python
+class MyClass(VizObject):
+    @VizObject.triggerlog(when="before")
+    def log_before_this_function():
+        # function
+```
+
+It's possible your class needs to use the popular name ```config``` and ```log```. They are just aliases of ```_viztracer_config``` and ```_viztracer_log```. You can use them instead.
 
 ### Log Print
 
@@ -286,83 +406,6 @@ Or do it when you initialize your ```VizTracer``` object
 
 ```python
 tracer = VizTracer(log_print=True)
-```
-
-
-### Counter Event
-
-```VizTracer``` provides Counter Event to track variables through time. It is useful to track CPU usage, memory usage, or any other numeric variable that means something to your program.
-
-To use Counter Event, you should register a counter to ```VizTracer``` first
-
-```python
-tracer = VizTracer()
-counter = tracer.register_counter("name of the counter")
-```
-
-You can store the counter to a variable, or you can directly update values of the counter with ```VizTracer```. The ```update()``` function(or ```update_counter()```) takes a ```dict``` or a ```(key, value)``` pair as an argument
-
-```python
-# These statements are equivalent
-tracer.update_counter("name of the counter", {"var_name": 1})
-tracer.update_counter("name of the counter", "var_name", 1)
-counter.update({"var_name": 1})
-counter.update("var_name", 1)
-```
-
-
-### Object Logging
-
-```VizTracer``` can log objects while your code is running, which is helpful to track complicated objects through time. 
-
-The way ```VizTracer``` achieve object logging is through a class ```LogObject```. You can derive a class from ```LogObject``` and set it up correctly to log your object automatically. 
-
-```python
-from viztracer import LogObject
-class MyClass(LogObject):
-    # Your Class
-```
-
-The next thing you need to do is to instantiate your object with ```VizTracer``` and a ```name``` which will show in the result
-
-```python
-tracer = VizTracer()
-obj = MyClass(tracer, "name I like")
-```
-
-If you wrote your own ```__init__``` function of the class, remember to call the base ```__init__``` with arguments required
-
-```python
-class MyClass(LogObject):
-    def __init__(self, tracer, name, *args, **kwargs):
-        super().__init__(tracer, name)
-        # Do your init stuff after
-```
-
-Now you have a class/object attached to ```VizTracer```. The next thing is to set which attribute you want to log by ```set_viztracer_attributes```
-
-```python
-obj.set_viztracer_attributes(["attr1", "attr2"])
-```
-
-```set_viztracer_attributes``` takes a list of string and each string is an attribute that you want to log. ```VizTracer``` will use ```__getattribute__``` function to access the attributes. 
-
-The last thing you need to do, is using ```LogObject.snapshot``` decorator to tell your class, before/after which method, the class should be logged(snapshot). The ```LogObject.snapshot``` decorator takes an optional keyword argument ```when```, which could be ```after```(default), ```before``` or ```both```, to indicate when ```VizTracer``` should take a snapshot of the object.
-
-```python
-class MyClass(LogObject):
-    @LogObject.snapshot
-    def snapshot_this_function(self, *arg, **kwargs):
-        # this is the function to trigger the log
-
-    @LogObject.snapshot(when="before")
-    def snapshot_before_this_function(self, *arg, **kwargs):
-        # this is the function to trigger the log
-
-    @LogObject.snapshot(when="both")
-    def snapshot_before_and_after_this_function(self, *arg, **kwargs):
-        # this is the function to trigger the log
-
 ```
 
 ### Multi Thread Support
