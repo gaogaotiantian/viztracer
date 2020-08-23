@@ -29,4 +29,5 @@ clean:
 	rm -rf build
 	rm -rf dist
 	rm -rf viztracer.egg-info 
+	rm -rf src/viztracer.egg-info
 	pip uninstall -y viztracer
