@@ -135,6 +135,10 @@ qsort     (10586, 10676): 0.003457500 vs 0.042572898(12.31)[py] vs 0.005594100(1
 slow_fib  (1508, 1508): 0.033606299 vs 0.038840998(1.16)[py] vs 0.033270399(0.99)[c] vs 0.032577599(0.97)[cProfile]
 ```
 
+## Documentation 
+
+For full documentation, please see [https://viztracer.readthedocs.io/en/latest](https://viztracer.readthedocs.io/en/latest)
+
 ## Bugs/Requests
 
 Please send bug reports and feature requests through [github issue tracker](https://github.com/gaogaotiantian/viztracer/issues). VizTracer is currently under development now and it's open to any constructive suggestions.
