@@ -2,9 +2,7 @@
 
 [![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)
 
-VizTracer is a deterministic debugging/profiling tool that can trace and visualize your python code to help you intuitively understand your code better and figure out the time consuming part of your code.
-
-VizTracer can display every function executed and the corresponding entry/exit time from the beginning of the program to the end, which is helpful for programmers to catch sporatic performance issues. VizTracer is also capable of generating traditional flamegraph which is a good summary of the execution of the program
+VizTracer is a low-overhead deterministic debugging/profiling tool that can trace and visualize your python code to help you intuitively understand your code better and figure out the time consuming part of your code.
 
 You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs(sort algorithms, mcts, modulo algorithms, multithread tracing, etc.)
 
@@ -15,6 +13,15 @@ You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html)
 VizTracer also supports json output that complies with Chrome trace event format, which can be loaded using [perfetto](https://ui.perfetto.dev/)
 
 VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://github.com/spiermar/d3-flame-graph)
+
+## Highlights
+
+* Lower overhead than cProfile, more accurate on actual time consumed
+* Detailed function entry/exit information on timeline, not just summary of time used
+* Super easy to use, no source code change for basic usage, no package dependency
+* Optional function filter to ignore functions you are not interested 
+* Customize events to log and track data through time
+* Stand alone HTML report with powerful front-end, or chrome-compatible json 
 
 ## Install
 
@@ -122,17 +129,36 @@ VizTracer needs to dump the internal data to json format. It is recommended for 
 
 ## Performance
 
-Overhead is a big consideration when people choose profilers. VizTracer now has a similar overhead as native cProfiler. It works slightly worse in the worst case(Pure FEE) and better in easier case because even though it collects some extra information than cProfiler, the structure is lighter. 
+Overhead is a big consideration when people choose profilers. VizTracer has a better overhead performance than native cProfiler. In the worst case(Pure FEE) VizTracer is about the same as cProfile and in more practical cases VizTracer performs much better. 
 
-Admittedly, VizTracer is only focusing on FEE now, so cProfiler also gets other information that VizTracer does not acquire.
+This is because VizTracer collects less information than cProfile, and optimized the hook function with a lot of efforts.
 
 An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github VM
 
 ```
-fib       (10336, 10336): 0.000852800 vs 0.013735200(16.11)[py] vs 0.001585900(1.86)[c] vs 0.001628400(1.91)[cProfile]
-hanoi     (8192, 8192): 0.000621400 vs 0.012924899(20.80)[py] vs 0.001801800(2.90)[c] vs 0.001292900(2.08)[cProfile]
-qsort     (10586, 10676): 0.003457500 vs 0.042572898(12.31)[py] vs 0.005594100(1.62)[c] vs 0.007573200(2.19)[cProfile]
-slow_fib  (1508, 1508): 0.033606299 vs 0.038840998(1.16)[py] vs 0.033270399(0.99)[c] vs 0.032577599(0.97)[cProfile]
+fib:
+0.000678067(1.00)[origin] 
+0.019880272(29.32)[py] 0.011103901(16.38)[parse] 0.021165599(31.21)[json] 
+0.001344933(1.98)[c] 0.008181911(12.07)[parse] 0.015789866(23.29)[json] 
+0.001472846(2.17)[cProfile]  
+
+hanoi     (6148, 4100):
+0.000550255(1.00)[origin] 
+0.016343521(29.70)[py] 0.007299123(13.26)[parse] 0.016779364(30.49)[json] 
+0.001062505(1.93)[c] 0.006416136(11.66)[parse] 0.011463236(20.83)[json] 
+0.001144914(2.08)[cProfile] 
+
+qsort     (8289, 5377):
+0.002817679(1.00)[origin] 
+0.052747431(18.72)[py] 0.011339725(4.02)[parse] 0.023644345(8.39)[json] 
+0.004767673(1.69)[c] 0.008735166(3.10)[parse] 0.017173703(6.09)[json] 
+0.007248019(2.57)[cProfile] 
+
+slow_fib  (1135, 758):
+0.028759652(1.00)[origin] 
+0.033994071(1.18)[py] 0.001630461(0.06)[parse] 0.003386635(0.12)[json] 
+0.029481623(1.03)[c] 0.001152415(0.04)[parse] 0.002191417(0.08)[json] 
+0.028289305(0.98)[cProfile] 
 ```
 
 ## Documentation 
