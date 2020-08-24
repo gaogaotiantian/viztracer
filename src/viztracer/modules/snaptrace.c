@@ -52,7 +52,7 @@ typedef enum _NodeType {
 
 struct FEEData {
     PyObject* file_name;
-    PyObject* class_name;
+    int first_lineno;
     PyObject* func_name;
     int type;
     long tid;
@@ -298,29 +298,17 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             if (what == PyTrace_CALL) {
                 node->data.fee.file_name = frame->f_code->co_filename;
                 Py_INCREF(node->data.fee.file_name);
-                node->data.fee.class_name = Py_None;
-                Py_INCREF(Py_None);
-                for (int i = 0; i < frame->f_code->co_nlocals; i++) {
-                    PyObject* name = PyTuple_GET_ITEM(frame->f_code->co_varnames, i);
-                    if (strcmp("self", PyUnicode_AsUTF8(name)) == 0) {
-                        // When self object is just created in __new__, it's possible that the value is NULL
-                        if (frame->f_localsplus[i]) {
-                            node->data.fee.class_name = PyUnicode_FromString(frame->f_localsplus[i]->ob_type->tp_name);
-                            Py_DECREF(Py_None);
-                        }
-                        break;
-                    }
-                }
+                node->data.fee.first_lineno = frame->f_code->co_firstlineno;
                 node->data.fee.func_name = frame->f_code->co_name;
                 Py_INCREF(node->data.fee.func_name);
             } else if (what == PyTrace_C_CALL) {
                 PyCFunctionObject* func = (PyCFunctionObject*) arg;
                 node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
                 if (func->m_module) {
-                    node->data.fee.class_name = func->m_module;
-                    Py_INCREF(node->data.fee.class_name);
+                    node->data.fee.file_name = func->m_module;
+                    Py_INCREF(node->data.fee.file_name);
                 } else {
-                    node->data.fee.class_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
+                    node->data.fee.file_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
                 }
             } 
         } else if (is_return) {
@@ -468,21 +456,18 @@ snaptrace_load(PyObject* self, PyObject* args)
         switch (node->ntype) {
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-                if (node->data.fee.class_name == Py_None) {
-                    name = PyUnicode_FromFormat("%s.%s", 
-                            PyUnicode_AsUTF8(node->data.fee.file_name), 
-                            PyUnicode_AsUTF8(node->data.fee.func_name));
-                } else {
-                    name = PyUnicode_FromFormat("%s.%s.%s", 
-                            PyUnicode_AsUTF8(node->data.fee.file_name), 
-                            PyUnicode_AsUTF8(node->data.fee.class_name), 
-                            PyUnicode_AsUTF8(node->data.fee.func_name));
-                }
+                name = PyUnicode_FromFormat("%s(%d).%s", 
+                       PyUnicode_AsUTF8(node->data.fee.file_name),
+                       node->data.fee.first_lineno,
+                       PyUnicode_AsUTF8(node->data.fee.func_name));
                 Py_DECREF(node->data.fee.file_name);
-                Py_DECREF(node->data.fee.class_name);
                 Py_DECREF(node->data.fee.func_name);
             } else {
-                name = node->data.fee.func_name;
+                name = PyUnicode_FromFormat("%s.%s", 
+                       PyUnicode_AsUTF8(node->data.fee.file_name),
+                       PyUnicode_AsUTF8(node->data.fee.func_name));
+                Py_DECREF(node->data.fee.file_name);
+                Py_DECREF(node->data.fee.func_name);
             }
 
             PyDict_SetItemString(dict, "name", name);
@@ -575,7 +560,6 @@ snaptrace_clear(PyObject* self, PyObject* args)
                 Py_DECREF(node->data.fee.func_name);
             } else {
                 Py_DECREF(node->data.fee.file_name);
-                Py_DECREF(node->data.fee.class_name);
                 Py_DECREF(node->data.fee.func_name);
             }
             break;
