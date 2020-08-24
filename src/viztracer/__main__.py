@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument("--tracer", nargs="?", choices=["c", "python"], default="c",
             help="specify the tracer you use. Can only be c or python")
     parser.add_argument("--output_file", "-o", nargs="?", default=None,
-            help="output file path. End with .json or .html")
+            help="output file path. End with .json or .html or .gz")
     parser.add_argument("--output_dir", nargs="?", default=None,
             help="output directory. Should only be used when --pid_suffix is used")
     parser.add_argument("--quiet", action="store_true", default=False,

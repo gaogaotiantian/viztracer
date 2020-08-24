@@ -31,12 +31,13 @@ Just feed it as it is to VizTracer
     
     python3 -m viztracer my_script.py arg1 arg2
 
-You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.html``. Two types of files are supported, html and json.
+You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.html``. Three types of files are supported, html, json and gz(gzip of json file).
 
 .. code-block::
 
     python3 -m viztracer -o other_name.html my_script.py
     python3 -m viztracer -o other_name.json my_script.py
+    python3 -m viztracer -o other_name.json.gz my_script.py
 
 By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
 

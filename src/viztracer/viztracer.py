@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
+import gzip
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 
@@ -85,6 +86,9 @@ class VizTracer(_VizTracer):
         elif file_type == "json":
             with open(output_file, "w") as f:
                 f.write(self.generate_json())
+        elif file_type == "gz":
+            with gzip.open(output_file, "wb") as f:
+                f.write(self.generate_json().encode("utf-8"))
         else:
             raise Exception("Only html and json are supported")
 
