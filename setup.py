@@ -39,7 +39,7 @@ setuptools.setup(
             sources = [
                 "src/viztracer/modules/snaptrace.c",
             ],
-            extra_compile_args=["-lpthread"]
+            extra_link_args=["-lpthread"]
         )
     ],
     classifiers=[
