@@ -40,6 +40,8 @@ VizTracer
         :value: None
 
         Specify the files or folders that VizTracer will trace. If it's not empty, VizTracer will function in whitelist mode, any files/folders not included will be ignored.
+        
+        Because converting code filename in tracer is too expensive, we will only compare the input and its absolute path against code filename, which could be a relative path. That means, if you run your program using relative path, but gives the ``include_files`` an absolute path, it will not be able to detect.
 
         Can't be set with ``exclude_files``
 
@@ -62,6 +64,8 @@ VizTracer
         :value: None
 
         Specify the files or folders that VizTracer will not trace. If it's not empty, VizTracer will function in blacklist mode, any files/folders not included will be ignored.
+
+        Because converting code filename in tracer is too expensive, we will only compare the input and its absolute path against code filename, which could be a relative path. That means, if you run your program using relative path, but gives the ``exclude_files`` an absolute path, it will not be able to detect.
 
         Can't be set with ``include_files``
 
