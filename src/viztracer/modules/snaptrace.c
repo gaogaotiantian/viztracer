@@ -761,7 +761,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(void) {
     struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
 #if __APPLE__
-    info->tid = pthread_getthreadid_np();
+    info->tid = pthread_threadid_np(NULL, NULL);
 #else
     info->tid = syscall(SYS_gettid);
 #endif
