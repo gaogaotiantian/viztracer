@@ -68,7 +68,7 @@ class _VizTracer:
             self.__include_files = None
         elif type(include_files) == list:
             if include_files:
-                self.__include_files = [os.path.abspath(f) for f in include_files]
+                self.__include_files = include_files[:] + [os.path.abspath(f) for f in include_files if not f.startswith("/")]
             else:
                 self.__include_files = None
         else:
@@ -84,7 +84,7 @@ class _VizTracer:
             self.__exclude_files = None
         elif type(exclude_files) == list:
             if exclude_files:
-                self.__exclude_files = [os.path.abspath(f) for f in exclude_files]
+                self.__exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
             else:
                 self.__exclude_files = None
         else:

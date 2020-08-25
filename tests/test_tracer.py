@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import os
 import unittest
 from viztracer.tracer import _VizTracer
 
@@ -82,13 +83,18 @@ class TestTracerFilter(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
+        tracer.include_files = [os.path.abspath("./")]
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 177)
+
         tracer.include_files = ["./"]
         tracer.start()
         fib(10)
         tracer.stop()
         entries = tracer.parse()
-        with open("result.html", "w") as f:
-            f.write(tracer.generate_report())
         self.assertEqual(entries, 177)
 
     def test_exclude_files(self):
@@ -98,6 +104,13 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 177)
+
+        tracer.exclude_files = [os.path.abspath("./")]
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 0)
 
         tracer.exclude_files = ["./"]
         tracer.start()

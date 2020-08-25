@@ -236,6 +236,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         } else if (is_python && is_call) {
             PyObject* file_name = frame->f_code->co_filename;
+            //Print_Py(file_name);
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
                 info->ignore_stack_depth += 1;
                 return 0;
@@ -272,16 +273,12 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 }
                 Py_ssize_t length = PyList_GET_SIZE(files);
                 PyObject* name = frame->f_code->co_filename;
-                char* path = realpath(PyUnicode_AsUTF8(name), NULL);
-                if (path) {
-                    for (int i = 0; i < length; i++) {
-                        PyObject* f = PyList_GET_ITEM(files, i);
-                        if (startswith(path, PyUnicode_AsUTF8(f))) {
-                            record = 1 - record;
-                            break;
-                        }
+                for (int i = 0; i < length; i++) {
+                    PyObject* f = PyList_GET_ITEM(files, i);
+                    if (startswith(PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(f))) {
+                        record = 1 - record;
+                        break;
                     }
-                    free(path);
                 }
                 if (record == 0) {
                     info->ignore_stack_depth += 1;

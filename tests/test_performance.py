@@ -128,3 +128,45 @@ class TestPerformance(unittest.TestCase):
                 TowerOfHanoi(n-1, auxiliary, destination, source)
             TowerOfHanoi(12, "A", "B", "C")
         self.do_one_function(hanoi)
+
+class TestFilterPerformance(unittest.TestCase):
+    def do_one_function(self, func):
+        tracer = VizTracer("c", verbose=0)
+        tracer.start()
+        with Timer() as t:
+            func()
+            baseline = t.get_time()
+        tracer.stop()
+        tracer.cleanup()
+        
+        tracer.include_files = ["/"]
+        tracer.start()
+        with Timer() as t:
+            func()
+            include_files = t.get_time()
+        tracer.stop()
+        tracer.cleanup()
+
+        tracer.include_files = []
+        tracer.max_stack_depth = 200
+        tracer.start()
+        with Timer() as t:
+            func()
+            max_stack_depth = t.get_time()
+        tracer.stop()
+        tracer.cleanup()
+
+        print("Filter performance:")
+        print("Baseline:        {:.9f}(1)".format(baseline))
+        print("Include:         {:.9f}({:.2f})".format(include_files, include_files / baseline))
+        print("Max stack depth: {:.9f}({:.2f})".format(max_stack_depth, max_stack_depth / baseline))
+        
+    def test_hanoi(self):
+        def hanoi():
+            def TowerOfHanoi(n, source, destination, auxiliary):
+                if n == 1:
+                    return
+                TowerOfHanoi(n-1, source, auxiliary, destination)
+                TowerOfHanoi(n-1, auxiliary, destination, source)
+            TowerOfHanoi(12, "A", "B", "C")
+        self.do_one_function(hanoi)
