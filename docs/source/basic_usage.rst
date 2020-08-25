@@ -15,6 +15,9 @@ You can simply use VizTracer as
 
 .. code-block::
     
+    # These two commands are equivalent. In this docs, they might both be used, but you can choose either one that you prefer.
+    viztracer my_script.py
+    # OR
     python3 -m viztracer my_script.py
 
 which will generate a ``result.html`` file in the directory you run this command. Open it in browser and there's your result.
@@ -29,21 +32,21 @@ Just feed it as it is to VizTracer
 
 .. code-block::
     
-    python3 -m viztracer my_script.py arg1 arg2
+    viztracer my_script.py arg1 arg2
 
 You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.html``. Three types of files are supported, html, json and gz(gzip of json file).
 
 .. code-block::
 
-    python3 -m viztracer -o other_name.html my_script.py
-    python3 -m viztracer -o other_name.json my_script.py
-    python3 -m viztracer -o other_name.json.gz my_script.py
+    viztracer -o other_name.html my_script.py
+    viztracer -o other_name.json my_script.py
+    viztracer -o other_name.json.gz my_script.py
 
 By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
 
 .. code-block::
     
-    python3 -m viztracer --save_flamegraph my_script.py
+    viztracer --save_flamegraph my_script.py
 
 Inline
 ------

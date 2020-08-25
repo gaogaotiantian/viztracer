@@ -53,4 +53,9 @@ setuptools.setup(
         "Topic :: Software Development :: Quality Assurance",
     ],
     python_requires=">=3.6",
+    entry_points={
+        "console_scripts": [
+            "viztracer = viztracer:main"
+        ]
+    },
 )

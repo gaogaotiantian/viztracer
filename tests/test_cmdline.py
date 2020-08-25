@@ -56,6 +56,7 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_run(self):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"])
+        self.template(["viztracer", "cmdline_test.py"])
 
     def test_outputfile(self):
         self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"])
@@ -64,6 +65,9 @@ class TestCommandLineBasic(unittest.TestCase):
         self.template(["python", "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["python", "-m", "viztracer", "--output_file", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
+        self.template(["viztracer", "-o", "result.html", "cmdline_test.py"])
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
+        self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
 
     def test_tracer(self):
         self.template(["python", "-m", "viztracer", "--tracer", "c", "cmdline_test.py"])
@@ -77,6 +81,7 @@ class TestCommandLineBasic(unittest.TestCase):
 
     def test_max_stack_depth(self):
         self.template(["python", "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
+        self.template(["viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
 
     def test_include_files(self):
         result = self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"], expected_output_file=None)

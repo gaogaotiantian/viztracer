@@ -6,11 +6,13 @@ from .flamegraph import FlameGraph
 from .decorator import ignore_function
 from .vizcounter import VizCounter
 from .vizobject import VizObject
+from .main import main
 
 __version__ = "0.3.3"
 
 __all__ = [
     "__version__",
+    "main",
     "VizTracer",
     "FlameGraph",
     "ignore_function",
