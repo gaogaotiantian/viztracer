@@ -84,11 +84,16 @@ class VizTracer(_VizTracer):
             with open(output_file, "w") as f:
                 f.write(self.generate_report())
         elif file_type == "json":
-            with open(output_file, "w") as f:
-                f.write(self.generate_json())
+            data = self.generate_json(allow_binary=True)
+            open_option = "wb" if type(data) is bytes else "w"
+            with open(output_file, open_option) as f:
+                f.write(data)
         elif file_type == "gz":
+            data = self.generate_json(allow_binary=True)
+            if type(data) is not bytes:
+                data = data.encode("utf-8")
             with gzip.open(output_file, "wb") as f:
-                f.write(self.generate_json().encode("utf-8"))
+                f.write(data)
         else:
             raise Exception("Only html, json and gz are supported")
 

@@ -282,6 +282,6 @@ class _VizTracer:
         builder = ReportBuilder(self.data, verbose=self.verbose)
         return builder.generate_report()
 
-    def generate_json(self):
+    def generate_json(self, allow_binary=False):
         builder = ReportBuilder(self.data)
-        return builder.generate_json()
+        return builder.generate_json(allow_binary)

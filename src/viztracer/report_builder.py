@@ -43,13 +43,16 @@ class ReportBuilder:
                 if "traceEvents" in one:
                     self.combined_json["traceEvents"].extend(one["traceEvents"])
 
-    def generate_json(self):
+    def generate_json(self, allow_binary=False):
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
             print("Dumping trace data to json, total entries: {}, estimated json file size: {}".format(entries, size_fmt(120*entries)))
         if json.__name__ == "orjson":
-            return json.dumps(self.combined_json).decode("utf-8")
+            if allow_binary:
+                return json.dumps(self.combined_json)
+            else:
+                return json.dumps(self.combined_json).decode("utf-8")
         else:
             return json.dumps(self.combined_json)
 

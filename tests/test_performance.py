@@ -56,7 +56,7 @@ class TestPerformance(unittest.TestCase):
             entries2 = tracer.parse()
             instrumented_c_parse = t.get_time()
         with Timer() as t:
-            tracer.generate_json()
+            tracer.generate_json(allow_binary=True)
             instrumented_c_json = t.get_time()
         tracer.clear()
 
