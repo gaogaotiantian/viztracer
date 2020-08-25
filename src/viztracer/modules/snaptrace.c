@@ -9,7 +9,6 @@
 #include <pthread.h>
 
 #if __APPLE__
-#include <pthread_np.h>
 #else
 #include <sys/syscall.h>
 #endif
