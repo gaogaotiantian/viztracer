@@ -53,6 +53,13 @@ python3 -m viztracer my_script.py arg1 arg2
 
 which will generate a ```result.html``` file in the directory you run this command. Open it in browser and there's your result.
 
+You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
+
+```
+python3 -m viztracer -o result.json my_script.py arg1 arg2
+python3 -m viztracer -o result.json.gz my_script.py arg1 arg2
+```
+
 By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
 
 ```
@@ -84,10 +91,11 @@ with VizTracer(output_file="optional.html") as tracer:
 
 By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome(maybe Firefox?). The front-end uses trace-viewer to show all the data. 
 
-However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. 
+However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. Or you can use [chrome://tracing](chrome://tracing/) to load the file.
 
-At the moment, perfetto does not support locally stand alone HTML file generation, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
+At the moment, perfetto does not support locally stand alone HTML file generation and it has some bugs, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
 
+**When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file and load it via [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/)**
 
 ### Trace Filter
 

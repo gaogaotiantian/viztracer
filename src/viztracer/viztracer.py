@@ -90,7 +90,7 @@ class VizTracer(_VizTracer):
             with gzip.open(output_file, "wb") as f:
                 f.write(self.generate_json().encode("utf-8"))
         else:
-            raise Exception("Only html and json are supported")
+            raise Exception("Only html, json and gz are supported")
 
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
