@@ -48,9 +48,7 @@ python3 my_script.py arg1 arg2
 You can simply use VizTracer as 
 
 ```
-viztracer my_script.py arg1 arg2
-# OR
-python3 -m viztracer my_script arg1 arg2
+python3 -m viztracer my_script.py arg1 arg2
 ```
 
 which will generate a ```result.html``` file in the directory you run this command. Open it in browser and there's your result.
@@ -58,14 +56,14 @@ which will generate a ```result.html``` file in the directory you run this comma
 You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
 
 ```
-viztracer -o result.json my_script.py arg1 arg2
-viztracer -o result.json.gz my_script.py arg1 arg2
+python3 -m viztracer -o result.json my_script.py arg1 arg2
+python3 -m viztracer -o result.json.gz my_script.py arg1 arg2
 ```
 
 By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
 
 ```
-viztracer --save_flamegraph my_script.py
+python3 -m viztracer --save_flamegraph my_script.py
 ```
 
 ### Inline
@@ -173,7 +171,7 @@ slow_fib  (1135, 758):
 
 ## Documentation 
 
-For full documentation, please see [https://viztracer.readthedocs.io/en/latest](https://viztracer.readthedocs.io/en/latest)
+For full documentation, please see [https://viztracer.readthedocs.io/en/stable](https://viztracer.readthedocs.io/en/stable)
 
 ## Bugs/Requests
 
