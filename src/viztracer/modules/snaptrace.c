@@ -7,6 +7,13 @@
 #include <frameobject.h>
 #include <time.h>
 #include <pthread.h>
+
+#if __APPLE__
+#include <pthread_np.h>
+#else
+#include <sys/syscall.h>
+#endif
+
 #include "snaptrace.h"
 
 // Function declarations
@@ -55,7 +62,7 @@ struct FEEData {
     int first_lineno;
     PyObject* func_name;
     int type;
-    long tid;
+    unsigned long tid;
     double dur;
     struct EventNode* parent;
 };
@@ -96,6 +103,7 @@ struct ThreadInfo {
     int paused;
     int curr_stack_depth;
     int ignore_stack_depth;
+    unsigned long tid;
     struct EventNode* stack_top;
 };
 
@@ -142,7 +150,7 @@ static void verbose_printf(int v, const char* fmt, ...)
 }
 
 // target and prefix has to be NULL-terminated
-static int startswith(const char* target, const char* prefix)
+static inline int startswith(const char* target, const char* prefix)
 {
     while(*target != 0 && *prefix != 0) {
         if (*target != *prefix) {
@@ -222,7 +230,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         if (is_c && is_call) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
             if (func->m_module) {
-                if (strcmp(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name) == 0) {
+                if (startswith(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name)) {
                     info->ignore_stack_depth += 1;
                     return 0;
                 }
@@ -294,7 +302,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             node->data.fee.parent = info->stack_top;
             info->stack_top = node;
             node->data.fee.type = what;
-            node->data.fee.tid = pthread_self();
+            node->data.fee.tid = info->tid;
             if (what == PyTrace_CALL) {
                 node->data.fee.file_name = frame->f_code->co_filename;
                 Py_INCREF(node->data.fee.file_name);
@@ -753,6 +761,12 @@ snaptrace_addobject(PyObject* self, PyObject* args)
 static struct ThreadInfo* snaptrace_createthreadinfo(void) {
     struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
+#if __APPLE__
+    info->tid = pthread_getthreadid_np();
+#else
+    info->tid = syscall(SYS_gettid);
+#endif
+
     pthread_setspecific(thread_key, info);
 
     return info;
@@ -764,6 +778,7 @@ static void snaptrace_threaddestructor(void* key) {
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
+        info->tid = 0;
         info->stack_top = NULL;
     }
 }
