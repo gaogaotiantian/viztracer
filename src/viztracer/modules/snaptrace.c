@@ -61,7 +61,6 @@ struct FEEData {
     int first_lineno;
     PyObject* func_name;
     int type;
-    unsigned long tid;
     double dur;
     struct EventNode* parent;
 };
@@ -89,6 +88,7 @@ struct EventNode {
     struct EventNode* next;
     struct EventNode* prev;
     double ts;
+    unsigned long tid;
     union {
         struct FEEData fee;
         struct InstantData instant;
@@ -298,7 +298,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             node->data.fee.parent = info->stack_top;
             info->stack_top = node;
             node->data.fee.type = what;
-            node->data.fee.tid = info->tid;
+            node->tid = info->tid;
             if (what == PyTrace_CALL) {
                 node->data.fee.file_name = frame->f_code->co_filename;
                 Py_INCREF(node->data.fee.file_name);
@@ -445,17 +445,14 @@ snaptrace_load(PyObject* self, PyObject* args)
         struct EventNode* node = curr->next;
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
-        PyObject* tid = PyLong_FromLong(node->data.fee.tid);
+        PyObject* tid = PyLong_FromLong(node->tid);
         PyObject* ts = PyFloat_FromDouble(node->ts / 1000);
-        PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
 
         PyDict_SetItemString(dict, "pid", pid);
         PyDict_SetItemString(dict, "tid", tid);
         Py_DECREF(tid);
         PyDict_SetItemString(dict, "ts", ts);
         Py_DECREF(ts);
-        PyDict_SetItemString(dict, "dur", dur);
-        Py_DECREF(dur);
 
         switch (node->ntype) {
         case FEE_NODE:
@@ -474,6 +471,9 @@ snaptrace_load(PyObject* self, PyObject* args)
                 Py_DECREF(node->data.fee.func_name);
             }
 
+            PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
+            PyDict_SetItemString(dict, "dur", dur);
+            Py_DECREF(dur);
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
 
@@ -685,6 +685,7 @@ snaptrace_addinstant(PyObject* self, PyObject* args)
     PyObject* name = NULL;
     PyObject* instant_args = NULL;
     PyObject* scope = NULL;
+    struct ThreadInfo* info = pthread_getspecific(thread_key);
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OOO", &name, &instant_args, &scope)) {
         printf("Error when parsing arguments!\n");
@@ -693,6 +694,7 @@ snaptrace_addinstant(PyObject* self, PyObject* args)
 
     node = get_next_node();
     node->ntype = INSTANT_NODE;
+    node->tid = info->tid;
     node->ts = get_ts();
     node->data.instant.name = name;
     node->data.instant.args = instant_args;
@@ -709,6 +711,7 @@ snaptrace_addcounter(PyObject* self, PyObject* args)
 {
     PyObject* name = NULL;
     PyObject* counter_args = NULL;
+    struct ThreadInfo* info = pthread_getspecific(thread_key);
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OO", &name, &counter_args)) {
         printf("Error when parsing arguments!\n");
@@ -717,6 +720,7 @@ snaptrace_addcounter(PyObject* self, PyObject* args)
 
     node = get_next_node();
     node->ntype = COUNTER_NODE;
+    node->tid = info->tid;
     node->ts = get_ts();
     node->data.counter.name = name;
     node->data.counter.args = counter_args;
@@ -733,6 +737,7 @@ snaptrace_addobject(PyObject* self, PyObject* args)
     PyObject* id = NULL;
     PyObject* name = NULL;
     PyObject* object_args = NULL;
+    struct ThreadInfo* info = pthread_getspecific(thread_key);
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OOOO", &ph, &id, &name, &object_args)) {
         printf("Error when parsing arguments!\n");
@@ -741,6 +746,7 @@ snaptrace_addobject(PyObject* self, PyObject* args)
 
     node = get_next_node();
     node->ntype = OBJECT_NODE;
+    node->tid = info->tid;
     node->ts = get_ts();
     node->data.object.ph = ph;
     node->data.object.id = id;
