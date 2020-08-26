@@ -28,7 +28,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 setuptools wheel twine
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Install dependencies
+    - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
       run: |
         python -m pip install --upgrade pip
@@ -41,7 +41,14 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Build dist and test with unittest
+      if: matrix.os == 'windows-latest'
       run: |
         python setup.py sdist bdist_wheel
         pip install dist/*.whl
+        python -m unittest
+    - name: Build dist and test with unittest on Windows
+      if: matrix.os != 'windows-latest'
+      run: |
+        python setup.py sdist bdist_wheel
+        pip install (Get-ChildItem dist/*.whl)
         python -m unittest
