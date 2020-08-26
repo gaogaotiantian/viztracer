@@ -22,6 +22,7 @@ VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://git
 * Optional function filter to ignore functions you are not interested 
 * Customize events to log and track data through time
 * Stand alone HTML report with powerful front-end, or chrome-compatible json 
+* Work on Linux/MacOS/Windows
 
 ## Install
 
