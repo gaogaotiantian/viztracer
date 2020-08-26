@@ -30,7 +30,6 @@ class TestVizObject(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         del a
-        tracer.save()
         self.assertEqual(entries, 3)
 
     def test_include(self):
