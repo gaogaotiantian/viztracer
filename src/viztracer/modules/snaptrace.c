@@ -6,10 +6,12 @@
 #include <Python.h>
 #include <frameobject.h>
 #include <time.h>
+#if _WIN32
+#include <windows.h>
+#elif __APPLE
 #include <pthread.h>
-
-#if __APPLE__
 #else
+#include <pthread.h>
 #include <sys/syscall.h>
 #endif
 
@@ -34,7 +36,12 @@ static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(void);
 
 // the key is used to locate thread specific info
+#if _WIN32
+DWORD dwTlsIndex;
+LARGE_INTEGER qpc_freq = {0}; 
+#else
 static pthread_key_t thread_key = 0;
+#endif
 // We need to ignore the first events until we get an entry
 int collecting = 0;
 unsigned long total_entries = 0;
@@ -113,11 +120,30 @@ static void Print_Py(PyObject* o)
     printf("%s\n", PyUnicode_AsUTF8(PyObject_Repr(o)));
 }
 
+static struct ThreadInfo* get_thread_info()
+{
+    struct ThreadInfo* info = NULL;
+#if _WIN32
+    info = TlsGetValue(dwTlsIndex);
+#else
+    info = pthread_getspecific(thread_key);
+#endif
+    return info;
+}
+
 static inline double get_ts()
 {
+#if _WIN32
+    LARGE_INTEGER counter = {0};
+    QueryPerformanceCounter(&counter);
+    counter.QuadPart *= 1000000000LL;
+    counter.QuadPart /= qpc_freq.QuadPart;
+    return (double) counter.QuadPart;
+#else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return ((double)t.tv_sec * 1e9 + t.tv_nsec);
+#endif
 }
 
 static inline struct EventNode* get_next_node()
@@ -152,9 +178,22 @@ static void verbose_printf(int v, const char* fmt, ...)
 static inline int startswith(const char* target, const char* prefix)
 {
     while(*target != 0 && *prefix != 0) {
+#if _WIN32
+        // Windows path has double slashes and case-insensitive
+        if (*prefix == '\\' && prefix[-1] == '\\') {
+            prefix++;
+        }
+        if (*target == '\\' && target[-1] == '\\') {
+            target++;
+        }
+        if (*target != *prefix && *target != *prefix - ('a'-'A') && *target != *prefix + ('a'-'A')) {
+            return 0;
+        }
+#else
         if (*target != *prefix) {
             return 0;
         }
+#endif
         target++;
         prefix++;
     }
@@ -200,7 +239,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     if (what == PyTrace_CALL || what == PyTrace_RETURN || 
             (!CHECK_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
         struct EventNode* node = NULL;
-        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        struct ThreadInfo* info = get_thread_info();
 
         int is_call = (what == PyTrace_CALL || what == PyTrace_C_CALL);
         int is_return = (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
@@ -236,7 +275,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         } else if (is_python && is_call) {
             PyObject* file_name = frame->f_code->co_filename;
-            //Print_Py(file_name);
             if (lib_file_path && startswith(PyUnicode_AsUTF8(file_name), lib_file_path)) {
                 info->ignore_stack_depth += 1;
                 return 0;
@@ -393,7 +431,7 @@ snaptrace_stop(PyObject* self, PyObject* args)
 {
     PyEval_SetProfile(NULL, NULL);
     if (collecting == 1) {
-        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        struct ThreadInfo* info = get_thread_info();
         snaptrace_threaddestructor(info);
     }
     
@@ -404,7 +442,7 @@ static PyObject*
 snaptrace_pause(PyObject* self, PyObject* args)
 {
     if (collecting) {
-        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        struct ThreadInfo* info = get_thread_info();
         if (info) {
             info->paused += 1;
         }
@@ -417,7 +455,7 @@ static PyObject*
 snaptrace_resume(PyObject* self, PyObject* args)
 {
     if (collecting) {
-        struct ThreadInfo* info = pthread_getspecific(thread_key);
+        struct ThreadInfo* info = get_thread_info();
         if (info && info->paused > 0) {
             info->paused -= 1;
         }
@@ -431,7 +469,11 @@ snaptrace_load(PyObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
     struct EventNode* curr = buffer_head;
+#if _WIN32
+    PyObject* pid = PyLong_FromLong(GetCurrentProcessId());
+#else
     PyObject* pid = PyLong_FromLong(getpid());
+#endif
     PyObject* cat_fee = PyUnicode_FromString("FEE");
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
     PyObject* ph_B = PyUnicode_FromString("B");
@@ -685,7 +727,7 @@ snaptrace_addinstant(PyObject* self, PyObject* args)
     PyObject* name = NULL;
     PyObject* instant_args = NULL;
     PyObject* scope = NULL;
-    struct ThreadInfo* info = pthread_getspecific(thread_key);
+    struct ThreadInfo* info = get_thread_info();
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OOO", &name, &instant_args, &scope)) {
         printf("Error when parsing arguments!\n");
@@ -711,7 +753,7 @@ snaptrace_addcounter(PyObject* self, PyObject* args)
 {
     PyObject* name = NULL;
     PyObject* counter_args = NULL;
-    struct ThreadInfo* info = pthread_getspecific(thread_key);
+    struct ThreadInfo* info = get_thread_info();
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OO", &name, &counter_args)) {
         printf("Error when parsing arguments!\n");
@@ -737,7 +779,7 @@ snaptrace_addobject(PyObject* self, PyObject* args)
     PyObject* id = NULL;
     PyObject* name = NULL;
     PyObject* object_args = NULL;
-    struct ThreadInfo* info = pthread_getspecific(thread_key);
+    struct ThreadInfo* info = get_thread_info();
     struct EventNode* node = NULL;
     if (!PyArg_ParseTuple(args, "OOOO", &ph, &id, &name, &object_args)) {
         printf("Error when parsing arguments!\n");
@@ -763,13 +805,19 @@ snaptrace_addobject(PyObject* self, PyObject* args)
 static struct ThreadInfo* snaptrace_createthreadinfo(void) {
     struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
-#if __APPLE__
+#if _WIN32  
+    info->tid = GetCurrentThreadId();
+#elif __APPLE__
     info->tid = pthread_threadid_np(NULL, NULL);
 #else
     info->tid = syscall(SYS_gettid);
 #endif
 
+#if _WIN32
+    TlsSetValue(dwTlsIndex, info);
+#else
     pthread_setspecific(thread_key, info);
+#endif
 
     return info;
 }
@@ -794,10 +842,18 @@ PyInit_snaptrace(void)
     buffer_head->prev = NULL;
     buffer_tail = buffer_head; 
     collecting = 0;
+#if _WIN32
+    if ((dwTlsIndex = TlsAlloc()) == TLS_OUT_OF_INDEXES) {
+        printf("Error on TLS!\n");
+        exit(-1);
+    }
+    QueryPerformanceFrequency(&qpc_freq); 
+#else
     if (pthread_key_create(&thread_key, snaptrace_threaddestructor)) {
         perror("Failed to create Tss_Key");
         exit(-1);
     }
+#endif
     snaptrace_createthreadinfo();
 
     thread_module = PyImport_ImportModule("threading");

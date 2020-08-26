@@ -5,7 +5,7 @@ name: build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, win-support ]
   pull_request:
     branches: [ master ]
 
