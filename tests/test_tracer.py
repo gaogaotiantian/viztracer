@@ -32,8 +32,6 @@ class TestCTracer(unittest.TestCase):
         fib(5)
         tracer.stop()
         tracer.parse()
-        with open("result.html", "w") as f:
-            f.write(tracer.generate_report())
 
     def test_c_run_after_clear(self):
         tracer = _VizTracer(tracer="c")

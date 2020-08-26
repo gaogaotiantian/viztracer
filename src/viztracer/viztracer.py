@@ -81,7 +81,7 @@ class VizTracer(_VizTracer):
             output_file = ".".join(output_file_parts)
         file_type = output_file.split(".")[-1]
         if file_type == "html":
-            with open(output_file, "w") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(self.generate_report())
         elif file_type == "json":
             data = self.generate_json(allow_binary=True)
