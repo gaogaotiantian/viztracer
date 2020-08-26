@@ -70,5 +70,5 @@ class ReportBuilder:
         return Template(tmpl).substitute(sub)
 
     def save(self, output_file="result.html"):
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(self.generate_report())
