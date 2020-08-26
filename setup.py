@@ -50,6 +50,7 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux",
+        "Operating System :: Microsoft :: Windows",
         "Topic :: Software Development :: Quality Assurance",
     ],
     python_requires=">=3.6",

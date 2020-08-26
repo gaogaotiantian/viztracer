@@ -8,7 +8,7 @@ from .vizcounter import VizCounter
 from .vizobject import VizObject
 from .main import main
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 __all__ = [
     "__version__",
