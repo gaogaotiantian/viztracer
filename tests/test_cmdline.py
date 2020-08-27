@@ -4,6 +4,7 @@
 import unittest
 import subprocess
 import os
+import json
 
 file_fib = \
 """
@@ -20,8 +21,21 @@ lst = []
 lst.append(1)
 """
 
+file_main = \
+"""
+if __name__ == '__main__':
+    lst = []
+    lst.append(1)
+"""
 
-class TestCommandLineBasic(unittest.TestCase):
+file_argv = \
+"""
+import sys
+assert(sys.argv)
+"""
+
+
+class Tmpl(unittest.TestCase):
     def build_script(self, script):
         with open("cmdline_test.py", "w") as f:
             f.write(script)
@@ -37,7 +51,7 @@ class TestCommandLineBasic(unittest.TestCase):
             else:
                 raise Exception("Unexpected output file argument")
 
-    def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib):
+    def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib, expected_entries=None, cleanup=True):
         self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE)
         self.assertTrue(success ^ (result.returncode != 0))
@@ -47,9 +61,19 @@ class TestCommandLineBasic(unittest.TestCase):
                     self.assertTrue(os.path.exists(f))
             elif type(expected_output_file) is str:
                 self.assertTrue(os.path.exists(expected_output_file))
-        self.cleanup(output_file=expected_output_file)
+        
+        if expected_entries:
+            assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+            with open(expected_output_file) as f:
+                data = json.load(f)
+                self.assertEqual(len(data["traceEvents"]), expected_entries)
+        
+        if cleanup:
+            self.cleanup(output_file=expected_output_file)
         return result
 
+
+class TestCommandLineBasic(Tmpl):
     def test_no_file(self):
         result = self.template(["python", "-m", "viztracer"], expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))
@@ -106,3 +130,11 @@ class TestCommandLineBasic(unittest.TestCase):
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example_json")
         self.template(["python", "-m", "viztracer", "--combine", os.path.join(example_json_dir, "multithread.json"), 
                 os.path.join(example_json_dir, "different_sorts.json")], expected_output_file="result.html")
+
+
+class TestPossibleFailures(Tmpl):
+    def test_main(self):
+        self.template(["python", "-m", "viztracer", "-o", "main.json", "cmdline_test.py"], expected_output_file="main.json", script=file_main, expected_entries=3)
+
+    def test_argv(self):
+        self.template(["python", "-m", "viztracer", "cmdline_test.py"], script=file_argv)

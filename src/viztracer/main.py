@@ -4,6 +4,7 @@
 import sys
 import argparse
 import os
+import atexit
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
@@ -69,12 +70,12 @@ def main():
         exit(0)
 
     try:
-        f = command[0]
-        code_string = open(f).read()
+        file_name = command[0]
+        code_string = open(file_name).read()
     except FileNotFoundError:
-        print("No such file as {}".format(f))
+        print("No such file as {}".format(file_name))
         exit(1)
-    sys.argv = command[1:]
+    sys.argv = command[:]
     if options.quiet:
         verbose = 0
     else:
@@ -104,7 +105,21 @@ def main():
         pid_suffix=options.pid_suffix,
         log_print=options.log_print
     )
+    def exit_save(t, ofile, save_flamegraph):
+        t.stop()
+        t.save(output_file=ofile, save_flamegraph=save_flamegraph)
+    atexit.register(exit_save, tracer, ofile, options.save_flamegraph)
+    global_dict = {
+        "__name__": "__main__",
+        "__file__": file_name,
+        "__package__": None,
+        "__cached__": None
+    }
+    code_object = compile(code_string, file_name, "exec")
+    sys.path.insert(0, os.path.dirname(file_name))
+    print(global_dict)
     tracer.start()
-    exec(code_string, globals())
+    exec(code_object, global_dict)
     tracer.stop()
+    atexit.unregister(exit_save)
     tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
