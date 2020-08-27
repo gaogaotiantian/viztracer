@@ -3,6 +3,7 @@
 
 import os
 import gzip
+import multiprocessing
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 
@@ -99,6 +100,11 @@ class VizTracer(_VizTracer):
 
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
+    
+    def fork_save(self, output_file=None, save_flamegraph=False):
+        p = multiprocessing.Process(target=self.save, daemon=False,
+                kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
+        p.start()
 
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)

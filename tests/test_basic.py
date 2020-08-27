@@ -3,6 +3,8 @@
 
 import unittest
 import os
+import time
+import json
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer, ignore_function
 
@@ -111,3 +113,33 @@ class TestLogPrint(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 4)
+
+class TestForkSave(unittest.TestCase):
+    def test_basic(self):
+        def fib(n):
+            if n == 1 or n == 0:
+                return 1
+            return fib(n-1) + fib(n-2)
+        t = VizTracer(verbose=0)
+        for i in range(5, 10):
+            t.start()
+            fib(i)
+            t.stop()
+            t.parse()
+            t.fork_save(output_file=str(i) + ".json")
+        time.sleep(0.2)
+
+        expected = {
+            5: 15,
+            6: 25,
+            7: 41,
+            8: 67,
+            9: 109
+        }
+        for i in range(5, 10):
+            path = str(i) +".json"
+            self.assertTrue(os.path.exists(path))
+            with open(path) as f:
+                data = json.load(f)
+            self.assertEqual(len(data["traceEvents"]), expected[i])
+            os.remove(path)
