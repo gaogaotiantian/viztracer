@@ -14,6 +14,7 @@ class _FlameNode:
         self.name = name
         self.value = 0
         self.last_entry = -1
+        self.last_exit = -1
         self.parent = parent
         self.children = {}
 
@@ -47,6 +48,24 @@ class _FlameTree:
             self.curr = self.curr.parent
             if self.curr == self.root:
                 self.root.value = data["ts"] - self.root.last_entry
+    
+    def add_complete(self, data):
+        if self.root.last_entry == -1:
+            self.root.last_entry = data["ts"]
+        
+        # Find this nodes parent
+        while self.curr.last_exit != -1 and self.curr.last_exit < data["ts"]:
+            self.curr = self.curr.parent
+        if data["name"] in self.curr.children:
+            self.curr = self.curr.children[data["name"]]
+        else:
+            node = _FlameNode(self.curr, data["name"])
+            self.curr.children[data["name"]] = node
+            self.curr = node
+        self.curr.value += data["dur"]
+        self.curr.last_exit = data["ts"] + data["dur"]
+        if self.curr.parent == self.root:
+            self.root.value = data["ts"] + data["dur"] - self.root.last_entry
 
     def json(self):
         return self.root.json()
@@ -71,6 +90,8 @@ class FlameGraph:
                 tree.add_entry(data)
             elif data["ph"] == "E":
                 tree.add_exit(data)
+            elif data["ph"] == "X":
+                tree.add_complete(data)
         for key in trees:
             ret[key] = trees[key].json()
         return ret
