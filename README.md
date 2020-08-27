@@ -50,6 +50,8 @@ You can simply use VizTracer as
 
 ```
 python3 -m viztracer my_script.py arg1 arg2
+# OR
+viztracer my_script arg1 arg2
 ```
 
 which will generate a ```result.html``` file in the directory you run this command. Open it in browser and there's your result.
