@@ -4,6 +4,7 @@
 import os
 import gzip
 import multiprocessing
+import sys
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 
@@ -106,6 +107,11 @@ class VizTracer(_VizTracer):
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
 
     def fork_save(self, output_file=None, save_flamegraph=False):
+        if sys.platform == "win32":
+            # You have to parse first on Windows, Windows does not have fork so probably the 
+            # address space is not copied
+            if not self.parsed:
+                self.parse()
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()
