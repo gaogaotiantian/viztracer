@@ -11,6 +11,8 @@ from .report_builder import ReportBuilder
 
 
 def main():
+    import runpy
+
     parser = argparse.ArgumentParser(prog="python -m viztracer")
     parser.add_argument("--tracer", nargs="?", choices=["c", "python"], default="c",
             help="specify the tracer you use. Can only be c or python")
@@ -38,6 +40,8 @@ def main():
             help="generate a flamegraph from json VizTracer report. Specify the json file to use")
     parser.add_argument("--run", nargs="*", default=[],
             help="explicitly specify the python commands you want to trace. Should be used if there's ambiguity")
+    parser.add_argument("--module", "-m", nargs="?", default=None,
+            help="run module with VizTracer")
     parser.add_argument("--combine", nargs="*", default=[],
             help="combine all json reports to a single report. Specify all the json reports you want to combine")
     parser.add_argument("command", nargs=argparse.REMAINDER,
@@ -48,6 +52,8 @@ def main():
         command = options.command
     elif options.run:
         command = options.run
+    elif options.module:
+        command = options.command
     elif options.generate_flamegraph:
         flamegraph = FlameGraph()
         flamegraph.load(options.generate_flamegraph)
@@ -69,13 +75,29 @@ def main():
         parser.print_help()
         exit(0)
 
-    try:
-        file_name = command[0]
-        code_string = open(file_name).read()
-    except FileNotFoundError:
-        print("No such file as {}".format(file_name))
-        exit(1)
-    sys.argv = command[:]
+    if options.module:
+        code = "run_module(modname, run_name='__main__')"
+        global_dict = {
+            "run_module": runpy.run_module,
+            "modname": options.module
+        }
+        sys.argv = [options.module] + command[:]
+    else:
+        try:
+            file_name = command[0]
+            code_string = open(file_name).read()
+            global_dict = {
+                "__name__": "__main__",
+                "__file__": file_name,
+                "__package__": None,
+                "__cached__": None
+            }
+            code = compile(code_string, file_name, "exec")
+            sys.path.insert(0, os.path.dirname(file_name))
+            sys.argv = command[:]
+        except FileNotFoundError:
+            print("No such file as {}".format(file_name))
+            exit(1)
     if options.quiet:
         verbose = 0
     else:
@@ -109,17 +131,9 @@ def main():
         t.stop()
         t.save(output_file=ofile, save_flamegraph=save_flamegraph)
     atexit.register(exit_save, tracer, ofile, options.save_flamegraph)
-    global_dict = {
-        "__name__": "__main__",
-        "__file__": file_name,
-        "__package__": None,
-        "__cached__": None
-    }
-    code_object = compile(code_string, file_name, "exec")
-    sys.path.insert(0, os.path.dirname(file_name))
     print(global_dict)
     tracer.start()
-    exec(code_object, global_dict)
+    exec(code, global_dict)
     tracer.stop()
     atexit.unregister(exit_save)
     tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
