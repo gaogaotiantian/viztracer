@@ -106,8 +106,6 @@ class VizTracer(_VizTracer):
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
 
     def fork_save(self, output_file=None, save_flamegraph=False):
-        if not self.parsed:
-            self.parse()
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()

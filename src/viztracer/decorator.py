@@ -32,8 +32,8 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
             file_name = os.path.join(output_dir, "result_{}_{}.json".format(func.__name__, int(100000*time.time())))
-            tracer.parse()
             tracer.fork_save(file_name)
+            tracer.cleanup()
             return ret
 
         return wrapper
