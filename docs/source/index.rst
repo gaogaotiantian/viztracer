@@ -26,6 +26,7 @@ VizTracer can display every function executed and the corresponding entry/exit t
    
    viztracer
    custom_event
+   decorator
    multi_process
 
 .. toctree::

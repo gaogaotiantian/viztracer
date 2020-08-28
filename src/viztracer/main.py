@@ -127,9 +127,11 @@ def main():
         pid_suffix=options.pid_suffix,
         log_print=options.log_print
     )
+
     def exit_save(t, ofile, save_flamegraph):
         t.stop()
         t.save(output_file=ofile, save_flamegraph=save_flamegraph)
+
     atexit.register(exit_save, tracer, ofile, options.save_flamegraph)
     print(global_dict)
     tracer.start()

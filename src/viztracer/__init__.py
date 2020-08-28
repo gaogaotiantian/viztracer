@@ -3,7 +3,7 @@
 
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
-from .decorator import ignore_function
+from .decorator import ignore_function, trace_and_save
 from .vizcounter import VizCounter
 from .vizobject import VizObject
 from .main import main
@@ -16,6 +16,7 @@ __all__ = [
     "VizTracer",
     "FlameGraph",
     "ignore_function",
+    "trace_and_save",
     "VizCounter",
     "VizObject"
 ]

@@ -46,13 +46,15 @@ Custom Event
     .. py:method:: config()
     .. py:method:: _viztracer_set_config(key, value)
 
-        set config. ``key`` could be ``"trigger_on_change"``, ``"include_attributes"`` or ``"exclude_attribtues"``
+        :param str key: ``"trigger_on_change"``, ``"include_attributes"`` or ``"exclude_attribtues"``
+        :param value: the value you want to set on corresponding config
     
-    .. py:staticmethod:: triggerlog(when="after")
+    .. py:decoratormethod:: triggerlog(when="after")
+
+        :param str when: ``"after"``, ``"before"`` or ``"both"`` to specify when the ``log()`` function is called
 
         ``triggerlog`` is a decorator for class methods to do auto-log when the method is called. 
 
-        ``when`` takes ``"after"``, ``"before"`` or ``"both"``, to specify when the ``log()`` function is called
 
 .. py:class:: VizCounter(_EventBase)
 

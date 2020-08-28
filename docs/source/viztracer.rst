@@ -148,8 +148,12 @@ VizTracer
         parse the data collected, return number of total entries
 
     .. py:method:: add_instant(name, args, scope="g")
+        
+        :param str name: name of this instant event
+        :param object args: a jsonifiable object to log with the event
+        :param str scope: one of ``g``, ``p`` or ``t`` for global, process or thread level event
 
-        Add instant event to the report. ``name`` should be a ``string``. ``args`` is a jsonifiable object. ``scope`` is one of ``g``, ``p`` or ``t`` for global, process or thread level event
+        Add instant event to the report. 
 
 
 

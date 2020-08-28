@@ -1,0 +1,37 @@
+Decorator
+=========
+
+.. py:decorator:: ignore_function
+
+    ``@ignore_function`` can tell VizTracer to skip on functions you specified. 
+
+    .. code-block:: python
+
+        @ignore_function
+        def function_you_want_to_ignore():
+            # function body
+
+.. py:decorator:: trace_and_save(method=None, output_dir="./", **viztracer_kwargs)
+    
+    :param function method: trick to make both ``@trace_and_save`` and ``@trace_and_save(**kwargs)`` work
+    :param str output_dir: output directory you want to put your logs in
+    :param dict viztracer_kwargs: kwargs for VizTracer
+
+    ``@trace_and_save`` can be used to trace a certain function and save the result as the program goes. 
+    This can be very helpful when you are running a very long program and just want to keep recording 
+    something periodically. You won't drain your memory and the dumping will be done in a new process,
+    which can reduce the affect to your main process. However, parsing still needs to be done in main
+    process for racing issues. 
+
+    You can pass any argument you want to ``VizTracer`` by giving it to the decorator
+
+    .. code-block:: python
+
+        @trace_and_save(output_dir="./mylogs", ignore_c_function=True)
+        def function_you_want_to_trace():
+            # function body
+
+        # this works as well
+        @trace_and_save
+        def function_you_want_to_trace():
+            # function body

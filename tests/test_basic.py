@@ -5,8 +5,9 @@ import unittest
 import os
 import time
 import json
+import shutil
 from viztracer.tracer import _VizTracer
-from viztracer import VizTracer, ignore_function
+from viztracer import VizTracer, ignore_function, trace_and_save
 
 
 def fib(n):
@@ -101,6 +102,17 @@ class TestDecorator(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
+    def test_trace_and_save(self):
+        @trace_and_save(output_dir="./tmp")
+        def my_function(n):
+            fib(n)
+        for _ in range(5):
+            my_function(10)
+        time.sleep(0.2)
+        counter = len(os.listdir("./tmp"))
+        shutil.rmtree("./tmp")
+        self.assertEqual(counter, 5)
+
 
 class TestLogPrint(unittest.TestCase):
     def test_log_print(self):
@@ -113,6 +125,7 @@ class TestLogPrint(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 4)
+
 
 class TestForkSave(unittest.TestCase):
     def test_basic(self):
@@ -137,9 +150,9 @@ class TestForkSave(unittest.TestCase):
             9: 109
         }
         for i in range(5, 10):
-            path = str(i) +".json"
+            path = str(i) + ".json"
             self.assertTrue(os.path.exists(path))
             with open(path) as f:
                 data = json.load(f)
-            self.assertEqual(len(data["traceEvents"]), expected[i])
             os.remove(path)
+            self.assertEqual(len(data["traceEvents"]), expected[i])

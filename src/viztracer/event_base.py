@@ -58,8 +58,8 @@ class _EventBase:
             raise Exception("when has to be one of 'after', 'before' or 'both', not {}".format(when))
 
         def inner(func):
-            functools.wraps(func)
 
+            @functools.wraps(func)
             def wrapper(self, *args, **kwargs):
                 if when == "before" or when == "both":
                     self._viztracer_log()

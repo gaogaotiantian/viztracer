@@ -258,8 +258,6 @@ class _VizTracer:
                 }
                 self.total_entries = len(self.data["traceEvents"])
             self.parsed = True
-        if self.enable:
-            self.start()
 
         return self.total_entries
 
