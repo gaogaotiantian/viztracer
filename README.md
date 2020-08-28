@@ -20,7 +20,7 @@ VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://git
 * Detailed function entry/exit information on timeline, not just summary of time used
 * Super easy to use, no source code change for basic usage, no package dependency
 * Optional function filter to ignore functions you are not interested 
-* Customize events to log and track data through time
+* Custom events to log and track data through time
 * Stand alone HTML report with powerful front-end, or chrome-compatible json 
 * Works on Linux/MacOS/Windows
 
@@ -96,8 +96,6 @@ By default, VizTracer will generate a stand alone HTML file which you can simply
 
 However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. Or you can use [chrome://tracing](chrome://tracing/) to load the file.
 
-At the moment, perfetto does not support locally stand alone HTML file generation and it has some bugs, so I'm not able to switch completely to it. The good news is that once you load the perfetto page, you can use it even when you are offline. 
-
 **When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file and load it via [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/)**
 
 ### Trace Filter
@@ -108,10 +106,10 @@ The filter works at tracing time, not parsing time. That means, using filters wi
 
 VizTracer support:
 
-* max stack depth
-* include files
-* exclude files
-* ignore c function
+* [max stack depth](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.max_stack_depth)
+* [include files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.include_files)
+* [exclude files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.exclude_files)
+* [ignore c function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.ignore_c_function)
 
 ### Add Custom Event
 
@@ -119,9 +117,9 @@ VizTracer support:
 
 VizTracer has:
 
-* Instant Event
-* Counter Event
-* Object Event
+* [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
+* [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
+* [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
 
 ### Multi Thread Support
 
@@ -133,6 +131,8 @@ VizTracer has:
 ### Multi Process Support
 
 VizTracer can support multi process with some extra steps. The current structure of VizTracer keeps one single buffer for one process, which means the user will have to produce multiple results from multiple processes and combine them together. 
+
+Refer to [multi process does](https://viztracer.readthedocs.io/en/stable/multi_process.html) for details
 
 ### JSON alternative 
 

@@ -18,6 +18,7 @@ class VizTracer(_VizTracer):
                  include_files=None,
                  exclude_files=None,
                  ignore_c_function=False,
+                 log_return_value=False,
                  log_print=False,
                  pid_suffix=False,
                  output_file="result.html"):
@@ -27,6 +28,7 @@ class VizTracer(_VizTracer):
                 include_files=include_files,
                 exclude_files=exclude_files,
                 ignore_c_function=ignore_c_function,
+                log_return_value=log_return_value,
                 log_print=log_print
         )
         self.verbose = verbose

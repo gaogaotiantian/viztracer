@@ -145,3 +145,19 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 0)
+    
+    def test_log_return_value(self):
+        tracer = _VizTracer(tracer="c")
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertFalse("args" in tracer.data["traceEvents"][0])
+
+        tracer.log_return_value = True
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertTrue("args" in tracer.data["traceEvents"][0] and \
+                        "return_value" in tracer.data["traceEvents"][0]["args"])

@@ -30,6 +30,8 @@ def main():
             help="specify the only files(directories) you want to include from tracing. Can't be used with --exclude_files")
     parser.add_argument("--ignore_c_function", action="store_true", default=False,
             help="ignore all c functions including most builtin functions and libraries")
+    parser.add_argument("--log_return_value", action="store_true", default=False,
+            help="log return value of the function in the report")
     parser.add_argument("--log_print", action="store_true", default=False,
             help="replace all print() function to adding an event to the result")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -124,6 +126,7 @@ def main():
         exclude_files=options.exclude_files,
         include_files=options.include_files,
         ignore_c_function=options.ignore_c_function,
+        log_return_value=options.log_return_value,
         pid_suffix=options.pid_suffix,
         log_print=options.log_print
     )

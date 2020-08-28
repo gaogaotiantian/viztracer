@@ -123,6 +123,9 @@ class TestCommandLineBasic(Tmpl):
     def test_ignore_c_function(self):
         self.template(["python", "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)
 
+    def test_log_return_value(self):
+        self.template(["python", "-m", "viztracer", "--log_return_value", "cmdline_test.py"], script=file_c_function)
+
     def test_flamegraph(self):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"], expected_output_file=["result.html", "result_flamegraph.html"])
 

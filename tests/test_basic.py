@@ -56,7 +56,7 @@ class TestTracerBasic(unittest.TestCase):
         self.assertEqual(entries, 0)
 
 
-class TestCodeSnapBasic(unittest.TestCase):
+class TestVizTracerBasic(unittest.TestCase):
     def test_run(self):
         snap = VizTracer()
         snap.run("import random; random.randrange(10)")
@@ -68,7 +68,7 @@ class TestCodeSnapBasic(unittest.TestCase):
         os.remove("test_with.json")
 
 
-class TestCodeSnapOutput(unittest.TestCase):
+class TestVizTracerOutput(unittest.TestCase):
     def test_json(self):
         t = _VizTracer()
         t.start()

@@ -80,6 +80,23 @@ VizTracer supports three kinds of custom events:
 
 You can refer to :doc:`custom_event` for how to use these.
 
+Log Return Value
+----------------
+
+VizTracer can log every function's return value as ``string``, aka it's ``__repr__``. The reason it can't log it as an object is because
+not all object in python are jsonifiable and it may cause problems. The return value will be stored in each python function entry 
+under ``args["return_value"]``. You can overwrite the object's ``__repr__`` function to log the object as you need.
+
+You can enable this feature in command line or using inline. 
+
+.. code-block:: 
+    
+    viztracer --log_return_value my_script.py
+
+.. code-block:: python
+    
+    tracer = VizTracer(log_return_value=True)
+
 Log Print
 ---------
 

@@ -65,6 +65,7 @@ typedef enum _NodeType {
 
 struct FEEData {
     PyObject* file_name;
+    PyObject* args;
     int first_lineno;
     PyObject* func_name;
     int type;
@@ -358,6 +359,9 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             if (stack_top) {
                 stack_top->data.fee.dur = get_ts() - stack_top->ts;
                 info->stack_top = stack_top->data.fee.parent;
+                if (is_python && CHECK_FLAG(check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
+                    stack_top->data.fee.args = PyObject_Repr(arg);
+                }
             } else {
                 printf("return out of stack\n");
             }
@@ -518,6 +522,13 @@ snaptrace_load(PyObject* self, PyObject* args)
             Py_DECREF(dur);
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
+            if (node->data.fee.args) {
+                PyObject* arg_dict = PyDict_New();
+                PyDict_SetItemString(arg_dict, "return_value", node->data.fee.args);
+                Py_DECREF(node->data.fee.args);
+                PyDict_SetItemString(dict, "args", arg_dict);
+                Py_DECREF(arg_dict);
+            }
 
             switch (node->data.fee.type) {
                 case PyTrace_CALL:
@@ -608,6 +619,10 @@ snaptrace_clear(PyObject* self, PyObject* args)
                 Py_DECREF(node->data.fee.file_name);
                 Py_DECREF(node->data.fee.func_name);
             }
+            if (node->data.fee.args) {
+                Py_DECREF(node->data.fee.args);
+                node->data.fee.args = NULL;
+            }
             break;
         case INSTANT_NODE:
             Py_DECREF(node->data.instant.name);
@@ -651,20 +666,23 @@ static PyObject*
 snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
-            "include_files", "exclude_files", "ignore_c_function", NULL};
+            "include_files", "exclude_files", "ignore_c_function", "log_return_value",
+            NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
     char* kw_lib_file_path = NULL;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOp", kwlist, 
+    int kw_log_return_value = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpp", kwlist, 
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
             &kw_include_files,
             &kw_exclude_files,
-            &kw_ignore_c_function)) {
+            &kw_ignore_c_function,
+            &kw_log_return_value)) {
         return NULL;
     }
 
@@ -687,6 +705,12 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
     } else if (kw_ignore_c_function == 0) {
         UNSET_FLAG(check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
+    }
+
+    if (kw_log_return_value == 1) {
+        SET_FLAG(check_flags, SNAPTRACE_LOG_RETURN_VALUE);
+    } else if (kw_log_return_value == 0) {
+        UNSET_FLAG(check_flags, SNAPTRACE_LOG_RETURN_VALUE);
     }
 
     if (kw_max_stack_depth >= 0) {
