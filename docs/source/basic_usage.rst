@@ -34,6 +34,12 @@ Just feed it as it is to VizTracer
     
     viztracer my_script.py arg1 arg2
 
+You can also run a module with VizTracer
+
+.. code-block::
+
+    viztracer -m your_module
+
 You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.html``. Three types of files are supported, html, json and gz(gzip of json file).
 
 .. code-block::
