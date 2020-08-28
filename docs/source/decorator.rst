@@ -19,9 +19,8 @@ Decorator
 
     ``@trace_and_save`` can be used to trace a certain function and save the result as the program goes. 
     This can be very helpful when you are running a very long program and just want to keep recording 
-    something periodically. You won't drain your memory and the dumping will be done in a new process,
-    which can reduce the affect to your main process. However, parsing still needs to be done in main
-    process for racing issues. 
+    something periodically. You won't drain your memory and the parsing/dumping will be done in a new process,
+    which can minimize the performance impact to your main process. 
 
     You can pass any argument you want to ``VizTracer`` by giving it to the decorator
 
