@@ -162,6 +162,10 @@ static inline struct EventNode* get_next_node()
         node = buffer_tail->next;
     } else {
         node = (struct EventNode*)PyMem_Calloc(1, sizeof(struct EventNode));
+        if (!node) {
+            printf("Out of memory!\n");
+            exit(1);
+        }
         node->next = NULL;
         buffer_tail->next = node;
         node->prev = buffer_tail;
@@ -734,6 +738,10 @@ snaptrace_config(PyObject* self, PyObject* args, PyObject* kw)
         // The documentation did not say whether the value persists on "s"
         // so we should copy it anyway. 
         lib_file_path = PyMem_Calloc((strlen(kw_lib_file_path) + 1), sizeof(char));
+        if (!lib_file_path) {
+            printf("Out of memory!\n");
+            exit(1);
+        }
         strcpy(lib_file_path, kw_lib_file_path);
     }
 
@@ -897,6 +905,10 @@ PyMODINIT_FUNC
 PyInit_snaptrace(void) 
 {
     buffer_head = (struct EventNode*) PyMem_Malloc (sizeof(struct EventNode));
+    if (!buffer_head) {
+        printf("Out of memory!\n");
+        exit(1);
+    }
     buffer_head->ntype = EVENT_NODE;
     buffer_head->next = NULL;
     buffer_head->prev = NULL;
