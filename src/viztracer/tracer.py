@@ -104,6 +104,17 @@ class _VizTracer:
             raise Exception("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
 
     @property
+    def log_return_value(self):
+        return self.__log_return_value
+
+    @log_return_value.setter
+    def log_return_value(self, log_return_value):
+        if type(log_return_value) is bool:
+            self.__log_return_value = log_return_value 
+        else:
+            raise Exception("log_return_value needs to be True or False, not {}".format(log_return_value))
+
+    @property
     def log_print(self):
         return self.__log_print
 
