@@ -149,6 +149,7 @@ class TestForkSave(unittest.TestCase):
             8: 67,
             9: 109
         }
+        pid = None
         for i in range(5, 10):
             path = str(i) + ".json"
             self.assertTrue(os.path.exists(path))
@@ -156,3 +157,7 @@ class TestForkSave(unittest.TestCase):
                 data = json.load(f)
             os.remove(path)
             self.assertEqual(len(data["traceEvents"]), expected[i])
+            if pid == None:
+                pid = data["traceEvents"][0]["pid"]
+            else:
+                self.assertEqual(data["traceEvents"][0]["pid"], pid)

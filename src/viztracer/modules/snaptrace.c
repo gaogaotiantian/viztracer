@@ -28,6 +28,7 @@ static PyObject* snaptrace_resume(PyObject* self, PyObject* args);
 static PyObject* snaptrace_load(PyObject* self, PyObject* args);
 static PyObject* snaptrace_clear(PyObject* self, PyObject* args);
 static PyObject* snaptrace_cleanup(PyObject* self, PyObject* args);
+static PyObject* snaptrace_setpid(PyObject* self, PyObject* args);
 static PyObject* snaptrace_config(PyObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addinstant(PyObject* self, PyObject* args);
 static PyObject* snaptrace_addcounter(PyObject* self, PyObject* args);
@@ -46,6 +47,12 @@ static pthread_key_t thread_key = 0;
 int collecting = 0;
 unsigned long total_entries = 0;
 unsigned int check_flags = 0;
+
+// When we do fork_save(), we want to keep the pid. This is a 
+// mechanism for child process to keep the parent's pid. If 
+// this value is 0, then the program gets pid before parsing,
+// otherwise it uses this pid
+long fix_pid = 0;
 
 int verbose = 0;
 char* lib_file_path = NULL;
@@ -215,6 +222,7 @@ static PyMethodDef SnaptraceMethods[] = {
     {"load", snaptrace_load, METH_VARARGS, "load buffer"},
     {"clear", snaptrace_clear, METH_VARARGS, "clear buffer"},
     {"cleanup", snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
+    {"setpid", snaptrace_setpid, METH_VARARGS, "set fixed pid"},
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"addinstant", snaptrace_addinstant, METH_VARARGS, "add instant event"},
     {"addcounter", snaptrace_addcounter, METH_VARARGS, "add counter event"},
@@ -473,11 +481,7 @@ snaptrace_load(PyObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
     struct EventNode* curr = buffer_head;
-#if _WIN32
-    PyObject* pid = PyLong_FromLong(GetCurrentProcessId());
-#else
-    PyObject* pid = PyLong_FromLong(getpid());
-#endif
+    PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
     PyObject* ph_B = PyUnicode_FromString("B");
@@ -487,6 +491,17 @@ snaptrace_load(PyObject* self, PyObject* args)
     PyObject* ph_C = PyUnicode_FromString("C");
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
+
+    if (fix_pid > 0) {
+        pid = PyLong_FromLong(fix_pid);
+    } else {
+#if _WIN32
+        pid = PyLong_FromLong(GetCurrentProcessId());
+#else
+        pid = PyLong_FromLong(getpid());
+#endif
+    }
+
     while (curr != buffer_tail && curr->next) {
         struct EventNode* node = curr->next;
         PyObject* dict = PyDict_New();
@@ -659,6 +674,27 @@ snaptrace_cleanup(PyObject* self, PyObject* args)
         buffer_head->next = node->next;
         PyMem_FREE(node);
     } 
+    Py_RETURN_NONE;
+}
+
+static PyObject* 
+snaptrace_setpid(PyObject* self, PyObject* args)
+{
+    long input_pid = -1;
+    if (!PyArg_ParseTuple(args, "|l", &input_pid)) {
+        printf("Parsing error on setpid\n");
+    }
+
+    if (input_pid >= 0) {
+        fix_pid = input_pid;
+    } else {
+#if _WIN32
+        fix_pid = GetCurrentProcessId();
+#else
+        fix_pid = getpid();
+#endif
+    }
+
     Py_RETURN_NONE;
 }
 

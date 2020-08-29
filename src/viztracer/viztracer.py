@@ -7,6 +7,7 @@ import multiprocessing
 import sys
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
+import viztracer.snaptrace
 
 
 # This is the interface of the package. Almost all user should use this
@@ -112,9 +113,16 @@ class VizTracer(_VizTracer):
             # address space is not copied
             if not self.parsed:
                 self.parse()
+        else:
+            # Fix the current pid so it won't give new pid when parsing
+            viztracer.snaptrace.setpid()
+
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()
+
+        # Revert to the normal pid mode
+        viztracer.snaptrace.setpid(0)
 
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)
