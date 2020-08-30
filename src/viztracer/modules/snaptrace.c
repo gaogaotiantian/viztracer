@@ -883,6 +883,15 @@ static void
 Tracer_dealloc(TracerObject* self)
 {
     snaptrace_cleanup(self, NULL);
+    if (self->lib_file_path) {
+        PyMem_FREE(self->lib_file_path);
+    }
+    if (self->include_files) {
+        Py_DECREF(self->include_files);
+    }
+    if (self->exclude_files) {
+        Py_DECREF(self->exclude_files);
+    }
     Py_DECREF(self->buffer_head);
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
