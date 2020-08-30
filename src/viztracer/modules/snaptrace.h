@@ -78,7 +78,6 @@ typedef struct {
     PyObject_HEAD
 #if _WIN32
     DWORD dwTlsIndex;
-    LARGE_INTEGER qpc_freq; 
 #else
     pthread_key_t thread_key;
 #endif

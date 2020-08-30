@@ -39,6 +39,10 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 TracerObject* curr_tracer = NULL;
 PyObject* thread_module = NULL;
 
+#if _WIN32
+LARGE_INTEGER qpc_freq; 
+#endif
+
 // Utility functions
 
 static void Print_Py(PyObject* o)
