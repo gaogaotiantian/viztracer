@@ -115,14 +115,14 @@ class VizTracer(_VizTracer):
                 self.parse()
         else:
             # Fix the current pid so it won't give new pid when parsing
-            viztracer.snaptrace.setpid()
+            self._tracer.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()
 
         # Revert to the normal pid mode
-        viztracer.snaptrace.setpid(0)
+        self._tracer.setpid(0)
 
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)

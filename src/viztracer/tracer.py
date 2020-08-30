@@ -24,6 +24,7 @@ class _VizTracer:
         self.enable = False
         self.parsed = False
         self.tracer = tracer
+        self._tracer = snaptrace.Tracer()
         self.verbose = 0
         self.data = []
         self.max_stack_depth = max_stack_depth
@@ -136,7 +137,7 @@ class _VizTracer:
         elif self.tracer == "c":
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
-            snaptrace.config(
+            self._tracer.config(
                 verbose=self.verbose,
                 lib_file_path=os.path.dirname(os.path.realpath(__file__)),
                 max_stack_depth=self.max_stack_depth,
@@ -145,7 +146,7 @@ class _VizTracer:
                 ignore_c_function=self.ignore_c_function,
                 log_return_value=self.log_return_value
             )
-            snaptrace.start()
+            self._tracer.start()
 
     def stop(self):
         self.enable = False
@@ -154,17 +155,17 @@ class _VizTracer:
         if self.tracer == "python":
             sys.setprofile(None)
         elif self.tracer == "c":
-            snaptrace.stop()
+            self._tracer.stop()
 
     def clear(self):
         if self.tracer == "python":
             self.buffer = []
         elif self.tracer == "c":
-            snaptrace.clear()
+            self._tracer.clear()
 
     def cleanup(self):
         if self.tracer == "c":
-            snaptrace.cleanup()
+            self._tracer.cleanup()
 
     def tracefunc(self, frame, event, arg):
         if event == "call" or event == "return":
@@ -211,15 +212,15 @@ class _VizTracer:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
-            snaptrace.addinstant(name, args, scope)
+            self._tracer.addinstant(name, args, scope)
 
     def add_counter(self, name, args):
         if self.tracer == "c" and self.enable:
-            snaptrace.addcounter(name, args)
+            self._tracer.addcounter(name, args)
 
     def add_object(self, ph, obj_id, name, args=None):
         if self.tracer == "c" and self.enable:
-            snaptrace.addobject(ph, obj_id, name, args)
+            self._tracer.addobject(ph, obj_id, name, args)
 
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
@@ -267,7 +268,7 @@ class _VizTracer:
                 self.buffer = []
             elif self.tracer == "c":
                 self.data = {
-                    "traceEvents": snaptrace.load(),
+                    "traceEvents": self._tracer.load(),
                     "displayTimeUnit": "ns"
                 }
                 self.total_entries = len(self.data["traceEvents"])
