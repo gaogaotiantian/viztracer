@@ -108,25 +108,27 @@ class VizTracer(_VizTracer):
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
 
     def fork_save(self, output_file=None, save_flamegraph=False):
-        if sys.platform == "win32":
-            # You have to parse first on Windows, Windows does not have fork so probably the 
-            # address space is not copied
+        if multiprocessing.get_start_method() != "fork":
+            # You have to parse first if you are not forking, address space is not copied
+            # Since it's not forking, we can't pickle tracer, just set it to None when
+            # we spawn
             if not self.parsed:
                 self.parse()
+            tracer = self._tracer
+            self._tracer = None
         else:
             # Fix the current pid so it won't give new pid when parsing
             self._tracer.setpid()
-        self.parse()
-        tracer = self._tracer
-        self._tracer = None
 
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()
 
-        # Revert to the normal pid mode
-        self._tracer = tracer
-        self._tracer.setpid(0)
+        if multiprocessing.get_start_method() != "fork":
+            self._tracer = tracer
+        else:
+            # Revert to the normal pid mode
+            self._tracer.setpid(0)
 
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)

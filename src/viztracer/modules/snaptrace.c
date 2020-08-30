@@ -35,8 +35,6 @@ static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
-static PyObject* Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs);
-static PyObject* Tracer___reduce__(TracerObject* self);
 
 TracerObject* curr_tracer = NULL;
 PyObject* thread_module = NULL;
@@ -139,7 +137,6 @@ static inline int startswith(const char* target, const char* prefix)
 
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
-    {"new", (PyCFunction)Tracer_New, METH_VARARGS, "new tracer"},
     {"start", (PyCFunction)snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", (PyCFunction)snaptrace_stop, METH_VARARGS, "stop profiling"},
     {"load", (PyCFunction)snaptrace_load, METH_VARARGS, "load buffer"},
@@ -150,7 +147,6 @@ static PyMethodDef Tracer_methods[] = {
     {"addinstant", (PyCFunction)snaptrace_addinstant, METH_VARARGS, "add instant event"},
     {"addcounter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
-    {"__reduce__", (PyCFunction)Tracer___reduce__, METH_VARARGS, "reduce"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -902,18 +898,6 @@ static PyTypeObject TracerType = {
     .tp_dealloc = (destructor) Tracer_dealloc,
     .tp_methods = Tracer_methods
 };
-
-static PyObject*
-Tracer___reduce__(TracerObject* self)
-{
-    PyObject* ret = PyTuple_New(2);
-    PyObject* handler = PyCFunction_New(&Tracer_methods[1], NULL);
-    PyObject* callback = Py_BuildValue("(O)", handler);
-    PyTuple_SetItem(ret, 0, callback);
-    PyTuple_SetItem(ret, 1, PyTuple_New(0));
-
-    return ret;
-}
 
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 
