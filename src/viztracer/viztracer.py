@@ -121,7 +121,7 @@ class VizTracer(_VizTracer):
             self._tracer.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
-                                    kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
+                                    kwargs={"output_file": os.path.abspath(output_file), "save_flamegraph": save_flamegraph})
         p.start()
 
         if multiprocessing.get_start_method() != "fork":
