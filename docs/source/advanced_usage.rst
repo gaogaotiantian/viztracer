@@ -124,6 +124,12 @@ Be aware that 600MiB is disk space, it requires more RAM to load it on Chrome.
 
 .. code-block:: python
 
+    python -m viztracer --tracer_entries 1000000 my_script.py
+
+OR
+
+.. code-block:: python
+
     tracer = VizTracer(tracer_entries = 1000000)
 
 Multi-Thread and Multi-Process

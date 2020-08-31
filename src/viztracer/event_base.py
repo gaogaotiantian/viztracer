@@ -1,5 +1,4 @@
 import functools
-import weakref
 
 
 class _EventBase:

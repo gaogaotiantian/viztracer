@@ -272,7 +272,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
             if (!info->stack_top->next) {
-                info->stack_top->next = (struct FunctionNode*) PyMem_Calloc (1, sizeof(struct FunctionNode));
+                info->stack_top->next = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
                 info->stack_top->next->prev = info->stack_top;
             }
             info->stack_top = info->stack_top->next;
@@ -886,7 +886,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->max_stack_depth = 0;
         self->include_files = NULL;
         self->exclude_files = NULL;
-        self->buffer = (struct EventNode*) PyMem_Calloc (self->buffer_size, sizeof(struct EventNode));
+        self->buffer = (struct EventNode*) PyMem_Calloc(self->buffer_size, sizeof(struct EventNode));
         if (!self->buffer) {
             printf("Out of memory!\n");
             exit(1);
