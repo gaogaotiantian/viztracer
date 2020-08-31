@@ -80,6 +80,37 @@ static inline double get_ts()
 #endif
 }
 
+static inline void clear_node(struct EventNode* node) {
+    switch (node->ntype) {
+    case FEE_NODE:
+        Py_DECREF(node->data.fee.file_name);
+        Py_DECREF(node->data.fee.func_name);
+        if (node->data.fee.args) {
+            Py_DECREF(node->data.fee.args);
+            node->data.fee.args = NULL;
+        }
+        break;
+    case INSTANT_NODE:
+        Py_DECREF(node->data.instant.name);
+        Py_DECREF(node->data.instant.args);
+        Py_DECREF(node->data.instant.scope);
+        break;
+    case COUNTER_NODE:
+        Py_DECREF(node->data.counter.name);
+        Py_DECREF(node->data.counter.args);
+        break;
+    case OBJECT_NODE:
+        Py_DECREF(node->data.object.ph);
+        Py_DECREF(node->data.object.id);
+        Py_DECREF(node->data.object.name);
+        Py_DECREF(node->data.object.args);
+        break;
+    default:
+        printf("Unknown Node Type!\n");
+        exit(1);
+    }
+}
+
 static inline struct EventNode* get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
@@ -88,6 +119,7 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     self->buffer_tail_idx = (self->buffer_tail_idx + 1) % self->buffer_size;
     if (self->buffer_tail_idx == self->buffer_head_idx) {
         self->buffer_head_idx = (self->buffer_head_idx + 1) % self->buffer_size;
+        clear_node(self->buffer + self->buffer_tail_idx);
     } else {
         self->total_entries += 1;
     }
@@ -477,14 +509,10 @@ snaptrace_load(TracerObject* self, PyObject* args)
                        PyUnicode_AsUTF8(node->data.fee.file_name),
                        node->data.fee.first_lineno,
                        PyUnicode_AsUTF8(node->data.fee.func_name));
-                Py_DECREF(node->data.fee.file_name);
-                Py_DECREF(node->data.fee.func_name);
             } else {
                 name = PyUnicode_FromFormat("%s.%s", 
                        PyUnicode_AsUTF8(node->data.fee.file_name),
                        PyUnicode_AsUTF8(node->data.fee.func_name));
-                Py_DECREF(node->data.fee.file_name);
-                Py_DECREF(node->data.fee.func_name);
             }
 
             PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
@@ -495,7 +523,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
             if (node->data.fee.args) {
                 PyObject* arg_dict = PyDict_New();
                 PyDict_SetItemString(arg_dict, "return_value", node->data.fee.args);
-                Py_DECREF(node->data.fee.args);
                 PyDict_SetItemString(dict, "args", arg_dict);
                 Py_DECREF(arg_dict);
             }
@@ -509,16 +536,11 @@ snaptrace_load(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "name", node->data.instant.name);
             PyDict_SetItemString(dict, "args", node->data.instant.args);
             PyDict_SetItemString(dict, "s", node->data.instant.scope);
-            Py_DECREF(node->data.instant.name);
-            Py_DECREF(node->data.instant.args);
-            Py_DECREF(node->data.instant.scope);
             break;
         case COUNTER_NODE:
             PyDict_SetItemString(dict, "ph", ph_C);
             PyDict_SetItemString(dict, "name", node->data.counter.name);
             PyDict_SetItemString(dict, "args", node->data.counter.args);
-            Py_DECREF(node->data.counter.name);
-            Py_DECREF(node->data.counter.args);
             break;
         case OBJECT_NODE:
             PyDict_SetItemString(dict, "ph", node->data.object.ph);
@@ -527,15 +549,12 @@ snaptrace_load(TracerObject* self, PyObject* args)
             if (!(node->data.object.args == Py_None)) {
                 PyDict_SetItemString(dict, "args", node->data.object.args);
             }
-            Py_DECREF(node->data.object.ph);
-            Py_DECREF(node->data.object.id);
-            Py_DECREF(node->data.object.name);
-            Py_DECREF(node->data.object.args);
             break;
         default:
             printf("Unknown Node Type!\n");
             exit(1);
         }
+        clear_node(node);
         PyList_Append(lst, dict);
         curr = curr + 1;
         if (curr == self->buffer + self->buffer_size) {
@@ -567,40 +586,7 @@ snaptrace_clear(TracerObject* self, PyObject* args)
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        switch (node->ntype) {
-        case FEE_NODE:
-            if (node->data.fee.type == PyTrace_C_CALL || 
-                    node->data.fee.type == PyTrace_C_RETURN || 
-                    node->data.fee.type == PyTrace_C_EXCEPTION) {
-                Py_DECREF(node->data.fee.func_name);
-            } else {
-                Py_DECREF(node->data.fee.file_name);
-                Py_DECREF(node->data.fee.func_name);
-            }
-            if (node->data.fee.args) {
-                Py_DECREF(node->data.fee.args);
-                node->data.fee.args = NULL;
-            }
-            break;
-        case INSTANT_NODE:
-            Py_DECREF(node->data.instant.name);
-            Py_DECREF(node->data.instant.args);
-            Py_DECREF(node->data.instant.scope);
-            break;
-        case COUNTER_NODE:
-            Py_DECREF(node->data.counter.name);
-            Py_DECREF(node->data.counter.args);
-            break;
-        case OBJECT_NODE:
-            Py_DECREF(node->data.object.ph);
-            Py_DECREF(node->data.object.id);
-            Py_DECREF(node->data.object.name);
-            Py_DECREF(node->data.object.args);
-            break;
-        default:
-            printf("Unknown Node Type!\n");
-            exit(1);
-        }
+        clear_node(node);
         curr = curr + 1;
         if (curr == self->buffer + self->buffer_size) {
             curr = self->buffer;
