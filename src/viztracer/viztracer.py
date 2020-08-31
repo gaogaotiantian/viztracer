@@ -4,10 +4,9 @@
 import os
 import gzip
 import multiprocessing
-import sys
+import atexit
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
-import viztracer.snaptrace
 
 
 # This is the interface of the package. Almost all user should use this
@@ -15,6 +14,7 @@ import viztracer.snaptrace
 class VizTracer(_VizTracer):
     def __init__(self,
                  tracer="c",
+                 tracer_entries=5000000,
                  verbose=1,
                  max_stack_depth=-1,
                  include_files=None,
@@ -22,6 +22,7 @@ class VizTracer(_VizTracer):
                  ignore_c_function=False,
                  log_return_value=False,
                  log_print=False,
+                 save_on_exit=False,
                  pid_suffix=False,
                  output_file="result.html"):
         super().__init__(
@@ -37,6 +38,7 @@ class VizTracer(_VizTracer):
         self.pid_suffix = pid_suffix
         self.output_file = output_file
         self.system_print = None
+        self.save_on_exit = save_on_exit
 
     @property
     def verbose(self):
@@ -68,6 +70,23 @@ class VizTracer(_VizTracer):
         self.stop()
         if type is None:
             self.save()
+
+    def exit_routine(self):
+        self.stop()
+        self.parse()
+        self.save()
+
+    def start(self):
+        if self.save_on_exit:
+            atexit.register(self.exit_routine)
+
+        _VizTracer.start(self)
+
+    def stop(self):
+        if self.save_on_exit:
+            atexit.unregister(self.exit_routine)
+
+        _VizTracer.stop(self)
 
     def run(self, command, output_file=None):
         self.start()

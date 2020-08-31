@@ -58,6 +58,16 @@ class TestCTracer(unittest.TestCase):
         tracer.cleanup()
 
 
+class TestCircularBuffer(unittest.TestCase):
+    def test_wrap(self):
+        tracer = _VizTracer(tracer_entries = 11)
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 10)
+
+
 class TestTracerFilter(unittest.TestCase):
     def test_max_stack_depth(self):
         tracer = _VizTracer(tracer="c", max_stack_depth=3)

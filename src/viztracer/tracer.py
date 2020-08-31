@@ -13,6 +13,7 @@ import viztracer.snaptrace as snaptrace
 
 class _VizTracer:
     def __init__(self,
+                 tracer_entries=5000000,
                  tracer="c",
                  max_stack_depth=-1,
                  include_files=None,
@@ -24,7 +25,7 @@ class _VizTracer:
         self.enable = False
         self.parsed = False
         self.tracer = tracer
-        self._tracer = snaptrace.Tracer()
+        self._tracer = snaptrace.Tracer(tracer_entries)
         self.verbose = 0
         self.data = []
         self.max_stack_depth = max_stack_depth
@@ -111,7 +112,7 @@ class _VizTracer:
     @log_return_value.setter
     def log_return_value(self, log_return_value):
         if type(log_return_value) is bool:
-            self.__log_return_value = log_return_value 
+            self.__log_return_value = log_return_value
         else:
             raise Exception("log_return_value needs to be True or False, not {}".format(log_return_value))
 

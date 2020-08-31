@@ -4,7 +4,6 @@
 import sys
 import argparse
 import os
-import atexit
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
@@ -16,6 +15,8 @@ def main():
     parser = argparse.ArgumentParser(prog="python -m viztracer")
     parser.add_argument("--tracer", nargs="?", choices=["c", "python"], default="c",
             help="specify the tracer you use. Can only be c or python")
+    parser.add_argument("--tracer_entries", nargs="?", type=int, default=5000000,
+            help="size of circular buffer. How many entries can it store")
     parser.add_argument("--output_file", "-o", nargs="?", default=None,
             help="output file path. End with .json or .html or .gz")
     parser.add_argument("--output_dir", nargs="?", default=None,
@@ -120,6 +121,7 @@ def main():
 
     tracer = VizTracer(
         tracer=options.tracer,
+        tracer_entries=options.tracer_entries,
         verbose=verbose,
         output_file=ofile,
         max_stack_depth=options.max_stack_depth,
@@ -127,18 +129,12 @@ def main():
         include_files=options.include_files,
         ignore_c_function=options.ignore_c_function,
         log_return_value=options.log_return_value,
+        save_on_exit=True,
         pid_suffix=options.pid_suffix,
         log_print=options.log_print
     )
 
-    def exit_save(t, ofile, save_flamegraph):
-        t.stop()
-        t.save(output_file=ofile, save_flamegraph=save_flamegraph)
-
-    atexit.register(exit_save, tracer, ofile, options.save_flamegraph)
-    print(global_dict)
     tracer.start()
     exec(code, global_dict)
     tracer.stop()
-    atexit.unregister(exit_save)
     tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)

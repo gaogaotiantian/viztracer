@@ -34,6 +34,13 @@ import sys
 assert(sys.argv)
 """
 
+file_exit = \
+"""
+lst = []
+lst.append(1)
+exit(0)
+"""
+
 
 class Tmpl(unittest.TestCase):
     def build_script(self, script):
@@ -61,13 +68,13 @@ class Tmpl(unittest.TestCase):
                     self.assertTrue(os.path.exists(f))
             elif type(expected_output_file) is str:
                 self.assertTrue(os.path.exists(expected_output_file))
-        
+
         if expected_entries:
             assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
             with open(expected_output_file) as f:
                 data = json.load(f)
                 self.assertEqual(len(data["traceEvents"]), expected_entries)
-        
+
         if cleanup:
             self.cleanup(output_file=expected_output_file)
         return result
@@ -134,6 +141,9 @@ class TestCommandLineBasic(Tmpl):
         self.template(["python", "-m", "viztracer", "--combine", os.path.join(example_json_dir, "multithread.json"), 
                 os.path.join(example_json_dir, "different_sorts.json")], expected_output_file="result.html")
 
+    def test_tracer_entries(self):
+        self.template(["python", "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--tracer_entries", "50", "cmdline_test.py"])
 
 class TestPossibleFailures(Tmpl):
     def test_main(self):
@@ -141,3 +151,6 @@ class TestPossibleFailures(Tmpl):
 
     def test_argv(self):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"], script=file_argv)
+
+    def test_exit(self):
+        self.template(["python", "-m", "viztracer", "cmdline_test.py"], script=file_exit)

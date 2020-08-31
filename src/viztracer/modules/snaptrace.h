@@ -53,8 +53,6 @@ struct ObjectData {
 
 struct EventNode {
     NodeType ntype;
-    struct EventNode* next;
-    struct EventNode* prev;
     double ts;
     unsigned long tid;
     union {
@@ -65,13 +63,18 @@ struct EventNode {
     } data;
 };
 
+struct FunctionNode {
+    struct FunctionNode* next;
+    struct FunctionNode* prev;
+    double ts;
+};
 
 struct ThreadInfo {
     int paused;
     int curr_stack_depth;
     int ignore_stack_depth;
     unsigned long tid;
-    struct EventNode* stack_top;
+    struct FunctionNode* stack_top;
 };
 
 typedef struct {
@@ -94,8 +97,10 @@ typedef struct {
     int max_stack_depth;
     PyObject* include_files;
     PyObject* exclude_files;
-    struct EventNode* buffer_head;
-    struct EventNode* buffer_tail;
+    struct EventNode* buffer;
+    long buffer_size;
+    long buffer_head_idx;
+    long buffer_tail_idx;
 } TracerObject;
 
 #endif

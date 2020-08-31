@@ -29,7 +29,6 @@ class TestVizObject(unittest.TestCase):
         a.hello = 2
         tracer.stop()
         entries = tracer.parse()
-        del a
         self.assertEqual(entries, 3)
 
     def test_include(self):
@@ -42,7 +41,6 @@ class TestVizObject(unittest.TestCase):
         a.lol = 4
         tracer.stop()
         entries = tracer.parse()
-        del a
         self.assertEqual(entries, 3)
 
     def test_exclude(self):
@@ -55,7 +53,6 @@ class TestVizObject(unittest.TestCase):
         a.lol = 4
         tracer.stop()
         entries = tracer.parse()
-        del a
         self.assertEqual(entries, 3)
 
     def test_trigger_on_change(self):
@@ -72,7 +69,6 @@ class TestVizObject(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         tracer.save()
-        del a
         self.assertEqual(entries, 2)
 
     def test_config(self):
@@ -86,7 +82,6 @@ class TestVizObject(unittest.TestCase):
         a.lol = 4
         a.log()
         tracer.stop()
-        del a
         entries = tracer.parse()
         self.assertEqual(entries, 2)
 
@@ -103,6 +98,4 @@ class TestVizObject(unittest.TestCase):
         b.change_val2()
         tracer.stop()
         entries = tracer.parse()
-        del a
-        del b
         self.assertEqual(entries, 10)
