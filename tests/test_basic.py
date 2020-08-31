@@ -66,6 +66,14 @@ class TestVizTracerBasic(unittest.TestCase):
             fib(10)
         self.assertTrue(os.path.exists("test_with.json"))
         os.remove("test_with.json")
+    
+    def test_tracer_entries(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 10)
 
 
 class TestVizTracerOutput(unittest.TestCase):

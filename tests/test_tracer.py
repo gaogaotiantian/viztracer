@@ -60,7 +60,7 @@ class TestCTracer(unittest.TestCase):
 
 class TestCircularBuffer(unittest.TestCase):
     def test_wrap(self):
-        tracer = _VizTracer(tracer_entries = 11)
+        tracer = _VizTracer(tracer_entries = 10)
         tracer.start()
         fib(10)
         tracer.stop()

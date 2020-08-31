@@ -27,6 +27,7 @@ class VizTracer(_VizTracer):
                  output_file="result.html"):
         super().__init__(
                 tracer=tracer,
+                tracer_entries=tracer_entries,
                 max_stack_depth=max_stack_depth,
                 include_files=include_files,
                 exclude_files=exclude_files,

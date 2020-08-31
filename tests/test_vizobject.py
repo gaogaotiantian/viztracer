@@ -68,7 +68,6 @@ class TestVizObject(unittest.TestCase):
         a.log()
         tracer.stop()
         entries = tracer.parse()
-        tracer.save()
         self.assertEqual(entries, 2)
 
     def test_config(self):
@@ -98,4 +97,15 @@ class TestVizObject(unittest.TestCase):
         b.change_val2()
         tracer.stop()
         entries = tracer.parse()
+        self.assertEqual(entries, 10)
+
+    def test_buffer_wrap(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        a = VizObject(tracer, "my variable")
+        for i in range(15):
+            a.hello = i
+        tracer.stop()
+        entries = tracer.parse()
+        tracer.save()
         self.assertEqual(entries, 10)

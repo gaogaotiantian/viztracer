@@ -876,6 +876,8 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
             printf("You need to specify buffer size when initializing Tracer\n");
             exit(-1);
         }
+        // We need an extra slot for circular buffer
+        self->buffer_size += 1;
         snaptrace_createthreadinfo(self);
         self->collecting = 0;
         self->fix_pid = 0;
