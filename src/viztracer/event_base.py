@@ -1,4 +1,5 @@
 import functools
+import weakref
 
 
 class _EventBase:
@@ -15,12 +16,6 @@ class _EventBase:
         for key in kwargs:
             if key in self._viztracer_config:
                 self._viztracer_config[key] = kwargs[key]
-
-        if not hasattr(self, "config"):
-            self.config = self._viztracer_set_config
-
-        if not hasattr(self, "log"):
-            self.log = self._viztracer_log
 
         self._viztracer_enable = True
 
@@ -49,8 +44,14 @@ class _EventBase:
             raise Exception("No config named {}".format(key))
         self._viztracer_config[key] = value
 
+    def config(self, key, value):
+        self._viztracer_set_config(key, value)
+
     def _viztracer_log(self):
         pass
+    
+    def log(self):
+        self._viztracer_log()
 
     @staticmethod
     def triggerlog(method=None, when="after"):

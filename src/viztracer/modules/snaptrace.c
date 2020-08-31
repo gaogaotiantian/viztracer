@@ -37,7 +37,7 @@ static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 
 TracerObject* curr_tracer = NULL;
-PyObject* thread_module = NULL;
+PyObject* threading_module = NULL;
 
 #if _WIN32
 LARGE_INTEGER qpc_freq; 
@@ -256,8 +256,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 for (int i = 0; i < length; i++) {
                     PyObject* f = PyList_GET_ITEM(files, i);
                     if (startswith(PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(f))) {
-                        Print_Py(name);
-                        Print_Py(f);
                         record = 1 - record;
                         break;
                     }
@@ -360,17 +358,16 @@ snaptrace_start(TracerObject* self, PyObject* args)
     }
     // Python: threading.setprofile(tracefunc)
     {
-        PyObject* threading = PyImport_ImportModule("threading");
-        assert(threading != NULL);
-        PyObject* setprofile = PyObject_GetAttrString(threading, "setprofile");
+        PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
 
         PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
-        PyObject* callback = Py_BuildValue("(O)", handler);
+        PyObject* callback = Py_BuildValue("(N)", handler);
 
         if (PyObject_CallObject(setprofile, callback) == NULL) {
             perror("Failed to call threading.setprofile() properly");
             exit(-1);
         }
+        Py_DECREF(callback);
     }
     PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
 
@@ -382,7 +379,20 @@ snaptrace_start(TracerObject* self, PyObject* args)
 static PyObject*
 snaptrace_stop(TracerObject* self, PyObject* args)
 {
+    PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
+
+    // threading.setprofile(None)
+    // This is important to keep REFCNT normal
+    PyObject* tuple = PyTuple_New(1);
+    PyTuple_SetItem(tuple, 0, Py_None);
+    if (PyObject_CallObject(setprofile, tuple) == NULL) {
+        perror("Failed to call threading.setprofile() properly");
+        exit(-1);
+    }
+    Py_DECREF(tuple);
+
     PyEval_SetProfile(NULL, NULL);
+    
     struct ThreadInfo* info = get_thread_info(self);
     if (info) {
         info->curr_stack_depth = 0;
@@ -940,7 +950,7 @@ PyInit_snaptrace(void)
         return NULL;
     }
 
-    thread_module = PyImport_ImportModule("threading");
+    threading_module = PyImport_ImportModule("threading");
 
     return m;
 }
