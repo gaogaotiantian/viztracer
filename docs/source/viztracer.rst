@@ -2,6 +2,7 @@ VizTracer
 =========
 
 .. py:class:: VizTracer(self,\
+                 tracer_entries=5000000,
                  verbose=1,\
                  max_stack_depth=-1,\
                  include_files=None,\
@@ -10,6 +11,14 @@ VizTracer
                  log_print=False,\
                  pid_suffix=False,\
                  output_file="result.html")
+
+    .. py:attribute:: tracer_entries
+        :type: integer
+        :value: 5000000
+
+        Size of circular buffer. The user can only specify this value when instantiate ``VizTracer`` object. 
+
+        ``tracer_entries`` means how many entries ``VizTracer`` can store. It's not a byte number.
 
     .. py:attribute:: verbose
         :type: integer

@@ -114,14 +114,17 @@ OR
 
     tracer = VizTracer(log_print=True)
 
-Memory Clean Up
----------------
+Circular Buffer Size
+--------------------
 
-To achieve lower overhead, some optimization is applied to the tracer so it will withhold the memory it allocates for future use to reduce the time it calls ``malloc()``. If you want the tracer to free all the memory it allocates while collecting trace, use
+VizTracer used circular buffer to store the entries. When there are too many entries, it will only store the latest ones so you know what happened
+recently. The default buffer size is 5,000,000(number of entries), which takes about 600MiB memory. You can specify this when you instantiate ``VizTracer`` object
+
+Be aware that 600MiB is disk space, it requires more RAM to load it on Chrome.
 
 .. code-block:: python
 
-    tracer.cleanup()
+    tracer = VizTracer(tracer_entries = 1000000)
 
 Multi-Thread and Multi-Process
 ------------------------------

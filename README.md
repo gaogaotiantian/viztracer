@@ -2,7 +2,7 @@
 
 [![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)
 
-VizTracer is a low-overhead deterministic debugging/profiling tool that can trace and visualize your python code to help you intuitively understand your code better and figure out the time consuming part of your code.
+VizTracer is a low-overhead deterministic debugging/profiling/logging tool that can trace and visualize your python code to help you intuitively understand your code better and figure out the time consuming part of your code.
 
 You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs(sort algorithms, mcts, modulo algorithms, multithread tracing, etc.)
 

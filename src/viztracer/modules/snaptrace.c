@@ -53,6 +53,10 @@ static void Print_Py(PyObject* o)
 static struct ThreadInfo* get_thread_info(TracerObject* self)
 {
     struct ThreadInfo* info = NULL;
+
+    if (!self) {
+        return NULL;
+    }
 #if _WIN32
     info = TlsGetValue(self->dwTlsIndex);
 #else
@@ -80,19 +84,13 @@ static inline struct EventNode* get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
 
-    if (self->buffer_tail->next) {
-        node = self->buffer_tail->next;
+    node = self->buffer + self->buffer_tail_idx;
+    self->buffer_tail_idx = (self->buffer_tail_idx + 1) % self->buffer_size;
+    if (self->buffer_tail_idx == self->buffer_head_idx) {
+        self->buffer_head_idx = (self->buffer_head_idx + 1) % self->buffer_size;
     } else {
-        node = (struct EventNode*)PyMem_Calloc(1, sizeof(struct EventNode));
-        if (!node) {
-            printf("Out of memory!\n");
-            exit(1);
-        }
-        node->next = NULL;
-        self->buffer_tail->next = node;
-        node->prev = self->buffer_tail;
+        self->total_entries += 1;
     }
-    self->buffer_tail = node;
 
     return node;
 }
@@ -133,6 +131,12 @@ static inline int startswith(const char* target, const char* prefix)
     }
 
     return (*prefix) == 0;
+}
+
+void clear_stack(struct FunctionNode** stack_top) {
+    while ((*stack_top)->prev) {
+        (*stack_top) = (*stack_top) -> prev;
+    }
 }
 
 static PyMethodDef Tracer_methods[] = {
@@ -200,10 +204,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
-        if (!info->stack_top && is_return) {
-            return 0;
-        }
-
         // Exclude Self
         if (is_c && is_call) {
             PyCFunctionObject* func = (PyCFunctionObject*) arg;
@@ -229,9 +229,11 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     return 0;
                 }
             } else if (is_return) {
-                info->curr_stack_depth -= 1;
-                if (info->curr_stack_depth + 1 > self->max_stack_depth) {
-                    return 0;
+                if (info->curr_stack_depth > 0) {
+                    info->curr_stack_depth -= 1;
+                    if (info->curr_stack_depth + 1 > self->max_stack_depth) {
+                        return 0;
+                    }
                 }
             }
         }
@@ -269,46 +271,47 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
 
         if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
-            node = get_next_node(self);
-            node->ntype = FEE_NODE;
-            node->ts = get_ts();
-            node->data.fee.dur = 0;
-            node->data.fee.parent = info->stack_top;
-            info->stack_top = node;
-            node->data.fee.type = what;
-            node->tid = info->tid;
-            if (what == PyTrace_CALL) {
-                node->data.fee.file_name = frame->f_code->co_filename;
-                Py_INCREF(node->data.fee.file_name);
-                node->data.fee.first_lineno = frame->f_code->co_firstlineno;
-                node->data.fee.func_name = frame->f_code->co_name;
-                Py_INCREF(node->data.fee.func_name);
-            } else if (what == PyTrace_C_CALL) {
-                PyCFunctionObject* func = (PyCFunctionObject*) arg;
-                node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
-                if (func->m_module) {
-                    node->data.fee.file_name = func->m_module;
-                    Py_INCREF(node->data.fee.file_name);
-                } else {
-                    node->data.fee.file_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
-                }
-            } 
+            if (!info->stack_top->next) {
+                info->stack_top->next = (struct FunctionNode*) PyMem_Calloc (1, sizeof(struct FunctionNode));
+                info->stack_top->next->prev = info->stack_top;
+            }
+            info->stack_top = info->stack_top->next;
+            info->stack_top->ts = get_ts();
         } else if (is_return) {
-            struct EventNode* stack_top = info->stack_top;
-            if (stack_top) {
-                stack_top->data.fee.dur = get_ts() - stack_top->ts;
-                info->stack_top = stack_top->data.fee.parent;
-                if (is_python && CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
-                    stack_top->data.fee.args = PyObject_Repr(arg);
-                }
-            } else {
-                printf("return out of stack\n");
+            struct FunctionNode* stack_top = info->stack_top;
+            if (stack_top->prev) {
+                // if stack_top has prev, it's not the fake node so it's at least root
+                node = get_next_node(self);
+                node->ntype = FEE_NODE;
+                node->ts = info->stack_top->ts;
+                node->data.fee.dur = get_ts() - info->stack_top->ts;
+                info->stack_top = info->stack_top->prev;
+                node->tid = info->tid;
+                node->data.fee.type = what;
+                if (is_python) {
+                    node->data.fee.file_name = frame->f_code->co_filename;
+                    Py_INCREF(node->data.fee.file_name);
+                    node->data.fee.first_lineno = frame->f_code->co_firstlineno;
+                    node->data.fee.func_name = frame->f_code->co_name;
+                    Py_INCREF(node->data.fee.func_name);
+                    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
+                        node->data.fee.args = PyObject_Repr(arg);
+                    }
+                } else if (is_c) {
+                    PyCFunctionObject* func = (PyCFunctionObject*) arg;
+                    node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
+                    if (func->m_module) {
+                        node->data.fee.file_name = func->m_module;
+                        Py_INCREF(node->data.fee.file_name);
+                    } else {
+                        node->data.fee.file_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
+                    }
+                } 
             }
             return 0;
         } else {
             printf("Unexpected event!\n");
         }
-        self->total_entries += 1;
     }
 
     return 0;
@@ -378,12 +381,15 @@ static PyObject*
 snaptrace_stop(TracerObject* self, PyObject* args)
 {
     PyEval_SetProfile(NULL, NULL);
-    curr_tracer = NULL;
-    if (self->collecting == 1) {
-        struct ThreadInfo* info = get_thread_info(self);
-        snaptrace_threaddestructor(info);
+    struct ThreadInfo* info = get_thread_info(self);
+    if (info) {
+        info->curr_stack_depth = 0;
+        info->ignore_stack_depth = 0;
+        info->paused = 0;
+        clear_stack(&info->stack_top);
     }
-    
+    curr_tracer = NULL;
+
     Py_RETURN_NONE;
 }
 
@@ -417,7 +423,7 @@ static PyObject*
 snaptrace_load(TracerObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
-    struct EventNode* curr = self->buffer_head;
+    struct EventNode* curr = self->buffer + self->buffer_head_idx;
     PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
@@ -439,8 +445,8 @@ snaptrace_load(TracerObject* self, PyObject* args)
 #endif
     }
 
-    while (curr != self->buffer_tail && curr->next) {
-        struct EventNode* node = curr->next;
+    while (curr != self->buffer + self->buffer_tail_idx) {
+        struct EventNode* node = curr;
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->tid);
@@ -482,22 +488,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
                 Py_DECREF(arg_dict);
             }
 
-            switch (node->data.fee.type) {
-                case PyTrace_CALL:
-                case PyTrace_C_CALL:
-                    // Entry
-                    PyDict_SetItemString(dict, "ph", ph_X);
-                    break;
-                case PyTrace_RETURN:
-                case PyTrace_C_RETURN:
-                case PyTrace_C_EXCEPTION:
-                    //Exit
-                    PyDict_SetItemString(dict, "ph", ph_E);
-                    break;
-                default:
-                    printf("Unknown Type!\n");
-                    exit(1);
-            }
+            PyDict_SetItemString(dict, "ph", ph_X);
             PyDict_SetItemString(dict, "cat", cat_fee);
             break;
         case INSTANT_NODE:
@@ -534,7 +525,10 @@ snaptrace_load(TracerObject* self, PyObject* args)
             exit(1);
         }
         PyList_Append(lst, dict);
-        curr = curr->next;
+        curr = curr + 1;
+        if (curr == self->buffer + self->buffer_size) {
+            curr = self->buffer;
+        }
 
         counter += 1;
         if (counter - prev_counter > 10000 && (counter - prev_counter) / ((1 + self->total_entries)/100) > 0) {
@@ -551,16 +545,16 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(ph_I);
     Py_DECREF(ph_X);
     Py_DECREF(ph_C);
-    self->buffer_tail = self->buffer_head;
+    self->buffer_tail_idx = self->buffer_head_idx;
     return lst;
 }
 
 static PyObject*
 snaptrace_clear(TracerObject* self, PyObject* args)
 {
-    struct EventNode* curr = self->buffer_head;
-    while (curr != self->buffer_tail && curr->next) {
-        struct EventNode* node = curr->next;
+    struct EventNode* curr = self->buffer + self->buffer_head_idx;
+    while (curr != self->buffer + self->buffer_tail_idx) {
+        struct EventNode* node = curr;
         switch (node->ntype) {
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_C_CALL || 
@@ -595,9 +589,12 @@ snaptrace_clear(TracerObject* self, PyObject* args)
             printf("Unknown Node Type!\n");
             exit(1);
         }
-        curr = curr->next;
+        curr = curr + 1;
+        if (curr == self->buffer + self->buffer_size) {
+            curr = self->buffer;
+        }
     }
-    self->buffer_tail = self->buffer_head;
+    self->buffer_tail_idx = self->buffer_head_idx;
 
     Py_RETURN_NONE;
 }
@@ -606,11 +603,6 @@ static PyObject*
 snaptrace_cleanup(TracerObject* self, PyObject* args)
 {
     snaptrace_clear(self, args);
-    while (self->buffer_head->next) {
-        struct EventNode* node = self->buffer_head->next;
-        self->buffer_head->next = node->next;
-        PyMem_FREE(node);
-    } 
     Py_RETURN_NONE;
 }
 
@@ -807,6 +799,8 @@ snaptrace_addobject(TracerObject* self, PyObject* args)
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
 
+    info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
+
 #if _WIN32  
     info->tid = GetCurrentThreadId();
 #elif __APPLE__
@@ -826,11 +820,22 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 
 static void snaptrace_threaddestructor(void* key) {
     struct ThreadInfo* info = key;
+    struct FunctionNode* tmp = NULL;
     if (info) {
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
         info->tid = 0;
+        if (info->stack_top) {
+            while (info->stack_top->prev) {
+                info->stack_top = info->stack_top->prev;
+            }
+            while (info->stack_top) {
+                tmp = info->stack_top;
+                info->stack_top = info->stack_top->next;
+                PyMem_FREE(tmp);
+            }
+        }
         info->stack_top = NULL;
     }
 }
@@ -855,6 +860,10 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
             exit(-1);
         }
 #endif
+        if (!PyArg_ParseTuple(args, "l", &self->buffer_size)) {
+            printf("You need to specify buffer size when initializing Tracer\n");
+            exit(-1);
+        }
         snaptrace_createthreadinfo(self);
         self->collecting = 0;
         self->fix_pid = 0;
@@ -865,15 +874,13 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->max_stack_depth = 0;
         self->include_files = NULL;
         self->exclude_files = NULL;
-        self->buffer_head = (struct EventNode*) PyMem_Malloc (sizeof(struct EventNode));
-        if (!self->buffer_head) {
+        self->buffer = (struct EventNode*) PyMem_Calloc (self->buffer_size, sizeof(struct EventNode));
+        if (!self->buffer) {
             printf("Out of memory!\n");
             exit(1);
         }
-        self->buffer_head->ntype = EVENT_NODE;
-        self->buffer_head->next = NULL;
-        self->buffer_head->prev = NULL;
-        self->buffer_tail = self->buffer_head; 
+        self->buffer_head_idx = 0;
+        self->buffer_tail_idx = 0;
     }
 
     return (PyObject*) self;
@@ -892,7 +899,7 @@ Tracer_dealloc(TracerObject* self)
     if (self->exclude_files) {
         Py_DECREF(self->exclude_files);
     }
-    Py_DECREF(self->buffer_head);
+    PyMem_FREE(self->buffer);
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
