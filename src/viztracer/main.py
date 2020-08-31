@@ -4,7 +4,6 @@
 import sys
 import argparse
 import os
-import atexit
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder

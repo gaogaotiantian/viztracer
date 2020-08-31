@@ -68,13 +68,13 @@ class Tmpl(unittest.TestCase):
                     self.assertTrue(os.path.exists(f))
             elif type(expected_output_file) is str:
                 self.assertTrue(os.path.exists(expected_output_file))
-        
+
         if expected_entries:
             assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
             with open(expected_output_file) as f:
                 data = json.load(f)
                 self.assertEqual(len(data["traceEvents"]), expected_entries)
-        
+
         if cleanup:
             self.cleanup(output_file=expected_output_file)
         return result

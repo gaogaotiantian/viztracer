@@ -4,11 +4,9 @@
 import os
 import gzip
 import multiprocessing
-import sys
 import atexit
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
-import viztracer.snaptrace
 
 
 # This is the interface of the package. Almost all user should use this
@@ -72,7 +70,7 @@ class VizTracer(_VizTracer):
         self.stop()
         if type is None:
             self.save()
-    
+
     def exit_routine(self):
         self.stop()
         self.parse()
@@ -83,7 +81,7 @@ class VizTracer(_VizTracer):
             atexit.register(self.exit_routine)
 
         _VizTracer.start(self)
-    
+
     def stop(self):
         if self.save_on_exit:
             atexit.unregister(self.exit_routine)

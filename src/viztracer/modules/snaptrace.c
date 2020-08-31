@@ -256,6 +256,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 for (int i = 0; i < length; i++) {
                     PyObject* f = PyList_GET_ITEM(files, i);
                     if (startswith(PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(f))) {
+                        Print_Py(name);
+                        Print_Py(f);
                         record = 1 - record;
                         break;
                     }
