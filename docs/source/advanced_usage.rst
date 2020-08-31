@@ -116,6 +116,22 @@ OR
 
     tracer = VizTracer(log_print=True)
 
+Work with ``logging`` module
+----------------------------
+
+VizTracer can work with python builtin ``logging`` module by adding a handler to it. The report will show logging
+data as instant events.
+
+.. code-block:: python
+
+    from viztracer import VizLoggingHandler
+
+    tracer = VizTracer()
+    handler = VizLoggingHandler()
+    handler.setTracer(tracer)
+    # A handler is added to logging so logging will dump data to VizTracer
+    logging.basicConfig(handler = [handler])
+
 Circular Buffer Size
 --------------------
 

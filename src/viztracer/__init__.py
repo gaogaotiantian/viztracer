@@ -6,6 +6,7 @@ from .flamegraph import FlameGraph
 from .decorator import ignore_function, trace_and_save
 from .vizcounter import VizCounter
 from .vizobject import VizObject
+from .vizlogging import VizLoggingHandler
 from .main import main
 
 __version__ = "0.5.1"
@@ -18,5 +19,6 @@ __all__ = [
     "ignore_function",
     "trace_and_save",
     "VizCounter",
-    "VizObject"
+    "VizObject",
+    "VizLoggingHandler"
 ]
