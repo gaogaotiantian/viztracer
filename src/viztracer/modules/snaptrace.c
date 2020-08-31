@@ -33,6 +33,7 @@ static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* 
 static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 
@@ -166,8 +167,16 @@ static inline int startswith(const char* target, const char* prefix)
 }
 
 void clear_stack(struct FunctionNode** stack_top) {
+    if ((*stack_top)->args) {
+        Py_DECREF((*stack_top)->args);
+        (*stack_top)->args = NULL;
+    }
     while ((*stack_top)->prev) {
         (*stack_top) = (*stack_top) -> prev;
+        if ((*stack_top)->args) {
+            Py_DECREF((*stack_top)->args);
+            (*stack_top)->args = NULL;
+        }
     }
 }
 
@@ -183,6 +192,7 @@ static PyMethodDef Tracer_methods[] = {
     {"addinstant", (PyCFunction)snaptrace_addinstant, METH_VARARGS, "add instant event"},
     {"addcounter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
+    {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -326,8 +336,12 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     node->data.fee.first_lineno = frame->f_code->co_firstlineno;
                     node->data.fee.func_name = frame->f_code->co_name;
                     Py_INCREF(node->data.fee.func_name);
+                    if (stack_top->args) {
+                        // steal the reference when return
+                        node->data.fee.args = stack_top->args;
+                    }
                     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
-                        node->data.fee.args = PyObject_Repr(arg);
+                        node->data.fee.retval = PyObject_Repr(arg);
                     }
                 } else if (is_c) {
                     PyCFunctionObject* func = (PyCFunctionObject*) arg;
@@ -520,9 +534,19 @@ snaptrace_load(TracerObject* self, PyObject* args)
             Py_DECREF(dur);
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
+            PyObject* arg_dict = NULL;
             if (node->data.fee.args) {
-                PyObject* arg_dict = PyDict_New();
-                PyDict_SetItemString(arg_dict, "return_value", node->data.fee.args);
+                arg_dict = node->data.fee.args;
+                Py_INCREF(arg_dict);
+            }
+            if (node->data.fee.retval) {
+                if (!arg_dict) {
+                    arg_dict = PyDict_New();
+                }
+                PyDict_SetItemString(arg_dict, "return_value", node->data.fee.retval);
+                Py_DECREF(node->data.fee.retval);
+            }
+            if (arg_dict) {
                 PyDict_SetItemString(dict, "args", arg_dict);
                 Py_DECREF(arg_dict);
             }
@@ -741,6 +765,27 @@ snaptrace_addinstant(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
+snaptrace_addfunctionarg(TracerObject* self, PyObject* args)
+{
+    PyObject* key = NULL;
+    PyObject* value = NULL;
+    struct ThreadInfo* info = get_thread_info(self);
+    if (!PyArg_ParseTuple(args, "OO", &key, &value)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    struct FunctionNode* fnode = info->stack_top;
+    if (!fnode->args) {
+        fnode->args = PyDict_New();
+    }
+
+    PyDict_SetItem(fnode->args, key, value);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
 snaptrace_addcounter(TracerObject* self, PyObject* args)
 {
     PyObject* name = NULL;
@@ -830,6 +875,10 @@ static void snaptrace_threaddestructor(void* key) {
             }
             while (info->stack_top) {
                 tmp = info->stack_top;
+                if (tmp->args) {
+                    Py_DECREF(tmp->args);
+                    tmp->args = NULL;
+                }
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }

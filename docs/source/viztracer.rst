@@ -164,5 +164,10 @@ VizTracer
 
         Add instant event to the report. 
 
+    .. _functionarg_label:
+    .. py:method:: add_functionarg(name, key, value)
+        
+        :param str key: key to display in the report
+        :param object value: a jsonifiable object
 
-
+        This method allows you to attach args to the current function, which will show in the report when you click on the function 

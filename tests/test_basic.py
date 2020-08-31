@@ -59,14 +59,16 @@ class TestTracerBasic(unittest.TestCase):
 class TestVizTracerBasic(unittest.TestCase):
     def test_run(self):
         snap = VizTracer()
-        snap.run("import random; random.randrange(10)")
+        snap.run("import random; random.randrange(10)", output_file="test_run.json")
+        self.assertTrue(os.path.exists("test_run.json"))
+        os.remove("test_run.json")
 
     def test_with(self):
         with VizTracer(output_file="test_with.json") as _:
             fib(10)
         self.assertTrue(os.path.exists("test_with.json"))
         os.remove("test_with.json")
-    
+
     def test_tracer_entries(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()
@@ -94,6 +96,19 @@ class TestInstant(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 1)
+
+
+class TestFunctionArg(unittest.TestCase):
+    def test_addfunctionarg(self):
+        def f(tracer):
+            tracer.add_functionarg("hello", "world")
+        tracer = VizTracer()
+        tracer.start()
+        f(tracer)
+        tracer.stop()
+        tracer.parse()
+        self.assertTrue("args" in tracer.data["traceEvents"][0] and
+                        "hello" in tracer.data["traceEvents"][0]["args"])
 
 
 class TestDecorator(unittest.TestCase):
@@ -165,7 +180,7 @@ class TestForkSave(unittest.TestCase):
                 data = json.load(f)
             os.remove(path)
             self.assertEqual(len(data["traceEvents"]), expected[i])
-            if pid == None:
+            if pid is None:
                 pid = data["traceEvents"][0]["pid"]
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)

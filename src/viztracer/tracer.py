@@ -223,6 +223,10 @@ class _VizTracer:
         if self.tracer == "c" and self.enable:
             self._tracer.addobject(ph, obj_id, name, args)
 
+    def add_functionarg(self, key, value):
+        if self.tracer == "c" and self.enable:
+            self._tracer.addfunctionarg(key, value)
+
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing

@@ -97,6 +97,8 @@ You can enable this feature in command line or using inline.
     
     tracer = VizTracer(log_return_value=True)
 
+You can log arbitrary (key, value) pairs for your function entry using ``add_functionarg()``. Refer to :doc:`viztracer` for it's usage
+
 Log Print
 ---------
 

@@ -26,6 +26,7 @@ typedef enum _NodeType {
 struct FEEData {
     PyObject* file_name;
     PyObject* args;
+    PyObject* retval;
     int first_lineno;
     PyObject* func_name;
     int type;
@@ -67,6 +68,7 @@ struct FunctionNode {
     struct FunctionNode* next;
     struct FunctionNode* prev;
     double ts;
+    PyObject* args;
 };
 
 struct ThreadInfo {
