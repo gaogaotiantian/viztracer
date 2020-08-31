@@ -2,7 +2,7 @@ VizTracer
 =========
 
 .. py:class:: VizTracer(self,\
-                 tracer_entries=5000000,
+                 tracer_entries=5000000,\
                  verbose=1,\
                  max_stack_depth=-1,\
                  include_files=None,\

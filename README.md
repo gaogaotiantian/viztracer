@@ -21,6 +21,7 @@ VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://git
 * Super easy to use, no source code change for basic usage, no package dependency
 * Optional function filter to ignore functions you are not interested 
 * Custom events to log and track data through time
+* Keep latest entries in a circular buffer, dump anytime or auto save at exit
 * Stand alone HTML report with powerful front-end, or chrome-compatible json 
 * Works on Linux/MacOS/Windows
 
@@ -63,12 +64,6 @@ python3 -m viztracer -o result.json my_script.py arg1 arg2
 python3 -m viztracer -o result.json.gz my_script.py arg1 arg2
 ```
 
-By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
-
-```
-python3 -m viztracer --save_flamegraph my_script.py
-```
-
 ### Inline
 
 Sometimes the command line may not work as you expected, or you do not want to profile the whole script. You can manually start/stop the profiling in your script as well.
@@ -90,9 +85,11 @@ with VizTracer(output_file="optional.html") as tracer:
     # Something happens here
 ```
 
+There are a lot of [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) available as well.
+
 ### Display Result
 
-By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome(maybe Firefox?). The front-end uses trace-viewer to show all the data. 
+By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome. The front-end uses trace-viewer to show all the data. 
 
 However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. Or you can use [chrome://tracing](chrome://tracing/) to load the file.
 
