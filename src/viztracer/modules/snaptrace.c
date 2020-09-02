@@ -84,11 +84,14 @@ static inline double get_ts()
 static inline void clear_node(struct EventNode* node) {
     switch (node->ntype) {
     case FEE_NODE:
-        Py_DECREF(node->data.fee.file_name);
-        Py_DECREF(node->data.fee.func_name);
-        if (node->data.fee.args) {
-            Py_DECREF(node->data.fee.args);
-            node->data.fee.args = NULL;
+        if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
+            Py_DECREF(node->data.fee.pycode);
+            if (node->data.fee.args) {
+                Py_DECREF(node->data.fee.args);
+                node->data.fee.args = NULL;
+            }
+        } else {
+            Py_DECREF(node->data.fee.cfunc);
         }
         break;
     case INSTANT_NODE:
@@ -247,21 +250,29 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         }
 
         // Exclude Self
-        if (is_c && is_call) {
-            PyCFunctionObject* func = (PyCFunctionObject*) arg;
-            if (func->m_module) {
-                if (startswith(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name)) {
-                    info->ignore_stack_depth += 1;
-                    return 0;
-                }
-            }
-        } else if (is_python && is_call) {
+        if (is_python && is_call) {
             PyObject* file_name = frame->f_code->co_filename;
             if (self->lib_file_path && startswith(PyUnicode_AsUTF8(file_name), self->lib_file_path)) {
                 info->ignore_stack_depth += 1;
                 return 0;
             }
         }
+        
+        // IMPORTANT: the C function will always be called from our python methods, 
+        // so this check is redundant. However, the user should never be allowed 
+        // to call our C methods directly! Otherwise C functions will be recorded.
+        // We keep this part in case we need to use it in the future
+
+        //if (is_c && is_call) {
+        //    PyCFunctionObject* func = (PyCFunctionObject*) arg;
+        //    if (func->m_module) {
+        //        if (startswith(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name)) {
+        //            printf("ignored\n");
+        //            info->ignore_stack_depth += 1;
+        //            return 0;
+        //        }
+        //    }
+        //} 
 
         // Check max stack depth
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
@@ -331,11 +342,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 node->tid = info->tid;
                 node->data.fee.type = what;
                 if (is_python) {
-                    node->data.fee.file_name = frame->f_code->co_filename;
-                    Py_INCREF(node->data.fee.file_name);
-                    node->data.fee.first_lineno = frame->f_code->co_firstlineno;
-                    node->data.fee.func_name = frame->f_code->co_name;
-                    Py_INCREF(node->data.fee.func_name);
+                    node->data.fee.pycode = frame->f_code;
+                    Py_INCREF(node->data.fee.pycode);
                     if (stack_top->args) {
                         // steal the reference when return
                         node->data.fee.args = stack_top->args;
@@ -344,14 +352,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                         node->data.fee.retval = PyObject_Repr(arg);
                     }
                 } else if (is_c) {
-                    PyCFunctionObject* func = (PyCFunctionObject*) arg;
-                    node->data.fee.func_name = PyUnicode_FromString(func->m_ml->ml_name);
-                    if (func->m_module) {
-                        node->data.fee.file_name = func->m_module;
-                        Py_INCREF(node->data.fee.file_name);
-                    } else {
-                        node->data.fee.file_name = PyUnicode_FromString(func->m_self->ob_type->tp_name);
-                    }
+                    node->data.fee.cfunc = (PyCFunctionObject*) arg;
+                    Py_INCREF(arg);
                 } 
             }
             return 0;
@@ -520,13 +522,20 @@ snaptrace_load(TracerObject* self, PyObject* args)
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
                 name = PyUnicode_FromFormat("%s(%d).%s", 
-                       PyUnicode_AsUTF8(node->data.fee.file_name),
-                       node->data.fee.first_lineno,
-                       PyUnicode_AsUTF8(node->data.fee.func_name));
+                       PyUnicode_AsUTF8(node->data.fee.pycode->co_filename),
+                       node->data.fee.pycode->co_firstlineno,
+                       PyUnicode_AsUTF8(node->data.fee.pycode->co_name));
             } else {
-                name = PyUnicode_FromFormat("%s.%s", 
-                       PyUnicode_AsUTF8(node->data.fee.file_name),
-                       PyUnicode_AsUTF8(node->data.fee.func_name));
+                PyCFunctionObject* func = node->data.fee.cfunc;
+                if (func->m_module) {
+                    name = PyUnicode_FromFormat("%s.%s",
+                           PyUnicode_AsUTF8(func->m_module),
+                           func->m_ml->ml_name);
+                } else {
+                    name = PyUnicode_FromFormat("%s.%s",
+                           func->m_self->ob_type->tp_name,
+                           func->m_ml->ml_name);
+                }
             }
 
             PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);

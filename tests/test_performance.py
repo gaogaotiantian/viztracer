@@ -46,7 +46,7 @@ class TestPerformance(unittest.TestCase):
         tracer.clear()
 
         # With viztracer + c tracer
-        tracer = VizTracer("c", verbose=0, ignore_c_function=True)
+        tracer = VizTracer("c", verbose=0)
         tracer.start()
         with Timer() as t:
             func()
@@ -128,6 +128,19 @@ class TestPerformance(unittest.TestCase):
                 TowerOfHanoi(n-1, auxiliary, destination, source)
             TowerOfHanoi(12, "A", "B", "C")
         self.do_one_function(hanoi)
+
+    def test_list(self):
+        def list_operation():
+            def ListOperation(n):
+                if n == 1:
+                    return [1]
+
+                ret = ListOperation(n-1)
+                for i in range(n):
+                    ret.append(i)
+                return ret
+            ListOperation(20)
+        self.do_one_function(list_operation)
 
 class TestFilterPerformance(unittest.TestCase):
     def do_one_function(self, func):

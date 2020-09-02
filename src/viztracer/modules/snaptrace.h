@@ -24,14 +24,12 @@ typedef enum _NodeType {
 } NodeType;
 
 struct FEEData {
-    PyObject* file_name;
     PyObject* args;
     PyObject* retval;
-    int first_lineno;
-    PyObject* func_name;
+    PyCFunctionObject* cfunc;
+    PyCodeObject* pycode;
     int type;
     double dur;
-    struct EventNode* parent;
 };
 
 struct InstantData {
