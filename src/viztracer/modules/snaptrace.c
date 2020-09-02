@@ -347,6 +347,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     if (stack_top->args) {
                         // steal the reference when return
                         node->data.fee.args = stack_top->args;
+                        stack_top->args = NULL;
                     }
                     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                         node->data.fee.retval = PyObject_Repr(arg);

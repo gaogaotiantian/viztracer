@@ -62,3 +62,21 @@ class TestSegFaultRegression(unittest.TestCase):
             pass
         tracer.stop()
         tracer.cleanup()
+
+
+class TestFunctionArg(unittest.TestCase):
+    def test_functionarg(self):
+        def f(n):
+            tracer.add_functionarg("input", n)
+            if n < 2:
+                return 1
+            return f(n-1) + f(n-2)
+        tracer = VizTracer()
+        tracer.start()
+        f(5)
+        tracer.stop()
+        tracer.parse()
+        inputs = set()
+        for d in tracer.data["traceEvents"]:
+            inputs.add(d["args"]["input"])
+        self.assertEqual(inputs, set([0,1,2,3,4,5]))
