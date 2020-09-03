@@ -2,9 +2,9 @@
 
 [![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)
 
-VizTracer is a low-overhead deterministic debugging/profiling/logging tool that can trace and visualize your python code to help you intuitively understand your code better and figure out the time consuming part of your code.
+VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
-You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs(sort algorithms, mcts, modulo algorithms, multithread tracing, etc.)
+You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
@@ -16,12 +16,11 @@ VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://git
 
 ## Highlights
 
-* Lower overhead than cProfile, more accurate on actual time consumed
 * Detailed function entry/exit information on timeline, not just summary of time used
 * Super easy to use, no source code change for basic usage, no package dependency
 * Optional function filter to ignore functions you are not interested 
-* Custom events to log and track data through time
-* Keep latest entries in a circular buffer, dump anytime or auto save at exit
+* Custom events to log and track arbitrary data through time
+* Keep latest entries, dump anytime or auto save at exit
 * Stand alone HTML report with powerful front-end, or chrome-compatible json 
 * Works on Linux/MacOS/Windows
 
@@ -32,8 +31,6 @@ The prefered way to install VizTracer is via pip
 ```
 pip install viztracer
 ```
-
-You can also download the source code and build it yourself.
 
 ## Usage
 
@@ -85,23 +82,19 @@ with VizTracer(output_file="optional.html") as tracer:
     # Something happens here
 ```
 
-There are a lot of [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) available as well.
+**There are a lot of [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) available as well.**
 
 ### Display Result
 
 By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome. The front-end uses trace-viewer to show all the data. 
 
-However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/), which will replace the deprecated trace viewer in the future. Or you can use [chrome://tracing](chrome://tracing/) to load the file.
+However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/) or [chrome://tracing](chrome://tracing/).
 
-**When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file and load it via [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/)**
+**When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file**
 
 ### Trace Filter
 
-Sometimes your code is really complicated or you need to run you program for a long time, which means the parsing time would be too long and the HTML/JSON file would be too large. There are ways in VizTracer to filter out the data you don't need. 
-
-The filter works at tracing time, not parsing time. That means, using filters will introduce some extra overhead while your tracing, but will save significant memory, parsing time and disk space. 
-
-VizTracer support:
+VizTracer can filter out the data you don't want to reduce overhead and keep info of a longer time period before you dump the log. 
 
 * [max stack depth](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.max_stack_depth)
 * [include files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.include_files)
@@ -110,17 +103,16 @@ VizTracer support:
 
 ### Add Custom Event
 
-```VizTracer``` supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
-
-VizTracer has:
+VizTracer supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
 
 * [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
 * [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
 * [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
+* [Function Args](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_functionarg)
 
 ### Multi Thread Support
 
-```VizTracer``` supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
+VizTracer supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
@@ -129,7 +121,7 @@ VizTracer has:
 
 VizTracer can support multi process with some extra steps. The current structure of VizTracer keeps one single buffer for one process, which means the user will have to produce multiple results from multiple processes and combine them together. 
 
-Refer to [multi process does](https://viztracer.readthedocs.io/en/stable/multi_process.html) for details
+Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_process.html) for details
 
 ### JSON alternative 
 
@@ -137,9 +129,7 @@ VizTracer needs to dump the internal data to json format. It is recommended for 
 
 ## Performance
 
-Overhead is a big consideration when people choose profilers. VizTracer has a better overhead performance than native cProfiler. In the worst case(Pure FEE) VizTracer is about the same as cProfile and in more practical cases VizTracer performs much better. 
-
-This is because VizTracer collects less information than cProfile, and optimized the hook function with a lot of efforts.
+VizTracer will introduce 2x to 3x overhead in the worst case. The overhead is much better if there are less function calls or if filters are applied correctly.
 
 An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github VM
 
