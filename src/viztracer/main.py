@@ -4,6 +4,7 @@
 import sys
 import argparse
 import os
+import subprocess
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
@@ -86,21 +87,29 @@ def main():
         }
         sys.argv = [options.module] + command[:]
     else:
-        try:
-            file_name = command[0]
-            code_string = open(file_name).read()
-            global_dict = {
-                "__name__": "__main__",
-                "__file__": file_name,
-                "__package__": None,
-                "__cached__": None
-            }
-            code = compile(code_string, file_name, "exec")
-            sys.path.insert(0, os.path.dirname(file_name))
-            sys.argv = command[:]
-        except FileNotFoundError:
-            print("No such file as {}".format(file_name))
-            exit(1)
+        file_name = command[0]
+        if not os.path.exists(file_name):
+            if sys.platform in ["linux", "linux2", "darwin"]:
+                p = subprocess.Popen(["which", file_name], stdout=subprocess.PIPE)
+                file_name = p.communicate()[0].strip()
+                if not file_name or not os.path.exists(file_name):
+                    print("No such file as {}".format(file_name))
+                    exit(1)
+            else:
+                print("No such file as {}".format(file_name))
+                exit(1)
+
+        code_string = open(file_name).read()
+        global_dict = {
+            "__name__": "__main__",
+            "__file__": file_name,
+            "__package__": None,
+            "__cached__": None
+        }
+        code = compile(code_string, file_name, "exec")
+        sys.path.insert(0, os.path.dirname(file_name))
+        sys.argv = command[:]
+
     if options.quiet:
         verbose = 0
     else:
