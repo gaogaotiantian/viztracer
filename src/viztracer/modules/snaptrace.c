@@ -352,8 +352,14 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                         node->data.fee.retval = PyObject_Repr(arg);
                     }
+                    if (frame->f_back) {
+                        node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame->f_back);
+                    } else {
+                        node->data.fee.caller_lineno = -1;
+                    }
                 } else if (is_c) {
                     node->data.fee.cfunc = (PyCFunctionObject*) arg;
+                    node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
                     Py_INCREF(arg);
                 } 
             }
@@ -544,6 +550,10 @@ snaptrace_load(TracerObject* self, PyObject* args)
             Py_DECREF(dur);
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
+            PyObject* caller_lineno = PyLong_FromLong(node->data.fee.caller_lineno);
+            PyDict_SetItemString(dict, "caller_lineno", caller_lineno);
+            Py_DECREF(caller_lineno);
+
             PyObject* arg_dict = NULL;
             if (node->data.fee.args) {
                 arg_dict = node->data.fee.args;

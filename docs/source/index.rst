@@ -28,6 +28,7 @@ VizTracer can display every function executed and the corresponding entry/exit t
    custom_event
    decorator
    multi_process
+   virtual_debug 
 
 .. toctree::
    :maxdepth: 1

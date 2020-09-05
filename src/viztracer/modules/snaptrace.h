@@ -29,6 +29,7 @@ struct FEEData {
     PyCFunctionObject* cfunc;
     PyCodeObject* pycode;
     int type;
+    int caller_lineno;
     double dur;
 };
 
