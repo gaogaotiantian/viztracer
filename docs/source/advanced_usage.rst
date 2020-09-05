@@ -164,3 +164,15 @@ It's a little bit more complicated to do multi processing. You basically need to
     python -m viztracer --combine <json_files>
 
 For detailed usage, please refer to :doc:`multi_process`
+
+Debug Your Saved Report
+-----------------------
+
+VizTracer allows you to debug your json report just like pdb. You can understand how your program is executed by 
+interact with it. Even better, you can **go back in time** because you know what happened before. 
+
+.. code-block:: 
+
+    vdb <your_json_report>
+
+For detailed commands, please refer to :doc:`virtual_debug`
