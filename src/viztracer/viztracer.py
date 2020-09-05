@@ -105,6 +105,10 @@ class VizTracer(_VizTracer):
             output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
             output_file = ".".join(output_file_parts)
         file_type = output_file.split(".")[-1]
+
+        if not os.path.isdir(os.path.dirname(output_file)):
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
         if self.verbose > 0:
             print("Saving report to {}...".format(os.path.abspath(output_file)))
         if file_type == "html":
