@@ -106,6 +106,7 @@ class VizTracer(_VizTracer):
             output_file = ".".join(output_file_parts)
         file_type = output_file.split(".")[-1]
 
+        output_file = os.path.abspath(output_file)
         if not os.path.isdir(os.path.dirname(output_file)):
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
