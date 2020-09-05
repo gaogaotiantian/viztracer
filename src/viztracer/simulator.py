@@ -1,7 +1,10 @@
 import sys
 import os
 import argparse
-import readline
+try:
+    import readline
+except ImportError:
+    pass
 
 from .prog_snapshot import ProgSnapshot
 
