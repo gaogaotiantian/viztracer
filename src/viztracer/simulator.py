@@ -32,8 +32,7 @@ class Simulator:
             try:
                 cmd = input(">>> ")
                 self.parse_cmd(cmd)
-            except Exception as e:
-                print(e)
+            except EOFError:
                 exit(0)
 
     def clear(self):
@@ -63,6 +62,9 @@ class Simulator:
             success, err_msg = self.snapshot.down()
         elif args[0] == "w":
             success, err_msg = self.snapshot.where(self.print)
+            return
+        elif args[0] in ["arg", "args"]:
+            success, err_msg = self.snapshot.print_args(self.print)
             return
         elif args[0] in ["quit", "exit", "q"]:
             exit(0)

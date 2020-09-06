@@ -58,7 +58,7 @@ class Frame:
                 end = len(lst)
 
             if self.curr_children_idx >= len(self.node.children):
-                currline = end - 1
+                currline = end
             else:
                 currline = self.node.children[self.curr_children_idx].caller_lineno - 1
 
@@ -69,7 +69,10 @@ class Frame:
                     else:
                         lst[idx] = "  " + lst[idx]
 
-            self.code_string = "".join(lst[start:end])
+            if currline == end:
+                self.code_string = "".join(lst[start:end] + ["> \n"])
+            else:
+                self.code_string = "".join(lst[start:end] + ["  \n"])
         else:
             self.code_string = "> " + self.node.fullname
         p(self.code_string)
@@ -264,5 +267,10 @@ class ProgSnapshot:
             else:
                 break
         self.curr_frame = frame
+
+        return True, None
+
+    def print_args(self, p):
+        p(str(self.curr_frame.node.event.get("args", "")))
 
         return True, None
