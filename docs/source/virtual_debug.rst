@@ -47,6 +47,10 @@ You can use the following commands in the interactive shell:
 
     go down a level to inspect the inner frame
 
+.. py:attribute:: a, arg, args
+
+    print the function args logged in VizTracer
+
 .. py:attribute:: q, quit, exit
 
     exit the program
