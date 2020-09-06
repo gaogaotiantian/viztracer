@@ -27,13 +27,28 @@ You can use the following commands in the interactive shell:
 
     go to **last** function entry/exit without entering other function
 
-.. py:attribute:: t <timestamp>
+.. py:attribute:: r
 
-    go to the time specified by ``<timestamp>``. ``<timestamp>`` has the unit of us.
+    go forward and return to the caller function
 
 .. py:attribute:: r
 
-    return to the caller function
+    go backward and return to the caller function
+
+.. py:attribute:: t [<timestamp>]
+
+    if ``<timestamp>`` is not specified, display current timestamp, otherwise
+    go to the time specified by ``<timestamp>``. ``<timestamp>`` has the unit of us.
+
+.. py:attribute:: tid [<tid>]
+
+    if ``<tid>`` is not specified, list the current thread ids in the current process, otherwise
+    go to the thread at the current timestamp
+
+.. py:attribute:: pid [<pid>]
+
+    if ``<pid>`` is not specified, list the current process ids, otherwise
+    go to the first spawned thread in the specified process at the current timestamp
 
 .. py:attribute:: w
 

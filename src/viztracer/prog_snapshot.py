@@ -36,19 +36,24 @@ class Frame:
             with open(node.filename) as f:
                 lst = f.readlines()
 
-            indent = -1
             start = firstlineno - 1
             line = lst[start]
             stripped_line = line.lstrip()
-            indent = len(line) - len(stripped_line)
+            code_indent = len(line) - len(stripped_line)
 
             if node.funcname != "<module>":
                 end = firstlineno
+                indented = False
                 while end < len(lst):
                     line = lst[end]
                     stripped_line = line.lstrip()
-                    if not stripped_line.startswith("#") and len(line) - len(stripped_line) <= indent:
-                        break
+                    indent = len(line) - len(stripped_line)
+                    if indent > code_indent:
+                        indented = True
+                    elif indented == True:
+                        if len(stripped_line) > 0 and \
+                                not stripped_line.startswith("#"):
+                            break
                     end += 1
 
                 # clear the ending spaces
@@ -60,6 +65,7 @@ class Frame:
             if self.curr_children_idx >= len(self.node.children):
                 currline = end
             else:
+                print(self.node.children[self.curr_children_idx])
                 currline = self.node.children[self.curr_children_idx].caller_lineno - 1
 
             for idx in range(start, end):
@@ -84,6 +90,7 @@ class ProgSnapshot:
         self.curr_node = None
         self.curr_frame = None
         self.first_tree = None
+        self.curr_tree = None
         if json_string:
             self.load(json_string)
 
@@ -95,6 +102,7 @@ class ProgSnapshot:
             self.load_event(event)
         self.first_tree = min([tree for tree in self.get_trees()], key=lambda x: x.first_ts())
         first_ts = self.first_tree.first_ts()
+        self.curr_tree = self.first_tree
         self.curr_frame = Frame(None, self.first_tree.first_node())
         for tree in self.get_trees():
             tree.normalize(first_ts)
@@ -113,7 +121,7 @@ class ProgSnapshot:
             if pid not in self.func_trees:
                 self.func_trees[pid] = {}
             if tid not in self.func_trees[pid]:
-                self.func_trees[pid][tid] = FuncTree()
+                self.func_trees[pid][tid] = FuncTree(pid, tid)
 
             self.func_trees[pid][tid].add_event(event)
         else:
@@ -158,12 +166,8 @@ class ProgSnapshot:
                 curr_frame.curr_children_idx += 1
         else:
             # go out of the function
-            if curr_frame.parent:
-                curr_frame = curr_frame.parent
-                curr_frame.next = None
-                curr_frame.curr_children_idx += 1
-                self.curr_frame = curr_frame
-            else:
+            success, _ = self.func_return()
+            if not success:
                 return False, "at the end of the trace"
         return True, None
 
@@ -179,11 +183,8 @@ class ProgSnapshot:
                 self.curr_frame = new_frame
         else:
             # go out of the function
-            if curr_frame.parent:
-                curr_frame = curr_frame.parent
-                curr_frame.next = None
-                self.curr_frame = curr_frame
-            else:
+            success, _ = self.func_return_back()
+            if not success:
                 return False, "at the beginning of the trace"
         return True, None
 
@@ -194,12 +195,8 @@ class ProgSnapshot:
             curr_frame.curr_children_idx += 1
         else:
             # go out of the function
-            if curr_frame.parent:
-                curr_frame = curr_frame.parent
-                curr_frame.next = None
-                curr_frame.curr_children_idx += 1
-                self.curr_frame = curr_frame
-            else:
+            success, _ = self.func_return()
+            if not success:
                 return False, "at the end of the trace"
         return True, None
 
@@ -210,11 +207,8 @@ class ProgSnapshot:
             curr_frame.curr_children_idx -= 1
         else:
             # go out of the function
-            if curr_frame.parent:
-                curr_frame = curr_frame.parent
-                curr_frame.next = None
-                self.curr_frame = curr_frame
-            else:
+            success, _ = self.func_return_back()
+            if not success:
                 return False, "at the beginning of the trace"
         return True, None
 
@@ -222,9 +216,32 @@ class ProgSnapshot:
         self._goto_inner_frame()
         curr_frame = self.curr_frame
         if not curr_frame.parent:
+            # Check if there's a sibling
+            node = curr_frame.node
+            idx = node.parent.children.index(node)
+            if idx < len(node.parent.children) - 1:
+                self.curr_frame = Frame(None, node.parent.children[idx+1])
+                return True, None
             return False, "No callers available"
         curr_frame = curr_frame.parent
         curr_frame.curr_children_idx += 1
+        curr_frame.next = None
+        self.curr_frame = curr_frame
+
+        return True, None
+
+    def func_return_back(self):
+        self._goto_inner_frame()
+        curr_frame = self.curr_frame
+        if not curr_frame.parent:
+            # Check if there's a sibling
+            node = curr_frame.node
+            idx = node.parent.children.index(node)
+            if idx > 0:
+                self.curr_frame = Frame(None, node.parent.children[idx-1])
+                return True, None
+            return False, "No callers available"
+        curr_frame = curr_frame.parent
         curr_frame.next = None
         self.curr_frame = curr_frame
 
@@ -247,17 +264,17 @@ class ProgSnapshot:
         return True, None
 
     def goto_timestamp(self, ts):
-        frame = Frame(None, self.first_tree.first_node())
+        frame = Frame(None, self.curr_tree.node_by_timestamp(ts))
         while True:
             if frame.node.children:
                 starts = [child.start for child in frame.node.children]
-                idx = bisect.bisect(starts, ts)
+                idx = bisect.bisect_left(starts, ts)
                 if idx == 0:
                     frame.curr_children_idx = 0
                     break
                 else:
                     idx -= 1
-                if frame.node.children[idx].end < ts:
+                if frame.node.children[idx].end <= ts:
                     # here's what we need!
                     frame.curr_children_idx = idx + 1
                     break
@@ -267,6 +284,69 @@ class ProgSnapshot:
             else:
                 break
         self.curr_frame = frame
+
+        return True, None
+
+    def get_timestamp(self):
+        tmp_frame = self.curr_frame
+        while tmp_frame.next:
+            tmp_frame = tmp_frame.next
+        if not tmp_frame.node.children:
+            return tmp_frame.node.start
+        if tmp_frame.curr_children_idx >= len(tmp_frame.node.children):
+            return tmp_frame.node.children[-1].end
+        else:
+            return tmp_frame.node.children[tmp_frame.curr_children_idx].start
+
+    def print_timestamp(self, p):
+        p(str(self.get_timestamp()))
+
+        return True, None
+
+    def list_tid(self, p):
+        curr_tree = self.curr_tree
+        forest = self.func_trees[curr_tree.pid]
+        for tid in forest:
+            if tid == curr_tree.tid:
+                p("> {}".format(tid))
+            else:
+                p("  {}".format(tid))
+
+        return True, None
+
+    def list_pid(self, p):
+        curr_tree = self.curr_tree
+        for pid in self.func_trees:
+            if pid == curr_tree.pid:
+                p("> {}".format(pid))
+            else:
+                p("  {}".format(pid))
+
+        return True, None
+
+    def goto_tid(self, tid):
+        assert(type(tid) is int)
+        forest = self.func_trees[self.curr_tree.pid]
+        if tid not in forest:
+            return False, "No such tid"
+        else:
+            ts = self.get_timestamp()
+            self.curr_tree = forest[tid]
+            self.goto_timestamp(ts)
+
+        return True, None
+
+    def goto_pid(self, pid):
+        assert(type(pid) is int)
+        if pid not in self.func_trees:
+            return False, "No such pid"
+        else:
+            ts = self.get_timestamp()
+            forest = self.func_trees[pid]
+            for tid in forest:
+                self.curr_tree = forest[tid]
+                break
+            self.goto_timestamp(ts)
 
         return True, None
 

@@ -32,6 +32,7 @@ class FuncTreeNode:
                 self.filename = m.group(1)
                 self.lineno = int(m.group(2))
                 self.funcname = m.group(3)
+            if "caller_lineno" in self.event:
                 self.caller_lineno = self.event["caller_lineno"]
 
     def __repr__(self):
@@ -76,9 +77,11 @@ class FuncTreeNode:
 
 
 class FuncTree:
-    def __init__(self):
+    def __init__(self, pid=0, tid=0):
         self.root = FuncTreeNode()
         self.curr = self.root
+        self.pid = pid
+        self.tid = tid
 
     def add_event(self, event):
         node = FuncTreeNode(event)
@@ -91,6 +94,14 @@ class FuncTree:
 
     def first_node(self):
         return self.root.children[0]
+
+    def node_by_timestamp(self, ts):
+        starts = [node.start for node in self.root.children]
+        idx = bisect.bisect(starts, ts)
+        if idx == 0:
+            return self.root.children[0]
+        else:
+            return self.root.children[idx-1]
 
     def get_tree_structure(self):
         return self.root.get_structure()

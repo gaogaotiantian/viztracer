@@ -51,11 +51,16 @@ class Simulator:
             success, err_msg = self.snapshot.next_back()
         elif args[0] == "r":
             success, err_msg = self.snapshot.func_return()
+        elif args[0] == "rb":
+            success, err_msg = self.snapshot.func_return_back()
         elif args[0] == "t":
-            if len(args) != 2:
-                success, err_msg = False, "You need to specify a timestamp"
-            else:
+            if len(args) == 1:
+                success, err_msg = self.snapshot.print_timestamp(self.print)
+                return
+            elif len(args) == 2:
                 success, err_msg = self.snapshot.goto_timestamp(float(args[1]))
+            else:
+                success, err_msg = False, "t takes 1 or no argument"
         elif args[0] == "u":
             success, err_msg = self.snapshot.up()
         elif args[0] == "d":
@@ -63,6 +68,32 @@ class Simulator:
         elif args[0] == "w":
             success, err_msg = self.snapshot.where(self.print)
             return
+        elif args[0] == "tid":
+            if len(args) == 1:
+                success, err_msg = self.snapshot.list_tid(self.print)
+                return
+            elif len(args) == 2:
+                try:
+                    tid = int(args[1])
+                    success, err_msg = self.snapshot.goto_tid(tid)
+                except ValueError:
+                    print("tid needs to be an integer")
+                    return
+            else:
+                success, err_msg = False, "tid takes 1 or no argument"
+        elif args[0] == "pid":
+            if len(args) == 1:
+                success, err_msg = self.snapshot.list_pid(self.print)
+                return
+            elif len(args) == 2:
+                try:
+                    pid = int(args[1])
+                    success, err_msg = self.snapshot.goto_pid(pid)
+                except ValueError:
+                    print("tid needs to be an integer")
+                    return
+            else:
+                success, err_msg = False, "pid takes 1 or no argument"
         elif args[0] in ["arg", "args"]:
             success, err_msg = self.snapshot.print_args(self.print)
             return
