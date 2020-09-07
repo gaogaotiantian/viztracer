@@ -14,7 +14,7 @@ from .flamegraph import FlameGraph
 class VizTracer(_VizTracer):
     def __init__(self,
                  tracer="c",
-                 tracer_entries=5000000,
+                 tracer_entries=1000000,
                  verbose=1,
                  max_stack_depth=-1,
                  include_files=None,

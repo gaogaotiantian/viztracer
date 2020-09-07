@@ -5,7 +5,7 @@ try:
     import orjson as json
 except ImportError:
     import json
-from .util import size_fmt
+from .util import size_fmt, color_print
 
 
 def get_json(data):
@@ -48,6 +48,13 @@ class ReportBuilder:
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
             print("Dumping trace data to json, total entries: {}, estimated json file size: {}".format(entries, size_fmt(120*entries)))
+            if entries >= 4000000:
+                print("")
+                color_print("WARNING", "Large trace requires a lot of RAM and is slow to load.")
+                color_print("WARNING", "    If you need faster loading time or smaller trace file, try a smaller tracer_entries or use filters")
+                color_print("WARNING", "    use --quiet to shut me up")
+                print("")
+
         if json.__name__ == "orjson":
             if allow_binary:
                 return json.dumps(self.combined_json)

@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(prog="python -m viztracer")
     parser.add_argument("--tracer", nargs="?", choices=["c", "python"], default="c",
             help="specify the tracer you use. Can only be c or python")
-    parser.add_argument("--tracer_entries", nargs="?", type=int, default=5000000,
+    parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
             help="size of circular buffer. How many entries can it store")
     parser.add_argument("--output_file", "-o", nargs="?", default=None,
             help="output file path. End with .json or .html or .gz")

@@ -6,14 +6,14 @@ import os
 import time
 import builtins
 from io import StringIO
-from .util import ProgressBar
+from .util import ProgressBar, color_print
 from .report_builder import ReportBuilder
 import viztracer.snaptrace as snaptrace
 
 
 class _VizTracer:
     def __init__(self,
-                 tracer_entries=5000000,
+                 tracer_entries=1000000,
                  tracer="c",
                  max_stack_depth=-1,
                  include_files=None,
@@ -26,6 +26,7 @@ class _VizTracer:
         self.parsed = False
         self.tracer = tracer
         self._tracer = snaptrace.Tracer(tracer_entries)
+        self.tracer_entries = tracer_entries
         self.verbose = 0
         self.data = []
         self.max_stack_depth = max_stack_depth
@@ -277,6 +278,13 @@ class _VizTracer:
                     "displayTimeUnit": "ns"
                 }
                 self.total_entries = len(self.data["traceEvents"])
+                if self.total_entries == self.tracer_entries and self.verbose > 0:
+                    print("")
+                    color_print("WARNING", "Circular buffer is full, you lost some early data, but you still have the most recent data.")
+                    color_print("WARNING", "    If you need more buffer, use \"viztracer --tracer_entries <entry_number>(current: {})\"".format(self.tracer_entries))
+                    color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
+                    color_print("WARNING", "    use --quiet to shut me up")
+                    print("")
             self.parsed = True
 
         return self.total_entries
