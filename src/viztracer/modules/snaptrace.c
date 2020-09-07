@@ -824,7 +824,7 @@ snaptrace_addcounter(TracerObject* self, PyObject* args)
     node->data.counter.name = name;
     node->data.counter.args = counter_args;
     Py_INCREF(name);
-    Py_INCREF(args);
+    Py_INCREF(counter_args);
 
     Py_RETURN_NONE;
 }
@@ -854,7 +854,7 @@ snaptrace_addobject(TracerObject* self, PyObject* args)
     Py_INCREF(ph);
     Py_INCREF(id);
     Py_INCREF(name);
-    Py_INCREF(args);
+    Py_INCREF(object_args);
 
     Py_RETURN_NONE;
 }
