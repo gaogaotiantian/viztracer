@@ -59,9 +59,7 @@ class Tmpl(unittest.TestCase):
                 raise Exception("Unexpected output file argument")
 
     def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib, expected_entries=None, cleanup=True):
-        print(os.getenv("COVERAGE_RUN"))
         if os.getenv("COVERAGE_RUN"):
-            print("This is a coverage run")
             idx = cmd_list.index("viztracer")
             cmd_list = ["coverage", "run", "--parallel-mode", "-m"] + cmd_list[idx:]
 
