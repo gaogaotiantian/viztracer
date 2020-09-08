@@ -46,20 +46,20 @@ jobs:
         python setup.py sdist bdist_wheel
         pip install dist/*.whl
         python -m unittest
-        export COVERAGE_RUN=True
     - name: Build dist and test with unittest on Windows, set coverage env
       if: matrix.os == 'windows-latest'
       run: |
         python setup.py sdist bdist_wheel
         pip install (Get-ChildItem dist/*.whl)
         python -m unittest
-        Set COVERAGE_RUN=True
     - name: Generate coverage report
       run: |
         coverage run --parallel-mode --pylib -m unittest
         ls .*
         coverage combine
         coverage xml --include=*viztracer* --omit=*tests*
+      env:
+        COVERAGE_RUN: True
     - name: Upload report to Codecov
       uses: codecov/codecov-action@v1
       with:
