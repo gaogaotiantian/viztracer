@@ -62,6 +62,10 @@ You can use the following commands in the interactive shell:
 
     go down a level to inspect the inner frame
 
+.. py:attribute:: counter
+
+    print the counter recorded at the current timestamp
+
 .. py:attribute:: a, arg, args
 
     print the function args logged in VizTracer

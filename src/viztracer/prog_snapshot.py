@@ -65,7 +65,6 @@ class Frame:
             if self.curr_children_idx >= len(self.node.children):
                 currline = end
             else:
-                print(self.node.children[self.curr_children_idx])
                 currline = self.node.children[self.curr_children_idx].caller_lineno - 1
 
             for idx in range(start, end):
@@ -84,15 +83,46 @@ class Frame:
         p(self.code_string)
 
 
+class CounterEvents:
+    def __init__(self):
+        self._events = []
+
+    def add_event(self, event):
+        # The events have to be added in order
+        if self._events:
+            args = self._events[-1]["args"].copy()
+        else:
+            args = {}
+        args.update(event["args"])
+        self._events.append({
+            "ts": event["ts"],
+            "args": args
+        })
+    
+    def normalize(self, first_ts):
+        for event in self._events:
+            event["ts"] -= first_ts
+
+    def get_args(self, ts):
+        ts_lst = [event["ts"] for event in self._events]
+        idx = bisect.bisect(ts_lst, ts)
+        if idx == 0:
+            return {}
+        else:
+            return self._events[idx-1]["args"]
+
+
 class ProgSnapshot:
-    def __init__(self, json_string=None):
+    def __init__(self, json_string=None, p=print):
         self.func_trees = {}
         self.curr_node = None
         self.curr_frame = None
         self.first_tree = None
         self.curr_tree = None
+        self.counter_events = CounterEvents()
         if json_string:
             self.load(json_string)
+        self.p = p
 
     def load(self, json_string):
         self.func_trees = {}
@@ -106,6 +136,7 @@ class ProgSnapshot:
         self.curr_frame = Frame(None, self.first_tree.first_node())
         for tree in self.get_trees():
             tree.normalize(first_ts)
+        self.counter_events.normalize(first_ts)
 
     def load_event(self, event):
         # event is a chrome trace format event object
@@ -124,6 +155,8 @@ class ProgSnapshot:
                 self.func_trees[pid][tid] = FuncTree(pid, tid)
 
             self.func_trees[pid][tid].add_event(event)
+        elif ph == "C":
+            self.counter_events.add_event(event)
         else:
             # Currently we only support complete events
             return
@@ -134,8 +167,8 @@ class ProgSnapshot:
                 yield self.func_trees[pid][tid]
         return
 
-    def show(self, p):
-        self.curr_frame.show(p)
+    def show(self):
+        self.curr_frame.show(self.p)
 
     def up(self):
         # Inspect previous frame
@@ -247,15 +280,15 @@ class ProgSnapshot:
 
         return True, None
 
-    def where(self, p):
+    def where(self):
         tmp_frame = self.curr_frame
         while tmp_frame.parent:
             tmp_frame = tmp_frame.parent
         while True:
             if tmp_frame == self.curr_frame:
-                p("> " + tmp_frame.node.fullname)
+                self.p("> " + tmp_frame.node.fullname)
             else:
-                p("  " + tmp_frame.node.fullname)
+                self.p("  " + tmp_frame.node.fullname)
             if tmp_frame.next:
                 tmp_frame = tmp_frame.next
             else:
@@ -298,29 +331,34 @@ class ProgSnapshot:
         else:
             return tmp_frame.node.children[tmp_frame.curr_children_idx].start
 
-    def print_timestamp(self, p):
-        p(str(self.get_timestamp()))
+    def print_timestamp(self):
+        self.p(str(self.get_timestamp()))
 
         return True, None
 
-    def list_tid(self, p):
+    def print_counter(self):
+        self.p(str(self.counter_events.get_args(self.get_timestamp())))
+
+        return True, None
+
+    def list_tid(self):
         curr_tree = self.curr_tree
         forest = self.func_trees[curr_tree.pid]
         for tid in forest:
             if tid == curr_tree.tid:
-                p("> {}".format(tid))
+                self.p("> {}".format(tid))
             else:
-                p("  {}".format(tid))
+                self.p("  {}".format(tid))
 
         return True, None
 
-    def list_pid(self, p):
+    def list_pid(self):
         curr_tree = self.curr_tree
         for pid in self.func_trees:
             if pid == curr_tree.pid:
-                p("> {}".format(pid))
+                self.p("> {}".format(pid))
             else:
-                p("  {}".format(pid))
+                self.p("  {}".format(pid))
 
         return True, None
 
@@ -350,7 +388,7 @@ class ProgSnapshot:
 
         return True, None
 
-    def print_args(self, p):
-        p(str(self.curr_frame.node.event.get("args", "")))
+    def print_args(self):
+        self.p(str(self.curr_frame.node.event.get("args", "")))
 
         return True, None

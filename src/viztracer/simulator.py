@@ -10,8 +10,7 @@ from .prog_snapshot import ProgSnapshot
 
 
 class Simulator:
-    def __init__(self, json_string):
-        self.snapshot = ProgSnapshot(json_string)
+    def __init__(self, json_string, no_clear=False):
         try:
             from rich.console import Console
             from rich.syntax import Syntax
@@ -24,10 +23,12 @@ class Simulator:
             self.print = p
         except ImportError:
             self.print = print
+        self.snapshot = ProgSnapshot(json_string, self.print)
+        self.no_clear = no_clear
 
     def start(self):
         self.clear()
-        self.snapshot.show(self.print)
+        self.snapshot.show()
         while True:
             try:
                 cmd = input(">>> ")
@@ -36,7 +37,8 @@ class Simulator:
                 exit(0)
 
     def clear(self):
-        os.system("cls" if os.name == "nt" else "clear")
+        if not self.no_clear:
+            os.system("cls" if os.name == "nt" else "clear")
 
     def parse_cmd(self, cmd):
         args = cmd.split(" ")
@@ -55,7 +57,7 @@ class Simulator:
             success, err_msg = self.snapshot.func_return_back()
         elif args[0] == "t":
             if len(args) == 1:
-                success, err_msg = self.snapshot.print_timestamp(self.print)
+                success, err_msg = self.snapshot.print_timestamp()
                 return
             elif len(args) == 2:
                 success, err_msg = self.snapshot.goto_timestamp(float(args[1]))
@@ -66,11 +68,11 @@ class Simulator:
         elif args[0] == "d":
             success, err_msg = self.snapshot.down()
         elif args[0] == "w":
-            success, err_msg = self.snapshot.where(self.print)
+            success, err_msg = self.snapshot.where()
             return
         elif args[0] == "tid":
             if len(args) == 1:
-                success, err_msg = self.snapshot.list_tid(self.print)
+                success, err_msg = self.snapshot.list_tid()
                 return
             elif len(args) == 2:
                 try:
@@ -83,7 +85,7 @@ class Simulator:
                 success, err_msg = False, "tid takes 1 or no argument"
         elif args[0] == "pid":
             if len(args) == 1:
-                success, err_msg = self.snapshot.list_pid(self.print)
+                success, err_msg = self.snapshot.list_pid()
                 return
             elif len(args) == 2:
                 try:
@@ -95,7 +97,10 @@ class Simulator:
             else:
                 success, err_msg = False, "pid takes 1 or no argument"
         elif args[0] in ["arg", "args"]:
-            success, err_msg = self.snapshot.print_args(self.print)
+            success, err_msg = self.snapshot.print_args()
+            return
+        elif args[0] == "counter":
+            success, err_msg = self.snapshot.print_counter()
             return
         elif args[0] in ["quit", "exit", "q"]:
             exit(0)
@@ -105,7 +110,7 @@ class Simulator:
 
         if success:
             self.clear()
-            self.snapshot.show(self.print)
+            self.snapshot.show()
         else:
             print(err_msg)
 
@@ -113,6 +118,7 @@ class Simulator:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs=1)
+    parser.add_argument("--no_clear", action="store_true", default=False)
 
     options = parser.parse_args(sys.argv[1:])
 
@@ -120,5 +126,5 @@ def main():
     with open(filename) as f:
         s = f.read()
 
-    sim = Simulator(s)
+    sim = Simulator(s, no_clear=options.no_clear)
     sim.start()
