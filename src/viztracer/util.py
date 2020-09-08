@@ -43,7 +43,9 @@ class _bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+
 bcolors = _bcolors()
+
 
 def color_print(color, s):
     print(bcolors.__getattribute__(color) + s + bcolors.ENDC)

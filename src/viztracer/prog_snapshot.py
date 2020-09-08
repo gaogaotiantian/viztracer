@@ -50,7 +50,7 @@ class Frame:
                     indent = len(line) - len(stripped_line)
                     if indent > code_indent:
                         indented = True
-                    elif indented == True:
+                    elif indented:
                         if len(stripped_line) > 0 and \
                                 not stripped_line.startswith("#"):
                             break
@@ -98,7 +98,7 @@ class CounterEvents:
             "ts": event["ts"],
             "args": args
         })
-    
+
     def normalize(self, first_ts):
         for event in self._events:
             event["ts"] -= first_ts
@@ -115,7 +115,7 @@ class CounterEvents:
 class ObjectEvents:
     def __init__(self):
         self._objects = {}
-    
+
     def add_event(self, event):
         if event["id"] not in self._objects:
             entry = {
@@ -125,7 +125,7 @@ class ObjectEvents:
                 ]
             }
             self._objects[event["id"]] = entry
-        
+
         entry = self._objects[event["id"]]
 
         if event["ph"] in ["N", "D"]:
@@ -140,7 +140,7 @@ class ObjectEvents:
             })
         else:
             raise Exception("Unexpected type for object event")
-    
+
     def normalize(self, first_ts):
         for entry in self._objects.values():
             for snapshot in entry["snapshots"]:
@@ -153,7 +153,7 @@ class ObjectEvents:
             idx = bisect.bisect(ts_lst, ts)
             if idx != 0:
                 snapshot = entry["snapshots"][idx-1]
-                if snapshot["args"] != None:
+                if snapshot["args"] is not None:
                     ret[entry["name"]] = snapshot["args"]
         return ret
 
