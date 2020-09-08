@@ -26,13 +26,13 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 setuptools wheel twine
+        pip install flake8 setuptools wheel twine coverage
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 setuptools wheel twine
+        pip install flake8 setuptools wheel twine coverage
         if (Test-Path -Path '.\requirements.txt' -PathType Leaf) {pip install -r requirements.txt}
     - name: Lint with flake8
       run: |
@@ -52,3 +52,11 @@ jobs:
         python setup.py sdist bdist_wheel
         pip install (Get-ChildItem dist/*.whl)
         python -m unittest
+    - name: Generate coverage report
+      run: |
+        coverage run --pylib -m unittest
+        coverage xml --include=*viztracer* --omit=*tests*
+    - name: Upload report to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
