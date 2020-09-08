@@ -55,7 +55,7 @@ jobs:
     - name: Generate coverage report
       run: |
         coverage run --pylib -m unittest
-        coverage xml --include=*viztracer*
+        coverage xml --include=*viztracer* --omit=*tests*
     - name: Upload report to Codecov
       uses: codecov/codecov-action@v1
       with:
