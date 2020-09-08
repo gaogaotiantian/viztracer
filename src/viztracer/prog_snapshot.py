@@ -112,6 +112,52 @@ class CounterEvents:
             return self._events[idx-1]["args"]
 
 
+class ObjectEvents:
+    def __init__(self):
+        self._objects = {}
+    
+    def add_event(self, event):
+        if event["id"] not in self._objects:
+            entry = {
+                "id": event["id"],
+                "name": event["name"],
+                "snapshots": [
+                ]
+            }
+            self._objects[event["id"]] = entry
+        
+        entry = self._objects[event["id"]]
+
+        if event["ph"] in ["N", "D"]:
+            entry["snapshots"].append({
+                "ts": event["ts"],
+                "args": None
+            })
+        elif event["ph"] == "O":
+            entry["snapshots"].append({
+                "ts": event["ts"],
+                "args": event["args"]["snapshot"]
+            })
+        else:
+            raise Exception("Unexpected type for object event")
+    
+    def normalize(self, first_ts):
+        for entry in self._objects.values():
+            for snapshot in entry["snapshots"]:
+                snapshot["ts"] -= first_ts
+
+    def get_args(self, ts):
+        ret = {}
+        for entry in self._objects.values():
+            ts_lst = [snapshot["ts"] for snapshot in entry["snapshots"]]
+            idx = bisect.bisect(ts_lst, ts)
+            if idx != 0:
+                snapshot = entry["snapshots"][idx-1]
+                if snapshot["args"] != None:
+                    ret[entry["name"]] = snapshot["args"]
+        return ret
+
+
 class ProgSnapshot:
     def __init__(self, json_string=None, p=print):
         self.func_trees = {}
@@ -120,6 +166,7 @@ class ProgSnapshot:
         self.first_tree = None
         self.curr_tree = None
         self.counter_events = CounterEvents()
+        self.object_events = ObjectEvents()
         if json_string:
             self.load(json_string)
         self.p = p
@@ -137,6 +184,7 @@ class ProgSnapshot:
         for tree in self.get_trees():
             tree.normalize(first_ts)
         self.counter_events.normalize(first_ts)
+        self.object_events.normalize(first_ts)
 
     def load_event(self, event):
         # event is a chrome trace format event object
@@ -157,6 +205,8 @@ class ProgSnapshot:
             self.func_trees[pid][tid].add_event(event)
         elif ph == "C":
             self.counter_events.add_event(event)
+        elif ph in ["N", "D", "O"]:
+            self.object_events.add_event(event)
         else:
             # Currently we only support complete events
             return
@@ -338,6 +388,14 @@ class ProgSnapshot:
 
     def print_counter(self):
         self.p(str(self.counter_events.get_args(self.get_timestamp())))
+
+        return True, None
+
+    def print_object(self):
+        object_dict = self.object_events.get_args(self.get_timestamp())
+        for k, v in object_dict.items():
+            self.p(str(k) + ":")
+            self.p(str(v))
 
         return True, None
 

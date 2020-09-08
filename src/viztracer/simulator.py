@@ -102,6 +102,9 @@ class Simulator:
         elif args[0] == "counter":
             success, err_msg = self.snapshot.print_counter()
             return
+        elif args[0] == "object":
+            success, err_msg = self.snapshot.print_object()
+            return
         elif args[0] in ["quit", "exit", "q"]:
             exit(0)
         else:
