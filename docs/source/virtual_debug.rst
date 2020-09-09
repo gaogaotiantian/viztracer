@@ -31,7 +31,7 @@ You can use the following commands in the interactive shell:
 
     go forward and return to the caller function
 
-.. py:attribute:: r
+.. py:attribute:: rb
 
     go backward and return to the caller function
 
