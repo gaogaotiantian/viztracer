@@ -10,7 +10,6 @@ def adapt_json_file(filename):
     with open(path) as f:
         data = json.loads(f.read())
         for event in data["traceEvents"]:
-            print(event)
             if event["ph"] == "X":
                 idx = event["name"].index("(")
                 new_name = py_path + event["name"][idx:]
