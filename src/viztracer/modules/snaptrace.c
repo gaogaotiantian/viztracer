@@ -867,7 +867,12 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 #if _WIN32  
     info->tid = GetCurrentThreadId();
 #elif __APPLE__
-    info->tid = pthread_threadid_np(NULL, NULL);
+    __uint64_t tid = 0;
+    if (pthread_threadid_np(NULL, &tid)) {
+        info->tid = (unsigned long)pthread_self();
+    } else {
+        info->tid = tid;
+    }
 #else
     info->tid = syscall(SYS_gettid);
 #endif

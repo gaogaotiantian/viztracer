@@ -31,8 +31,8 @@ class TestTracerBasic(unittest.TestCase):
         t.generate_report()
 
     def test_builtin_func(self):
+        import random
         def fun(n):
-            import random
             for _ in range(n):
                 random.randrange(n)
         t = _VizTracer(ignore_c_function=True)
