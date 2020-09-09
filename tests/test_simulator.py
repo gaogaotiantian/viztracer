@@ -12,8 +12,8 @@ vdb_basic = get_json_file_path("vdb_basic.json")
 
 
 class SimInterface:
-    def __init__(self, json_path):
-        commands = ["vdb", "--no_clear", "--extra_newline", json_path]
+    def __init__(self, json_path, vdb_cmd=["vdb", "--no_clear", "--extra_newline"]):
+        commands = vdb_cmd + [json_path]
         if os.getenv("COVERAGE_RUN"):
             commands = ["coverage", "run", "--parallel-mode", "--pylib", "-m", "viztracer.simulator"] + commands[1:]
         self.sim_process = subprocess.Popen(commands,
@@ -122,6 +122,18 @@ class TestSimulator(unittest.TestCase):
         sim.command("pid 3218")
         result = sim.command("pid")
         self.assertEqual(result.strip(), "> 3218")
+        result = sim.command("tid 1000")
+        self.assertTrue("def" not in result)
+        result = sim.command("pid 1000")
+        self.assertTrue("def" not in result)
+        result = sim.command("tid 10.5")
+        self.assertTrue("def" not in result)
+        result = sim.command("pid hello")
+        self.assertTrue("def" not in result)
+        result = sim.command("tid 1000 3218")
+        self.assertTrue("def" not in result)
+        result = sim.command("pid 3218 1000")
+        self.assertTrue("def" not in result)
         sim.close()
 
     def test_counter(self):
@@ -156,4 +168,33 @@ class TestSimulator(unittest.TestCase):
         result4 = sim.command("d")
         self.assertEqual(result1, result2)
         self.assertEqual(result3, result4)
+        # Make sure boundary won't break the code
+        for _ in range(5):
+            sim.command("u")
+        for _ in range(5):
+            sim.command("d")
         sim.close()
+    
+    def test_edge(self):
+        # Behaviors on the beginning/end of the program
+        sim = SimInterface(vdb_basic)
+        result1 = sim.command("sb")
+        self.assertTrue("def" not in result1)
+        result1 = sim.command("nb")
+        self.assertTrue("def" not in result1)
+        result1 = sim.command("rb")
+        self.assertTrue("def" not in result1)
+        sim.command("n")
+        sim.command("n")
+        sim.command("n")
+        result1 = sim.command("s")
+        self.assertTrue("def" not in result1)
+        result1 = sim.command("n")
+        self.assertTrue("def" not in result1)
+        result1 = sim.command("r")
+        self.assertTrue("def" not in result1)
+        sim.close()
+
+    def test_clear(self):
+        sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
+        result = sim.command("s")

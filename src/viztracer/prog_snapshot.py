@@ -277,7 +277,7 @@ class ProgSnapshot:
     def next(self):
         self._goto_inner_frame()
         curr_frame = self.curr_frame
-        if curr_frame.curr_children_idx < len(curr_frame.node.children) - 1:
+        if curr_frame.curr_children_idx < len(curr_frame.node.children):
             curr_frame.curr_children_idx += 1
         else:
             # go out of the function
