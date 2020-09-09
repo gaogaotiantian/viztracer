@@ -22,3 +22,10 @@ class TestInvalidArgs(unittest.TestCase):
             for val in vals:
                 with self.assertRaises(ValueError):
                     tracer.__setattr__(args, val)
+
+
+class TestInvalidOperation(unittest.TestCase):
+    def test_generate_without_data(self):
+        tracer = VizTracer()
+        with self.assertRaises(Exception):
+            tracer.generate_json()
