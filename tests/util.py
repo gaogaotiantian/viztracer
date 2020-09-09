@@ -17,7 +17,7 @@ def generate_json(filename):
 
 def adapt_json_file(filename):
     path = os.path.join(os.path.dirname(__file__), "data", filename)
-    py_filename = ".".join(filename.split(".")[:-1] + [".py"])
+    py_filename = ".".join(filename.split(".")[:-1] + ["py"])
     py_path_lst = path.split(".")
     py_path_lst[-1] = "py"
     py_path = ".".join(py_path_lst)
