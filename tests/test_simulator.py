@@ -8,9 +8,9 @@ from .util import get_json_file_path, adapt_json_file
 
 
 adapt_json_file("vdb_basic.json")
-adapt_json_file("multithread.json")
+adapt_json_file("vdb_multithread.json")
 vdb_basic = get_json_file_path("vdb_basic.json")
-vdb_multithread = get_json_file_path("multithread.json")
+vdb_multithread = get_json_file_path("vdb_multithread.json")
 
 
 class SimInterface:

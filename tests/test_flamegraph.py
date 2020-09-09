@@ -19,7 +19,7 @@ class TestFlameGraph(unittest.TestCase):
         fg = FlameGraph(sample_data)
         trees = fg.parse(sample_data)
         for tree in trees.values():
-            self.assertEqual(depth(tree), 6)
+            self.assertEqual(depth(tree), 5)
         ofile = "result_flamegraph.html"
         fg.save(ofile)
         self.assertTrue(os.path.exists(ofile))
@@ -29,7 +29,7 @@ class TestFlameGraph(unittest.TestCase):
         fg = FlameGraph()
         fg.load(os.path.join(os.path.dirname(__file__), "data/multithread.json"))
         for tree in fg._data.values():
-            self.assertEqual(depth(tree), 6)
+            self.assertEqual(depth(tree), 5)
         ofile = "result_flamegraph.html"
         fg.save(ofile)
         self.assertTrue(os.path.exists(ofile))
