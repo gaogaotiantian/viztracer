@@ -16,7 +16,7 @@ class TestIssue1(unittest.TestCase):
         tracer.parse()
         tracer.generate_json()
 
-        tracer = viztracer.VizTracer(tracer="python")
+        tracer = viztracer.VizTracer()
         tracer.start()
         from datetime import timedelta
         timedelta(hours=5)

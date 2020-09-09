@@ -27,14 +27,14 @@ class TestTracer(unittest.TestCase):
 
 class TestCTracer(unittest.TestCase):
     def test_c_load(self):
-        tracer = _VizTracer(tracer="c")
+        tracer = _VizTracer()
         tracer.start()
         fib(5)
         tracer.stop()
         tracer.parse()
 
     def test_c_run_after_clear(self):
-        tracer = _VizTracer(tracer="c")
+        tracer = _VizTracer()
         tracer.start()
         fib(5)
         tracer.stop()
@@ -49,7 +49,7 @@ class TestCTracer(unittest.TestCase):
         self.assertNotEqual(report1, report2)
 
     def test_c_cleanup(self):
-        tracer = _VizTracer(tracer="c")
+        tracer = _VizTracer()
         tracer.start()
         fib(5)
         tracer.stop()
@@ -70,21 +70,15 @@ class TestCircularBuffer(unittest.TestCase):
 
 class TestTracerFilter(unittest.TestCase):
     def test_max_stack_depth(self):
-        tracer = _VizTracer(tracer="c", max_stack_depth=3)
+        tracer = _VizTracer(max_stack_depth=3)
         tracer.start()
         fib(10)
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 7)
-        tracer = _VizTracer(tracer="python", max_stack_depth=3)
-        tracer.start()
-        fib(10)
-        tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 10)
 
     def test_include_files(self):
-        tracer = _VizTracer(tracer="c", include_files=["./src/"])
+        tracer = _VizTracer(include_files=["./src/"])
         tracer.start()
         fib(10)
         tracer.stop()
@@ -106,7 +100,7 @@ class TestTracerFilter(unittest.TestCase):
         self.assertEqual(entries, 177)
 
     def test_exclude_files(self):
-        tracer = _VizTracer(tracer="c", exclude_files=["./src/"])
+        tracer = _VizTracer(exclude_files=["./src/"])
         tracer.start()
         fib(10)
         tracer.stop()
@@ -128,10 +122,10 @@ class TestTracerFilter(unittest.TestCase):
         self.assertEqual(entries, 0)
 
     def test_include_exclude_exception(self):
-        tracer = _VizTracer(tracer="c", exclude_files=["./src/"], include_files=["./"])
+        tracer = _VizTracer(exclude_files=["./src/"], include_files=["./"])
         with self.assertRaises(Exception):
             tracer.start()
-        tracer = _VizTracer(tracer="c", exclude_files=["./src/"])
+        tracer = _VizTracer(exclude_files=["./src/"])
         tracer.include_files = ["./"]
         with self.assertRaises(Exception):
             tracer.start()
@@ -140,7 +134,7 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
 
     def test_ignore_c_function(self):
-        tracer = _VizTracer(tracer="c")
+        tracer = _VizTracer()
         tracer.start()
         lst = []
         lst.append(1)
@@ -157,7 +151,7 @@ class TestTracerFilter(unittest.TestCase):
         self.assertEqual(entries, 0)
     
     def test_log_return_value(self):
-        tracer = _VizTracer(tracer="c")
+        tracer = _VizTracer()
         tracer.start()
         fib(5)
         tracer.stop()

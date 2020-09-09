@@ -30,30 +30,15 @@ class TestPerformance(unittest.TestCase):
             func()
             origin = t.get_time()
 
-        # With viztracer + python tracer
-        tracer = VizTracer("python", verbose=0)
-        tracer.start()
-        with Timer() as t:
-            func()
-            instrumented = t.get_time()
-        tracer.stop()
-        with Timer() as t:
-            entries1 = tracer.parse()
-            instrumented_parse = t.get_time()
-        with Timer() as t:
-            tracer.generate_json()
-            instrumented_json = t.get_time()
-        tracer.clear()
-
         # With viztracer + c tracer
-        tracer = VizTracer("c", verbose=0)
+        tracer = VizTracer(verbose=0)
         tracer.start()
         with Timer() as t:
             func()
             instrumented_c = t.get_time()
         tracer.stop()
         with Timer() as t:
-            entries2 = tracer.parse()
+            tracer.parse()
             instrumented_c_parse = t.get_time()
         with Timer() as t:
             tracer.generate_json(allow_binary=True)
@@ -71,9 +56,7 @@ class TestPerformance(unittest.TestCase):
         def time_str(name, origin, instrumented):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 
-        print("{:10}({}, {}):".format(func.__name__, entries1, entries2))
         print(time_str("origin", origin, origin))
-        print(time_str("py", origin, instrumented) + time_str("parse", origin, instrumented_parse) + time_str("json", origin, instrumented_json))
         print(time_str("c", origin, instrumented_c) + time_str("parse", origin, instrumented_c_parse) + time_str("json", origin, instrumented_c_json))
         print(time_str("cProfile", origin, cprofile))
 
@@ -144,7 +127,7 @@ class TestPerformance(unittest.TestCase):
 
 class TestFilterPerformance(unittest.TestCase):
     def do_one_function(self, func):
-        tracer = VizTracer("c", verbose=0)
+        tracer = VizTracer(verbose=0)
         tracer.start()
         with Timer() as t:
             func()

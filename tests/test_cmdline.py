@@ -112,10 +112,6 @@ class TestCommandLineBasic(Tmpl):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
 
-    def test_tracer(self):
-        self.template(["python", "-m", "viztracer", "--tracer", "c", "cmdline_test.py"])
-        self.template(["python", "-m", "viztracer", "--tracer", "python", "cmdline_test.py"])
-
     def test_verbose(self):
         result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
         self.assertTrue("Dumping trace data" in result.stdout.decode("utf8"))

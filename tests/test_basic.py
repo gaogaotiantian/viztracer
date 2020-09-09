@@ -110,7 +110,7 @@ class TestVizTracerOutput(unittest.TestCase):
 
 class TestInstant(unittest.TestCase):
     def test_addinstant(self):
-        tracer = VizTracer(tracer="c")
+        tracer = VizTracer()
         tracer.start()
         tracer.add_instant("instant", {"karma": True})
         tracer.stop()
@@ -138,7 +138,7 @@ class TestDecorator(unittest.TestCase):
             if n == 0:
                 return 1
             return ignore(n-1) + 1
-        tracer = VizTracer(tracer="c")
+        tracer = VizTracer()
         tracer.start()
         ignore(10)
         tracer.stop()

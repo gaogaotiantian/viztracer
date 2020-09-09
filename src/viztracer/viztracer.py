@@ -13,7 +13,6 @@ from .flamegraph import FlameGraph
 # class for the functions
 class VizTracer(_VizTracer):
     def __init__(self,
-                 tracer="c",
                  tracer_entries=1000000,
                  verbose=1,
                  max_stack_depth=-1,
@@ -26,7 +25,6 @@ class VizTracer(_VizTracer):
                  pid_suffix=False,
                  output_file="result.html"):
         super().__init__(
-                tracer=tracer,
                 tracer_entries=tracer_entries,
                 max_stack_depth=max_stack_depth,
                 include_files=include_files,

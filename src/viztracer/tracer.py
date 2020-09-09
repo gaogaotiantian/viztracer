@@ -14,7 +14,6 @@ import viztracer.snaptrace as snaptrace
 class _VizTracer:
     def __init__(self,
                  tracer_entries=1000000,
-                 tracer="c",
                  max_stack_depth=-1,
                  include_files=None,
                  exclude_files=None,
@@ -24,7 +23,6 @@ class _VizTracer:
         self.buffer = []
         self.enable = False
         self.parsed = False
-        self.tracer = tracer
         self._tracer = snaptrace.Tracer(tracer_entries)
         self.tracer_entries = tracer_entries
         self.verbose = 0
@@ -39,17 +37,6 @@ class _VizTracer:
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
-
-    @property
-    def tracer(self):
-        return self.__tracer
-
-    @tracer.setter
-    def tracer(self, tracer):
-        if tracer.lower() in ["c", "python"]:
-            self.__tracer = tracer.lower()
-        else:
-            raise ValueError("tracer can only be c or python, not {}".format(tracer))
 
     @property
     def max_stack_depth(self):
@@ -137,99 +124,48 @@ class _VizTracer:
         self.parsed = False
         if self.log_print:
             self.overload_print()
-        if self.tracer == "python":
-            self.curr_stack_depth = 0
-            sys.setprofile(self.tracefunc)
-        elif self.tracer == "c":
-            if self.include_files is not None and self.exclude_files is not None:
-                raise Exception("include_files and exclude_files can't be both specified!")
-            self._tracer.config(
-                verbose=self.verbose,
-                lib_file_path=os.path.dirname(os.path.realpath(__file__)),
-                max_stack_depth=self.max_stack_depth,
-                include_files=self.include_files,
-                exclude_files=self.exclude_files,
-                ignore_c_function=self.ignore_c_function,
-                log_return_value=self.log_return_value
-            )
-            self._tracer.start()
+        if self.include_files is not None and self.exclude_files is not None:
+            raise Exception("include_files and exclude_files can't be both specified!")
+        self._tracer.config(
+            verbose=self.verbose,
+            lib_file_path=os.path.dirname(os.path.realpath(__file__)),
+            max_stack_depth=self.max_stack_depth,
+            include_files=self.include_files,
+            exclude_files=self.exclude_files,
+            ignore_c_function=self.ignore_c_function,
+            log_return_value=self.log_return_value
+        )
+        self._tracer.start()
 
     def stop(self):
         self.enable = False
         if self.log_print:
             self.restore_print()
-        if self.tracer == "python":
-            sys.setprofile(None)
-        elif self.tracer == "c":
-            self._tracer.stop()
+        self._tracer.stop()
 
     def clear(self):
-        if self.tracer == "python":
-            self.buffer = []
-        elif self.tracer == "c":
-            self._tracer.clear()
+        self._tracer.clear()
 
     def cleanup(self):
-        if self.tracer == "c":
-            self._tracer.cleanup()
-
-    def tracefunc(self, frame, event, arg):
-        if event == "call" or event == "return":
-            if self.max_stack_depth >= 0:
-                if event == "call":
-                    self.curr_stack_depth += 1
-                    if self.curr_stack_depth > self.max_stack_depth:
-                        return
-                elif event == "return":
-                    self.curr_stack_depth = max(0, self.curr_stack_depth - 1)
-                    if self.curr_stack_depth + 1 > self.max_stack_depth:
-                        return
-
-            if self.include_files:
-                for f in self.include_files:
-                    if frame.f_code.co_filename.startswith(f):
-                        break
-                else:
-                    return
-
-            if self.exclude_files:
-                for f in self.exclude_files:
-                    if frame.f_code.co_filename.startswith(f):
-                        return
-
-            f_locals = frame.f_locals
-            if "self" in f_locals:
-                if issubclass(f_locals["self"].__class__, self.__class__):
-                    # If we are inside this class, ignore
-                    return
-                class_name = type(f_locals["self"]).__name__ + "."
-            else:
-                class_name = ""
-
-            if event == "call":
-                name = "{}.{}{}".format(frame.f_code.co_filename, class_name, frame.f_code.co_name)
-                self.buffer.append(("entry", name, time.perf_counter()))
-            elif event == "return":
-                name = "{}.{}{}".format(frame.f_code.co_filename, class_name, frame.f_code.co_name)
-                self.buffer.append(("exit", name, time.perf_counter()))
+        self._tracer.cleanup()
 
     def add_instant(self, name, args, scope="g"):
-        if self.tracer == "c" and self.enable:
+        if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
             self._tracer.addinstant(name, args, scope)
 
     def add_counter(self, name, args):
-        if self.tracer == "c" and self.enable:
+        if self.enable:
             self._tracer.addcounter(name, args)
 
     def add_object(self, ph, obj_id, name, args=None):
-        if self.tracer == "c" and self.enable:
+        if self.enable:
             self._tracer.addobject(ph, obj_id, name, args)
 
     def add_functionarg(self, key, value):
-        if self.tracer == "c" and self.enable:
+        if self.enable:
             self._tracer.addfunctionarg(key, value)
 
     def parse(self):
@@ -240,55 +176,18 @@ class _VizTracer:
         pid = os.getpid()
         self.stop()
         if not self.parsed:
-            if self.tracer == "python":
-                buffer_size = len(self.buffer)
-                pbar = ProgressBar("Parsing data")
-                buffer_count = 1
-                events = []
-                for data in self.buffer:
-                    if self.verbose > 0:
-                        pbar.update(float(buffer_count) / buffer_size)
-
-                    if data[0] == "entry":
-                        ph = "B"
-                    elif data[0] == "exit":
-                        ph = "E"
-                    else:
-                        raise Exception("Unexpected data type")
-
-                    if data[0] == "exit" and events[-1]["ph"] == "B" and data[1] == events[-1]["name"]:
-                        events[-1]["ph"] = "X"
-                        events[-1]["dur"] = data[2] * 1000000 - events[-1]["ts"]
-                        continue
-                    # convert seconds to micro seconds
-                    event = {
-                        "name": data[1],
-                        "cat": "FEE",
-                        "ph": ph,
-                        "pid": pid,
-                        "tid": 1,
-                        "ts": data[2] * 1000000
-                    }
-                    events.append(event)
-                    self.total_entries += 1
-                    buffer_count += 1
-                self.data = {
-                    "traceEvents": events,
-                }
-                self.buffer = []
-            elif self.tracer == "c":
-                self.data = {
-                    "traceEvents": self._tracer.load(),
-                    "displayTimeUnit": "ns"
-                }
-                self.total_entries = len(self.data["traceEvents"])
-                if self.total_entries == self.tracer_entries and self.verbose > 0:
-                    print("")
-                    color_print("WARNING", "Circular buffer is full, you lost some early data, but you still have the most recent data.")
-                    color_print("WARNING", "    If you need more buffer, use \"viztracer --tracer_entries <entry_number>(current: {})\"".format(self.tracer_entries))
-                    color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
-                    color_print("WARNING", "    use --quiet to shut me up")
-                    print("")
+            self.data = {
+                "traceEvents": self._tracer.load(),
+                "displayTimeUnit": "ns"
+            }
+            self.total_entries = len(self.data["traceEvents"])
+            if self.total_entries == self.tracer_entries and self.verbose > 0:
+                print("")
+                color_print("WARNING", "Circular buffer is full, you lost some early data, but you still have the most recent data.")
+                color_print("WARNING", "    If you need more buffer, use \"viztracer --tracer_entries <entry_number>(current: {})\"".format(self.tracer_entries))
+                color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
+                color_print("WARNING", "    use --quiet to shut me up")
+                print("")
             self.parsed = True
 
         return self.total_entries
