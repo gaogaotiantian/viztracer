@@ -183,7 +183,7 @@ class TestForkSave(unittest.TestCase):
             t.stop()
             t.parse()
             t.fork_save(output_file=str(i) + ".json")
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         expected = {
             5: 15,

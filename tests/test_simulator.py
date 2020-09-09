@@ -139,11 +139,11 @@ class TestSimulator(unittest.TestCase):
         sim.close()
 
         sim = SimInterface(vdb_multithread)
-        for _ in range(50):
+        for _ in range(100):
             sim.command("n")
         result = sim.command("w")
         self.assertEqual(self.get_func_stack(result), ["join"])
-        for _ in range(51):
+        for _ in range(101):
             sim.command("nb")
         result = sim.command("w")
         self.assertEqual(self.get_func_stack(result), ["__init__"])
