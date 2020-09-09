@@ -23,7 +23,7 @@ def get_json(data):
         with open(data) as f:
             return json.loads(f.read())
     else:
-        raise Exception("Unexpected Type{}!", type(data))
+        raise TypeError("Unexpected Type{}!", type(data))
 
 
 class ReportBuilder:

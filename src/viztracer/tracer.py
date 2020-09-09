@@ -6,7 +6,7 @@ import os
 import time
 import builtins
 from io import StringIO
-from .util import ProgressBar, color_print
+from .util import color_print
 from .report_builder import ReportBuilder
 import viztracer.snaptrace as snaptrace
 
