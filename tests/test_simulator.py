@@ -4,12 +4,12 @@
 import os
 import unittest
 import subprocess
-from .util import get_json_file_path, adapt_json_file
+from .util import get_json_file_path, adapt_json_file, generate_json
 
 
 adapt_json_file("vdb_basic.json")
-adapt_json_file("vdb_multithread.json")
 vdb_basic = get_json_file_path("vdb_basic.json")
+generate_json("vdb_multithread.py")
 vdb_multithread = get_json_file_path("vdb_multithread.json")
 
 
@@ -149,9 +149,6 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(self.get_func_stack(result), ["__init__"])
         result1 = sim.command("tid")
         self.assertEqual(len(result1.strip().split()), 6)
-        sim.command("tid 5431")
-        result2 = sim.command("tid")
-        self.assertNotEqual(result1, result2)
         sim.close()
 
     def test_counter(self):

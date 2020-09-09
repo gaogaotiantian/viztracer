@@ -39,4 +39,4 @@ for thread in threads:
     thread.join()
 
 tracer.stop()
-tracer.save(output_file="multithread.json")
+tracer.save(output_file="vdb_multithread.json")

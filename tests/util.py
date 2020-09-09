@@ -3,6 +3,16 @@
 
 import os
 import json
+import subprocess
+
+
+def generate_json(filename):
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    cwd = os.getcwd()
+    os.chdir(data_dir)
+    path = os.path.join(os.path.dirname(__file__), "data", filename)
+    subprocess.run(["python", path])
+    os.chdir(cwd)
 
 
 def adapt_json_file(filename):
