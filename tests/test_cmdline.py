@@ -4,6 +4,7 @@
 import unittest
 import subprocess
 import os
+import sys
 import json
 import shutil
 from .util import get_json_file_path
@@ -162,7 +163,9 @@ class TestCommandLineBasic(Tmpl):
         self.template(["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"], expected_output_file="./suffix_tmp")
 
     def test_path_finding(self):
-        self.template(["viztracer", "vdb"], success=False)
+        if sys.platform in ["linux", "linux2", "darwin"]:
+            # path finding only works on Unix
+            self.template(["viztracer", "vdb"], success=False)
 
     def test_generate_flamegraph(self):
         self.template(["viztracer", "--generate_flamegraph", get_json_file_path("multithread.json")], expected_output_file="./result_flamegraph.html")
