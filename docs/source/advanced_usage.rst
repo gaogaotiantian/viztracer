@@ -130,7 +130,7 @@ data as instant events.
     handler = VizLoggingHandler()
     handler.setTracer(tracer)
     # A handler is added to logging so logging will dump data to VizTracer
-    logging.basicConfig(handler = [handler])
+    logging.basicConfig(handlers = [handler])
 
 Circular Buffer Size
 --------------------
