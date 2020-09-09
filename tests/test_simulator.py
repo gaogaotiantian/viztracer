@@ -98,6 +98,16 @@ class TestSimulator(unittest.TestCase):
         sim.command("t 40")
         result1 = sim.command("w")
         self.assertEqual(self.get_func_stack(result1), ['t', 'f', 'g', 'h'])
+        sim.command("t 74.2")
+        result1 = sim.command("w")
+        self.assertEqual(self.get_func_stack(result1), ['t', 'f'])
+        sim.command("s")
+        sim.command("u")
+        result = sim.command("t")
+        self.assertAlmostEqual(float(result), 74.5, places=4)
+        sim.command("s")
+        result = sim.command("t")
+        self.assertAlmostEqual(float(result), 105.9, places=4)
         sim.close()
     
     def test_tid_pid(self):
@@ -136,4 +146,14 @@ class TestSimulator(unittest.TestCase):
         sim.command("a")
         sim.command("arg")
         sim.command("args")
+        sim.close()
+
+    def test_up_down(self):
+        sim = SimInterface(vdb_basic)
+        result1 = sim.command("s")
+        result3 = sim.command("s")
+        result2 = sim.command("u")
+        result4 = sim.command("d")
+        self.assertEqual(result1, result2)
+        self.assertEqual(result3, result4)
         sim.close()

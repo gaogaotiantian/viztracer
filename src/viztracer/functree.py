@@ -44,12 +44,6 @@ class FuncTreeNode:
     def is_ancestor(self, other):
         return self.start < other.start and self.end > other.end
 
-    def is_before(self, other):
-        return self.end < other.start
-
-    def is_func(self, function_name):
-        return function_name == self.event["name"] or function_name == self.event["name"].split(".")[-1]
-
     def adopt(self, other):
         new_children = []
         if self.is_ancestor(other):
@@ -74,9 +68,6 @@ class FuncTreeNode:
                 raise Exception("This should not be possible")
         else:
             self.parent.adopt(other)
-
-    def get_structure(self):
-        return [child.get_structure() for child in self.children]
 
 
 class FuncTree:

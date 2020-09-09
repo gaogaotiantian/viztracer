@@ -5,6 +5,8 @@ import unittest
 import subprocess
 import os
 import json
+import shutil
+
 
 file_fib = \
 """
@@ -54,7 +56,11 @@ class Tmpl(unittest.TestCase):
                 for f in output_file:
                     os.remove(f)
             elif type(output_file) is str:
-                os.remove(output_file)
+                if os.path.exists(output_file):
+                    if os.path.isdir(output_file):
+                        shutil.rmtree(output_file)
+                    elif os.path.isfile(output_file):
+                        os.remove(output_file)
             else:
                 raise Exception("Unexpected output file argument")
 
@@ -148,6 +154,10 @@ class TestCommandLineBasic(Tmpl):
     def test_tracer_entries(self):
         self.template(["python", "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--tracer_entries", "50", "cmdline_test.py"])
+
+    def test_pid_suffix(self):
+        self.template(["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"], expected_output_file="./suffix_tmp")
+
 
 class TestPossibleFailures(Tmpl):
     def test_main(self):
