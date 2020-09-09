@@ -47,10 +47,15 @@ class VizTracer(_VizTracer):
 
     @verbose.setter
     def verbose(self, verbose):
-        try:
-            self.__verbose = int(verbose)
-        except Exception:
-            raise Exception("Verbose needs to be an integer, not {}".format(verbose))
+        if type(verbose) is str:
+            try:
+                self.__verbose = int(verbose)
+            except ValueError:
+                raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
+        elif type(verbose) is int:
+            self.__verbose = verbose
+        else:
+            raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
 
     @property
     def pid_suffix(self):
@@ -58,10 +63,10 @@ class VizTracer(_VizTracer):
 
     @pid_suffix.setter
     def pid_suffix(self, pid_suffix):
-        try:
-            self.__pid_suffix = int(pid_suffix)
-        except Exception:
-            raise Exception("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
+        if type(pid_suffix) is bool:
+            self.__pid_suffix = pid_suffix
+        else:
+            raise ValueError("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
 
     def __enter__(self):
         self.start()

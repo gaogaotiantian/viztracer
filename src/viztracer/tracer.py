@@ -49,7 +49,7 @@ class _VizTracer:
         if tracer.lower() in ["c", "python"]:
             self.__tracer = tracer.lower()
         else:
-            raise Exception("tracer can only be c or python, not {}".format(tracer))
+            raise ValueError("tracer can only be c or python, not {}".format(tracer))
 
     @property
     def max_stack_depth(self):
@@ -57,11 +57,15 @@ class _VizTracer:
 
     @max_stack_depth.setter
     def max_stack_depth(self, max_stack_depth):
-        try:
-            self.__max_stack_depth = int(max_stack_depth)
-        except Exception as e:
-            print("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
-            raise e
+        if type(max_stack_depth) is str:
+            try:
+                self.__max_stack_depth = int(max_stack_depth)
+            except ValueError:
+                raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
+        elif type(max_stack_depth) is int:
+            self.__max_stack_depth = max_stack_depth
+        else:
+            raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
 
     @property
     def include_files(self):
@@ -77,7 +81,7 @@ class _VizTracer:
             else:
                 self.__include_files = None
         else:
-            raise Exception("include_files has to be a list")
+            raise ValueError("include_files has to be a list")
 
     @property
     def exclude_files(self):
@@ -93,7 +97,7 @@ class _VizTracer:
             else:
                 self.__exclude_files = None
         else:
-            raise Exception("exclude_files has to be a list")
+            raise ValueError("exclude_files has to be a list")
 
     @property
     def ignore_c_function(self):
@@ -104,7 +108,7 @@ class _VizTracer:
         if type(ignore_c_function) is bool:
             self.__ignore_c_function = ignore_c_function
         else:
-            raise Exception("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
+            raise ValueError("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
 
     @property
     def log_return_value(self):
@@ -115,7 +119,7 @@ class _VizTracer:
         if type(log_return_value) is bool:
             self.__log_return_value = log_return_value
         else:
-            raise Exception("log_return_value needs to be True or False, not {}".format(log_return_value))
+            raise ValueError("log_return_value needs to be True or False, not {}".format(log_return_value))
 
     @property
     def log_print(self):
@@ -126,7 +130,7 @@ class _VizTracer:
         if type(log_print) is bool:
             self.__log_print = log_print
         else:
-            raise Exception("log_print needs to be True or False, not {}".format(log_print))
+            raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
     def start(self):
         self.enable = True
