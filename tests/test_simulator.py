@@ -142,7 +142,7 @@ class TestSimulator(unittest.TestCase):
         for _ in range(100):
             sim.command("n")
         result = sim.command("w")
-        print(result)
+        print("result: {}".format(result))
         print(self.get_func_stack(result))
         self.assertEqual(self.get_func_stack(result), ["join"])
         for _ in range(101):
