@@ -7,6 +7,7 @@ import json
 
 def adapt_json_file(filename):
     path = os.path.join(os.path.dirname(__file__), "data", filename)
+    py_filename = ".".join(filename.split(".")[:-1] + [".py"])
     py_path_lst = path.split(".")
     py_path_lst[-1] = "py"
     py_path = ".".join(py_path_lst)
@@ -14,9 +15,13 @@ def adapt_json_file(filename):
         data = json.loads(f.read())
         for event in data["traceEvents"]:
             if event["ph"] == "X":
-                idx = event["name"].index("(")
-                new_name = py_path + event["name"][idx:]
-                event["name"] = new_name
+                try:
+                    idx = event["name"].index("(")
+                    if event["name"][:idx].endswith(py_filename):
+                        new_name = py_path + event["name"][idx:]
+                        event["name"] = new_name
+                except ValueError:
+                    pass
 
     with open(path, "w") as f:
         f.write(json.dumps(data))
