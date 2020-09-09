@@ -5,7 +5,7 @@ from viztracer import VizTracer
 import unittest
 
 
-class TestInvalid(unittest.TestCase):
+class TestInvalidArgs(unittest.TestCase):
     def test_invalid_args(self):
         invalid_args = {
             "verbose": ["hello", 0.1],

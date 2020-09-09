@@ -77,6 +77,26 @@ class TestVizTracerBasic(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 10)
 
+    def test_save(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        tracer.save("./tmp/result.html")
+        self.assertTrue(os.path.exists("./tmp/result/html"))
+        shutil.rmtree("./tmp")
+
+    def test_save_flamegraph(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        tracer.save_flamegraph()
+        self.assertTrue(os.path.exists("result_flamegraph.html"))
+        os.remove("result_flamegraph.html")
+
 
 class TestVizTracerOutput(unittest.TestCase):
     def test_json(self):
