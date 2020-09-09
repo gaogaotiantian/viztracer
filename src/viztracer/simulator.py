@@ -10,7 +10,7 @@ from .prog_snapshot import ProgSnapshot
 
 
 class Simulator:
-    def __init__(self, json_string, no_clear=False):
+    def __init__(self, json_string, no_clear=False, extra_newline=False):
         try:
             from rich.console import Console
             from rich.syntax import Syntax
@@ -25,6 +25,7 @@ class Simulator:
             self.print = print
         self.snapshot = ProgSnapshot(json_string, self.print)
         self.no_clear = no_clear
+        self.extra_newline = extra_newline
 
     def start(self):
         self.clear()
@@ -32,6 +33,8 @@ class Simulator:
         while True:
             try:
                 cmd = input(">>> ")
+                if self.extra_newline:
+                    print("")
                 self.parse_cmd(cmd)
             except EOFError:
                 exit(0)
@@ -41,7 +44,9 @@ class Simulator:
             os.system("cls" if os.name == "nt" else "clear")
 
     def parse_cmd(self, cmd):
-        args = cmd.split(" ")
+        args = cmd.split()
+        if not args:
+            return
         success = False
         if args[0] == "s":
             success, err_msg = self.snapshot.step()
@@ -122,6 +127,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs=1)
     parser.add_argument("--no_clear", action="store_true", default=False)
+    parser.add_argument("--extra_newline", action="store_true", default=False)
 
     options = parser.parse_args(sys.argv[1:])
 
@@ -129,5 +135,8 @@ def main():
     with open(filename) as f:
         s = f.read()
 
-    sim = Simulator(s, no_clear=options.no_clear)
+    sim = Simulator(s, no_clear=options.no_clear, extra_newline=options.extra_newline)
     sim.start()
+
+if __name__ == '__main__':
+    main()
