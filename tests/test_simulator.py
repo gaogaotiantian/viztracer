@@ -64,7 +64,8 @@ class SimInterface:
 
 class TestSimulator(unittest.TestCase):
     def get_func_stack(self, result):
-        return [s.split('.')[-1] for s in result.split() if '.' in s]
+        line = result.replace("\r\n", "").replace("\n", "").replace("> ", " ")
+        return [s.split('.')[-1] for s in line.split() if '.' in s]
 
     def test_step(self):
         sim = SimInterface(vdb_basic)
