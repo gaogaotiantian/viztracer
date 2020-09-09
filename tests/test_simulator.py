@@ -4,10 +4,13 @@
 import os
 import unittest
 import subprocess
-from .util import get_json_file_path
+from .util import get_json_file_path, adapt_json_file
 
 
+adapt_json_file("vdb_basic.json")
 vdb_basic = get_json_file_path("vdb_basic.json")
+
+
 class SimInterface:
     def __init__(self, json_path):
         commands = ["vdb", "--no_clear", "--extra_newline", json_path]
