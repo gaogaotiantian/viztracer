@@ -121,6 +121,13 @@ class TestTracerFilter(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
+        tracer.exclude_files = []
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 177)
+
     def test_include_exclude_exception(self):
         tracer = _VizTracer(exclude_files=["./src/"], include_files=["./"])
         with self.assertRaises(Exception):

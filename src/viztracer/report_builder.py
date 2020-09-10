@@ -30,6 +30,7 @@ class ReportBuilder:
     def __init__(self, data, verbose=1):
         self.verbose = verbose
         self.combined_json = None
+        self.entry_number_threshold = 4000000
         if type(data) is list:
             self.jsons = [get_json(j) for j in data]
         else:
@@ -51,7 +52,7 @@ class ReportBuilder:
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
             print("Dumping trace data to json, total entries: {}, estimated json file size: {}".format(entries, size_fmt(120*entries)))
-            if entries >= 4000000:
+            if entries >= self.entry_number_threshold:
                 print("")
                 color_print("WARNING", "Large trace requires a lot of RAM and is slow to load.")
                 color_print("WARNING", "    If you need faster loading time or smaller trace file, try a smaller tracer_entries or use filters")

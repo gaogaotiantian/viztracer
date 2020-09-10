@@ -86,6 +86,8 @@ class TestVizObject(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 2)
+        with self.assertRaises(ValueError):
+            a.config("invalid", "value")
 
     def test_decorator(self):
         tracer = VizTracer()
@@ -101,6 +103,11 @@ class TestVizObject(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 10)
+        with self.assertRaises(ValueError):
+            @VizObject.triggerlog(when="invalid")
+            def change_invalid():
+                pass
+            change_invalid()
 
     def test_buffer_wrap(self):
         tracer = VizTracer(tracer_entries=10)

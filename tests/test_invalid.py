@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+from viztracer.event_base import _EventBase
 from viztracer import VizTracer
 import unittest
 
@@ -29,3 +30,18 @@ class TestInvalidOperation(unittest.TestCase):
         tracer = VizTracer()
         with self.assertRaises(Exception):
             tracer.generate_json()
+
+    def test_save_invalid_format(self):
+        tracer = VizTracer()
+        tracer.start()
+        _ = len([1, 2])
+        tracer.stop()
+        with self.assertRaises(Exception):
+            tracer.save("test.invalid")
+
+
+class TestUseEventBase(unittest.TestCase):
+    def test_use_event_base(self):
+        event = _EventBase(None)
+        with self.assertRaises(NotImplementedError):
+            event.log()

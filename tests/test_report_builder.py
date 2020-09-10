@@ -17,3 +17,11 @@ class TestReportBuilder(unittest.TestCase):
     def test_invalid(self):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)
+
+    def test_too_many_entry(self):
+        json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
+        with open(json_path) as f:
+            rb = ReportBuilder(f, verbose=1)
+        rb.entry_number_threshold = 20
+        # Coverage only
+        rb.generate_json()

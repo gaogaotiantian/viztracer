@@ -3,6 +3,7 @@
 
 import unittest
 import os
+import subprocess
 import time
 import json
 import shutil
@@ -97,6 +98,14 @@ class TestVizTracerBasic(unittest.TestCase):
         self.assertTrue(os.path.exists("result_flamegraph.html"))
         os.remove("result_flamegraph.html")
 
+    def test_exit_routine(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        fib(5)
+        tracer.exit_routine()
+        self.assertTrue(os.path.exists("result.html"))
+        os.remove("result.html")
+
 
 class TestVizTracerOutput(unittest.TestCase):
     def test_json(self):
@@ -116,6 +125,14 @@ class TestInstant(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 1)
+
+    def test_invalid_scope(self):
+        tracer = VizTracer()
+        tracer.start()
+        tracer.add_instant("instant", {"karma": True}, scope="invalid")
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 0)
 
 
 class TestFunctionArg(unittest.TestCase):
@@ -155,6 +172,16 @@ class TestDecorator(unittest.TestCase):
         counter = len(os.listdir("./tmp"))
         shutil.rmtree("./tmp")
         self.assertEqual(counter, 5)
+
+        @trace_and_save
+        def my_function2(n):
+            fib(n)
+        my_function2(10)
+        time.sleep(0.2)
+        a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.assertEqual(a.returncode, 0)
+        a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.assertEqual(a.returncode, 0)
 
 
 class TestLogPrint(unittest.TestCase):

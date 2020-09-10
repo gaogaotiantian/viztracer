@@ -20,7 +20,6 @@ class SimInterface:
             commands = ["coverage", "run", "--parallel-mode", "--pylib", "-m", "viztracer.simulator"] + commands[1:]
         self.sim_process = subprocess.Popen(commands,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
-        import time
         self.sim_process.stdin.write('\n')
         self.sim_process.stdin.flush()
         while True:
@@ -96,7 +95,7 @@ class TestSimulator(unittest.TestCase):
 
     def test_timestamp(self):
         sim = SimInterface(vdb_basic)
-        result = sim.command("t 0")
+        result = sim.command("t -1")
         result = sim.command("t")
         self.assertAlmostEqual(float(result), 0.6, places=4)
         sim.command("t 40")
@@ -112,6 +111,8 @@ class TestSimulator(unittest.TestCase):
         sim.command("s")
         result = sim.command("t")
         self.assertAlmostEqual(float(result), 105.9, places=4)
+        result = sim.command("t 1 1")
+        self.assertIn("argument", result)
         sim.close()
     
     def test_tid_pid(self):
@@ -215,3 +216,12 @@ class TestSimulator(unittest.TestCase):
     def test_clear(self):
         sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
         sim.command("s")
+        sim.close()
+
+    def test_close(self):
+        sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
+        sim.close()
+        self.sim_process = subprocess.Popen(["vdb {} < /dev/null".format(vdb_basic)],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
+        self.sim_process.wait()
+        self.assertEqual(self.sim_process.returncode, 0)

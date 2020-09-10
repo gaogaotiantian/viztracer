@@ -165,9 +165,13 @@ class TestCommandLineBasic(Tmpl):
 
     def test_generate_flamegraph(self):
         self.template(["viztracer", "--generate_flamegraph", get_json_file_path("multithread.json")], expected_output_file="./result_flamegraph.html")
+        self.template(["viztracer", "-o", "result_flamegraph.html", "--generate_flamegraph", get_json_file_path("multithread.json")], expected_output_file="./result_flamegraph.html")
 
     def test_module(self):
         self.template(["viztracer", "-m", "numbers"])
+
+    def test_invalid_file(self):
+        self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
 
 
 class TestPossibleFailures(Tmpl):

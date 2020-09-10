@@ -43,22 +43,22 @@ class _EventBase:
 
     def _viztracer_set_config(self, key, value):
         if key not in self._viztracer_config:
-            raise Exception("No config named {}".format(key))
+            raise ValueError("No config named {}".format(key))
         self._viztracer_config[key] = value
 
     def config(self, key, value):
         self._viztracer_set_config(key, value)
 
     def _viztracer_log(self):
-        pass
-    
+        raise NotImplementedError("You should not use _EventBase class directly")
+
     def log(self):
         self._viztracer_log()
 
     @staticmethod
     def triggerlog(method=None, when="after"):
         if when not in ["after", "before", "both"]:
-            raise Exception("when has to be one of 'after', 'before' or 'both', not {}".format(when))
+            raise ValueError("when has to be one of 'after', 'before' or 'both', not {}".format(when))
 
         def inner(func):
 
