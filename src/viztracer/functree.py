@@ -38,11 +38,13 @@ class FuncTreeNode:
             if "caller_lineno" in self.event:
                 self.caller_lineno = self.event["caller_lineno"]
 
-    def __repr__(self):
-        return "name: {}\nstart: {}, end: {}\n".format(self.fullname, self.start, self.end)
-
     def is_ancestor(self, other):
         return self.start < other.start and self.end > other.end
+
+    def is_same(self, other):
+        return self.fullname == other.fullname and \
+                len(self.children) == len(other.children) and \
+                all([t[0].is_same(t[1]) for t in zip(self.children, other.children)])
 
     def adopt(self, other):
         new_children = []
@@ -77,6 +79,9 @@ class FuncTree:
         self.pid = pid
         self.tid = tid
 
+    def is_same(self, other):
+        return self.root.is_same(other.root)
+
     def add_event(self, event):
         node = FuncTreeNode(event)
 
@@ -96,9 +101,6 @@ class FuncTree:
             return self.root.children[0]
         else:
             return self.root.children[idx-1]
-
-    def get_tree_structure(self):
-        return self.root.get_structure()
 
     def normalize(self, first_ts):
         for node in self.inorder_traverse():

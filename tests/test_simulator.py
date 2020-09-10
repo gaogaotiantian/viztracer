@@ -96,6 +96,7 @@ class TestSimulator(unittest.TestCase):
 
     def test_timestamp(self):
         sim = SimInterface(vdb_basic)
+        result = sim.command("t 0")
         result = sim.command("t")
         self.assertAlmostEqual(float(result), 0.6, places=4)
         sim.command("t 40")
@@ -213,4 +214,4 @@ class TestSimulator(unittest.TestCase):
 
     def test_clear(self):
         sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
-        result = sim.command("s")
+        sim.command("s")

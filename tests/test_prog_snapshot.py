@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import unittest
+import json
 from viztracer.prog_snapshot import ProgSnapshot
 
 
@@ -53,3 +54,11 @@ class TestSnapShot(unittest.TestCase):
         snap.next()
         self.assertEqual(snap.curr_frame.node.funcname, "t")
         self.assertEqual(snap.curr_frame.curr_children_idx, 1)
+
+    def test_random_entries(self):
+        import random
+        snap = ProgSnapshot(test1_str)
+        test_obj = json.loads(test1_str)
+        random.shuffle(test_obj["traceEvents"])
+        snap2 = ProgSnapshot(json.dumps(test_obj))
+        self.assertTrue(list(snap.get_trees())[0].is_same(list(snap2.get_trees())[0]))
