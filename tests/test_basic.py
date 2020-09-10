@@ -3,6 +3,7 @@
 
 import unittest
 import os
+import sys
 import subprocess
 import time
 import json
@@ -173,15 +174,17 @@ class TestDecorator(unittest.TestCase):
         shutil.rmtree("./tmp")
         self.assertEqual(counter, 5)
 
-        @trace_and_save
-        def my_function2(n):
-            fib(n)
-        my_function2(10)
-        time.sleep(0.2)
-        a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.assertEqual(a.returncode, 0)
-        a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.assertEqual(a.returncode, 0)
+        if sys.platform in ["linux", "linux2", "darwin"]:
+            # ls does not work on windows. Don't bother fixing it because it's just coverage test
+            @trace_and_save
+            def my_function2(n):
+                fib(n)
+            my_function2(10)
+            time.sleep(0.2)
+            a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(a.returncode, 0)
+            a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.assertEqual(a.returncode, 0)
 
 
 class TestLogPrint(unittest.TestCase):

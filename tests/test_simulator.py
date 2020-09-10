@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
+import sys
 import unittest
 import subprocess
 from .util import get_json_file_path, adapt_json_file, generate_json
@@ -219,9 +220,10 @@ class TestSimulator(unittest.TestCase):
         sim.close()
 
     def test_close(self):
-        sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
-        sim.close()
-        self.sim_process = subprocess.Popen(["vdb {} < /dev/null".format(vdb_basic)],
-                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
-        self.sim_process.wait()
-        self.assertEqual(self.sim_process.returncode, 0)
+        if sys.platform in ["linux", "linux2", "darwin"]:
+            sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
+            sim.close()
+            self.sim_process = subprocess.Popen(["vdb {} < /dev/null".format(vdb_basic)],
+                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
+            self.sim_process.wait()
+            self.assertEqual(self.sim_process.returncode, 0)
