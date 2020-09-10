@@ -11,7 +11,7 @@ class TestLogging(unittest.TestCase):
         tracer = VizTracer()
         handler = VizLoggingHandler()
         handler.setTracer(tracer)
-        logging.basicConfig(handlers = [handler])
+        logging.basicConfig(handlers=[handler])
         tracer.start()
         logging.warning("lol")
         tracer.stop()
@@ -22,7 +22,7 @@ class TestLogging(unittest.TestCase):
     def test_notracer(self):
         tracer = VizTracer()
         handler = VizLoggingHandler()
-        logging.basicConfig(handlers = [handler])
+        logging.basicConfig(handlers=[handler])
         tracer.start()
         with self.assertRaises(Exception):
             logging.warning("lol")

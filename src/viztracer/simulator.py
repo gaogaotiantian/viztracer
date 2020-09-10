@@ -142,5 +142,6 @@ def main():
     sim = Simulator(s, no_clear=options.no_clear, extra_newline=options.extra_newline)
     sim.start()
 
+
 if __name__ == '__main__':
     main()

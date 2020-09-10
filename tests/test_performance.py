@@ -125,6 +125,7 @@ class TestPerformance(unittest.TestCase):
             ListOperation(20)
         self.do_one_function(list_operation)
 
+
 class TestFilterPerformance(unittest.TestCase):
     def do_one_function(self, func):
         tracer = VizTracer(verbose=0)
@@ -134,7 +135,7 @@ class TestFilterPerformance(unittest.TestCase):
             baseline = t.get_time()
         tracer.stop()
         tracer.cleanup()
-        
+
         tracer.include_files = ["/"]
         tracer.start()
         with Timer() as t:
@@ -156,7 +157,7 @@ class TestFilterPerformance(unittest.TestCase):
         print("Baseline:        {:.9f}(1)".format(baseline))
         print("Include:         {:.9f}({:.2f})".format(include_files, include_files / baseline))
         print("Max stack depth: {:.9f}({:.2f})".format(max_stack_depth, max_stack_depth / baseline))
-        
+
     def test_hanoi(self):
         def hanoi():
             def TowerOfHanoi(n, source, destination, auxiliary):

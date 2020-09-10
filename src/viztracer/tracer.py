@@ -1,9 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import sys
 import os
-import time
 import builtins
 from io import StringIO
 from .util import color_print
@@ -172,8 +170,6 @@ class _VizTracer:
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
         # We parse the buffer into Chrome Trace Event Format
-        self.total_entries = 0
-        pid = os.getpid()
         self.stop()
         if not self.parsed:
             self.data = {

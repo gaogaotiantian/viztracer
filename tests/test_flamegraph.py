@@ -12,6 +12,7 @@ def depth(tree):
         return 1
     return max([depth(n) for n in tree["children"]]) + 1
 
+
 class TestFlameGraph(unittest.TestCase):
     def test_basic(self):
         with open(os.path.join(os.path.dirname(__file__), "data/multithread.json")) as f:

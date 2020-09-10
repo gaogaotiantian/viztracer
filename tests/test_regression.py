@@ -79,4 +79,4 @@ class TestFunctionArg(unittest.TestCase):
         inputs = set()
         for d in tracer.data["traceEvents"]:
             inputs.add(d["args"]["input"])
-        self.assertEqual(inputs, set([0,1,2,3,4,5]))
+        self.assertEqual(inputs, set([0, 1, 2, 3, 4, 5]))

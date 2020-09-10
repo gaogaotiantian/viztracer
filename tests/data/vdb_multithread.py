@@ -9,16 +9,18 @@ def ig(n):
         return 1
     return ig(n-1) + ig(n-2)
 
+
 def fib(n):
     if n < 2:
         return 1
-    #ig(n)
     time.sleep(0.0000001)
     return fib(n-1) + fib(n-2)
+
 
 class MyThread(threading.Thread):
     def run(self):
         fib(7)
+
 
 tracer = VizTracer(verbose=1)
 tracer.start()

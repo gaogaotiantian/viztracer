@@ -15,39 +15,39 @@ def main():
 
     parser = argparse.ArgumentParser(prog="python -m viztracer")
     parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
-            help="size of circular buffer. How many entries can it store")
+                        help="size of circular buffer. How many entries can it store")
     parser.add_argument("--output_file", "-o", nargs="?", default=None,
-            help="output file path. End with .json or .html or .gz")
+                        help="output file path. End with .json or .html or .gz")
     parser.add_argument("--output_dir", nargs="?", default=None,
-            help="output directory. Should only be used when --pid_suffix is used")
+                        help="output directory. Should only be used when --pid_suffix is used")
     parser.add_argument("--quiet", action="store_true", default=False,
-            help="stop VizTracer from printing anything")
+                        help="stop VizTracer from printing anything")
     parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
-            help="maximum stack depth you want to trace.")
-    parser.add_argument("--exclude_files", nargs="*", default=None, 
-            help="specify the files(directories) you want to exclude from tracing. Can't be used with --include_files")
+                        help="maximum stack depth you want to trace.")
+    parser.add_argument("--exclude_files", nargs="*", default=None,
+                        help="specify the files(directories) you want to exclude from tracing. Can't be used with --include_files")
     parser.add_argument("--include_files", nargs="*", default=None,
-            help="specify the only files(directories) you want to include from tracing. Can't be used with --exclude_files")
+                        help="specify the only files(directories) you want to include from tracing. Can't be used with --exclude_files")
     parser.add_argument("--ignore_c_function", action="store_true", default=False,
-            help="ignore all c functions including most builtin functions and libraries")
+                        help="ignore all c functions including most builtin functions and libraries")
     parser.add_argument("--log_return_value", action="store_true", default=False,
-            help="log return value of the function in the report")
+                        help="log return value of the function in the report")
     parser.add_argument("--log_print", action="store_true", default=False,
-            help="replace all print() function to adding an event to the result")
+                        help="replace all print() function to adding an event to the result")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
-            help="append pid to file name. This should be used when you try to trace multi process programs. Will by default generate json files")
+                        help="append pid to file name. This should be used when you try to trace multi process programs. Will by default generate json files")
     parser.add_argument("--save_flamegraph", action="store_true", default=False,
-            help="save flamegraph after generating the VizTracer report")
+                        help="save flamegraph after generating the VizTracer report")
     parser.add_argument("--generate_flamegraph", nargs="?", default=None,
-            help="generate a flamegraph from json VizTracer report. Specify the json file to use")
+                        help="generate a flamegraph from json VizTracer report. Specify the json file to use")
     parser.add_argument("--run", nargs="*", default=[],
-            help="explicitly specify the python commands you want to trace. Should be used if there's ambiguity")
+                        help="explicitly specify the python commands you want to trace. Should be used if there's ambiguity")
     parser.add_argument("--module", "-m", nargs="?", default=None,
-            help="run module with VizTracer")
+                        help="run module with VizTracer")
     parser.add_argument("--combine", nargs="*", default=[],
-            help="combine all json reports to a single report. Specify all the json reports you want to combine")
+                        help="combine all json reports to a single report. Specify all the json reports you want to combine")
     parser.add_argument("command", nargs=argparse.REMAINDER,
-            help="python commands to trace")
+                        help="python commands to trace")
     options = parser.parse_args(sys.argv[1:])
 
     if options.command:

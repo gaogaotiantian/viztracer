@@ -20,7 +20,7 @@ class SimInterface:
         if os.getenv("COVERAGE_RUN"):
             commands = ["coverage", "run", "--parallel-mode", "--pylib", "-m", "viztracer.simulator"] + commands[1:]
         self.sim_process = subprocess.Popen(commands,
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+                                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
         self.sim_process.stdin.write('\n')
         self.sim_process.stdin.flush()
         while True:
@@ -115,7 +115,7 @@ class TestSimulator(unittest.TestCase):
         result = sim.command("t 1 1")
         self.assertIn("argument", result)
         sim.close()
-    
+
     def test_tid_pid(self):
         sim = SimInterface(vdb_basic)
         result = sim.command("tid")
@@ -193,7 +193,7 @@ class TestSimulator(unittest.TestCase):
         for _ in range(5):
             sim.command("d")
         sim.close()
-    
+
     def test_edge(self):
         # Behaviors on the beginning/end of the program
         sim = SimInterface(vdb_basic)
@@ -215,15 +215,15 @@ class TestSimulator(unittest.TestCase):
         sim.close()
 
     def test_clear(self):
-        sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
+        sim = SimInterface(vdb_basic, vdb_cmd=["vdb", "--extra_newline"])
         sim.command("s")
         sim.close()
 
     def test_close(self):
         if sys.platform in ["linux", "linux2", "darwin"]:
-            sim = SimInterface(vdb_basic, vdb_cmd = ["vdb", "--extra_newline"])
+            sim = SimInterface(vdb_basic, vdb_cmd=["vdb", "--extra_newline"])
             sim.close()
             self.sim_process = subprocess.Popen(["vdb {} < /dev/null".format(vdb_basic)],
-                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
+                                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
             self.sim_process.wait()
             self.assertEqual(self.sim_process.returncode, 0)
