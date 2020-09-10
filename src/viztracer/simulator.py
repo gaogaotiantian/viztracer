@@ -40,7 +40,6 @@ class Simulator:
                     print("")
                 self.parse_cmd(cmd)
             except EOFError:
-                print("EOF")
                 exit(0)
 
     def clear(self):

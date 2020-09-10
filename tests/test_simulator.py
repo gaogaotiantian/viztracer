@@ -221,9 +221,12 @@ class TestSimulator(unittest.TestCase):
 
     def test_close(self):
         if sys.platform in ["linux", "linux2", "darwin"]:
-            sim = SimInterface(vdb_basic, vdb_cmd=["vdb", "--extra_newline"])
-            sim.close()
-            self.sim_process = subprocess.Popen(["vdb {} < /dev/null".format(vdb_basic)],
-                                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
-            self.sim_process.wait()
-            self.assertEqual(self.sim_process.returncode, 0)
+            if os.getenv("COVERAGE_RUN"):
+                commands = "coverage run --parallel-mode --pylib -m viztracer.simulator {} < /dev/null".format(vdb_basic)
+            else:
+                commands = "vdb {} < /dev/null".format(vdb_basic)
+
+            sim_process = subprocess.Popen([commands],
+                                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
+            sim_process.wait()
+            self.assertEqual(sim_process.returncode, 0)
