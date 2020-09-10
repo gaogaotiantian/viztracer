@@ -12,7 +12,7 @@ You can limit maximum stack depth to trace by
 
 .. code-block::
 
-    python3 -m viztracer --max_stack_depth 10 my_script.py
+    viztracer --max_stack_depth 10 my_script.py
 
 OR
 
@@ -24,7 +24,7 @@ You can include only certain files/folders to trace by
 
 .. code-block::
 
-    python3 -m viztracer --include_files ./src --run my_script.py
+    viztracer --include_files ./src --run my_script.py
 
 OR
 
@@ -36,7 +36,7 @@ Similarly, you can exclude certain files/folders to trace by
 
 .. code-block::
 
-    python3 -m viztracer --exclude_files ./not_interested.py --run my_script.py
+    viztracer --exclude_files ./not_interested.py --run my_script.py
 
 OR
 
@@ -48,7 +48,7 @@ By default, VizTracer will trace both python and C functions. You can turn off t
 
 .. code-block:: 
 
-    python3 -m viztracer --ignore_c_function my_script.py
+    viztracer --ignore_c_function my_script.py
 
 OR
 
@@ -108,7 +108,7 @@ You can do this simply by:
 
 .. code-block:: 
 
-    python -m viztracer --log_print my_script.py
+    viztracer --log_print my_script.py
 
 OR
 
@@ -132,6 +132,24 @@ data as instant events.
     # A handler is added to logging so logging will dump data to VizTracer
     logging.basicConfig(handlers = [handler])
 
+Global ``VizTracer`` object
+---------------------------
+
+For many features, you need a tracer object, which you have to instantiate in your code and can not
+use the convenient ``viztracer <args>`` commands. You can solve this by using the global ``VizTracer``
+object ``viztracer <args>`` generates. 
+
+When you youse ``viztracer <args>`` command to trace your program, a ``__viz_tracer__`` builtin
+is passed to your program and it has the tracer object ``viztracer <args>`` used. 
+
+You can do things like:
+
+.. code-block:: python
+
+    from viztracer import VizLoggingHandler
+
+    handler.setTracer(__viz_tracer__)
+
 Circular Buffer Size
 --------------------
 
@@ -142,7 +160,7 @@ Be aware that 600MiB is disk space, it requires more RAM to load it on Chrome.
 
 .. code-block:: python
 
-    python -m viztracer --tracer_entries 1000000 my_script.py
+    viztracer --tracer_entries 1000000 my_script.py
 
 OR
 
@@ -161,7 +179,7 @@ It's a little bit more complicated to do multi processing. You basically need to
 
 .. code-block:: 
 
-    python -m viztracer --combine <json_files>
+    viztracer --combine <json_files>
 
 For detailed usage, please refer to :doc:`multi_process`
 

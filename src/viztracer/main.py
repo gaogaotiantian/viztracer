@@ -5,6 +5,7 @@ import sys
 import argparse
 import os
 import subprocess
+import builtins
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
@@ -140,6 +141,8 @@ def main():
         log_print=options.log_print
     )
 
+    builtins.__dict__["__viz_tracer__"] = tracer
+    global_dict["__builtins__"] = globals()["__builtins__"]
     tracer.start()
     exec(code, global_dict)
     tracer.stop()
