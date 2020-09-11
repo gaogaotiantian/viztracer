@@ -42,7 +42,7 @@ OR
 
 .. code-block:: python
 
-    tracer = VizTracer(include_files=["./not_interested.py"])
+    tracer = VizTracer(exclude_files=["./not_interested.py"])
 
 By default, VizTracer will trace both python and C functions. You can turn off tracing C functions by
 
