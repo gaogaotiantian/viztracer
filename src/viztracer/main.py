@@ -92,8 +92,8 @@ def main():
         if not os.path.exists(file_name):
             if sys.platform in ["linux", "linux2", "darwin"]:
                 p = subprocess.Popen(["which", file_name], stdout=subprocess.PIPE)
-                file_name = p.communicate()[0].decode("utf-8").strip()
-                if not file_name or not os.path.exists(file_name):
+                guess_file_name = p.communicate()[0].decode("utf-8").strip()
+                if not guess_file_name or not os.path.exists(guess_file_name):
                     print("No such file as {}".format(file_name))
                     exit(1)
             else:
