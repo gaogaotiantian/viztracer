@@ -9,6 +9,7 @@ VizTracer
                  exclude_files=None,\
                  ignore_c_function=False,\
                  log_print=False,\
+                 novdb=False,\
                  pid_suffix=False,\
                  output_file="result.html")
 
@@ -122,6 +123,18 @@ VizTracer
 
             python -m viztracer --log_print
     
+    .. py:attribute:: novdb
+        :type: boolean
+        :value: False
+
+        whether made viztracer to stop instrumenting for vdb, which would improve the overhead and the file size a bit
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            python -m viztracer --novdb
+
     .. py:attribute:: output_file
         :type: string
         :value: "result.html"
