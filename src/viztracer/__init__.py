@@ -1,6 +1,9 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+__version__ = "0.6.3"
+
+
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
 from .decorator import ignore_function, trace_and_save
@@ -10,7 +13,6 @@ from .vizlogging import VizLoggingHandler
 from .main import main
 from .simulator import main as sim_main
 
-__version__ = "0.6.3"
 
 __all__ = [
     "__version__",

@@ -27,6 +27,8 @@ class Simulator:
         except ImportError:
             self.print = print
         self.snapshot = ProgSnapshot(json_string, self.print)
+        if not self.snapshot.valid:
+            exit(1)
         self.no_clear = no_clear
         self.extra_newline = extra_newline
 

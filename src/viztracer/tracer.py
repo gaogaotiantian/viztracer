@@ -6,6 +6,7 @@ import builtins
 from io import StringIO
 from .util import color_print
 from .report_builder import ReportBuilder
+from . import __version__
 import viztracer.snaptrace as snaptrace
 
 
@@ -188,7 +189,10 @@ class _VizTracer:
         if not self.parsed:
             self.data = {
                 "traceEvents": self._tracer.load(),
-                "displayTimeUnit": "ns"
+                "displayTimeUnit": "ns",
+                "viztracer_metadata": {
+                    "version": __version__
+                }
             }
             self.total_entries = len(self.data["traceEvents"])
             if self.total_entries == self.tracer_entries and self.verbose > 0:

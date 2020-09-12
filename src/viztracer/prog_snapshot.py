@@ -5,8 +5,10 @@ try:
     import orjson as json
 except ImportError:
     import json
-from .functree import FuncTree
 import bisect
+from .functree import FuncTree
+from .util import color_print
+from . import __version__
 
 
 class Frame:
@@ -162,6 +164,7 @@ class ObjectEvents:
 
 
 class ProgSnapshot:
+    compatible_version = "0.6.2"
     def __init__(self, json_string=None, p=print):
         self.func_trees = {}
         self.curr_node = None
@@ -171,12 +174,21 @@ class ProgSnapshot:
         self.counter_events = CounterEvents()
         self.object_events = ObjectEvents()
         if json_string:
-            self.load(json_string)
+            if not self.load(json_string):
+                self.valid = False
+                return
         self.p = p
+        self.valid = True
 
     def load(self, json_string):
         self.func_trees = {}
         raw_data = json.loads(json_string)
+        if "viztracer_metadata" not in raw_data:
+            color_print("FAIL", "Error, json file version too old.")
+            return False
+        else:
+            if not self.check_version(raw_data["viztracer_metadata"]["version"]):
+                return False
         trace_events = raw_data["traceEvents"]
         for event in trace_events:
             self.load_event(event)
@@ -188,6 +200,7 @@ class ProgSnapshot:
             tree.normalize(first_ts)
         self.counter_events.normalize(first_ts)
         self.object_events.normalize(first_ts)
+        return True
 
     def load_event(self, event):
         # event is a chrome trace format event object
@@ -211,8 +224,16 @@ class ProgSnapshot:
         elif ph in ["N", "D", "O"]:
             self.object_events.add_event(event)
         else:
-            # Currently we only support complete events
+            print("Unsupported event type: {}".format(ph))
             return
+
+    def check_version(self, version):
+        if tuple(version.split(".")) < tuple(self.compatible_version.split(".")):
+            color_print("FAIL", "Error, json file version too old.")
+            return False
+        elif tuple(version.split(".")) > tuple(__version__.split(".")):
+            color_print("WARNING", "Warning, json file version is newer than vdb! Not sure if it's compatible")
+        return True
 
     def get_trees(self):
         for pid in self.func_trees:
@@ -245,11 +266,8 @@ class ProgSnapshot:
         curr_frame = self.curr_frame
         if curr_frame.curr_children_idx < len(curr_frame.node.children):
             child = curr_frame.node.children[curr_frame.curr_children_idx]
-            if child.is_python:
-                new_frame = Frame(curr_frame, child)
-                self.curr_frame = new_frame
-            else:
-                curr_frame.curr_children_idx += 1
+            new_frame = Frame(curr_frame, child)
+            self.curr_frame = new_frame
         else:
             # go out of the function
             success, _ = self.func_return()
@@ -263,10 +281,9 @@ class ProgSnapshot:
         if curr_frame.curr_children_idx > 0:
             curr_frame.curr_children_idx -= 1
             child = curr_frame.node.children[curr_frame.curr_children_idx]
-            if child.is_python:
-                new_frame = Frame(curr_frame, child)
-                new_frame.curr_children_idx = len(new_frame.node.children)
-                self.curr_frame = new_frame
+            new_frame = Frame(curr_frame, child)
+            new_frame.curr_children_idx = len(new_frame.node.children)
+            self.curr_frame = new_frame
         else:
             # go out of the function
             success, _ = self.func_return_back()
