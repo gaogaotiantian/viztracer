@@ -96,6 +96,8 @@ def main():
                 if not guess_file_name or not os.path.exists(guess_file_name):
                     print("No such file as {}".format(file_name))
                     exit(1)
+                else:
+                    file_name = guess_file_name
             else:
                 print("No such file as {}".format(file_name))
                 exit(1)
