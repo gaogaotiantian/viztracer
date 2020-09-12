@@ -21,6 +21,7 @@ class VizTracer(_VizTracer):
                  ignore_c_function=False,
                  log_return_value=False,
                  log_print=False,
+                 novdb=False,
                  save_on_exit=False,
                  pid_suffix=False,
                  output_file="result.html"):

@@ -30,6 +30,21 @@ class TestPerformance(unittest.TestCase):
             func()
             origin = t.get_time()
 
+        # With viztracer + c tracer + novdb
+        tracer = VizTracer(verbose=0, novdb=True)
+        tracer.start()
+        with Timer() as t:
+            func()
+            instrumented_c_novdb = t.get_time()
+        tracer.stop()
+        with Timer() as t:
+            tracer.parse()
+            instrumented_c_novdb_parse = t.get_time()
+        with Timer() as t:
+            tracer.generate_json(allow_binary=True)
+            instrumented_c_novdb_json = t.get_time()
+        tracer.clear()
+
         # With viztracer + c tracer
         tracer = VizTracer(verbose=0)
         tracer.start()
@@ -57,6 +72,7 @@ class TestPerformance(unittest.TestCase):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 
         print(time_str("origin", origin, origin))
+        print(time_str("c+novdb", origin, instrumented_c_novdb) + time_str("parse", origin, instrumented_c_novdb_parse) + time_str("json", origin, instrumented_c_novdb_json))
         print(time_str("c", origin, instrumented_c) + time_str("parse", origin, instrumented_c_parse) + time_str("json", origin, instrumented_c_json))
         print(time_str("cProfile", origin, cprofile))
 

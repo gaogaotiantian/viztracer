@@ -172,3 +172,18 @@ class TestTracerFilter(unittest.TestCase):
         tracer.parse()
         self.assertTrue("args" in tracer.data["traceEvents"][0] and \
                         "return_value" in tracer.data["traceEvents"][0]["args"])
+
+    def test_novdb(self):
+        tracer = _VizTracer(novdb=False)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertTrue("caller_lineno" in tracer.data["traceEvents"][0])
+
+        tracer = _VizTracer(novdb=True)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertFalse("caller_lineno" in tracer.data["traceEvents"][0])

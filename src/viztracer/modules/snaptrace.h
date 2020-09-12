@@ -9,6 +9,7 @@
 #define SNAPTRACE_EXCLUDE_FILES (1 << 2)
 #define SNAPTRACE_IGNORE_C_FUNCTION (1 << 3)
 #define SNAPTRACE_LOG_RETURN_VALUE (1 << 4)
+#define SNAPTRACE_NOVDB (1 << 5)
 
 #define SET_FLAG(reg, flag) ((reg) |= (flag))
 #define UNSET_FLAG(reg, flag) ((reg) &= (~(flag)))

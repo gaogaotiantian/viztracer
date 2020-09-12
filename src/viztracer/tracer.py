@@ -17,7 +17,8 @@ class _VizTracer:
                  exclude_files=None,
                  ignore_c_function=False,
                  log_return_value=False,
-                 log_print=False):
+                 log_print=False,
+                 novdb=False):
         self.buffer = []
         self.enable = False
         self.parsed = False
@@ -32,6 +33,7 @@ class _VizTracer:
         self.ignore_c_function = ignore_c_function
         self.log_return_value = log_return_value
         self.log_print = log_print
+        self.novdb = novdb
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
@@ -117,6 +119,17 @@ class _VizTracer:
         else:
             raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
+    @property
+    def novdb(self):
+        return self.__novdb
+
+    @novdb.setter
+    def novdb(self, novdb):
+        if type(novdb) is bool:
+            self.__novdb = novdb
+        else:
+            raise ValueError("novdb needs to be True or False, not {}".format(novdb))
+
     def start(self):
         self.enable = True
         self.parsed = False
@@ -131,7 +144,8 @@ class _VizTracer:
             include_files=self.include_files,
             exclude_files=self.exclude_files,
             ignore_c_function=self.ignore_c_function,
-            log_return_value=self.log_return_value
+            log_return_value=self.log_return_value,
+            novdb=self.novdb
         )
         self._tracer.start()
 

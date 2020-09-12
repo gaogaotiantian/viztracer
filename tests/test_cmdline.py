@@ -141,6 +141,9 @@ class TestCommandLineBasic(Tmpl):
     def test_log_return_value(self):
         self.template(["python", "-m", "viztracer", "--log_return_value", "cmdline_test.py"], script=file_c_function)
 
+    def test_novdb(self):
+        self.template(["python", "-m", "viztracer", "--novdb", "cmdline_test.py"])
+
     def test_flamegraph(self):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"], expected_output_file=["result.html", "result_flamegraph.html"])
 

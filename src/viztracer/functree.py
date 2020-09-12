@@ -12,7 +12,7 @@ class FuncTreeNode:
     def __init__(self, event=None):
         self.filename = None
         self.lineno = None
-        self.caller_lineno = None
+        self.caller_lineno = -1
         self.is_python = False
         self.funcname = None
         if event is None:

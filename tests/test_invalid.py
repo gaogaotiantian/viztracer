@@ -16,7 +16,8 @@ class TestInvalidArgs(unittest.TestCase):
             "exclude_files": ["./src"],
             "ignore_c_function": ["hello", 1, "True"],
             "log_print": ["hello", 1, "True"],
-            "log_return_value": ["hello", 1, "True"]
+            "log_return_value": ["hello", 1, "True"],
+            "novdb": ["hello", 1, "True"]
         }
         tracer = VizTracer()
         for args, vals in invalid_args.items():

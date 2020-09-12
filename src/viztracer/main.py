@@ -35,6 +35,8 @@ def main():
                         help="log return value of the function in the report")
     parser.add_argument("--log_print", action="store_true", default=False,
                         help="replace all print() function to adding an event to the result")
+    parser.add_argument("--novdb", action="store_true", default=False,
+                        help="Do not instrument for vdb, will reduce the overhead")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
                         help="append pid to file name. This should be used when you try to trace multi process programs. Will by default generate json files")
     parser.add_argument("--save_flamegraph", action="store_true", default=False,
@@ -136,6 +138,7 @@ def main():
         include_files=options.include_files,
         ignore_c_function=options.ignore_c_function,
         log_return_value=options.log_return_value,
+        novdb=options.novdb,
         save_on_exit=True,
         pid_suffix=options.pid_suffix,
         log_print=options.log_print

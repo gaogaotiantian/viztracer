@@ -352,14 +352,18 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                         node->data.fee.retval = PyObject_Repr(arg);
                     }
-                    if (frame->f_back) {
+                    if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && frame->f_back) {
                         node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame->f_back);
                     } else {
                         node->data.fee.caller_lineno = -1;
                     }
                 } else if (is_c) {
                     node->data.fee.cfunc = (PyCFunctionObject*) arg;
-                    node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
+                    if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB)) {
+                        node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
+                    } else {
+                        node->data.fee.caller_lineno = -1;
+                    }
                     Py_INCREF(arg);
                 } 
             }
@@ -550,9 +554,12 @@ snaptrace_load(TracerObject* self, PyObject* args)
             Py_DECREF(dur);
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
-            PyObject* caller_lineno = PyLong_FromLong(node->data.fee.caller_lineno);
-            PyDict_SetItemString(dict, "caller_lineno", caller_lineno);
-            Py_DECREF(caller_lineno);
+
+            if (node->data.fee.caller_lineno >= 0) {
+                PyObject* caller_lineno = PyLong_FromLong(node->data.fee.caller_lineno);
+                PyDict_SetItemString(dict, "caller_lineno", caller_lineno);
+                Py_DECREF(caller_lineno);
+            }
 
             PyObject* arg_dict = NULL;
             if (node->data.fee.args) {
@@ -673,7 +680,7 @@ static PyObject*
 snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
-            "include_files", "exclude_files", "ignore_c_function", "log_return_value",
+            "include_files", "exclude_files", "ignore_c_function", "log_return_value", "novdb",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -682,14 +689,16 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
     int kw_log_return_value = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpp", kwlist, 
+    int kw_novdb = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppp", kwlist, 
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
             &kw_include_files,
             &kw_exclude_files,
             &kw_ignore_c_function,
-            &kw_log_return_value)) {
+            &kw_log_return_value,
+            &kw_novdb)) {
         return NULL;
     }
 
@@ -723,6 +732,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
     } else if (kw_log_return_value == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
+    }
+
+    if (kw_novdb == 1) {
+        SET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
+    } else if (kw_novdb == 0) {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
     }
 
     if (kw_max_stack_depth >= 0) {
