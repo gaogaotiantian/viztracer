@@ -3,6 +3,7 @@
 
 import unittest
 import json
+import sys
 from viztracer.prog_snapshot import ProgSnapshot
 
 
@@ -75,3 +76,20 @@ class TestSnapShot(unittest.TestCase):
         # Pure coverage
         high_version_str = '{"traceEvents":[{"pid":7761,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata":{"version":"1000.0.1"}}'
         snap = ProgSnapshot(high_version_str)
+
+    def test_invalid(self):
+        data = '{"traceEvents": [{"ph": "hello"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        with self.assertRaises(ValueError):
+            snap = ProgSnapshot(data)
+
+        data = '{"traceEvents": [{"ph": "hello", "pid": 1, "tid": 1}], "viztracer_metadata": {"version": "0.6.2"}}'
+        with self.assertRaises(ValueError):
+            snap = ProgSnapshot(data)
+
+    def test_multiple_process(self):
+        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7761,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        snap = ProgSnapshot(data)
+        self.assertEqual(len(list(snap.get_trees())), 2)
+
+        # Coverage test
+        val = snap.list_pid()
