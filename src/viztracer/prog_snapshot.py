@@ -144,7 +144,7 @@ class ObjectEvents:
                 "args": event["args"]["snapshot"]
             })
         else:
-            raise Exception("Unexpected type for object event")
+            raise ValueError("Unexpected type for object event")
 
     def normalize(self, first_ts):
         for entry in self._objects.values():
@@ -209,8 +209,7 @@ class ProgSnapshot:
             pid = event["pid"]
             tid = event["tid"]
         except Exception:
-            print("Error when loading event data: {}", event)
-            return
+            raise ValueError("Error when loading event data: {}", event)
 
         if ph == "X":
             if pid not in self.func_trees:
