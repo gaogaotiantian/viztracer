@@ -36,6 +36,7 @@ static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
+static void log_function_args(struct FunctionNode* node, PyFrameObject* frame);
 
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
@@ -48,7 +49,9 @@ LARGE_INTEGER qpc_freq;
 
 static void Print_Py(PyObject* o)
 {
-    printf("%s\n", PyUnicode_AsUTF8(PyObject_Repr(o)));
+    PyObject* repr = PyObject_Repr(o);
+    printf("%s\n", PyUnicode_AsUTF8(repr));
+    Py_DECREF(repr);
 }
 
 static struct ThreadInfo* get_thread_info(TracerObject* self)
@@ -129,6 +132,45 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     }
 
     return node;
+}
+
+static void log_function_args(struct FunctionNode* node, PyFrameObject* frame)
+{
+    PyObject* func_arg_dict = PyDict_New();
+    PyCodeObject* code = frame->f_code;
+    PyObject* names = code->co_varnames;
+    PyObject* locals = PyEval_GetLocals();
+
+    int idx = 0;
+    if (!node->args) {
+        node->args = PyDict_New();
+    }
+
+    int name_length = code->co_argcount + code->co_kwonlyargcount;
+    if (code->co_flags & CO_VARARGS) {
+        name_length ++;
+    }
+
+    if (code->co_flags & CO_VARKEYWORDS) {
+        name_length ++;
+    }
+
+    while (idx < name_length) {
+        // Borrowed
+        PyObject* name = PyTuple_GET_ITEM(names, idx);
+        // New
+        PyObject* repr = PyObject_Repr(PyDict_GetItem(locals, name));
+        if (!repr) {
+            repr = PyUnicode_FromString("Not Displayable");
+            PyErr_Clear();
+        }
+        PyDict_SetItem(func_arg_dict, name, repr);
+        Py_DECREF(repr);
+        idx++;
+    }
+
+    PyDict_SetItemString(node->args, "func_args", func_arg_dict);
+    Py_DECREF(func_arg_dict);
 }
 
 static void verbose_printf(TracerObject* self, int v, const char* fmt, ...)
@@ -330,6 +372,9 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
             info->stack_top = info->stack_top->next;
             info->stack_top->ts = get_ts();
+            if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
+                log_function_args(info->stack_top, frame);
+            }
         } else if (is_return) {
             struct FunctionNode* stack_top = info->stack_top;
             if (stack_top->prev) {
@@ -680,7 +725,8 @@ static PyObject*
 snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
-            "include_files", "exclude_files", "ignore_c_function", "log_return_value", "novdb",
+            "include_files", "exclude_files", "ignore_c_function", "log_return_value", 
+            "novdb", "log_function_args",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -690,7 +736,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_ignore_c_function = -1;
     int kw_log_return_value = -1;
     int kw_novdb = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppp", kwlist, 
+    int kw_log_function_args = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppp", kwlist, 
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -698,7 +745,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_exclude_files,
             &kw_ignore_c_function,
             &kw_log_return_value,
-            &kw_novdb)) {
+            &kw_novdb,
+            &kw_log_function_args)) {
         return NULL;
     }
 
@@ -738,6 +786,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
     } else if (kw_novdb == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
+    }
+
+    if (kw_log_function_args == 1) {
+        SET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
+    } else if (kw_log_function_args == 0) {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
     }
 
     if (kw_max_stack_depth >= 0) {
@@ -913,6 +967,7 @@ static void snaptrace_threaddestructor(void* key) {
             while (info->stack_top->prev) {
                 info->stack_top = info->stack_top->prev;
             }
+            PyGILState_STATE state = PyGILState_Ensure();
             while (info->stack_top) {
                 tmp = info->stack_top;
                 if (tmp->args) {
@@ -922,6 +977,7 @@ static void snaptrace_threaddestructor(void* key) {
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }
+            PyGILState_Release(state);
         }
         info->stack_top = NULL;
     }

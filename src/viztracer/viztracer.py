@@ -20,6 +20,7 @@ class VizTracer(_VizTracer):
                  exclude_files=None,
                  ignore_c_function=False,
                  log_return_value=False,
+                 log_function_args=False,
                  log_print=False,
                  novdb=False,
                  save_on_exit=False,
@@ -33,7 +34,8 @@ class VizTracer(_VizTracer):
                 ignore_c_function=ignore_c_function,
                 log_return_value=log_return_value,
                 log_print=log_print,
-                novdb=novdb
+                novdb=novdb,
+                log_function_args=log_function_args
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix

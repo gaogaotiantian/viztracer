@@ -60,7 +60,7 @@ class TestCTracer(unittest.TestCase):
 
 class TestCircularBuffer(unittest.TestCase):
     def test_wrap(self):
-        tracer = _VizTracer(tracer_entries = 10)
+        tracer = _VizTracer(tracer_entries=10)
         tracer.start()
         fib(10)
         tracer.stop()
@@ -156,7 +156,7 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 0)
-    
+
     def test_log_return_value(self):
         tracer = _VizTracer()
         tracer.start()
@@ -170,7 +170,7 @@ class TestTracerFilter(unittest.TestCase):
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0] and \
+        self.assertTrue("args" in tracer.data["traceEvents"][0] and
                         "return_value" in tracer.data["traceEvents"][0]["args"])
 
     def test_novdb(self):
@@ -187,3 +187,11 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         tracer.parse()
         self.assertFalse("caller_lineno" in tracer.data["traceEvents"][0])
+
+    def test_log_function_args(self):
+        tracer = _VizTracer(log_function_args=True)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertTrue("args" in tracer.data["traceEvents"][0] and "func_args" in tracer.data["traceEvents"][0]["args"])

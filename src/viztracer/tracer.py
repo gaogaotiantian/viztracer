@@ -18,6 +18,7 @@ class _VizTracer:
                  exclude_files=None,
                  ignore_c_function=False,
                  log_return_value=False,
+                 log_function_args=False,
                  log_print=False,
                  novdb=False):
         self.buffer = []
@@ -35,6 +36,7 @@ class _VizTracer:
         self.log_return_value = log_return_value
         self.log_print = log_print
         self.novdb = novdb
+        self.log_function_args = log_function_args
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
@@ -146,7 +148,8 @@ class _VizTracer:
             exclude_files=self.exclude_files,
             ignore_c_function=self.ignore_c_function,
             log_return_value=self.log_return_value,
-            novdb=self.novdb
+            novdb=self.novdb,
+            log_function_args=self.log_function_args
         )
         self._tracer.start()
 
