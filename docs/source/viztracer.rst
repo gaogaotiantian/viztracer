@@ -8,8 +8,11 @@ VizTracer
                  include_files=None,\
                  exclude_files=None,\
                  ignore_c_function=False,\
+                 log_return_value=False,\
+                 log_function_args=False,\
                  log_print=False,\
                  novdb=False,\
+                 save_on_exit=False,\
                  pid_suffix=False,\
                  output_file="result.html")
 
@@ -111,6 +114,30 @@ VizTracer
 
             python -m viztracer --ignore_c_function
 
+    .. py:attribute:: log_return_value 
+        :type: boolean
+        :value: False
+
+        Whether log the return value of the function as string in report entry
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            python -m viztracer --log_return_value
+    
+    .. py:attribute:: log_function_args 
+        :type: boolean
+        :value: False
+
+        Whether log the arguments of the function as string in report entry
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            python -m viztracer --log_function_args
+    
     .. py:attribute:: log_print 
         :type: boolean
         :value: False
@@ -128,6 +155,14 @@ VizTracer
         :value: False
 
         whether made viztracer to stop instrumenting for vdb, which would improve the overhead and the file size a bit
+
+        This attribute is automatically set to ``True`` when you are using command line
+
+    .. py:attribute:: save_on_exit 
+        :type: boolean
+        :value: False
+
+        Whether to save to log if the program exits unexpectedly
 
         Setting it to ``True`` is equivalent to 
 

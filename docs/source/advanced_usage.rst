@@ -97,7 +97,25 @@ You can enable this feature in command line or using inline.
     
     tracer = VizTracer(log_return_value=True)
 
-You can log arbitrary (key, value) pairs for your function entry using ``add_functionarg()``. Refer to :doc:`viztracer` for it's usage
+Log Function Arguments 
+----------------------
+
+VizTracer can log every function's arguments as ``string``, aka their ``__repr__``. The arguments will be stored in each python function entry 
+under ``args["func_args"]``. You can overwrite the object's ``__repr__`` function to log the object as you need.
+
+You can enable this feature in command line or using inline. 
+
+.. code-block:: 
+    
+    viztracer --log_function_args my_script.py
+
+.. code-block:: python
+    
+    tracer = VizTracer(log_function_args=True)
+
+**This feature will introduce a very large overhead(depends on your argument list), so be aware of it**
+
+You can log additional arbitrary (key, value) pairs for your function entry using ``add_functionarg()``. Refer to :doc:`viztracer` for it's usage
 
 Log Print
 ---------
