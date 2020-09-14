@@ -169,7 +169,7 @@ class TestDecorator(unittest.TestCase):
             fib(n)
         for _ in range(5):
             my_function(10)
-        time.sleep(0.2)
+        time.sleep(0.5)
         counter = len(os.listdir("./tmp"))
         shutil.rmtree("./tmp")
         self.assertEqual(counter, 5)
@@ -180,7 +180,7 @@ class TestDecorator(unittest.TestCase):
             def my_function2(n):
                 fib(n)
             my_function2(10)
-            time.sleep(0.2)
+            time.sleep(0.5)
             a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.assertEqual(a.returncode, 0)
             a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -213,7 +213,7 @@ class TestForkSave(unittest.TestCase):
             t.stop()
             t.parse()
             t.fork_save(output_file=str(i) + ".json")
-        time.sleep(0.5)
+        time.sleep(0.6)
 
         expected = {
             5: 15,
