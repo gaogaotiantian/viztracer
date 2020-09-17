@@ -239,7 +239,7 @@ class TestForkSave(unittest.TestCase):
 class TestGlobalTracer(unittest.TestCase):
     def test_get_tracer(self):
         with self.assertRaises(NameError):
-            tmp = __viz_tracer__
+            tmp = __viz_tracer__ # noqa: F821
         self.assertIs(get_tracer(), None)
         tracer = VizTracer
         builtins.__dict__["__viz_tracer__"] = tracer
