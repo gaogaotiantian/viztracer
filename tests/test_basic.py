@@ -8,8 +8,9 @@ import subprocess
 import time
 import json
 import shutil
+import builtins
 from viztracer.tracer import _VizTracer
-from viztracer import VizTracer, ignore_function, trace_and_save
+from viztracer import VizTracer, ignore_function, trace_and_save, get_tracer
 
 
 def fib(n):
@@ -234,3 +235,13 @@ class TestForkSave(unittest.TestCase):
                 pid = data["traceEvents"][0]["pid"]
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
+
+class TestGlobalTracer(unittest.TestCase):
+    def test_get_tracer(self):
+        with self.assertRaises(NameError):
+            tmp = __viz_tracer__
+        self.assertIs(get_tracer(), None)
+        tracer = VizTracer
+        builtins.__dict__["__viz_tracer__"] = tracer
+        self.assertIs(get_tracer(), tracer)
+        builtins.__dict__.pop("__viz_tracer__")

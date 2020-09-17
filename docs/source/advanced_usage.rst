@@ -160,6 +160,9 @@ object ``viztracer <args>`` generates.
 When you youse ``viztracer <args>`` command to trace your program, a ``__viz_tracer__`` builtin
 is passed to your program and it has the tracer object ``viztracer <args>`` used. 
 
+Or you can import ``get_tracer`` and use that function. The upside of using ``get_tracer()`` function 
+is that your program won't crash when it's not started by ``viztracer`` because it will return ``None``
+
 You can do things like:
 
 .. code-block:: python
@@ -167,6 +170,14 @@ You can do things like:
     from viztracer import VizLoggingHandler
 
     handler.setTracer(__viz_tracer__)
+
+Or
+
+.. code-block:: python
+
+    from viztracer import get_tracer
+
+    handler.setTracer(get_tracer())
 
 Circular Buffer Size
 --------------------

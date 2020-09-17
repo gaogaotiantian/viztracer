@@ -26,3 +26,10 @@ __all__ = [
     "VizObject",
     "VizLoggingHandler"
 ]
+
+
+def get_tracer():
+    try:
+        return __viz_tracer__
+    except NameError:
+        return None
