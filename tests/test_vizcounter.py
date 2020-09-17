@@ -46,3 +46,14 @@ class TestCounterClass(unittest.TestCase):
         entries = tracer.parse()
         tracer.save()
         self.assertEqual(entries, 2)
+
+    def test_notracer(self):
+        counter = VizCounter(None, "name")
+        counter.a = 1
+        counter.b = 2
+
+        a = Hello(None, "name")
+        a.b = 1
+        a.c = 2
+        a.d = 3
+        a.log()

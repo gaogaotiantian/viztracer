@@ -6,6 +6,8 @@ from .event_base import _EventBase
 
 class VizCounter(_EventBase):
     def _viztracer_log(self):
+        if not self._viztracer_tracer:
+            return
         d = {}
         for attr in self._viztracer_get_attr_list():
             if hasattr(self, attr):

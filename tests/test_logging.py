@@ -24,6 +24,5 @@ class TestLogging(unittest.TestCase):
         handler = VizLoggingHandler()
         logging.basicConfig(handlers=[handler])
         tracer.start()
-        with self.assertRaises(Exception):
-            logging.warning("lol")
+        logging.warning("lol")
         tracer.stop()

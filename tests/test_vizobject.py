@@ -119,3 +119,16 @@ class TestVizObject(unittest.TestCase):
         entries = tracer.parse()
         tracer.save()
         self.assertEqual(entries, 10)
+
+    def test_notracer(self):
+        a = VizObject(None, "my variable")
+        a.hello = 1
+        a.hello = 2
+        a = Hello(None)
+        a.config("include_attributes", ["a", "b"])
+        a.change_val()
+        a.change_val2()
+        b = Hello(None)
+        b.config("include_attributes", ["a", "b"])
+        b.change_val()
+        b.change_val2()

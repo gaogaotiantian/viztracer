@@ -160,24 +160,28 @@ object ``viztracer <args>`` generates.
 When you youse ``viztracer <args>`` command to trace your program, a ``__viz_tracer__`` builtin
 is passed to your program and it has the tracer object ``viztracer <args>`` used. 
 
-Or you can import ``get_tracer`` and use that function. The upside of using ``get_tracer()`` function 
-is that your program won't crash when it's not started by ``viztracer`` because it will return ``None``
+It is recommended to import ``get_tracer`` and use it to get global tracer. The upside of using ``get_tracer()`` function 
+is that your program won't crash when it's not started by ``viztracer`` because ``get_tracer()`` will return ``None``
+
+When you use ``VizLoggingHandler`` or ``VizCounter`` or ``VizObject``, setting their tracer to ``None`` will make 
+the logging a ``NOP``. This will enable you to leave the instrumentation code as it is and run you program both
+regularly and with ``viztracer``
 
 You can do things like:
 
 .. code-block:: python
 
-    from viztracer import VizLoggingHandler
+    from viztracer import VizLoggingHandler, get_tracer
 
-    handler.setTracer(__viz_tracer__)
+    handler = VizLoggingHandler()
 
-Or
+    handler.setTracer(get_tracer())
 
 .. code-block:: python
 
-    from viztracer import get_tracer
+    from viztracer import get_tracer, VizObject
 
-    handler.setTracer(get_tracer())
+    obj = VizObject(get_tracer(), "my variable")
 
 Circular Buffer Size
 --------------------
