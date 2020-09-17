@@ -17,6 +17,7 @@ class _VizTracer:
                  include_files=None,
                  exclude_files=None,
                  ignore_c_function=False,
+                 ignore_non_file=False,
                  log_return_value=False,
                  log_function_args=False,
                  log_print=False,
@@ -33,6 +34,7 @@ class _VizTracer:
         self.include_files = include_files
         self.exclude_files = exclude_files
         self.ignore_c_function = ignore_c_function
+        self.ignore_non_file = ignore_non_file
         self.log_return_value = log_return_value
         self.log_print = log_print
         self.novdb = novdb
@@ -147,6 +149,7 @@ class _VizTracer:
             include_files=self.include_files,
             exclude_files=self.exclude_files,
             ignore_c_function=self.ignore_c_function,
+            ignore_non_file=self.ignore_non_file,
             log_return_value=self.log_return_value,
             novdb=self.novdb,
             log_function_args=self.log_function_args

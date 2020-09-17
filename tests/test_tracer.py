@@ -157,6 +157,16 @@ class TestTracerFilter(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
+    def test_ignore_non_file(self):
+        tracer = _VizTracer(ignore_non_file=True)
+        tracer.start()
+        import random
+        lst = []
+        lst.append(1)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 1)
+
     def test_log_return_value(self):
         tracer = _VizTracer()
         tracer.start()

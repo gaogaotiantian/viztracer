@@ -364,6 +364,16 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_NON_FILE)) {
+            if (is_python && is_call) {
+                PyObject* file_name = frame->f_code->co_filename;
+                if (startswith(PyUnicode_AsUTF8(file_name), "<")) {
+                    info->ignore_stack_depth += 1;
+                    return 0;
+                }
+            }
+        }
+
         if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
             if (!info->stack_top->next) {
@@ -725,8 +735,8 @@ static PyObject*
 snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
-            "include_files", "exclude_files", "ignore_c_function", "log_return_value", 
-            "novdb", "log_function_args",
+            "include_files", "exclude_files", "ignore_c_function", "ignore_non_file",
+            "log_return_value", "novdb", "log_function_args",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -734,16 +744,18 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
+    int kw_ignore_non_file = -1;
     int kw_log_return_value = -1;
     int kw_novdb = -1;
     int kw_log_function_args = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppp", kwlist, 
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppp", kwlist, 
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
             &kw_include_files,
             &kw_exclude_files,
             &kw_ignore_c_function,
+            &kw_ignore_non_file,
             &kw_log_return_value,
             &kw_novdb,
             &kw_log_function_args)) {
@@ -774,6 +786,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
     } else if (kw_ignore_c_function == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
+    }
+
+    if (kw_ignore_non_file == 1) {
+        SET_FLAG(self->check_flags, SNAPTRACE_IGNORE_NON_FILE);
+    } else if (kw_ignore_non_file == 0) {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_IGNORE_NON_FILE);
     }
 
     if (kw_log_return_value == 1) {

@@ -8,6 +8,7 @@ VizTracer
                  include_files=None,\
                  exclude_files=None,\
                  ignore_c_function=False,\
+                 ignore_non_file=False,\
                  log_return_value=False,\
                  log_function_args=False,\
                  log_print=False,\
@@ -113,6 +114,18 @@ VizTracer
         .. code-block::
 
             python -m viztracer --ignore_c_function
+
+    .. py:attribute:: ignore_non_file
+        :type: boolean
+        :value: False
+
+        Whether trace functions from invalid files(mostly import stuff)
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            python -m viztracer --ignore_non_file
 
     .. py:attribute:: log_return_value 
         :type: boolean

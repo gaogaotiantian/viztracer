@@ -56,6 +56,18 @@ OR
     
     tracer = VizTracer(ignore_c_function=True)
 
+You can ask VizTracer not to trace any functions that are not in a valid file(mostly import stuff) using ``ignore_non_file``
+
+.. code-block:: 
+
+    viztracer --ignore_non_file my_script.py
+
+OR
+
+.. code-block:: python
+    
+    tracer = VizTracer(ignore_non_file=True)
+
 It's possible that you want to ignore some arbitrary functions and their descendants. You can do it using ``@ignore_function`` decorator
 
 .. code-block:: python

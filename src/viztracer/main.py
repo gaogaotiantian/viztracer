@@ -31,6 +31,8 @@ def main():
                         help="specify the only files(directories) you want to include from tracing. Can't be used with --exclude_files")
     parser.add_argument("--ignore_c_function", action="store_true", default=False,
                         help="ignore all c functions including most builtin functions and libraries")
+    parser.add_argument("--ignore_non_file", action="store_true", default=False,
+                        help="ignore all functions that are not in a vaild file(like import)")
     parser.add_argument("--log_return_value", action="store_true", default=False,
                         help="log return value of the function in the report")
     parser.add_argument("--log_print", action="store_true", default=False,
@@ -141,6 +143,7 @@ def main():
         exclude_files=options.exclude_files,
         include_files=options.include_files,
         ignore_c_function=options.ignore_c_function,
+        ignore_non_file=options.ignore_non_file,
         log_return_value=options.log_return_value,
         log_function_args=options.log_function_args,
         log_print=options.log_print,
