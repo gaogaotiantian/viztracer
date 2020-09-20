@@ -10,17 +10,27 @@ from .util import get_json_file_path, adapt_json_file, generate_json
 
 adapt_json_file("vdb_basic.json")
 vdb_basic = get_json_file_path("vdb_basic.json")
+adapt_json_file("fib.json")
+vdb_fib = get_json_file_path("fib.json")
+adapt_json_file("old.json")
+vdb_old = get_json_file_path("old.json")
 generate_json("vdb_multithread.py")
 vdb_multithread = get_json_file_path("vdb_multithread.json")
 
 
 class SimInterface:
-    def __init__(self, json_path, vdb_cmd=["vdb", "--no_clear", "--extra_newline"]):
+    def __init__(self, json_path, vdb_cmd=["vdb", "--no_clear", "--extra_newline"], expect_fail=False):
         commands = vdb_cmd + [json_path]
         if os.getenv("COVERAGE_RUN"):
             commands = ["coverage", "run", "--parallel-mode", "--pylib", "-m", "viztracer.simulator"] + commands[1:]
         self.sim_process = subprocess.Popen(commands,
                                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+        if expect_fail:
+            self.sim_process.wait(timeout=3)
+            self.sim_process.stdout.close()
+            self.sim_process.stdin.close()
+            self.returncode = self.sim_process.returncode
+            return
         self.sim_process.stdin.write('\n')
         self.sim_process.stdin.flush()
         while True:
@@ -66,6 +76,14 @@ class TestSimulator(unittest.TestCase):
     def get_func_stack(self, result):
         line = result.replace("\r\n", "").replace("\n", "").replace("> ", " ")
         return [s.split('.')[-1] for s in line.split() if '.' in s]
+
+    def test_module_run(self):
+        sim = SimInterface(vdb_fib)
+        sim.close()
+
+    def test_old(self):
+        sim = SimInterface(vdb_old, expect_fail=True)
+        self.assertNotEqual(sim.returncode, 0)
 
     def test_step(self):
         sim = SimInterface(vdb_basic)
