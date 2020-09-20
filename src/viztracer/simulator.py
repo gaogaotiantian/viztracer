@@ -21,7 +21,7 @@ class Simulator:
 
             def p(s):
                 syntax = Syntax(s, "python", theme="monokai")
-                self.console.print(syntax)
+                self.console.print(syntax, soft_wrap=True)
 
             self.print = p
         except ImportError:
