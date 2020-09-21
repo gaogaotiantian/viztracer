@@ -104,10 +104,10 @@ VizTracer can filter out the data you don't want to reduce overhead and keep inf
 
 VizTracer can log extra information without changing your source code
 
-* [```print()``` function](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-print)
-* [Function Input Arguments](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-function-arguments)
-* [Garbage Collector Operation](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-garbage-collector)
-* [Function Arguments and Return Value](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-return-value)
+* [```print()``` function](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-print)
+* [Function Input Arguments](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-arguments)
+* [Garbage Collector Operation](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-garbage-collector)
+* [Function Arguments and Return Value](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-return-value)
 
 ### Add Custom Event
 
