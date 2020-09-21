@@ -3,6 +3,7 @@
 
 import os
 import builtins
+import gc
 from io import StringIO
 from .util import color_print
 from .report_builder import ReportBuilder
@@ -21,6 +22,7 @@ class _VizTracer:
                  log_return_value=False,
                  log_function_args=False,
                  log_print=False,
+                 log_gc=False,
                  novdb=False):
         self.buffer = []
         self.enable = False
@@ -37,11 +39,13 @@ class _VizTracer:
         self.ignore_non_file = ignore_non_file
         self.log_return_value = log_return_value
         self.log_print = log_print
+        self.log_gc = log_gc
         self.novdb = novdb
         self.log_function_args = log_function_args
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
+        self.gc_start_args = {}
 
     @property
     def max_stack_depth(self):
@@ -125,6 +129,32 @@ class _VizTracer:
             raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
     @property
+    def log_function_args(self):
+        return self.__log_function_args
+
+    @log_function_args.setter
+    def log_function_args(self, log_function_args):
+        if type(log_function_args) is bool:
+            self.__log_function_args = log_function_args
+        else:
+            raise ValueError("log_function_args needs to be True or False, not {}".format(log_function_args))
+
+    @property
+    def log_gc(self):
+        return self.__log_gc
+
+    @log_gc.setter
+    def log_gc(self, log_gc):
+        if type(log_gc) is bool:
+            self.__log_gc = log_gc
+            if log_gc:
+                gc.callbacks.append(self.add_garbage_collection)
+            elif self.add_garbage_collection in gc.callbacks:
+                gc.callbacks.remove(self.add_garbage_collection)
+        else:
+            raise ValueError("log_gc needs to be True or False, not {}".format(log_gc))
+
+    @property
     def novdb(self):
         return self.__novdb
 
@@ -186,6 +216,26 @@ class _VizTracer:
     def add_functionarg(self, key, value):
         if self.enable:
             self._tracer.addfunctionarg(key, value)
+
+    def add_garbage_collection(self, phase, info):
+        if self.enable:
+            if phase == "start":
+                args = {
+                    "collecting": 1,
+                    "collected": 0,
+                    "uncollectable": 0
+                }
+                self.add_counter("garbage collection", args)
+                self.gc_start_args = args
+            if phase == "stop" and self.gc_start_args:
+                self.gc_start_args["collected"] = info["collected"]
+                self.gc_start_args["uncollectable"] = info["uncollectable"]
+                self.gc_start_args = {}
+                self.add_counter("garbage collection", {
+                    "collecting": 0,
+                    "collected": 0,
+                    "uncollectable": 0
+                })
 
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries

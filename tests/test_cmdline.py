@@ -38,6 +38,13 @@ import sys
 assert(sys.argv)
 """
 
+file_gc = \
+"""
+import gc
+lst = []
+gc.collect()
+"""
+
 file_exit = \
 """
 lst = []
@@ -175,6 +182,9 @@ class TestCommandLineBasic(Tmpl):
 
     def test_module(self):
         self.template(["viztracer", "-m", "numbers"])
+
+    def test_log_gc(self):
+        self.template(["viztracer", "--log_gc", "cmdline_test.py"], script=file_gc)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

@@ -39,6 +39,8 @@ def main():
                         help="replace all print() function to adding an event to the result")
     parser.add_argument("--log_function_args", action="store_true", default=False,
                         help="log all function arguments, this will introduce large overhead")
+    parser.add_argument("--log_gc", action="store_true", default=False,
+                        help="log ref cycle garbage collection operations")
     parser.add_argument("--novdb", action="store_true", default=False,
                         help="Do not instrument for vdb, will reduce the overhead")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -147,6 +149,7 @@ def main():
         log_return_value=options.log_return_value,
         log_function_args=options.log_function_args,
         log_print=options.log_print,
+        log_gc=options.log_gc,
         novdb=options.novdb,
         save_on_exit=True,
         pid_suffix=options.pid_suffix

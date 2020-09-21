@@ -89,31 +89,46 @@ static inline void clear_node(struct EventNode* node) {
     case FEE_NODE:
         if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
             Py_DECREF(node->data.fee.pycode);
+            node->data.fee.pycode = NULL;
             if (node->data.fee.args) {
                 Py_DECREF(node->data.fee.args);
                 node->data.fee.args = NULL;
             }
+            if (node->data.fee.retval) {
+                Py_DECREF(node->data.fee.retval);
+                node->data.fee.retval = NULL;
+            }
         } else {
             Py_DECREF(node->data.fee.cfunc);
+            node->data.fee.cfunc = NULL;
         }
         break;
     case INSTANT_NODE:
         Py_DECREF(node->data.instant.name);
         Py_DECREF(node->data.instant.args);
         Py_DECREF(node->data.instant.scope);
+        node->data.instant.name = NULL;
+        node->data.instant.args = NULL;
+        node->data.instant.scope = NULL;
         break;
     case COUNTER_NODE:
         Py_DECREF(node->data.counter.name);
         Py_DECREF(node->data.counter.args);
+        node->data.counter.name = NULL;
+        node->data.counter.args = NULL;
         break;
     case OBJECT_NODE:
         Py_DECREF(node->data.object.ph);
         Py_DECREF(node->data.object.id);
         Py_DECREF(node->data.object.name);
         Py_DECREF(node->data.object.args);
+        node->data.object.ph = NULL;
+        node->data.object.id = NULL;
+        node->data.object.name = NULL;
+        node->data.object.args = NULL;
         break;
     default:
-        printf("Unknown Node Type!\n");
+        printf("Unknown Node Type When Clearing!\n");
         exit(1);
     }
 }
@@ -626,7 +641,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
                     arg_dict = PyDict_New();
                 }
                 PyDict_SetItemString(arg_dict, "return_value", node->data.fee.retval);
-                Py_DECREF(node->data.fee.retval);
             }
             if (arg_dict) {
                 PyDict_SetItemString(dict, "args", arg_dict);

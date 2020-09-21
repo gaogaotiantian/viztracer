@@ -205,3 +205,19 @@ class TestTracerFilter(unittest.TestCase):
         tracer.stop()
         tracer.parse()
         self.assertTrue("args" in tracer.data["traceEvents"][0] and "func_args" in tracer.data["traceEvents"][0]["args"])
+
+    def test_log_gc(self):
+        import gc
+        tracer = _VizTracer(log_gc=True)
+        self.assertTrue(tracer.log_gc)
+        tracer.start()
+        gc.collect()
+        tracer.stop()
+        tracer.parse()
+        self.assertEqual(len(tracer.data["traceEvents"]), 3)
+        tracer.log_gc = False
+        tracer.start()
+        gc.collect()
+        tracer.stop()
+        tracer.parse()
+        self.assertEqual(len(tracer.data["traceEvents"]), 1)

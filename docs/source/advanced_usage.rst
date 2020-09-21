@@ -146,6 +146,25 @@ OR
 
     tracer = VizTracer(log_print=True)
 
+Log Garbage Collection
+----------------------
+
+You can log the optionaml garbage collector module in Python. Notice that in CPython, most garbage collection is done using 
+reference count. The garbage collector module is only responsible for the cycle reference. So this feature is mainly used
+to detect cycle reference collection status, and the time consumed by running the optional garbage collector.
+
+You can do this simply by:
+
+.. code-block:: 
+
+    viztracer --log_gc my_script.py
+
+OR
+
+.. code-block:: python
+
+    tracer = VizTracer(log_gc=True)
+
 Work with ``logging`` module
 ----------------------------
 
