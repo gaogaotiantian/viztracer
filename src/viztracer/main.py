@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--log_function_args", action="store_true", default=False,
                         help="log all function arguments, this will introduce large overhead")
     parser.add_argument("--log_gc", action="store_true", default=False,
-                        help="log garbage collection operations")
+                        help="log ref cycle garbage collection operations")
     parser.add_argument("--novdb", action="store_true", default=False,
                         help="Do not instrument for vdb, will reduce the overhead")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
