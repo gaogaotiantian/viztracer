@@ -129,6 +129,17 @@ class _VizTracer:
             raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
     @property
+    def log_function_args(self):
+        return self.__log_function_args
+
+    @log_function_args.setter
+    def log_function_args(self, log_function_args):
+        if type(log_function_args) is bool:
+            self.__log_function_args = log_function_args
+        else:
+            raise ValueError("log_function_args needs to be True or False, not {}".format(log_function_args))
+
+    @property
     def log_gc(self):
         return self.__log_gc
 
