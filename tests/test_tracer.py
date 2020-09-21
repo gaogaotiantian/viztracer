@@ -209,8 +209,15 @@ class TestTracerFilter(unittest.TestCase):
     def test_log_gc(self):
         import gc
         tracer = _VizTracer(log_gc=True)
+        self.assertTrue(tracer.log_gc)
         tracer.start()
         gc.collect()
         tracer.stop()
         tracer.parse()
         self.assertEqual(len(tracer.data["traceEvents"]), 3)
+        tracer.log_gc = False
+        tracer.start()
+        gc.collect()
+        tracer.stop()
+        tracer.parse()
+        self.assertEqual(len(tracer.data["traceEvents"]), 1)
