@@ -23,6 +23,7 @@ class VizTracer(_VizTracer):
                  log_return_value=False,
                  log_function_args=False,
                  log_print=False,
+                 log_gc=False,
                  novdb=False,
                  save_on_exit=False,
                  pid_suffix=False,
@@ -36,6 +37,7 @@ class VizTracer(_VizTracer):
                 ignore_non_file=ignore_non_file,
                 log_return_value=log_return_value,
                 log_print=log_print,
+                log_gc=log_gc,
                 novdb=novdb,
                 log_function_args=log_function_args
         )
