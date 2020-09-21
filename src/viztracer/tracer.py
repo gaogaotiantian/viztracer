@@ -208,9 +208,9 @@ class _VizTracer:
 
     def add_garbage_collection(self, phase, info):
         if self.enable:
-            print("gc")
             if phase == "start":
                 args = {
+                    "collecting": 1,
                     "collected": 0,
                     "uncollectable": 0
                 }
@@ -221,6 +221,7 @@ class _VizTracer:
                 self.gc_start_args["uncollectable"] = info["uncollectable"]
                 self.gc_start_args = {}
                 self.add_counter("garbage collection", {
+                    "collecting": 0,
                     "collected": 0,
                     "uncollectable": 0
                 })
