@@ -32,19 +32,17 @@ The prefered way to install VizTracer is via pip
 pip install viztracer
 ```
 
-## Usage
-
-There are a couple ways to use VizTracer
+## Basic Usage
 
 ### Command Line
 
-The easiest way to use VizTracer is through command line. Assume you have a python script to profile and the normal way to run it is:
+Assume you have a python script to run:
 
 ```
 python3 my_script.py arg1 arg2
 ```
 
-You can simply use VizTracer as 
+You can simply use VizTracer by
 
 ```
 viztracer my_script arg1 arg2
@@ -52,7 +50,7 @@ viztracer my_script arg1 arg2
 python3 -m viztracer my_script.py arg1 arg2
 ```
 
-which will generate a ```result.html``` file in the directory you run this command. Open it in browser and there's your result.
+which will generate a ```result.html``` file in the directory you run this command, which you can open with **Chrome**.
 
 You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
 
@@ -63,7 +61,7 @@ viztracer -o result.json.gz my_script.py arg1 arg2
 
 ### Inline
 
-Sometimes the command line may not work as you expected, or you do not want to profile the whole script. You can manually start/stop the profiling in your script as well.
+You can also manually start/stop VizTracer in your script as well.
 
 ```python
 from viztracer import VizTracer
@@ -82,15 +80,16 @@ with VizTracer(output_file="optional.html") as tracer:
     # Something happens here
 ```
 
-**There are a lot of [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) available as well.**
 
 ### Display Result
 
-By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome. The front-end uses trace-viewer to show all the data. 
+By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome.
 
 However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/) or [chrome://tracing](chrome://tracing/).
 
 **When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file**
+
+## Advanced Usage
 
 ### Trace Filter
 
@@ -101,6 +100,15 @@ VizTracer can filter out the data you don't want to reduce overhead and keep inf
 * [exclude files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.exclude_files)
 * [ignore c function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.ignore_c_function)
 
+### Extra Logs without Code Change
+
+VizTracer can log extra information without changing your source code
+
+* [```print()``` function](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-print)
+* [Function Input Arguments](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-function-arguments)
+* [Garbage Collector Operation](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-garbage-collector)
+* [Function Arguments and Return Value](https://viztracer.readthedocs.io/en/latest/advanced_usage.html#log-return-value)
+
 ### Add Custom Event
 
 VizTracer supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
@@ -108,8 +116,11 @@ VizTracer supports inserting custom events while the program is running. This wo
 * [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
 * [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
 * [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
-* [Function Arguments and Return Value](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.log_return_value)
 * [Arbitrary Value in Function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_functionarg)
+
+**Check more [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) for more features**
+
+## Misc
 
 ### Multi Thread Support
 

@@ -12,6 +12,7 @@ VizTracer
                  log_return_value=False,\
                  log_function_args=False,\
                  log_print=False,\
+                 log_gc=False,\
                  novdb=False,\
                  save_on_exit=False,\
                  pid_suffix=False,\
@@ -162,6 +163,18 @@ VizTracer
         .. code-block::
 
             python -m viztracer --log_print
+
+    .. py:attribute:: log_gc 
+        :type: boolean
+        :value: False
+
+        Whether log garbage collector
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            python -m viztracer --log_gc
     
     .. py:attribute:: novdb
         :type: boolean
