@@ -33,7 +33,10 @@ class SimInterface:
             return
         self.sim_process.stdin.write('\n')
         self.sim_process.stdin.flush()
+
         while True:
+            if self.sim_process.poll() is not None:
+                raise Exception("vdb unexpected closed")
             line = self.sim_process.stdout.readline()
             if line.startswith(">>>"):
                 break
@@ -47,6 +50,8 @@ class SimInterface:
             ret = ""
             data = False
             while True:
+                if self.sim_process.poll() is not None:
+                    raise Exception("vdb unexpected closed")
                 line = self.sim_process.stdout.readline()
                 if line.startswith(">>>"):
                     if data:
