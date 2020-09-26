@@ -70,7 +70,7 @@ class ReportBuilder:
 
     def generate_report(self):
         sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html")) as f:
+        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
             tmpl = f.read()
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
             sub["trace_viewer_full"] = f.read()

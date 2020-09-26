@@ -108,7 +108,7 @@ def main():
                 print("No such file as {}".format(file_name))
                 exit(1)
 
-        code_string = open(file_name).read()
+        code_string = open(file_name, "rb").read()
         global_dict = {
             "__name__": "__main__",
             "__file__": file_name,
