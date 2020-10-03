@@ -12,6 +12,6 @@ def fib(n):
 
 handler = VizLoggingHandler()
 handler.setTracer(get_tracer())
-logging.basicConfig(handlers=[handler])
+logging.basicConfig(handlers=[handler], level=logging.INFO)
 
 fib(7)
