@@ -164,7 +164,7 @@ class TestCommandLineBasic(Tmpl):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"], expected_output_file=["result.html", "result_flamegraph.html"])
 
     def test_combine(self):
-        example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example_json")
+        example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
         self.template(["python", "-m", "viztracer", "--combine", os.path.join(example_json_dir, "multithread.json"),
                 os.path.join(example_json_dir, "different_sorts.json")], expected_output_file="result.html")
         self.template(["python", "-m", "viztracer", "-o", "my_result.html", "--combine", os.path.join(example_json_dir, "multithread.json"),
