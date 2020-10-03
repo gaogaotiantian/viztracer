@@ -349,7 +349,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         }
 
         // Check include/exclude files
-        if (CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES) && is_call) {
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES) && is_python && is_call) {
             if (info->ignore_stack_depth == 0) {
                 PyObject* files = NULL;
                 int record = 0;

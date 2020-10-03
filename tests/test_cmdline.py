@@ -73,7 +73,13 @@ class Tmpl(unittest.TestCase):
             else:
                 raise Exception("Unexpected output file argument")
 
-    def template(self, cmd_list, expected_output_file="result.html", success=True, script=file_fib, expected_entries=None, cleanup=True):
+    def template(self, 
+                 cmd_list, 
+                 expected_output_file="result.html", 
+                 success=True, 
+                 script=file_fib, 
+                 expected_entries=None, 
+                 cleanup=True):
         if os.getenv("COVERAGE_RUN"):
             idx = cmd_list.index("viztracer")
             cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
@@ -132,14 +138,14 @@ class TestCommandLineBasic(Tmpl):
     def test_include_files(self):
         result = self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"], expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))
-        self.template(["python", "-m", "viztracer", "--include_files", "./", "--run", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--run", "cmdline_test.py"], expected_output_file="result.json", expected_entries=17)
         self.template(["python", "-m", "viztracer", "--include_files", "./", "--max_stack_depth", "5", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "--run", "cmdline_test.py"])
 
     def test_exclude_files(self):
         result = self.template(["python", "-m", "viztracer", "--exclude_files", "./abcd", "cmdline_test.py"], expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))
-        self.template(["python", "-m", "viztracer", "--exclude_files", "./", "--run", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--exclude_files", "./", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", expected_entries=1)
         self.template(["python", "-m", "viztracer", "--exclude_files", "./abcd", "--run", "cmdline_test.py"])
 
     def test_ignore_c_function(self):

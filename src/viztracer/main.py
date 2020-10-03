@@ -115,7 +115,7 @@ def main():
             "__package__": None,
             "__cached__": None
         }
-        code = compile(code_string, file_name, "exec")
+        code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
 
