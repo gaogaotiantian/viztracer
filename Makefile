@@ -12,6 +12,9 @@ build_dist:
 	pip install dist/*.whl
 	make test
 
+json:
+	python example/generate_examples.py
+
 release:
 	python -m twine upload dist/*
 
