@@ -192,6 +192,9 @@ class TestCommandLineBasic(Tmpl):
     def test_log_gc(self):
         self.template(["viztracer", "--log_gc", "cmdline_test.py"], script=file_gc)
 
+    def test_open(self):
+        self.template(["viztracer", "--open", "cmdline_test.py"])
+
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
 

@@ -6,9 +6,11 @@ import argparse
 import os
 import subprocess
 import builtins
+import webbrowser
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
+from .util import get_url_from_file
 
 
 def main():
@@ -55,6 +57,8 @@ def main():
                         help="run module with VizTracer")
     parser.add_argument("--combine", nargs="*", default=[],
                         help="combine all json reports to a single report. Specify all the json reports you want to combine")
+    parser.add_argument("--open", action="store_true", default=False,
+                        help="open the report in browser after saving")
     parser.add_argument("command", nargs=argparse.REMAINDER,
                         help="python commands to trace")
     options = parser.parse_args(sys.argv[1:])
@@ -161,3 +165,9 @@ def main():
     exec(code, global_dict)
     tracer.stop()
     tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
+    
+    if options.open:
+        try:
+            webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
+        except webbrowser.Error as e:
+            print(e, "Can not open the report")
