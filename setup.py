@@ -47,11 +47,15 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux",
         "Operating System :: Microsoft :: Windows",
         "Topic :: Software Development :: Quality Assurance",
+        "Topic :: Software Development :: Bug Tracking",
+        "Topic :: System :: Logging"
     ],
     python_requires=">=3.6",
     extras_require={
