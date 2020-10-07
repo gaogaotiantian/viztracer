@@ -27,7 +27,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: nightly
+        toolchain: nightly-2020-09-14
     - name: Install dependencies
       if: matrix.os != 'windows-latest'
       run: |
