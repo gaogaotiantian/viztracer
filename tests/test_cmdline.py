@@ -195,6 +195,9 @@ class TestCommandLineBasic(Tmpl):
     def test_open(self):
         self.template(["viztracer", "--open", "cmdline_test.py"])
 
+    def test_log_var(self):
+        self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
+
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
 
