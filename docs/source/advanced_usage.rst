@@ -168,7 +168,7 @@ OR
 Log Variable
 ------------
 
-You can log any variable by its name without making any changes to your source code.
+You can log any variable by its name and regex without making any changes to your source code.
 This is like adding ``print`` after assigning the variable without actually writing the code.
 The log will appear in the report as an instant event
 
@@ -176,7 +176,8 @@ The log will appear in the report as an instant event
 
     viztracer --log_var var_name --run my_script.py
 
-``--run`` is added to resolve the ambiguity. Every time a variable named ``var_name`` is assigned a value, it will be logged
+``--run`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
+If you don't know what regex is, simply using the full name of the variable as ``var_name`` will allow you to log the variable
 
 Work with ``logging`` module
 ----------------------------
