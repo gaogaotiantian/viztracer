@@ -52,6 +52,20 @@ lst.append(1)
 exit(0)
 """
 
+file_log_var = \
+"""
+class Stub:
+    def __init__(self):
+        self.b = 0
+
+(a): int = 1
+a = [1, 2]
+a[1] = 0
+a[1] += 1
+a = Stub()
+a.b = 1
+"""
+
 
 class Tmpl(unittest.TestCase):
     def build_script(self, script):
@@ -197,6 +211,7 @@ class TestCommandLineBasic(Tmpl):
 
     def test_log_var(self):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
+        self.template(["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=11)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

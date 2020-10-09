@@ -165,6 +165,19 @@ OR
 
     tracer = VizTracer(log_gc=True)
 
+Log Variable
+------------
+
+You can log any variable by its name without making any changes to your source code.
+This is like adding ``print`` after assigning the variable without actually writing the code.
+The log will appear in the report as an instant event
+
+.. code-block:: 
+
+    viztracer --log_var var_name --run my_script.py
+
+``--run`` is added to resolve the ambiguity. Every time a variable named ``var_name`` is assigned a value, it will be logged
+
 Work with ``logging`` module
 ----------------------------
 

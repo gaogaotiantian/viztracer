@@ -208,7 +208,7 @@ class _VizTracer:
     def add_variable(self, name, var, event="instant"):
         if self.enable:
             if event == "instant":
-                self.add_instant(name, {"value": var})
+                self.add_instant(name, {"value": repr(var)})
 
     def add_counter(self, name, args):
         if self.enable:
