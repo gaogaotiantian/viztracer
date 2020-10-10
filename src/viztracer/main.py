@@ -11,6 +11,7 @@ from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
 from .util import get_url_from_file
+from .code_monkey import CodeMonkey
 
 
 def main():
@@ -43,6 +44,10 @@ def main():
                         help="log all function arguments, this will introduce large overhead")
     parser.add_argument("--log_gc", action="store_true", default=False,
                         help="log ref cycle garbage collection operations")
+    parser.add_argument("--log_var", nargs="*", default=None,
+                        help="log variable with specified names")
+    parser.add_argument("--log_number", nargs="*", default=None,
+                        help="log variable with specified names as a number(using VizCounter)")
     parser.add_argument("--novdb", action="store_true", default=False,
                         help="Do not instrument for vdb, will reduce the overhead")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -119,6 +124,13 @@ def main():
             "__package__": None,
             "__cached__": None
         }
+        if options.log_var or options.log_number:
+            monkey = CodeMonkey(code_string, file_name)
+            if options.log_var:
+                monkey.add_instrument("log_var", {"varnames": options.log_var})
+            if options.log_number:
+                monkey.add_instrument("log_number", {"varnames": options.log_number})
+            builtins.compile = monkey.compile
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]

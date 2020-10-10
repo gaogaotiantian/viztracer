@@ -167,6 +167,8 @@ class TestTracerFilter(unittest.TestCase):
         entries = tracer.parse()
         self.assertEqual(entries, 1)
 
+
+class TestTracerFeature(unittest.TestCase):
     def test_log_return_value(self):
         tracer = _VizTracer()
         tracer.start()

@@ -42,6 +42,14 @@ class TestInvalidOperation(unittest.TestCase):
         with self.assertRaises(Exception):
             tracer.save("test.invalid")
 
+    def test_add_invalid_variable(self):
+        tracer = VizTracer()
+        tracer.start()
+        with self.assertRaises(Exception):
+            tracer.add_variable("a", 1, event="invalid")
+        with self.assertRaises(Exception):
+            tracer.add_variable("a", "str", event="counter")
+
 
 class TestUseEventBase(unittest.TestCase):
     def test_use_event_base(self):

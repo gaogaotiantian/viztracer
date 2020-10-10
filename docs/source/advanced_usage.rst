@@ -165,6 +165,35 @@ OR
 
     tracer = VizTracer(log_gc=True)
 
+Log Variable
+------------
+
+You can log any variable by its name and regex without making any changes to your source code.
+This is like adding ``print`` after assigning the variable without actually writing the code.
+The log will appear in the report as an instant event, and the variables ``repr`` will be showed
+
+.. code-block:: 
+
+    viztracer --log_var <var_name> --run my_script.py
+
+``--run`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
+If you don't know what regex is, simply using the full name of the variable as ``var_name`` will allow you to log the variable
+
+Log Number
+----------
+
+Similar to `Log Variable`_, you can log any variable as a number, which will utilize trace viewer's counter event. 
+The report will visualize the number through time as a separate signal like ``VizCounter`` did. 
+
+.. code-block:: 
+
+    viztracer --log_number <var_name> --run my_script.py
+
+``--run`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
+If you don't know what regex is, simply using the full name of the variable as ``var_name`` will allow you to log the variable
+
+Using ``--log_number`` on non-numeric variables will raise an exception.
+
 Work with ``logging`` module
 ----------------------------
 
