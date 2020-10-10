@@ -3,6 +3,8 @@
 
 import ast
 import re
+from functools import reduce
+from .util import color_print
 
 
 class AstTransformer(ast.NodeTransformer):
@@ -14,67 +16,59 @@ class AstTransformer(ast.NodeTransformer):
     def visit_Assign(self, node):
         self.generic_visit(node)
         ret = [node]
-        if self.inst_type == "log_var":
+        if self.inst_type == "log_var" or self.inst_type == "log_number":
             for target in node.targets:
-                instrumented_node = self.get_assign_log_node(target)
-                if instrumented_node:
-                    ret.append(instrumented_node)
-        elif self.inst_type == "log_number":
-            for target in node.targets:
-                instrumented_node = self.get_assign_log_node(target)
-                if instrumented_node:
-                    ret.append(instrumented_node)
+                instrumented_nodes = self.get_assign_log_nodes(target)
+                if instrumented_nodes:
+                    ret.extend(instrumented_nodes)
         return ret
 
     def visit_AugAssign(self, node):
         self.generic_visit(node)
         ret = [node]
-        if self.inst_type == "log_var":
-            instrumented_node = self.get_assign_log_node(node.target)
-            if instrumented_node:
-                ret.append(instrumented_node)
-        elif self.inst_type == "log_number":
-            instrumented_node = self.get_assign_log_node(node.target)
-            if instrumented_node:
-                ret.append(instrumented_node)
+        if self.inst_type == "log_var" or self.inst_type == "log_number":
+            instrumented_nodes = self.get_assign_log_nodes(node.target)
+            if instrumented_nodes:
+                ret.extend(instrumented_nodes)
         return ret
 
     def visit_AnnAssign(self, node):
         self.generic_visit(node)
         ret = [node]
-        if self.inst_type == "log_var":
-            instrumented_node = self.get_assign_log_node(node.target)
-            if instrumented_node:
-                ret.append(instrumented_node)
-        elif self.inst_type == "log_number":
-            instrumented_node = self.get_assign_log_node(node.target)
-            if instrumented_node:
-                ret.append(instrumented_node)
+        if self.inst_type == "log_var" or self.inst_type == "log_number":
+            instrumented_nodes = self.get_assign_log_nodes(node.target)
+            if instrumented_nodes:
+                ret.extend(instrumented_nodes)
         return ret
 
-    def get_assign_target(self, node):
+    def get_assign_targets(self, node):
         """
         :param ast.Node node: has to be Name or Attribute or Subscribe
         """
         if type(node) is ast.Name:
-            return node.id
-        elif type(node) is ast.Attribute:
-            return self.get_assign_target(node.value)
-        elif type(node) is ast.Subscript:
-            return self.get_assign_target(node.value)
-        return None
+            return [node.id]
+        elif type(node) is ast.Attribute or type(node) is ast.Subscript or type(node) is ast.Starred:
+            return self.get_assign_targets(node.value)
+        elif type(node) is ast.Tuple or type(node) is ast.List:
+            return reduce(lambda a, b: a+b, [self.get_assign_targets(elt) for elt in node.elts])
+        color_print("WARNING", "Unexpected node type {} for ast.Assign. \
+            Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
+        return []
 
-    def get_assign_log_node(self, target):
+    def get_assign_log_nodes(self, target):
         """
         given a target of any type of Assign, return the instrumented node
         that log this variable
         if this target is not supposed to be logged, return None
         """
-        target_id = self.get_assign_target(target)
-        for varname in self.inst_args["varnames"]:
-            if re.match(varname, target_id):
-                return self.get_instrument_node(target_id)
-        return None
+        ret = []
+        target_ids = self.get_assign_targets(target)
+        for target_id in target_ids:
+            for varname in self.inst_args["varnames"]:
+                if re.match(varname, target_id):
+                    ret.append(self.get_instrument_node(target_id))
+                    break
+        return ret
 
     def get_instrument_node(self, name):
         if self.inst_type == "log_var":
@@ -82,7 +76,7 @@ class AstTransformer(ast.NodeTransformer):
         elif self.inst_type == "log_number":
             event = "counter"
         else:
-            raise ValueError("{} is not supported".format(event))
+            raise ValueError("{} is not supported".format(name))
 
         node_instrument = ast.Expr(
             value=ast.Call(

@@ -68,6 +68,9 @@ a.b = 1
 abc = 2
 abc += 1
 abc: int = 1
+a, abc = (1, 2)
+unrelated, *a = 1, 2, 3
+[abc, d] = 3, 4
 """
 
 
@@ -215,8 +218,8 @@ class TestCommandLineBasic(Tmpl):
 
     def test_log_var(self):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
-        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=15)
-        self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=9)
+        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=19)
+        self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=11)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
