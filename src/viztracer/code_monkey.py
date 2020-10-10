@@ -16,7 +16,12 @@ class AstTransformer(ast.NodeTransformer):
         ret = [node]
         if self.inst_type == "log_var":
             for target in node.targets:
-                instrumented_node = self.get_log_var_node(target)
+                instrumented_node = self.get_assign_log_node(target)
+                if instrumented_node:
+                    ret.append(instrumented_node)
+        elif self.inst_type == "log_number":
+            for target in node.targets:
+                instrumented_node = self.get_assign_log_node(target)
                 if instrumented_node:
                     ret.append(instrumented_node)
         return ret
@@ -25,7 +30,11 @@ class AstTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         ret = [node]
         if self.inst_type == "log_var":
-            instrumented_node = self.get_log_var_node(node.target)
+            instrumented_node = self.get_assign_log_node(node.target)
+            if instrumented_node:
+                ret.append(instrumented_node)
+        elif self.inst_type == "log_number":
+            instrumented_node = self.get_assign_log_node(node.target)
             if instrumented_node:
                 ret.append(instrumented_node)
         return ret
@@ -34,7 +43,11 @@ class AstTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         ret = [node]
         if self.inst_type == "log_var":
-            instrumented_node = self.get_log_var_node(node.target)
+            instrumented_node = self.get_assign_log_node(node.target)
+            if instrumented_node:
+                ret.append(instrumented_node)
+        elif self.inst_type == "log_number":
+            instrumented_node = self.get_assign_log_node(node.target)
             if instrumented_node:
                 ret.append(instrumented_node)
         return ret
@@ -51,7 +64,7 @@ class AstTransformer(ast.NodeTransformer):
             return self.get_assign_target(node.value)
         return None
 
-    def get_log_var_node(self, target):
+    def get_assign_log_node(self, target):
         """
         given a target of any type of Assign, return the instrumented node
         that log this variable
@@ -64,6 +77,13 @@ class AstTransformer(ast.NodeTransformer):
         return None
 
     def get_instrument_node(self, name):
+        if self.inst_type == "log_var":
+            event = "instant"
+        elif self.inst_type == "log_number":
+            event = "counter"
+        else:
+            raise ValueError("{} is not supported".format(event))
+
         node_instrument = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
@@ -73,7 +93,8 @@ class AstTransformer(ast.NodeTransformer):
                 ),
                 args=[
                     ast.Constant(value=name),
-                    ast.Name(id=name, ctx=ast.Load())
+                    ast.Name(id=name, ctx=ast.Load()),
+                    ast.Constant(value=event)
                 ],
                 keywords=[]
             )
@@ -89,7 +110,7 @@ class CodeMonkey:
         self.ast_transformers = []
 
     def add_instrument(self, inst_type, inst_args):
-        if inst_type == "log_var":
+        if inst_type == "log_var" or inst_type == "log_number":
             self.ast_transformers.append(AstTransformer(inst_type, inst_args))
 
     def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1):

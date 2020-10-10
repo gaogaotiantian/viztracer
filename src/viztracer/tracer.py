@@ -209,6 +209,13 @@ class _VizTracer:
         if self.enable:
             if event == "instant":
                 self.add_instant(name, {"value": repr(var)})
+            elif event == "counter":
+                if type(var) is int or type(var) is float:
+                    self.add_counter(name, {name: var})
+                else:
+                    raise ValueError("{}({}) is not a number".format(name, var))
+            else:
+                raise ValueError("{} is not supported".format(event))
 
     def add_counter(self, name, args):
         if self.enable:
