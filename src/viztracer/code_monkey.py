@@ -157,7 +157,10 @@ class AstTransformer(ast.NodeTransformer):
         if type(node) is ast.Name:
             return node.id
         elif type(node) is ast.Constant:
-            return "{}".format(node.value)
+            if type(node.value) is str:
+                return "'{}'".format(node.value)
+            else:
+                return "{}".format(node.value)
         elif type(node) is ast.Num:
             return "{}".format(node.n)
         elif type(node) is ast.Str:
