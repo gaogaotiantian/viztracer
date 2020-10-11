@@ -108,7 +108,7 @@ VizTracer can log extra information without changing your source code
 * [Function Input Arguments](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-arguments)
 * [Garbage Collector Operation](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-garbage-collector)
 * [Function Return Value](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-return-value)
-* [Any Variable with Certain Name](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-variable)
+* [Any Variable/Attribute with RegEx](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-variable)
 
 ### Add Custom Event
 

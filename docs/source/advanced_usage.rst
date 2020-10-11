@@ -194,6 +194,20 @@ If you don't know what regex is, simply using the full name of the variable as `
 
 Using ``--log_number`` on non-numeric variables will raise an exception.
 
+Log Attribute
+-------------
+
+You can log writes to attributes based on the name of the attribute. This is useful when you want to track an attribute of
+an object, but there are just too many entries to it. It could be ``self.attr_name`, `obj.attr_name` or even 
+``obj_list[0].attr_name``. With ``log_attr`` you can log the attributes that match the regex.
+
+.. code-block:: 
+
+    viztracer --log_attr <attr_name> --run my_script.py
+
+``--run`` is added to resolve the ambiguity. Every time an attribute matches regex ``attr_name`` is assigned a value, it will be logged.
+If you don't know what regex is, simply using the full name of the attribute as ``attr_name`` will allow you to log the attribute
+
 Work with ``logging`` module
 ----------------------------
 

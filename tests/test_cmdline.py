@@ -65,6 +65,26 @@ unrelated, *a = 1, 2, 3
 [abc, d] = 3, 4
 """
 
+file_log_attr = \
+"""
+class Stub:
+    def __init__(self):
+        self.a = 0
+        self.b = 0
+        self.c = 0
+        self.alst = [1,2,3]
+
+s = Stub()
+s.a = [1, 2]
+s.alst[1] = 0
+lst = [s, 2]
+lst[0].a = 1
+s.b += 1
+a, abc = (1, 2)
+unrelated, *s.a = 1, 2, 3
+[abc, d] = 3, 4
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -160,6 +180,9 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
         self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=19)
         self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=11)
+    
+    def test_log_attr(self):
+        self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_attr, expected_output_file="result.json", expected_entries=9)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
