@@ -24,12 +24,12 @@ class TestAstTransformer(unittest.TestCase):
         self.assertEqual(tf.get_assign_targets_with_attr("invalid"), [])
 
     def test_get_string_of_expr(self):
-        test_cases = ["a", "a[0]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a", "a[1,2:3]"]
-        invalid_test_cases = ["a()"]
+        test_cases = ["a", "a[0]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
+        # just for coverage
+        invalid_test_cases = ["a[1,2:3]", "a()"]
         tf = AstTransformer("", "")
         for test_case in test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
             self.assertEqual(tf.get_string_of_expr(tree.body[0].value), test_case)
         for test_case in invalid_test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
-            self.assertNotEqual(tf.get_string_of_expr(tree.body[0].value), test_case)
