@@ -24,7 +24,7 @@ class TestAstTransformer(unittest.TestCase):
         self.assertEqual(tf.get_assign_targets_with_attr("invalid"), [])
 
     def test_get_string_of_expr(self):
-        test_cases = ["a", "a[0]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
+        test_cases = ["a", "a[0]","a[1:]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
         # just for coverage
         invalid_test_cases = ["a[1,2:3]", "a()"]
         tf = AstTransformer("", "")
