@@ -33,3 +33,4 @@ class TestAstTransformer(unittest.TestCase):
             self.assertEqual(tf.get_string_of_expr(tree.body[0].value), test_case)
         for test_case in invalid_test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
+            tf.get_string_of_expr(tree.body[0].value)
