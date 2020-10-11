@@ -14,6 +14,30 @@ from .util import get_url_from_file
 from .code_monkey import CodeMonkey
 
 
+def search_file_in_path(file_name):
+    def match_func(f):
+        return os.path.exists(f) and os.path.isfile(f)
+    
+    if match_func(file_name):
+        return file_name
+    
+    # search file in $PATH
+    if "PATH" not in os.environ:
+        return
+    
+    if sys.platform in ["linux", "linux2", "darwin"]: 
+        path_sep = ":"
+    elif sys.platform in ["win32"]:
+        path_sep = ";"
+    else:
+        return
+    
+    for dir_name in os.environ["PATH"].split(path_sep):
+        candidate = os.path.join(dir_name, file_name)
+        if match_func(candidate):
+            return candidate
+
+
 def main():
     import runpy
 
@@ -104,19 +128,11 @@ def main():
         sys.argv = [options.module] + command[:]
     else:
         file_name = command[0]
-        if not os.path.exists(file_name):
-            if sys.platform in ["linux", "linux2", "darwin"]:
-                p = subprocess.Popen(["which", file_name], stdout=subprocess.PIPE)
-                guess_file_name = p.communicate()[0].decode("utf-8").strip()
-                if not guess_file_name or not os.path.exists(guess_file_name):
-                    print("No such file as {}".format(file_name))
-                    exit(1)
-                else:
-                    file_name = guess_file_name
-            else:
-                print("No such file as {}".format(file_name))
-                exit(1)
-
+        search_file = search_file_in_path(file_name)
+        if not search_file:
+            print("No such file as {}".format(file_name))
+            exit(1)
+        file_name = search_file
         code_string = open(file_name, "rb").read()
         global_dict = {
             "__name__": "__main__",
