@@ -56,44 +56,46 @@ def main():
                         help="save flamegraph after generating the VizTracer report")
     parser.add_argument("--generate_flamegraph", nargs="?", default=None,
                         help="generate a flamegraph from json VizTracer report. Specify the json file to use")
-    parser.add_argument("--run", nargs="*", default=[],
-                        help="explicitly specify the python commands you want to trace. Should be used if there's ambiguity")
     parser.add_argument("--module", "-m", nargs="?", default=None,
                         help="run module with VizTracer")
     parser.add_argument("--combine", nargs="*", default=[],
                         help="combine all json reports to a single report. Specify all the json reports you want to combine")
     parser.add_argument("--open", action="store_true", default=False,
                         help="open the report in browser after saving")
-    parser.add_argument("command", nargs=argparse.REMAINDER,
-                        help="python commands to trace")
-    options = parser.parse_args(sys.argv[1:])
 
-    if options.command:
-        command = options.command
-    elif options.run:
-        command = options.run
-    elif options.module:
-        command = options.command
-    elif options.generate_flamegraph:
-        flamegraph = FlameGraph()
-        flamegraph.load(options.generate_flamegraph)
-        if options.output_file:
-            ofile = options.output_file
+    # If --run exists, all the commands after --run are the commands we need to run
+    # We need to filter those out, they might conflict with our arguments
+    if "--run" in sys.argv[1:]:
+        idx = sys.argv.index("--run")
+        if idx == len(sys.argv) - 1:
+            print("You need to specify commands after --run")
+            exit(1)
         else:
-            ofile = "result_flamegraph.html"
-        flamegraph.save(ofile)
-        exit(0)
-    elif options.combine:
-        builder = ReportBuilder(options.combine)
-        if options.output_file:
-            ofile = options.output_file
-        else:
-            ofile = "result.html"
-        builder.save(output_file=ofile)
-        exit(0)
+            options, command = parser.parse_args(sys.argv[1:idx]), sys.argv[idx+1:]
     else:
-        parser.print_help()
-        exit(0)
+        options, command = parser.parse_known_args(sys.argv[1:])
+
+    if not command and not options.module:
+        if options.generate_flamegraph:
+            flamegraph = FlameGraph()
+            flamegraph.load(options.generate_flamegraph)
+            if options.output_file:
+                ofile = options.output_file
+            else:
+                ofile = "result_flamegraph.html"
+            flamegraph.save(ofile)
+            exit(0)
+        elif options.combine:
+            builder = ReportBuilder(options.combine)
+            if options.output_file:
+                ofile = options.output_file
+            else:
+                ofile = "result.html"
+            builder.save(output_file=ofile)
+            exit(0)
+        else:
+            parser.print_help()
+            exit(0)
 
     if options.module:
         code = "run_module(modname, run_name='__main__')"
