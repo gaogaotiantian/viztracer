@@ -4,6 +4,7 @@
 import unittest
 import viztracer
 from viztracer import VizTracer
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class TestIssue1(unittest.TestCase):
@@ -80,3 +81,25 @@ class TestFunctionArg(unittest.TestCase):
         for d in tracer.data["traceEvents"]:
             inputs.add(d["args"]["input"])
         self.assertEqual(inputs, set([0, 1, 2, 3, 4, 5]))
+
+
+issue21_code = \
+"""
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--script_option", action="store_true")
+parser.add_argument("-o", action="store_true")
+options = parser.parse_args()
+print(options)
+if not options.script_option:
+    exit(1)
+"""
+class TestIssue21(CmdlineTmpl):
+    # viztracer --run my_script --script_option
+    # is not parsed correctly because the program gets confused 
+    # about --script_option
+    def test_issue21(self):
+        self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "--run"], script=issue21_code, success=False, expected_output_file=None)
