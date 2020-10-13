@@ -14,6 +14,27 @@ from .util import get_url_from_file
 from .code_monkey import CodeMonkey
 
 
+def search_file(file_name):
+    if os.path.isfile(file_name):
+        return file_name
+    
+    # search file in $PATH
+    if "PATH" in os.environ:
+        if sys.platform in ["linux", "linux2", "darwin"]: 
+            path_sep = ":"
+        elif sys.platform in ["win32"]:
+            path_sep = ";"
+        else:
+            return None
+    
+        for dir_name in os.environ["PATH"].split(path_sep):
+            candidate = os.path.join(dir_name, file_name)
+            if os.path.isfile(candidate):
+                return candidate
+
+    return None
+
+
 def main():
     import runpy
 
@@ -108,19 +129,11 @@ def main():
         sys.argv = [options.module] + command[:]
     else:
         file_name = command[0]
-        if not os.path.exists(file_name):
-            if sys.platform in ["linux", "linux2", "darwin"]:
-                p = subprocess.Popen(["which", file_name], stdout=subprocess.PIPE)
-                guess_file_name = p.communicate()[0].decode("utf-8").strip()
-                if not guess_file_name or not os.path.exists(guess_file_name):
-                    print("No such file as {}".format(file_name))
-                    exit(1)
-                else:
-                    file_name = guess_file_name
-            else:
-                print("No such file as {}".format(file_name))
-                exit(1)
-
+        search_result = search_file(file_name)
+        if not search_result:
+            print("No such file as {}".format(file_name))
+            exit(1)
+        file_name = search_result
         code_string = open(file_name, "rb").read()
         global_dict = {
             "__name__": "__main__",
