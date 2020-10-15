@@ -30,6 +30,7 @@ jobs:
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
     - name: Publish wheels to PyPI
+      continue-on-error: true
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
@@ -52,6 +53,7 @@ jobs:
         pip install wheel setuptools twine
         python setup.py sdist bdist_wheel
     - name: Publish wheels to PyPI
+      continue-on-error: true
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
@@ -74,6 +76,7 @@ jobs:
         pip install wheel setuptools twine
         python setup.py sdist bdist_wheel
     - name: Publish wheels to PyPI
+      continue-on-error: true
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
