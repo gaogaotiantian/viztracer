@@ -26,7 +26,7 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2010_x86_64
+      uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2014_x86_64
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
     - name: Publish wheels to PyPI
