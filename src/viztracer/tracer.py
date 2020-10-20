@@ -249,6 +249,17 @@ class _VizTracer:
                     "uncollectable": 0
                 })
 
+    def add_func_exec(self, name, val, lineno):
+        exec_line = "({}) {} = {}".format(lineno, name, val)
+        curr_args = self._tracer.getfunctionarg()
+        if not curr_args:
+            self._tracer.addfunctionarg("exec_steps", [exec_line])
+        else:
+            if "exec_steps" in curr_args:
+                curr_args["exec_steps"].append(exec_line)
+            else:
+                curr_args["exec_steps"] = [exec_line]
+
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing

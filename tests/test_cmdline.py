@@ -85,6 +85,25 @@ unrelated, *s.a = 1, 2, 3
 [abc, d] = 3, 4
 """
 
+file_log_func_exec= \
+"""
+def a():
+    n = 2
+    n += 3
+
+def aba():
+    __viz_tracer__.add_functionarg("place", "holder")
+    n2 = 3
+    n2 += 5
+
+def b():
+    t = 0
+
+a()
+aba()
+b()
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -183,6 +202,14 @@ class TestCommandLineBasic(CmdlineTmpl):
     
     def test_log_attr(self):
         self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_attr, expected_output_file="result.json", expected_entries=9)
+
+    def test_log_func_exec(self):
+        def check_func(data):
+            for entry in data["traceEvents"]:
+                if entry["name"].startswith("a"):
+                    self.assertIn("exec_steps", entry.args)
+                    self.assertEqual(len(entry["args"]["exec_steps"]), 2)
+        self.template(["viztracer", "--log_func_exec", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_func_exec, expected_output_file="result.json", check_func=check_func)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

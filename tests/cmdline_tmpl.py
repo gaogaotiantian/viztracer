@@ -44,7 +44,8 @@ class CmdlineTmpl(unittest.TestCase):
                  success=True, 
                  script=file_fib, 
                  expected_entries=None, 
-                 cleanup=True):
+                 cleanup=True,
+                 check_func=None):
         if os.getenv("COVERAGE_RUN"):
             idx = cmd_list.index("viztracer")
             cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
@@ -64,6 +65,12 @@ class CmdlineTmpl(unittest.TestCase):
             with open(expected_output_file) as f:
                 data = json.load(f)
                 self.assertEqual(len(data["traceEvents"]), expected_entries)
+
+        if check_func:
+            assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+            with open(expected_output_file) as f:
+                data = json.load(f)
+                check_func(data)
 
         if cleanup:
             self.cleanup(output_file=expected_output_file)

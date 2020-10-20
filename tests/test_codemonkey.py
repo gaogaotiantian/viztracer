@@ -34,3 +34,10 @@ class TestAstTransformer(unittest.TestCase):
         for test_case in invalid_test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
             tf.get_string_of_expr(tree.body[0].value)
+
+    def test_get_assign_log_nodes(self):
+        tf = AstTransformer("log_var", {"varnames": "fi"})
+        test_cases = [("fib = 1", 0)]
+        for test_case, node_number in test_cases:
+            tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
+            self.assertEqual(len(tf.get_assign_log_nodes(tree.body[0].targets[0])), node_number)

@@ -34,6 +34,7 @@ static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_function_args(struct FunctionNode* node, PyFrameObject* frame);
@@ -253,6 +254,7 @@ static PyMethodDef Tracer_methods[] = {
     {"addcounter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
     {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
+    {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -958,6 +960,21 @@ snaptrace_addobject(TracerObject* self, PyObject* args)
     Py_INCREF(object_args);
 
     Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_getfunctionarg(TracerObject* self, PyObject* args)
+{
+    struct ThreadInfo* info = get_thread_info(self);
+
+    struct FunctionNode* fnode = info->stack_top;
+    if (!fnode->args) {
+        Py_RETURN_NONE;
+    }
+
+    Py_INCREF(fnode->args);
+
+    return fnode->args;
 }
 
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
