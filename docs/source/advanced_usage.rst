@@ -208,6 +208,19 @@ an object, but there are just too many entries to it. It could be ``self.attr_na
 ``--run`` is added to resolve the ambiguity. Every time an attribute matches regex ``attr_name`` is assigned a value, it will be logged.
 If you don't know what regex is, simply using the full name of the attribute as ``attr_name`` will allow you to log the attribute
 
+Log Function Execution
+----------------------
+
+You can log function execution details with VizTracer. VizTracer will record all the assignments in specified functions and display
+them in the detailed information of the generated report.
+
+.. code-block:: 
+
+    viztracer --log_func_exec <func_name> --run my_script.py
+
+``--run`` is added to resolve the ambiguity. Every time an function matches regex ``func_name`` is called, its execution will be logged.
+If you don't know what regex is, simply using the full name of the function as ``func_name`` will allow you to log the function 
+
 Work with ``logging`` module
 ----------------------------
 
