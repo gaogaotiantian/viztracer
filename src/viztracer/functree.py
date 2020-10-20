@@ -62,11 +62,12 @@ class FuncTreeNode:
                 def change_parent(node):
                     node.parent = other
                 new_children = self.children[start_idx:end_idx]
-                map(change_parent, new_children)
+                # force map to run
+                list(map(change_parent, new_children))
                 other.children = new_children
                 other.parent = self
                 self.children = self.children[:start_idx] + [other] + self.children[end_idx:]
-            else:
+            else: # pragma: no cover
                 raise Exception("This should not be possible")
         else:
             self.parent.adopt(other)

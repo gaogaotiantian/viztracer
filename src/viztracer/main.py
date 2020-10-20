@@ -24,7 +24,7 @@ def search_file(file_name):
             path_sep = ":"
         elif sys.platform in ["win32"]:
             path_sep = ";"
-        else:
+        else: # pragma: no cover
             return None
     
         for dir_name in os.environ["PATH"].split(path_sep):
@@ -204,5 +204,5 @@ def main():
     if options.open:
         try:
             webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
-        except webbrowser.Error as e:
+        except webbrowser.Error as e: # pragma: no cover
             print(e, "Can not open the report")
