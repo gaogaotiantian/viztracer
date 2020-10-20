@@ -143,7 +143,7 @@ class ObjectEvents:
                 "ts": event["ts"],
                 "args": event["args"]["snapshot"]
             })
-        else:
+        else: # pragma: no cover
             raise ValueError("Unexpected type for object event")
 
     def normalize(self, first_ts):

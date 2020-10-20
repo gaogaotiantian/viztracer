@@ -98,3 +98,11 @@ class TestSnapShot(unittest.TestCase):
 
         # Coverage test
         _ = snap.list_pid()
+
+    def test_change_parent(self):
+        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":0,"dur":100,"name":"grandpa","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":50,"dur":10,"name":"grandson","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":10,"dur":80,"name":"son","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        snap = ProgSnapshot(data)
+        tree = next(snap.get_trees())
+        for node in tree.inorder_traverse():
+            if node.parent:
+                self.assertIn(node, node.parent.children)

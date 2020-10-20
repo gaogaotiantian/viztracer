@@ -84,6 +84,10 @@ class TestSimulator(unittest.TestCase):
 
     def test_module_run(self):
         sim = SimInterface(vdb_fib)
+        result = sim.command("s")
+        self.assertGreater(len(result), 10)
+        result = sim.command("s")
+        self.assertGreater(len(result), 2)
         sim.close()
 
     def test_old(self):
