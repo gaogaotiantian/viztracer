@@ -92,6 +92,7 @@ def a():
     n += 3
 
 def aba():
+    __viz_tracer__.add_functionarg("place", "holder")
     n2 = 3
     n2 += 5
 
