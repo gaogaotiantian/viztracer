@@ -221,7 +221,8 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_log_exception(self):
         self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=3)
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=2)
+        # Coverage for visit_Raise without change
+        self.template(["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=2)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
