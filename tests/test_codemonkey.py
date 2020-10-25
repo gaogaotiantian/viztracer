@@ -26,7 +26,7 @@ class TestAstTransformer(unittest.TestCase):
     def test_get_string_of_expr(self):
         test_cases = ["a", "a[0]","a[1:]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
         # just for coverage
-        invalid_test_cases = ["a[1,2:3]", "a()"]
+        invalid_test_cases = ["a[1,2:3]", "a>b"]
         tf = AstTransformer("", "")
         for test_case in test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
