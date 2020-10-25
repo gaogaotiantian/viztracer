@@ -85,7 +85,7 @@ unrelated, *s.a = 1, 2, 3
 [abc, d] = 3, 4
 """
 
-file_log_func_exec= \
+file_log_func_exec = \
 """
 def a():
     n = 2
@@ -104,6 +104,14 @@ aba()
 b()
 """
 
+
+file_log_exception = \
+"""
+try:
+    raise Exception("lol")
+except Exception:
+    pass
+"""
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -210,6 +218,9 @@ class TestCommandLineBasic(CmdlineTmpl):
                     self.assertIn("exec_steps", entry.args)
                     self.assertEqual(len(entry["args"]["exec_steps"]), 2)
         self.template(["viztracer", "--log_func_exec", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_func_exec, expected_output_file="result.json", check_func=check_func)
+
+    def test_log_exception(self):
+        self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=3)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

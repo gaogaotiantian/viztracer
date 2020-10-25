@@ -73,6 +73,8 @@ def main():
                         help="log attribute with specified names")
     parser.add_argument("--log_func_exec", nargs="*", default=None,
                         help="log execution of function with specified names")
+    parser.add_argument("--log_exception", action="store_true", default=False,
+                        help="log all exception when it's raised")
     parser.add_argument("--novdb", action="store_true", default=False,
                         help="Do not instrument for vdb, will reduce the overhead")
     parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -143,7 +145,8 @@ def main():
             "__package__": None,
             "__cached__": None
         }
-        if options.log_var or options.log_number or options.log_attr or options.log_func_exec:
+        if options.log_var or options.log_number or options.log_attr or \
+                options.log_func_exec or options.log_exception:
             monkey = CodeMonkey(code_string, file_name)
             if options.log_var:
                 monkey.add_instrument("log_var", {"varnames": options.log_var})
@@ -153,6 +156,8 @@ def main():
                 monkey.add_instrument("log_attr", {"varnames": options.log_attr})
             if options.log_func_exec:
                 monkey.add_instrument("log_func_exec", {"funcnames": options.log_func_exec})
+            if options.log_exception:
+                monkey.add_instrument("log_exception", {})
             builtins.compile = monkey.compile
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
