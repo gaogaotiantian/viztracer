@@ -110,6 +110,7 @@ VizTracer can log extra information without changing your source code
 * [Function Return Value](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-return-value)
 * [Any Variable/Attribute with RegEx](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-variable)
 * [Variables in Specified Function](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-execution)
+* [Raised Exceptions](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-exception)
 
 ### Add Custom Event
 

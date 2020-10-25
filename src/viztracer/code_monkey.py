@@ -33,6 +33,12 @@ class AstTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         self.log_func_exec_enable = False
         return node
+
+    def visit_Raise(self, node):
+        if self.inst_type == "log_exception":
+            instrument_node = self.get_instrument_node_by_node(node.exc)
+            return [instrument_node, node]
+        return node
     
     def _visit_generic_assign(self, node):
         self.generic_visit(node)
@@ -200,6 +206,8 @@ class AstTransformer(ast.NodeTransformer):
             return "{}.{}".format(self.get_string_of_expr(node.value), node.attr)
         elif type(node) is ast.Subscript:
             return "{}[{}]".format(self.get_string_of_expr(node.value), self.get_string_of_expr(node.slice))
+        elif type(node) is ast.Call:
+            return "{}()".format(self.get_string_of_expr(node.func))
         elif type(node) is ast.Starred:
             return "*{}".format(self.get_string_of_expr(node.value))
         elif type(node) is ast.Tuple:
@@ -233,8 +241,7 @@ class CodeMonkey:
         self.ast_transformers = []
 
     def add_instrument(self, inst_type, inst_args):
-        if inst_type in ("log_var", "log_number", "log_attr", "log_func_exec"):
-            self.ast_transformers.append(AstTransformer(inst_type, inst_args))
+        self.ast_transformers.append(AstTransformer(inst_type, inst_args))
 
     def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1):
         if self.ast_transformers:

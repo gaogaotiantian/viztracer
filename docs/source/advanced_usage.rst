@@ -221,6 +221,16 @@ them in the detailed information of the generated report.
 ``--run`` is added to resolve the ambiguity. Every time an function matches regex ``func_name`` is called, its execution will be logged.
 If you don't know what regex is, simply using the full name of the function as ``func_name`` will allow you to log the function 
 
+Log Exception
+-------------
+
+You can log raised exception with VizTracer. All raised exceptions, whether caught or not, will be displayed as an instant event
+in the report.
+
+.. code-block:: 
+
+    viztracer --log_exception my_script.py
+
 Work with ``logging`` module
 ----------------------------
 
