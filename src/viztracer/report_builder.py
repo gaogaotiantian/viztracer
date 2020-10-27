@@ -83,4 +83,7 @@ class ReportBuilder:
 
     def save(self, output_file="result.html"):
         with open(output_file, "w", encoding="utf-8") as f:
-            f.write(self.generate_report())
+            if output_file.split(".")[-1] == "html":
+                f.write(self.generate_report())
+            else:
+                f.write(self.generate_json())

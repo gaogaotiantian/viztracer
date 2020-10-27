@@ -6,6 +6,7 @@ import argparse
 import os
 import subprocess
 import builtins
+import shutil
 import webbrowser
 from . import VizTracer
 from . import FlameGraph
@@ -21,6 +22,8 @@ class VizUI:
         self.verbose = 1
         self.ofile = "result.html"
         self.options = None
+        self.args = []
+        self.subprocess_output_dir = "./viztracer_subprocess_tmp"
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
@@ -60,6 +63,10 @@ class VizUI:
                             help="log execution of function with specified names")
         parser.add_argument("--log_exception", action="store_true", default=False,
                             help="log all exception when it's raised")
+        parser.add_argument("--log_subprocess", action="store_true", default=False,
+                            help="log subprocesses")
+        parser.add_argument("--subprocess_child", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--novdb", action="store_true", default=False,
                             help="Do not instrument for vdb, will reduce the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -91,8 +98,10 @@ class VizUI:
                 return False, "You need to specify commands after --/--run"
             else:
                 options, command = self.parser.parse_args(argv[1:idx]), argv[idx+1:]
+                self.args = argv[1:idx]
         else:
             options, command = self.parser.parse_known_args(argv[1:])
+            self.args = [elem for elem in argv[1:] if elem not in command]
 
         if options.quiet:
             self.verbose = 0
@@ -106,6 +115,11 @@ class VizUI:
             if not os.path.exists(options.output_dir):
                 os.mkdir(options.output_dir)
             self.ofile = os.path.join(options.output_dir, self.ofile)
+
+        if options.log_subprocess:
+            if not options.subprocess_child:
+                self.args = self.args + ["--subprocess_child", "--output_dir", self.subprocess_output_dir, "-o", "result.json", "--pid_suffix"]
+            self.patch_subprocess()
 
         self.options, self.command = options, command
 
@@ -130,6 +144,18 @@ class VizUI:
                     return candidate
     
         return None
+
+    def patch_subprocess(self):
+        ui = self
+        def subprocess_init(self, args, **kwargs):
+            if type(args) is list:
+                if args[0].startswith("python"):
+                    args = ["viztracer"] + ui.args + ["--"] + args[1:]
+            self.__originit__(args, **kwargs)
+
+        import subprocess
+        subprocess.Popen.__originit__ = subprocess.Popen.__init__
+        subprocess.Popen.__init__ = subprocess_init
 
     def run(self):
         if self.options.module:
@@ -172,7 +198,14 @@ class VizUI:
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
-        tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
+        if options.log_subprocess and not options.subprocess_child:
+            tracer.pid_suffix = True
+            tracer.save(output_file=os.path.join(self.subprocess_output_dir, "result.json"))
+            builder = ReportBuilder([os.path.join(self.subprocess_output_dir, f) for f in os.listdir(self.subprocess_output_dir)])
+            builder.save(output_file=ofile)
+            shutil.rmtree(self.subprocess_output_dir)
+        else:
+            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
 
         if options.open:
             try:
