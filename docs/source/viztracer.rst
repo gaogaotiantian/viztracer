@@ -74,11 +74,11 @@ VizTracer
 
         **NOTICE**
 
-        In command line, ``--include_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--run``
+        In command line, ``--include_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--``
 
         .. code-block::
 
-            python -m viztracer --include_files file1 file2 --run my_scrpit.py
+            python -m viztracer --include_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: exclude_files
         :type: list of string or None
@@ -98,11 +98,11 @@ VizTracer
         
         **NOTICE**
 
-        In command line, ``--exclude_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--run``
+        In command line, ``--exclude_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--``
 
         .. code-block::
 
-            python -m viztracer --exclude_files file1 file2 --run my_scrpit.py
+            python -m viztracer --exclude_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: ignore_c_function
         :type: boolean

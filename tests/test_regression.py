@@ -100,6 +100,9 @@ class TestIssue21(CmdlineTmpl):
     # about --script_option
     def test_issue21(self):
         self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "--include_files", "/", "--", "cmdline_test.py", "--script_option"], script=issue21_code)
         self.template(["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "--", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--run"], script=issue21_code, success=False, expected_output_file=None)
+        self.template(["viztracer", "--"], script=issue21_code, success=False, expected_output_file=None)

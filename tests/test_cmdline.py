@@ -147,6 +147,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         result = self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"], expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))
         self.template(["python", "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--run", "cmdline_test.py"], expected_output_file="result.json", expected_entries=17)
+        self.template(["python", "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--", "cmdline_test.py"], expected_output_file="result.json", expected_entries=17)
         self.template(["python", "-m", "viztracer", "--include_files", "./", "--max_stack_depth", "5", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--include_files", "./abcd", "--run", "cmdline_test.py"])
 
@@ -155,6 +156,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.assertIn("help", result.stdout.decode("utf8"))
         self.template(["python", "-m", "viztracer", "--exclude_files", "./", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", expected_entries=1)
         self.template(["python", "-m", "viztracer", "--exclude_files", "./abcd", "--run", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--exclude_files", "./abcd", "--", "cmdline_test.py"])
 
     def test_ignore_c_function(self):
         self.template(["python", "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)

@@ -50,7 +50,7 @@ viztracer my_script arg1 arg2
 python3 -m viztracer my_script.py arg1 arg2
 ```
 
-which will generate a ```result.html``` file in the directory you run this command, which you can open with **Chrome**.
+which will generate a ```result.html``` file in the directory you run this command, which you can open with **Chrome**(**use AWSD to navigate/zoom**).
 
 You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
 

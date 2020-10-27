@@ -90,12 +90,18 @@ def main():
     parser.add_argument("--open", action="store_true", default=False,
                         help="open the report in browser after saving")
 
-    # If --run exists, all the commands after --run are the commands we need to run
+    # If -- or --run exists, all the commands after --/--run are the commands we need to run
     # We need to filter those out, they might conflict with our arguments
-    if "--run" in sys.argv[1:]:
+    if "--" in sys.argv[1:]:
+        idx = sys.argv.index("--")
+    elif "--run" in sys.argv[1:]:
         idx = sys.argv.index("--run")
+    else:
+        idx = None
+
+    if idx:
         if idx == len(sys.argv) - 1:
-            print("You need to specify commands after --run")
+            print("You need to specify commands after --/--run")
             exit(1)
         else:
             options, command = parser.parse_args(sys.argv[1:idx]), sys.argv[idx+1:]

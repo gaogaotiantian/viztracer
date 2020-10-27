@@ -24,7 +24,7 @@ You can include only certain files/folders to trace by
 
 .. code-block::
 
-    viztracer --include_files ./src --run my_script.py
+    viztracer --include_files ./src -- my_script.py
 
 OR
 
@@ -36,7 +36,7 @@ Similarly, you can exclude certain files/folders to trace by
 
 .. code-block::
 
-    viztracer --exclude_files ./not_interested.py --run my_script.py
+    viztracer --exclude_files ./not_interested.py -- my_script.py
 
 OR
 
@@ -174,9 +174,9 @@ The log will appear in the report as an instant event, and the variables ``repr`
 
 .. code-block:: 
 
-    viztracer --log_var <var_name> --run my_script.py
+    viztracer --log_var <var_name> -- my_script.py
 
-``--run`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
+``--`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
 If you don't know what regex is, simply using the full name of the variable as ``var_name`` will allow you to log the variable
 
 Log Number
@@ -187,9 +187,9 @@ The report will visualize the number through time as a separate signal like ``Vi
 
 .. code-block:: 
 
-    viztracer --log_number <var_name> --run my_script.py
+    viztracer --log_number <var_name> -- my_script.py
 
-``--run`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
+``--`` is added to resolve the ambiguity. Every time a variable matches regex ``var_name`` is assigned a value, it will be logged.
 If you don't know what regex is, simply using the full name of the variable as ``var_name`` will allow you to log the variable
 
 Using ``--log_number`` on non-numeric variables will raise an exception.
@@ -203,9 +203,9 @@ an object, but there are just too many entries to it. It could be ``self.attr_na
 
 .. code-block:: 
 
-    viztracer --log_attr <attr_name> --run my_script.py
+    viztracer --log_attr <attr_name> -- my_script.py
 
-``--run`` is added to resolve the ambiguity. Every time an attribute matches regex ``attr_name`` is assigned a value, it will be logged.
+``--`` is added to resolve the ambiguity. Every time an attribute matches regex ``attr_name`` is assigned a value, it will be logged.
 If you don't know what regex is, simply using the full name of the attribute as ``attr_name`` will allow you to log the attribute
 
 Log Function Execution
@@ -216,9 +216,9 @@ them in the detailed information of the generated report.
 
 .. code-block:: 
 
-    viztracer --log_func_exec <func_name> --run my_script.py
+    viztracer --log_func_exec <func_name> -- my_script.py
 
-``--run`` is added to resolve the ambiguity. Every time an function matches regex ``func_name`` is called, its execution will be logged.
+``--`` is added to resolve the ambiguity. Every time an function matches regex ``func_name`` is called, its execution will be logged.
 If you don't know what regex is, simply using the full name of the function as ``func_name`` will allow you to log the function 
 
 Log Exception
