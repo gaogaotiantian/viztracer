@@ -1,9 +1,27 @@
 Multi Process
 =============
 
-VizTracer can support multi process with some extra steps. The current structure of VizTracer keeps one single buffer for one process, which means the user will have to produce multiple results from multiple processes and combine them together. 
+subprocess
+----------
+
+VizTracer supports ``subprocess`` module with ease. You only need to add ``--log_subprocess`` to make it work
+
+.. code-block::
+
+    viztracer --log_subprocess my_script.py
+
+This will generate an HTML file for all processes. There are a couple of things you need to be aware though. 
+
+VizTracer patches subprocess module(to be more specific, ``subprocess.Popen``) to make this work like a magic. However, it will only patch
+when the args passed to ``subprocess.Popen`` is a list(``subprocess.Popen(["python", "subscript.py"])``) and the first argument starts with
+``python``. This covers most of the cases, but if you do have a situation that can't be solved, you can raise an issue and we can talk
+about solutions.
+
+os.fork()
+---------
 
 If you are using ``os.fork()`` or libraries using similiar mechanism, you can use VizTracer the normal way you do, with an extra option ``pid_suffix``.
+You will generate one ``json`` file per process, and use ``viztracer`` to combine them to a report.
 
 .. code-block::
     
@@ -26,9 +44,3 @@ After generating ``json`` files, you need to combine them
 This will generate the HTML report with all the process info. You can specify ``--output_file`` when using ``--combine``.
 
 Actually, you can combine any json reports together to an HTML report. 
-
-If your code is using ``subprocess`` to spawn processes, the newly spawned process won't be traced(We could do something to ``PATH`` but that feels sketchy). There are a couple ways to deal with that:
-
-* You can change the ``subprocess`` or ``popen`` code manually, to attach VizTracer to sub-process. You will have json results from differnt processes and you just need to combine them together. This is a generic way to do multi-process tracing and could work pretty smoothly if you don't have many entries for your subprocess
-
-* Or you can hack your ``PATH`` env to use ``python -m viztracer <args>`` to replace ``python``. This will make VizTracer attach your spawned process automatically, but could have other side effects.

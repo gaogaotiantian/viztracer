@@ -311,6 +311,9 @@ It's a little bit more complicated to do multi processing. You basically need to
 
     viztracer --combine <json_files>
 
+However, VizTracer has a dark magic for ``subprocess`` module. If you only use ``subprocess`` to spawn processes, and only pass lists as arguments. You
+can use ``--log_subprocess`` to log all processes.
+
 For detailed usage, please refer to :doc:`multi_process`
 
 Debug Your Saved Report

@@ -134,7 +134,8 @@ VizTracer supports python native ```threading``` module without the need to do a
 
 ### Multi Process Support
 
-VizTracer can support multi process with some extra steps. The current structure of VizTracer keeps one single buffer for one process, which means the user will have to produce multiple results from multiple processes and combine them together. 
+VizTracer supports ```subprocess``` with ```--log_subprocess```. For more general multi-process cases,
+VizTracer can support with some extra steps. The current structure of VizTracer keeps one single buffer for one process, which means the user will have to produce multiple results from multiple processes and combine them together. 
 
 Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_process.html) for details
 
