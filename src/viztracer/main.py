@@ -226,7 +226,7 @@ class VizUI:
                 builder = ReportBuilder([os.path.join(self.subprocess_output_dir, f) for f in os.listdir(self.subprocess_output_dir)])
                 builder.save(output_file=ofile)
                 shutil.rmtree(self.subprocess_output_dir)
-            else:
+            else:  # pragma: no cover
                 tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
 
         if options.log_multiprocess:

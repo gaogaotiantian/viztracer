@@ -95,4 +95,6 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
         
         if sys.platform in ["linux", "linux2"]:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func)
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func, concurrency="multiprocessing")
+        else:
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False)
