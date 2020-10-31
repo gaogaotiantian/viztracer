@@ -98,4 +98,4 @@ class TestMultiprocessing(CmdlineTmpl):
         if multiprocessing.get_start_method() == "fork":
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func, concurrency="multiprocessing")
         else:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False)
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False, expected_output_file=None)
