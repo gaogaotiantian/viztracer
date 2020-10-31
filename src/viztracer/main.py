@@ -257,9 +257,7 @@ class VizUI:
             "modname": self.options.module
         }
         sys.argv = [self.options.module] + self.command[:]
-        self.run_code(code, global_dict)
-
-        return True, None
+        return self.run_code(code, global_dict)
 
     def run_command(self):
         command = self.command
@@ -293,9 +291,7 @@ class VizUI:
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        self.run_code(code, global_dict)
-
-        return True, None
+        return self.run_code(code, global_dict)
 
     def run_generate_flamegraph(self):
         options = self.options
