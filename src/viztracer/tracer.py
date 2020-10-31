@@ -208,7 +208,7 @@ class _VizTracer:
     def add_variable(self, name, var, event="instant"):
         if self.enable:
             if event == "instant":
-                self.add_instant(name, {"value": repr(var)})
+                self.add_instant(name, {"value": repr(var)}, scope="p")
             elif event == "counter":
                 if type(var) is int or type(var) is float:
                     self.add_counter(name, {name: var})
