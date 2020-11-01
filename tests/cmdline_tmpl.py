@@ -45,10 +45,14 @@ class CmdlineTmpl(unittest.TestCase):
                  script=file_fib, 
                  expected_entries=None, 
                  cleanup=True,
-                 check_func=None):
+                 check_func=None,
+                 concurrency=None):
         if os.getenv("COVERAGE_RUN"):
             idx = cmd_list.index("viztracer")
-            cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
+            if not concurrency:
+                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
+            elif concurrency == "multiprocessing":
+                cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
 
         self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE)

@@ -4,7 +4,7 @@
 import sys
 import argparse
 import os
-import subprocess
+import multiprocessing
 import builtins
 import shutil
 import webbrowser
@@ -15,7 +15,6 @@ from .util import get_url_from_file
 from .code_monkey import CodeMonkey
 
 
-
 class VizUI:
     def __init__(self):
         self.parser = self.create_parser()
@@ -24,6 +23,7 @@ class VizUI:
         self.options = None
         self.args = []
         self.subprocess_output_dir = "./viztracer_subprocess_tmp"
+        self.multiprocess_output_dir = "./viztracer_multiprocess_tmp"
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
@@ -67,6 +67,8 @@ class VizUI:
                             help="log subprocesses")
         parser.add_argument("--subprocess_child", action="store_true", default=False,
                             help=argparse.SUPPRESS)
+        parser.add_argument("--log_multiprocess", action="store_true", default=False,
+                            help="log multiprocesses")
         parser.add_argument("--novdb", action="store_true", default=False,
                             help="Do not instrument for vdb, will reduce the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -80,7 +82,7 @@ class VizUI:
         parser.add_argument("--combine", nargs="*", default=[],
                             help="combine all json reports to a single report. Specify all the json reports you want to combine")
         parser.add_argument("--open", action="store_true", default=False,
-                        help="open the report in browser after saving")
+                            help="open the report in browser after saving")
         return parser
 
     def parse(self, argv):
@@ -128,25 +130,26 @@ class VizUI:
     def search_file(self, file_name):
         if os.path.isfile(file_name):
             return file_name
-        
+
         # search file in $PATH
         if "PATH" in os.environ:
-            if sys.platform in ["linux", "linux2", "darwin"]: 
+            if sys.platform in ["linux", "linux2", "darwin"]:
                 path_sep = ":"
             elif sys.platform in ["win32"]:
                 path_sep = ";"
-            else: # pragma: no cover
+            else:  # pragma: no cover
                 return None
-        
+
             for dir_name in os.environ["PATH"].split(path_sep):
                 candidate = os.path.join(dir_name, file_name)
                 if os.path.isfile(candidate):
                     return candidate
-    
+
         return None
 
     def patch_subprocess(self):
         ui = self
+
         def subprocess_init(self, args, **kwargs):
             if type(args) is list:
                 if args[0].startswith("python"):
@@ -156,6 +159,17 @@ class VizUI:
         import subprocess
         subprocess.Popen.__originit__ = subprocess.Popen.__init__
         subprocess.Popen.__init__ = subprocess_init
+
+    def patch_multiprocessing(self, tracer):
+
+        def func_after_fork(tracer):
+            from multiprocessing.util import Finalize
+            Finalize(None, tracer.exit_routine, exitpriority=1)
+
+        from multiprocessing.util import register_after_fork
+        tracer.pid_suffix = True
+        tracer.output_file = os.path.join(self.multiprocess_output_dir, "result.json")
+        register_after_fork(tracer, func_after_fork)
 
     def run(self):
         if self.options.module:
@@ -193,26 +207,46 @@ class VizUI:
             pid_suffix=options.pid_suffix
         )
 
+        if options.log_multiprocess:
+            if multiprocessing.get_start_method() != "fork":
+                return False, "Only fork based multiprocess is supported"
+            parent_pid = os.getpid()
+            parent_ofile = ofile
+            self.patch_multiprocessing(tracer)
+
         builtins.__dict__["__viz_tracer__"] = tracer
         global_dict["__builtins__"] = globals()["__builtins__"]
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
-        if options.log_subprocess and not options.subprocess_child:
-            tracer.pid_suffix = True
-            tracer.save(output_file=os.path.join(self.subprocess_output_dir, "result.json"))
-            builder = ReportBuilder([os.path.join(self.subprocess_output_dir, f) for f in os.listdir(self.subprocess_output_dir)])
-            builder.save(output_file=ofile)
-            shutil.rmtree(self.subprocess_output_dir)
-        else:
+        if options.log_subprocess:
+            if not options.subprocess_child:
+                tracer.pid_suffix = True
+                tracer.save(output_file=os.path.join(self.subprocess_output_dir, "result.json"))
+                builder = ReportBuilder([os.path.join(self.subprocess_output_dir, f) for f in os.listdir(self.subprocess_output_dir)])
+                builder.save(output_file=ofile)
+                shutil.rmtree(self.subprocess_output_dir)
+            else:  # pragma: no cover
+                tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
+
+        if options.log_multiprocess:
+            if os.getpid() == parent_pid:
+                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
+                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f) for f in os.listdir(self.multiprocess_output_dir)])
+                builder.save(output_file=parent_ofile)
+                shutil.rmtree(self.multiprocess_output_dir)
+            else:
+                tracer.save()
+
+        if not (options.log_subprocess or options.log_multiprocess):
             tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
 
         if options.open:
             try:
                 webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
-            except webbrowser.Error: # pragma: no cover
+            except webbrowser.Error:  # pragma: no cover
                 return False, "Can not open the report"
-        
+
         return True, None
 
     def run_module(self):
@@ -223,9 +257,7 @@ class VizUI:
             "modname": self.options.module
         }
         sys.argv = [self.options.module] + self.command[:]
-        self.run_code(code, global_dict)
-
-        return True, None
+        return self.run_code(code, global_dict)
 
     def run_command(self):
         command = self.command
@@ -259,9 +291,7 @@ class VizUI:
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        self.run_code(code, global_dict)
-
-        return True, None
+        return self.run_code(code, global_dict)
 
     def run_generate_flamegraph(self):
         options = self.options
@@ -286,6 +316,7 @@ class VizUI:
 
         return True, None
 
+
 def main():
     ui = VizUI()
     success, err_msg = ui.parse(sys.argv)
@@ -296,4 +327,3 @@ def main():
     if not success:
         print(err_msg)
         exit(1)
-

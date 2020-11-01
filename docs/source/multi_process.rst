@@ -17,30 +17,42 @@ when the args passed to ``subprocess.Popen`` is a list(``subprocess.Popen(["pyth
 ``python``. This covers most of the cases, but if you do have a situation that can't be solved, you can raise an issue and we can talk
 about solutions.
 
-os.fork()
----------
+multiprocessing or os.fork()
+----------------------------
 
-If you are using ``os.fork()`` or libraries using similiar mechanism, you can use VizTracer the normal way you do, with an extra option ``pid_suffix``.
-You will generate one ``json`` file per process, and use ``viztracer`` to combine them to a report.
+If you are using multiprocessing library or pure ``os.fork()``. You can enable multi-process log by passing ``--log_multiprocess``. 
+
+.. code-block::
+
+    viztracer --log_multiprocess my_script.py
+
+This will generate an HTML file for all processes.
+
+This feature is only available on UNIX, not Windows. Also it will only work when ``multiprocessing.get_start_method()`` is ``fork``. 
+After python3.8, MacOS has start method "spawn" by default and "fork" should be considered unsafe. 
+
+combine reports
+---------------
+
+You can generate json reports from different processes and combine them manually as well. It is recommended to use 
+``--pid_suffix`` so the report will be json file ends with its pid. You can specify your own file name using ``-o`` too. 
 
 .. code-block::
     
-    python -m viztracer --pid_suffix multi_process_program.py
-
-This way, the program will generate mutliple ``json`` files in current working directory. Notice here, if ``--pid_suffix`` is passed to VizTracer, the default output format will be ``json`` because this is only expected to be used by multi-process programs. 
+    viztracer --pid_suffix single_process.py
+    # or
+    viztracer -o process1.json single_process.py
 
 You can specify the output directory if you want
 
 .. code-block::
 
-    python -m viztracer --pid_suffix --output_dir ./temp_dir multi_process_program.py
+    viztracer --pid_suffix --output_dir ./temp_dir single_process.py
 
 After generating ``json`` files, you need to combine them
 
 .. code-block::
     
-    python -m viztracer --combine ./temp_dir/*.json
+    viztracer --combine ./temp_dir/*.json
 
 This will generate the HTML report with all the process info. You can specify ``--output_file`` when using ``--combine``.
-
-Actually, you can combine any json reports together to an HTML report. 
