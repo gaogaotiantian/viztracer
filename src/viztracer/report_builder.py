@@ -21,7 +21,11 @@ def get_json(data):
         return json.loads(data.read())
     elif type(data) is str:
         with open(data) as f:
-            return json.loads(f.read())
+            try:
+                return json.loads(f.read())
+            except Exception as e:
+                print("Unable to decode {}".format(data))
+                raise e
     else:
         raise TypeError("Unexpected Type{}!", type(data))
 

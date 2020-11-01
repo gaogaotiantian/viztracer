@@ -1,10 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import atexit
 import sys
 import argparse
 import os
 import multiprocessing
+import types
 import builtins
 import shutil
 import webbrowser
@@ -22,7 +24,7 @@ class VizUI:
         self.ofile = "result.html"
         self.options = None
         self.args = []
-        self.subprocess_output_dir = "./viztracer_subprocess_tmp"
+        self._saving = False
         self.multiprocess_output_dir = "./viztracer_multiprocess_tmp"
 
     def create_parser(self):
@@ -120,7 +122,7 @@ class VizUI:
 
         if options.log_subprocess:
             if not options.subprocess_child:
-                self.args = self.args + ["--subprocess_child", "--output_dir", self.subprocess_output_dir, "-o", "result.json", "--pid_suffix"]
+                self.args = self.args + ["--subprocess_child", "--output_dir", self.multiprocess_output_dir, "-o", "result.json", "--pid_suffix"]
             self.patch_subprocess()
 
         self.options, self.command = options, command
@@ -163,8 +165,19 @@ class VizUI:
     def patch_multiprocessing(self, tracer):
 
         def func_after_fork(tracer):
+
+            def exit_routine():
+                self.save(tracer)
+
+            def term_handler(signalnum, frame):
+                if not self._saving:
+                    self.save(tracer)
+                    os._exit(0)
+
             from multiprocessing.util import Finalize
-            Finalize(None, tracer.exit_routine, exitpriority=1)
+            import signal
+            Finalize(tracer, exit_routine, exitpriority=32)
+            signal.signal(signal.SIGTERM, term_handler)
 
         from multiprocessing.util import register_after_fork
         tracer.pid_suffix = True
@@ -203,43 +216,22 @@ class VizUI:
             log_print=options.log_print,
             log_gc=options.log_gc,
             novdb=options.novdb,
-            save_on_exit=True,
             pid_suffix=options.pid_suffix
         )
 
+        self.parent_pid = os.getpid()
         if options.log_multiprocess:
             if multiprocessing.get_start_method() != "fork":
                 return False, "Only fork based multiprocess is supported"
-            parent_pid = os.getpid()
-            parent_ofile = ofile
             self.patch_multiprocessing(tracer)
 
         builtins.__dict__["__viz_tracer__"] = tracer
-        global_dict["__builtins__"] = globals()["__builtins__"]
+        atexit.register(self.save, tracer)
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
-        if options.log_subprocess:
-            if not options.subprocess_child:
-                tracer.pid_suffix = True
-                tracer.save(output_file=os.path.join(self.subprocess_output_dir, "result.json"))
-                builder = ReportBuilder([os.path.join(self.subprocess_output_dir, f) for f in os.listdir(self.subprocess_output_dir)])
-                builder.save(output_file=ofile)
-                shutil.rmtree(self.subprocess_output_dir)
-            else:  # pragma: no cover
-                tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
-
-        if options.log_multiprocess:
-            if os.getpid() == parent_pid:
-                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
-                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f) for f in os.listdir(self.multiprocess_output_dir)])
-                builder.save(output_file=parent_ofile)
-                shutil.rmtree(self.multiprocess_output_dir)
-            else:
-                tracer.save()
-
-        if not (options.log_subprocess or options.log_multiprocess):
-            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
+        atexit.unregister(self.save)
+        self.save(tracer)
 
         if options.open:
             try:
@@ -268,12 +260,6 @@ class VizUI:
             return False, "No such file as {}".format(file_name)
         file_name = search_result
         code_string = open(file_name, "rb").read()
-        global_dict = {
-            "__name__": "__main__",
-            "__file__": file_name,
-            "__package__": None,
-            "__cached__": None
-        }
         if options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception:
             monkey = CodeMonkey(code_string, file_name)
@@ -288,10 +274,16 @@ class VizUI:
             if options.log_exception:
                 monkey.add_instrument("log_exception", {})
             builtins.compile = monkey.compile
+
+        main_mod = types.ModuleType("__main__")
+        main_mod.__file__ = os.path.abspath(file_name)
+        main_mod.__builtins__ = globals()["__builtins__"]
+
+        sys.modules["__main__"] = main_mod
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        return self.run_code(code, global_dict)
+        return self.run_code(code, main_mod.__dict__)
 
     def run_generate_flamegraph(self):
         options = self.options
@@ -315,6 +307,31 @@ class VizUI:
         builder.save(output_file=ofile)
 
         return True, None
+
+    def save(self, tracer):
+        self._saving = True
+
+        options = self.options
+        ofile = self.ofile
+
+        tracer.stop()
+
+        if options.log_multiprocess:
+            is_main_process = os.getpid() == self.parent_pid
+        elif options.log_subprocess:
+            is_main_process = not options.subprocess_child
+
+        if options.log_subprocess or options.log_multiprocess:
+            tracer.pid_suffix = True
+            if is_main_process:
+                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
+                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f) for f in os.listdir(self.multiprocess_output_dir)])
+                builder.save(output_file=ofile)
+                shutil.rmtree(self.multiprocess_output_dir)
+            else:  # pragma: no cover
+                tracer.save(save_flamegraph=options.save_flamegraph)
+        else:
+            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
 
 
 def main():

@@ -100,14 +100,6 @@ class TestVizTracerBasic(unittest.TestCase):
         self.assertTrue(os.path.exists("result_flamegraph.html"))
         os.remove("result_flamegraph.html")
 
-    def test_exit_routine(self):
-        tracer = VizTracer(tracer_entries=10)
-        tracer.start()
-        fib(5)
-        tracer.exit_routine()
-        self.assertTrue(os.path.exists("result.html"))
-        os.remove("result.html")
-
 
 class TestVizTracerOutput(unittest.TestCase):
     def test_json(self):
