@@ -5,11 +5,11 @@ import atexit
 import sys
 import argparse
 import os
-import multiprocessing
+from multiprocessing import get_start_method
 import types
 import builtins
+import signal
 import shutil
-import webbrowser
 from . import VizTracer
 from . import FlameGraph
 from .report_builder import ReportBuilder
@@ -169,15 +169,8 @@ class VizUI:
             def exit_routine():
                 self.save(tracer)
 
-            def term_handler(signalnum, frame):
-                if not self._saving:
-                    self.save(tracer)
-                    os._exit(0)
-
             from multiprocessing.util import Finalize
-            import signal
             Finalize(tracer, exit_routine, exitpriority=32)
-            signal.signal(signal.SIGTERM, term_handler)
 
         from multiprocessing.util import register_after_fork
         tracer.pid_suffix = True
@@ -221,12 +214,19 @@ class VizUI:
 
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
-            if multiprocessing.get_start_method() != "fork":
+            if get_start_method() != "fork":
                 return False, "Only fork based multiprocess is supported"
             self.patch_multiprocessing(tracer)
 
         builtins.__dict__["__viz_tracer__"] = tracer
         atexit.register(self.save, tracer)
+
+        def term_handler(signalnum, frame):
+            if not self._saving:
+                self.save(tracer)
+                os._exit(0)
+        signal.signal(signal.SIGTERM, term_handler)
+
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
@@ -234,6 +234,7 @@ class VizUI:
         self.save(tracer)
 
         if options.open:
+            import webbrowser
             try:
                 webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
             except webbrowser.Error:  # pragma: no cover

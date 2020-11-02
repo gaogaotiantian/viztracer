@@ -88,6 +88,12 @@ class TestVizTracerBasic(unittest.TestCase):
         tracer.parse()
         tracer.save("./tmp/result.html")
         self.assertTrue(os.path.exists("./tmp/result.html"))
+        tracer.start()
+        fib(5)
+        tracer.save("./tmp/result2.json")
+        self.assertTrue(os.path.exists("./tmp/result2.json"))
+        self.assertTrue(tracer.enable)
+
         shutil.rmtree("./tmp")
 
     def test_save_flamegraph(self):
