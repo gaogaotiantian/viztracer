@@ -14,7 +14,6 @@ VizTracer
                  log_print=False,\
                  log_gc=False,\
                  novdb=False,\
-                 save_on_exit=False,\
                  pid_suffix=False,\
                  output_file="result.html")
 
@@ -42,7 +41,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --quiet
+            viztracer --quiet
 
     .. py:attribute:: max_stack_depth
         :type: integer
@@ -54,7 +53,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --max_stack_depth <val>
+            viztracer --max_stack_depth <val>
     
     .. py:attribute:: include_files
         :type: list of string or None
@@ -70,7 +69,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --include_files file1[ file2 [file3 ...]]
+            viztracer --include_files file1[ file2 [file3 ...]]
 
         **NOTICE**
 
@@ -78,7 +77,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --include_files file1 file2 -- my_scrpit.py
+            viztracer --include_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: exclude_files
         :type: list of string or None
@@ -94,7 +93,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --exclude_files file1[ file2 [file3 ...]]
+            viztracer --exclude_files file1[ file2 [file3 ...]]
         
         **NOTICE**
 
@@ -102,7 +101,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --exclude_files file1 file2 -- my_scrpit.py
+            viztracer --exclude_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: ignore_c_function
         :type: boolean
@@ -114,7 +113,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --ignore_c_function
+            viztracer --ignore_c_function
 
     .. py:attribute:: ignore_non_file
         :type: boolean
@@ -126,7 +125,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --ignore_non_file
+            viztracer --ignore_non_file
 
     .. py:attribute:: log_return_value 
         :type: boolean
@@ -138,7 +137,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --log_return_value
+            viztracer --log_return_value
     
     .. py:attribute:: log_function_args 
         :type: boolean
@@ -150,7 +149,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --log_function_args
+            viztracer --log_function_args
     
     .. py:attribute:: log_print 
         :type: boolean
@@ -162,7 +161,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --log_print
+            viztracer --log_print
 
     .. py:attribute:: log_gc 
         :type: boolean
@@ -174,7 +173,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer --log_gc
+            viztracer --log_gc
     
     .. py:attribute:: novdb
         :type: boolean
@@ -182,19 +181,11 @@ VizTracer
 
         whether made viztracer to stop instrumenting for vdb, which would improve the overhead and the file size a bit
 
-        This attribute is automatically set to ``True`` when you are using command line
-
-    .. py:attribute:: save_on_exit 
-        :type: boolean
-        :value: False
-
-        Whether to save to log if the program exits unexpectedly
-
         Setting it to ``True`` is equivalent to 
 
         .. code-block::
 
-            python -m viztracer --novdb
+            viztracer --novdb
 
     .. py:attribute:: output_file
         :type: string
@@ -206,7 +197,7 @@ VizTracer
 
         .. code-block::
 
-            python -m viztracer -o <filepath>
+            viztracer -o <filepath>
     
     .. py:method:: run(command, output_file=None)
 
