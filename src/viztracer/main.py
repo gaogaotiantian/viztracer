@@ -224,7 +224,7 @@ class VizUI:
         def term_handler(signalnum, frame):
             if not self._saving:
                 self.save(tracer)
-                os._exit(0)
+                exit(0)
         signal.signal(signal.SIGTERM, term_handler)
 
         tracer.start()
