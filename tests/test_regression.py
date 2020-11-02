@@ -6,6 +6,7 @@ import viztracer
 import subprocess
 import os
 import time
+import sys
 from viztracer import VizTracer
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -120,6 +121,9 @@ while(1):
 """
 class TestTermCaught(CmdlineTmpl):
     def test_term(self):
+        if sys.platform == "win32":
+            return
+
         self.build_script(term_code)
         cmd = ["viztracer", "-o", "term.json", "cmdline_test.py"]
         if os.getenv("COVERAGE_RUN"):
