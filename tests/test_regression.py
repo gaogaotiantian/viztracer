@@ -125,7 +125,7 @@ class TestTermCaught(CmdlineTmpl):
         if os.getenv("COVERAGE_RUN"):
             cmd = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd
         p = subprocess.Popen(cmd)
-        time.sleep(0.1)
+        time.sleep(0.5)
         p.terminate()
         p.wait(timeout=10)
         self.assertTrue(os.path.exists("term.json"))
