@@ -219,14 +219,15 @@ class VizUI:
             self.patch_multiprocessing(tracer)
 
         builtins.__dict__["__viz_tracer__"] = tracer
-        atexit.register(self.save, tracer)
 
         def term_handler(signalnum, frame):
             if not self._saving:
                 self.save(tracer)
+                atexit.unregister(self.save)
                 exit(0)
         signal.signal(signal.SIGTERM, term_handler)
 
+        atexit.register(self.save, tracer)
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
