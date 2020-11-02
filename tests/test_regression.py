@@ -114,10 +114,11 @@ class TestIssue21(CmdlineTmpl):
 
 term_code = \
 """
+import time
 a = []
 a.append(1)
-while(1):
-    pass
+for i in range(10):
+    time.sleep(1)
 """
 class TestTermCaught(CmdlineTmpl):
     def test_term(self):
