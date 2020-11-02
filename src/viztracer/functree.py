@@ -20,7 +20,7 @@ class FuncTreeNode:
             self.fullname = "__ROOT__"
             self.parent = None
             self.children = []
-            self.start = -1
+            self.start = - (2 ** 64)
             self.end = 2 ** 64
         else:
             self.event = copy.copy(event)
