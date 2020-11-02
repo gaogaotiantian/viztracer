@@ -3,6 +3,10 @@
 
 import unittest
 import viztracer
+import subprocess
+import os
+import time
+import sys
 from viztracer import VizTracer
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -106,3 +110,27 @@ class TestIssue21(CmdlineTmpl):
         self.template(["viztracer", "--", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--run"], script=issue21_code, success=False, expected_output_file=None)
         self.template(["viztracer", "--"], script=issue21_code, success=False, expected_output_file=None)
+
+
+term_code = \
+"""
+a = []
+a.append(1)
+while(1):
+    pass
+"""
+class TestTermCaught(CmdlineTmpl):
+    def test_term(self):
+        if sys.platform == "win32":
+            return
+
+        self.build_script(term_code)
+        cmd = ["viztracer", "-o", "term.json", "cmdline_test.py"]
+        if os.getenv("COVERAGE_RUN"):
+            cmd = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd
+        p = subprocess.Popen(cmd)
+        time.sleep(0.5)
+        p.terminate()
+        p.wait(timeout=10)
+        self.assertTrue(os.path.exists("term.json"))
+        self.cleanup(output_file="term.json")

@@ -88,6 +88,12 @@ class TestVizTracerBasic(unittest.TestCase):
         tracer.parse()
         tracer.save("./tmp/result.html")
         self.assertTrue(os.path.exists("./tmp/result.html"))
+        tracer.start()
+        fib(5)
+        tracer.save("./tmp/result2.json")
+        self.assertTrue(os.path.exists("./tmp/result2.json"))
+        self.assertTrue(tracer.enable)
+
         shutil.rmtree("./tmp")
 
     def test_save_flamegraph(self):
@@ -99,14 +105,6 @@ class TestVizTracerBasic(unittest.TestCase):
         tracer.save_flamegraph()
         self.assertTrue(os.path.exists("result_flamegraph.html"))
         os.remove("result_flamegraph.html")
-
-    def test_exit_routine(self):
-        tracer = VizTracer(tracer_entries=10)
-        tracer.start()
-        fib(5)
-        tracer.exit_routine()
-        self.assertTrue(os.path.exists("result.html"))
-        os.remove("result.html")
 
 
 class TestVizTracerOutput(unittest.TestCase):

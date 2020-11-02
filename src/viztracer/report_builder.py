@@ -18,12 +18,18 @@ def get_json(data):
         # This is an object already
         return data
     elif isinstance(data, io.IOBase):
-        return json.loads(data.read())
+        json_str = data.read()
     elif type(data) is str:
         with open(data) as f:
-            return json.loads(f.read())
+            json_str = f.read()
     else:
         raise TypeError("Unexpected Type{}!", type(data))
+
+    try:
+        return json.loads(json_str)
+    except Exception as e:
+        print("Unable to decode {}".format(data))
+        raise e
 
 
 class ReportBuilder:

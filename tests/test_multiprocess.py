@@ -61,6 +61,34 @@ if __name__ == "__main__":
     time.sleep(0.1)
 """
 
+file_pool = \
+"""
+from multiprocessing import Process, Pool
+import os
+import time
+
+def f(x):
+    return x*x
+
+if __name__ == "__main__":
+    process_num = 5
+    with Pool(processes=process_num) as pool:
+        print(pool.map(f, range(10)))
+
+        for i in pool.imap_unordered(f, range(10)):
+            print(i)
+
+        res = pool.apply_async(f, (20,))      # runs in *only* one process
+        print(res.get(timeout=1))             # prints "400"
+
+        res = pool.apply_async(os.getpid, ()) # runs in *only* one process
+        print(res.get(timeout=1))             # prints the PID of that process
+
+        multiple_results = [pool.apply_async(os.getpid, ()) for i in range(process_num)]
+        print([res.get(timeout=1) for res in multiple_results])
+"""
+
+
 class TestSubprocess(CmdlineTmpl):
     def setUp(self):
         with open("child.py", "w") as f:
@@ -97,5 +125,6 @@ class TestMultiprocessing(CmdlineTmpl):
         
         if multiprocessing.get_start_method() == "fork":
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func, concurrency="multiprocessing")
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_pool, check_func=check_func, concurrency="multiprocessing")
         else:
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False, expected_output_file=None)

@@ -25,3 +25,9 @@ class TestReportBuilder(unittest.TestCase):
         rb.entry_number_threshold = 20
         # Coverage only
         rb.generate_json()
+
+    def test_invalid_json(self):
+        invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+        with open(invalid_json_path) as f:
+            with self.assertRaises(Exception):
+                ReportBuilder(f, verbose=1)

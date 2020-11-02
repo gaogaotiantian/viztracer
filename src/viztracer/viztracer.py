@@ -4,7 +4,6 @@
 import os
 import gzip
 import multiprocessing
-import atexit
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 
@@ -25,7 +24,6 @@ class VizTracer(_VizTracer):
                  log_print=False,
                  log_gc=False,
                  novdb=False,
-                 save_on_exit=False,
                  pid_suffix=False,
                  output_file="result.html"):
         super().__init__(
@@ -45,7 +43,6 @@ class VizTracer(_VizTracer):
         self.pid_suffix = pid_suffix
         self.output_file = output_file
         self.system_print = None
-        self.save_on_exit = save_on_exit
 
     @property
     def verbose(self):
@@ -83,21 +80,10 @@ class VizTracer(_VizTracer):
         if type is None:
             self.save()
 
-    def exit_routine(self):
-        self.stop()
-        self.parse()
-        self.save()
-
     def start(self):
-        if self.save_on_exit:
-            atexit.register(self.exit_routine)
-
         _VizTracer.start(self)
 
     def stop(self):
-        if self.save_on_exit:
-            atexit.unregister(self.exit_routine)
-
         _VizTracer.stop(self)
 
     def run(self, command, output_file=None):
@@ -107,6 +93,10 @@ class VizTracer(_VizTracer):
         self.save(output_file)
 
     def save(self, output_file=None, save_flamegraph=False):
+        enabled = False
+        if self.enable:
+            enabled = True
+            self.stop()
         if not self.parsed:
             self.parse()
         if output_file is None:
@@ -142,6 +132,12 @@ class VizTracer(_VizTracer):
 
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
+
+        if self.verbose > 0:
+            print("Report saved.")
+
+        if enabled:
+            self.start()
 
     def fork_save(self, output_file=None, save_flamegraph=False):
         if multiprocessing.get_start_method() != "fork":
