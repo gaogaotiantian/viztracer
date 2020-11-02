@@ -4,7 +4,8 @@
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
-You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs.
+You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs. **Use "AWSD" to zoom/navigate**.
+More help can be found by clicking "?" on the top right corner.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
