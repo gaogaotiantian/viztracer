@@ -611,13 +611,22 @@ snaptrace_load(TracerObject* self, PyObject* args)
             } else {
                 PyCFunctionObject* func = node->data.fee.cfunc;
                 if (func->m_module) {
+                    // The function belongs to a module
                     name = PyUnicode_FromFormat("%s.%s",
                            PyUnicode_AsUTF8(func->m_module),
                            func->m_ml->ml_name);
                 } else {
-                    name = PyUnicode_FromFormat("%s.%s",
-                           func->m_self->ob_type->tp_name,
-                           func->m_ml->ml_name);
+                    // The function is a class method
+                    if (func->m_self) {
+                        // It's not a static method, has __self__
+                        name = PyUnicode_FromFormat("%s.%s",
+                               func->m_self->ob_type->tp_name,
+                               func->m_ml->ml_name);
+                    } else {
+                        // It's a static method, does not have __self__
+                        name = PyUnicode_FromFormat("%s",
+                               func->m_ml->ml_name);
+                    }
                 }
             }
 
