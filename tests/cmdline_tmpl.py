@@ -56,7 +56,7 @@ class CmdlineTmpl(BaseTmpl):
                 cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
 
         self.build_script(script)
-        result = subprocess.run(cmd_list, stdout=subprocess.PIPE)
+        result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=15)
         self.assertTrue(success ^ (result.returncode != 0))
         if expected_output_file:
             if type(expected_output_file) is list:
