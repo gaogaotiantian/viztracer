@@ -5,6 +5,7 @@ import unittest
 import json
 from viztracer import FlameGraph
 import os
+from .base_tmpl import BaseTmpl
 
 
 def depth(tree):

@@ -9,9 +9,10 @@ import time
 import sys
 from viztracer import VizTracer
 from .cmdline_tmpl import CmdlineTmpl
+from .base_tmpl import BaseTmpl
 
 
-class TestIssue1(unittest.TestCase):
+class TestIssue1(BaseTmpl):
     def test_datetime(self):
         tracer = viztracer.VizTracer()
         tracer.start()
@@ -30,7 +31,7 @@ class TestIssue1(unittest.TestCase):
         tracer.generate_json()
 
 
-class TestStackOptimization(unittest.TestCase):
+class TestStackOptimization(BaseTmpl):
     # There's an order issue in tracefunc to skip the FEE log
     # If the stack is empty(stack_top is NULL), and we entered
     # into an ignored function, ignore_stack_depth will increment.
@@ -54,7 +55,7 @@ class TestStackOptimization(unittest.TestCase):
         self.assertEqual(entries, 4)
 
 
-class TestSegFaultRegression(unittest.TestCase):
+class TestSegFaultRegression(BaseTmpl):
     # Without parsing, cleanup of C function had caused segfault
     def test_cleanup(self):
         tracer = VizTracer()
@@ -69,7 +70,7 @@ class TestSegFaultRegression(unittest.TestCase):
         tracer.cleanup()
 
 
-class TestFunctionArg(unittest.TestCase):
+class TestFunctionArg(BaseTmpl):
     def test_functionarg(self):
         def f(n):
             tracer.add_functionarg("input", n)

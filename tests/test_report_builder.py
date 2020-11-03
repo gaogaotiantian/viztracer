@@ -1,9 +1,10 @@
 import os
 import unittest
 from viztracer.report_builder import ReportBuilder
+from .base_tmpl import BaseTmpl
 
 
-class TestReportBuilder(unittest.TestCase):
+class TestReportBuilder(BaseTmpl):
     def test_file(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:

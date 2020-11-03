@@ -1,9 +1,13 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
 import os
 import unittest
 import viztracer.util
+from .base_tmpl import BaseTmpl
 
 
-class TestUtil(unittest.TestCase):
+class TestUtil(BaseTmpl):
     def test_size_fmt(self):
         size_fmt = viztracer.util.size_fmt
         self.assertEqual(size_fmt(1024), "1.0KiB")

@@ -4,9 +4,10 @@
 from viztracer.event_base import _EventBase
 from viztracer import VizTracer
 import unittest
+from .base_tmpl import BaseTmpl
 
 
-class TestInvalidArgs(unittest.TestCase):
+class TestInvalidArgs(BaseTmpl):
     def test_invalid_args(self):
         invalid_args = {
             "verbose": ["hello", 0.1],
@@ -28,7 +29,7 @@ class TestInvalidArgs(unittest.TestCase):
                     tracer.__setattr__(args, val)
 
 
-class TestInvalidOperation(unittest.TestCase):
+class TestInvalidOperation(BaseTmpl):
     def test_generate_without_data(self):
         tracer = VizTracer()
         with self.assertRaises(Exception):
@@ -51,7 +52,7 @@ class TestInvalidOperation(unittest.TestCase):
             tracer.add_variable("a", "str", event="counter")
 
 
-class TestUseEventBase(unittest.TestCase):
+class TestUseEventBase(BaseTmpl):
     def test_use_event_base(self):
         event = _EventBase(None)
         with self.assertRaises(NotImplementedError):

@@ -4,9 +4,10 @@
 import unittest
 import ast
 from viztracer.code_monkey import CodeMonkey, AstTransformer
+from .base_tmpl import BaseTmpl
 
 
-class TestCodeMonkey(unittest.TestCase):
+class TestCodeMonkey(BaseTmpl):
     def test_pure_compile(self):
         code_string = "a = 1"
         monkey = CodeMonkey(code_string, "test.py")
@@ -14,7 +15,7 @@ class TestCodeMonkey(unittest.TestCase):
         _compile(code_string, "test.py", "exec")
 
 
-class TestAstTransformer(unittest.TestCase):
+class TestAstTransformer(BaseTmpl):
     def test_invalid(self):
         tf = AstTransformer("invalid", "invalid")
         self.assertEqual(tf.get_assign_targets("invalid"), [])

@@ -4,9 +4,10 @@
 import unittest
 import logging
 from viztracer import VizTracer, VizLoggingHandler
+from .base_tmpl import BaseTmpl
 
 
-class TestLogging(unittest.TestCase):
+class TestLogging(BaseTmpl):
     def test_handler(self):
         tracer = VizTracer()
         handler = VizLoggingHandler()

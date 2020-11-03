@@ -4,6 +4,7 @@
 import os
 import unittest
 from viztracer.tracer import _VizTracer
+from .base_tmpl import BaseTmpl
 
 
 def fib(n):

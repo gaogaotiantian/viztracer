@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import unittest
+from .base_tmpl import BaseTmpl
 
 
 file_fib = \
@@ -18,13 +19,7 @@ fib(5)
 """
 
 
-class CmdlineTmpl(unittest.TestCase):
-    def setUp(self):
-        print("{} start".format(self.id()))
-
-    def tearDown(self):
-        print("{} finish".format(self.id()))
-
+class CmdlineTmpl(BaseTmpl):
     def build_script(self, script):
         with open("cmdline_test.py", "w") as f:
             f.write(script)

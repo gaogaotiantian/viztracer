@@ -6,6 +6,7 @@ import random
 import time
 import cProfile
 from viztracer import VizTracer
+from .base_tmpl import BaseTmpl
 
 
 class Timer:
@@ -23,7 +24,7 @@ class Timer:
         return time.perf_counter() - self.timer
 
 
-class TestPerformance(unittest.TestCase):
+class TestPerformance(BaseTmpl):
     def do_one_function(self, func):
         # the original speed
         with Timer() as t:
@@ -142,7 +143,7 @@ class TestPerformance(unittest.TestCase):
         self.do_one_function(list_operation)
 
 
-class TestFilterPerformance(unittest.TestCase):
+class TestFilterPerformance(BaseTmpl):
     def do_one_function(self, func):
         tracer = VizTracer(verbose=0)
         tracer.start()

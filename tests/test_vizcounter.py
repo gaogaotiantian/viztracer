@@ -3,6 +3,7 @@
 
 import unittest
 from viztracer import VizTracer, VizCounter
+from .base_tmpl import BaseTmpl
 
 
 class Hello(VizCounter):
@@ -10,7 +11,7 @@ class Hello(VizCounter):
         super().__init__(tracer, name, trigger_on_change=False)
 
 
-class TestCounterClass(unittest.TestCase):
+class TestCounterClass(BaseTmpl):
     def test_basic(self):
         tracer = VizTracer()
         tracer.start()

@@ -11,6 +11,7 @@ import shutil
 import builtins
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer, ignore_function, trace_and_save, get_tracer
+from .base_tmpl import BaseTmpl
 
 
 def fib(n):
@@ -19,7 +20,7 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 
 
-class TestTracerBasic(unittest.TestCase):
+class TestTracerBasic(BaseTmpl):
     def test_construct(self):
         def fib(n):
             if n == 1 or n == 0:
@@ -59,7 +60,7 @@ class TestTracerBasic(unittest.TestCase):
         self.assertEqual(entries, 0)
 
 
-class TestVizTracerBasic(unittest.TestCase):
+class TestVizTracerBasic(BaseTmpl):
     def test_run(self):
         snap = VizTracer()
         snap.run("import random; random.randrange(10)", output_file="test_run.json")
@@ -107,7 +108,7 @@ class TestVizTracerBasic(unittest.TestCase):
         os.remove("result_flamegraph.html")
 
 
-class TestVizTracerOutput(unittest.TestCase):
+class TestVizTracerOutput(BaseTmpl):
     def test_json(self):
         t = _VizTracer()
         t.start()
@@ -117,7 +118,7 @@ class TestVizTracerOutput(unittest.TestCase):
         t.generate_json()
 
 
-class TestInstant(unittest.TestCase):
+class TestInstant(BaseTmpl):
     def test_addinstant(self):
         tracer = VizTracer()
         tracer.start()
@@ -135,7 +136,7 @@ class TestInstant(unittest.TestCase):
         self.assertEqual(entries, 0)
 
 
-class TestFunctionArg(unittest.TestCase):
+class TestFunctionArg(BaseTmpl):
     def test_addfunctionarg(self):
         def f(tracer):
             tracer.add_functionarg("hello", "world")
@@ -148,7 +149,7 @@ class TestFunctionArg(unittest.TestCase):
                         "hello" in tracer.data["traceEvents"][0]["args"])
 
 
-class TestDecorator(unittest.TestCase):
+class TestDecorator(BaseTmpl):
     def test_pause_resume(self):
         @ignore_function
         def ignore(n):
@@ -186,7 +187,7 @@ class TestDecorator(unittest.TestCase):
             self.assertEqual(a.returncode, 0)
 
 
-class TestLogPrint(unittest.TestCase):
+class TestLogPrint(BaseTmpl):
     def test_log_print(self):
         tracer = VizTracer(log_print=True)
         tracer.start()
@@ -199,7 +200,7 @@ class TestLogPrint(unittest.TestCase):
         self.assertEqual(entries, 4)
 
 
-class TestForkSave(unittest.TestCase):
+class TestForkSave(BaseTmpl):
     def test_basic(self):
         def fib(n):
             if n == 1 or n == 0:
@@ -234,7 +235,7 @@ class TestForkSave(unittest.TestCase):
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
 
-class TestGlobalTracer(unittest.TestCase):
+class TestGlobalTracer(BaseTmpl):
     def test_get_tracer(self):
         with self.assertRaises(NameError):
             tmp = __viz_tracer__ # noqa: F821

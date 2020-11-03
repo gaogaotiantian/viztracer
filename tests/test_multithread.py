@@ -5,6 +5,7 @@ import unittest
 from viztracer import VizTracer
 import time
 import threading
+from .base_tmpl import BaseTmpl
 
 
 def fib(n):
@@ -19,7 +20,7 @@ class MyThread(threading.Thread):
         fib(10)
 
 
-class TestMultithread(unittest.TestCase):
+class TestMultithread(BaseTmpl):
     def test_basic(self):
         tracer = VizTracer(max_stack_depth=4)
         tracer.start()

@@ -4,6 +4,7 @@
 import unittest
 from viztracer import VizTracer
 from viztracer import VizObject
+from .base_tmpl import BaseTmpl
 
 
 class Hello(VizObject):
@@ -23,7 +24,7 @@ class Hello(VizObject):
         self.b += "b"
 
 
-class TestVizObject(unittest.TestCase):
+class TestVizObject(BaseTmpl):
     def test_basic(self):
         tracer = VizTracer()
         tracer.start()

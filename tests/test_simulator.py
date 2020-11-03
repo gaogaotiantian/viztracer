@@ -6,6 +6,7 @@ import sys
 import unittest
 import subprocess
 from .util import get_json_file_path, adapt_json_file, generate_json
+from .base_tmpl import BaseTmpl
 
 
 adapt_json_file("vdb_basic.json")
@@ -77,7 +78,7 @@ class SimInterface:
         self.close()
 
 
-class TestSimulator(unittest.TestCase):
+class TestSimulator(BaseTmpl):
     def get_func_stack(self, result):
         line = result.replace("\r\n", "").replace("\n", "").replace("> ", " ")
         return [s.split('.')[-1] for s in line.split() if '.' in s]

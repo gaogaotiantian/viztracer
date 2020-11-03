@@ -9,6 +9,7 @@ import json
 import shutil
 from .util import get_json_file_path
 from .cmdline_tmpl import CmdlineTmpl
+from .base_tmpl import BaseTmpl
 
 
 file_c_function = \
