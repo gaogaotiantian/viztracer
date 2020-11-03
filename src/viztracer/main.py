@@ -336,7 +336,7 @@ class VizUI:
             if self.options.open:
                 import webbrowser
                 try:
-                    webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
+                    webbrowser.open(get_url_from_file(os.path.abspath(self.ofile)))
                 except webbrowser.Error:  # pragma: no cover
                     return False, "Can not open the report"
             exit(0)
