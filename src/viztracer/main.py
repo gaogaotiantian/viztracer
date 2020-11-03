@@ -19,12 +19,13 @@ from .code_monkey import CodeMonkey
 
 class VizUI:
     def __init__(self):
+        self.tracer = None
         self.parser = self.create_parser()
         self.verbose = 1
         self.ofile = "result.html"
         self.options = None
         self.args = []
-        self._saving = False
+        self._exiting = False
         self.multiprocess_output_dir = "./viztracer_multiprocess_tmp"
 
     def create_parser(self):
@@ -167,10 +168,14 @@ class VizUI:
         def func_after_fork(tracer):
 
             def exit_routine():
-                self.save(tracer)
+                self.exit_routine()
 
             from multiprocessing.util import Finalize
+            import signal
             Finalize(tracer, exit_routine, exitpriority=32)
+            def term_handler(signalnum, frame):
+                self.exit_routine()
+            signal.signal(signal.SIGTERM, term_handler)
 
         from multiprocessing.util import register_after_fork
         tracer.pid_suffix = True
@@ -212,6 +217,8 @@ class VizUI:
             pid_suffix=options.pid_suffix
         )
 
+        self.tracer = tracer
+
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
             if get_start_method() != "fork":
@@ -221,27 +228,15 @@ class VizUI:
         builtins.__dict__["__viz_tracer__"] = tracer
 
         def term_handler(signalnum, frame):
-            if not self._saving:
-                self.save(tracer)
-                atexit.unregister(self.save)
-                exit(0)
+            self.exit_routine()
         signal.signal(signal.SIGTERM, term_handler)
 
-        atexit.register(self.save, tracer)
+        atexit.register(self.exit_routine)
         tracer.start()
         exec(code, global_dict)
         tracer.stop()
-        atexit.unregister(self.save)
-        self.save(tracer)
 
-        if options.open:
-            import webbrowser
-            try:
-                webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
-            except webbrowser.Error:  # pragma: no cover
-                return False, "Can not open the report"
-
-        return True, None
+        self.exit_routine()
 
     def run_module(self):
         import runpy
@@ -311,8 +306,6 @@ class VizUI:
         return True, None
 
     def save(self, tracer):
-        self._saving = True
-
         options = self.options
         ofile = self.ofile
 
@@ -335,6 +328,18 @@ class VizUI:
         else:
             tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
 
+    def exit_routine(self):
+        atexit.unregister(self.exit_routine)
+        if not self._exiting:
+            self._exiting = True
+            self.save(self.tracer)
+            if self.options.open:
+                import webbrowser
+                try:
+                    webbrowser.open(get_url_from_file(os.path.abspath(ofile)))
+                except webbrowser.Error:  # pragma: no cover
+                    return False, "Can not open the report"
+            exit(0)
 
 def main():
     ui = VizUI()
