@@ -13,7 +13,7 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 
 
-class TestTracer(unittest.TestCase):
+class TestTracer(BaseTmpl):
     def test_double_parse(self):
         tracer = _VizTracer()
         tracer.start()
@@ -26,7 +26,7 @@ class TestTracer(unittest.TestCase):
         self.assertEqual(result1, result2)
 
 
-class TestCTracer(unittest.TestCase):
+class TestCTracer(BaseTmpl):
     def test_c_load(self):
         tracer = _VizTracer()
         tracer.start()
@@ -59,7 +59,7 @@ class TestCTracer(unittest.TestCase):
         tracer.cleanup()
 
 
-class TestCircularBuffer(unittest.TestCase):
+class TestCircularBuffer(BaseTmpl):
     def test_wrap(self):
         tracer = _VizTracer(tracer_entries=10)
         tracer.start()
@@ -69,7 +69,7 @@ class TestCircularBuffer(unittest.TestCase):
         self.assertEqual(entries, 10)
 
 
-class TestTracerFilter(unittest.TestCase):
+class TestTracerFilter(BaseTmpl):
     def test_max_stack_depth(self):
         tracer = _VizTracer(max_stack_depth=3)
         tracer.start()
@@ -169,7 +169,7 @@ class TestTracerFilter(unittest.TestCase):
         self.assertEqual(entries, 1)
 
 
-class TestTracerFeature(unittest.TestCase):
+class TestTracerFeature(BaseTmpl):
     def test_log_return_value(self):
         tracer = _VizTracer()
         tracer.start()
