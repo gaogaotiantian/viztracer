@@ -19,6 +19,12 @@ fib(5)
 
 
 class CmdlineTmpl(unittest.TestCase):
+    def setUp(self):
+        print("{} start".format(self.id()))
+
+    def tearDown(self):
+        print("{} finish".format(self.id()))
+
     def build_script(self, script):
         with open("cmdline_test.py", "w") as f:
             f.write(script)
