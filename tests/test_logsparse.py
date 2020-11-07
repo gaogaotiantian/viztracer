@@ -56,4 +56,4 @@ class TestLogSparse(CmdlineTmpl):
 
     def test_multiprocess(self):
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"], script=file_pool, expected_output_file="result.json", expected_entries=21)
+            self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"], script=file_pool, expected_output_file="result.json", expected_entries=21, concurrency="multiprocessing")
