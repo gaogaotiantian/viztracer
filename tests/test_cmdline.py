@@ -254,7 +254,10 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=2)
 
     def test_ignore_function(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_ignore_function, expected_output_file="result.json", expected_entries=6)
+        def check_func(data):
+            for entry in data["traceEvents"]:
+                self.assertNotEqual(entry["name"], "f")
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_ignore_function, expected_output_file="result.json", check_func=check_func)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
