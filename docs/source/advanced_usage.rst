@@ -208,6 +208,18 @@ an object, but there are just too many entries to it. It could be ``self.attr_na
 ``--`` is added to resolve the ambiguity. Every time an attribute matches regex ``attr_name`` is assigned a value, it will be logged.
 If you don't know what regex is, simply using the full name of the attribute as ``attr_name`` will allow you to log the attribute
 
+Log Function Entry
+------------------
+
+You can log when a function is called with VizTracer. This is helpful to label the timeline for some crucial function
+
+.. code-block:: 
+
+    viztracer --log_func_entry <func_name> -- my_script.py
+
+``--`` is added to resolve the ambiguity. Every time an function matches regex ``func_name`` is called, it will be logged.
+If you don't know what regex is, simply using the full name of the function as ``func_name`` will allow you to log the function 
+
 Log Function Execution
 ----------------------
 
