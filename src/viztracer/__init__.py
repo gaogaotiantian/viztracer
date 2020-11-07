@@ -4,6 +4,13 @@
 __version__ = "0.9.2"
 
 
+def get_tracer():
+    try:
+        return __viz_tracer__
+    except NameError:
+        return None
+
+
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
 from .decorator import ignore_function, trace_and_save
@@ -22,14 +29,8 @@ __all__ = [
     "FlameGraph",
     "ignore_function",
     "trace_and_save",
+    "get_tracer",
     "VizCounter",
     "VizObject",
     "VizLoggingHandler"
 ]
-
-
-def get_tracer():
-    try:
-        return __viz_tracer__
-    except NameError:
-        return None

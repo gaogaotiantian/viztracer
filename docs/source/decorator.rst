@@ -7,7 +7,13 @@ Decorator
 
     .. code-block:: python
 
+        # This only works when you are using VizTracer from command line
         @ignore_function
+        def function_you_want_to_ignore():
+            # function body
+
+        # You need to specify tracer when you are using inline 
+        @ignore_function(tracer=tracer)
         def function_you_want_to_ignore():
             # function body
 

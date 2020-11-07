@@ -540,13 +540,9 @@ static PyObject*
 snaptrace_pause(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
-        //struct ThreadInfo* info = get_thread_info(curr_tracer);
         PyGILState_STATE state = PyGILState_Ensure();
         PyEval_SetProfile(NULL, NULL);
         PyGILState_Release(state);
-        //if (info) {
-        //    info->paused += 1;
-        //}
     }
 
     Py_RETURN_NONE;
@@ -556,13 +552,9 @@ static PyObject*
 snaptrace_resume(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
-        struct ThreadInfo* info = get_thread_info(curr_tracer);
         PyGILState_STATE state = PyGILState_Ensure();
         PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)curr_tracer);
         PyGILState_Release(state);
-        //if (info && info->paused > 0) {
-        //    info->paused -= 1;
-        //}
     }
 
     Py_RETURN_NONE;

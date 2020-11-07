@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
-from viztracer import VizTracer
+from viztracer import VizTracer, get_tracer
 import os
 import time
 
@@ -11,7 +11,7 @@ def ignore_function(method=None, tracer=None):
 
     print(method, tracer)
     if not tracer:
-        tracer = __viz_tracer__
+        tracer = get_tracer()
     
     def inner(func):
 
