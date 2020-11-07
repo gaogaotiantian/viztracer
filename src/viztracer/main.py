@@ -64,6 +64,8 @@ class VizUI:
                             help="log attribute with specified names")
         parser.add_argument("--log_func_exec", nargs="*", default=None,
                             help="log execution of function with specified names")
+        parser.add_argument("--log_func_entry", nargs="*", default=None,
+                            help="log entry of the function with specified names")
         parser.add_argument("--log_exception", action="store_true", default=False,
                             help="log all exception when it's raised")
         parser.add_argument("--log_subprocess", action="store_true", default=False,
@@ -219,13 +221,13 @@ class VizUI:
 
         self.tracer = tracer
 
+        builtins.__dict__["__viz_tracer__"] = tracer
+
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
             if get_start_method() != "fork":
                 return False, "Only fork based multiprocess is supported"
             self.patch_multiprocessing(tracer)
-
-        builtins.__dict__["__viz_tracer__"] = tracer
 
         def term_handler(signalnum, frame):
             self.exit_routine()
@@ -258,7 +260,7 @@ class VizUI:
         file_name = search_result
         code_string = open(file_name, "rb").read()
         if options.log_var or options.log_number or options.log_attr or \
-                options.log_func_exec or options.log_exception:
+                options.log_func_exec or options.log_exception or options.log_func_entry:
             monkey = CodeMonkey(code_string, file_name)
             if options.log_var:
                 monkey.add_instrument("log_var", {"varnames": options.log_var})
@@ -268,6 +270,8 @@ class VizUI:
                 monkey.add_instrument("log_attr", {"varnames": options.log_attr})
             if options.log_func_exec:
                 monkey.add_instrument("log_func_exec", {"funcnames": options.log_func_exec})
+            if options.log_func_entry:
+                monkey.add_instrument("log_func_entry", {"funcnames": options.log_func_entry})
             if options.log_exception:
                 monkey.add_instrument("log_exception", {})
             builtins.compile = monkey.compile

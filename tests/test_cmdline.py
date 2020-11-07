@@ -222,6 +222,9 @@ class TestCommandLineBasic(CmdlineTmpl):
                     self.assertEqual(len(entry["args"]["exec_steps"]), 2)
         self.template(["viztracer", "--log_func_exec", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_func_exec, expected_output_file="result.json", check_func=check_func)
 
+    def test_log_func_entry(self):
+        self.template(["viztracer", "--log_func_entry", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_func_exec, expected_output_file="result.json", expected_entries=7)
+
     def test_log_exception(self):
         self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=3)
         # Coverage for visit_Raise without change
