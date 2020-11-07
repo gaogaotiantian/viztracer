@@ -23,7 +23,8 @@ typedef enum _NodeType {
     FEE_NODE = 1,
     INSTANT_NODE = 2,
     COUNTER_NODE = 3,
-    OBJECT_NODE = 4
+    OBJECT_NODE = 4,
+    RAW_NODE = 5
 } NodeType;
 
 struct FEEData {
@@ -63,6 +64,7 @@ struct EventNode {
         struct InstantData instant;
         struct CounterData counter;
         struct ObjectData object;
+        PyObject* raw;
     } data;
 };
 

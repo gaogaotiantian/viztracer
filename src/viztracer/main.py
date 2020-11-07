@@ -52,6 +52,8 @@ class VizUI:
                             help="log return value of the function in the report")
         parser.add_argument("--log_print", action="store_true", default=False,
                             help="replace all print() function to adding an event to the result")
+        parser.add_argument("--log_sparse", action="store_true", default=False,
+                            help="log only selected functions with @log_sparse")
         parser.add_argument("--log_function_args", action="store_true", default=False,
                             help="log all function arguments, this will introduce large overhead")
         parser.add_argument("--log_gc", action="store_true", default=False,
@@ -234,7 +236,10 @@ class VizUI:
         signal.signal(signal.SIGTERM, term_handler)
 
         atexit.register(self.exit_routine)
-        tracer.start()
+        if options.log_sparse:
+            tracer.enable = True
+        else:
+            tracer.start()
         exec(code, global_dict)
         tracer.stop()
 

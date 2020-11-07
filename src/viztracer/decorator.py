@@ -51,3 +51,22 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
     if method:
         return inner(method)
     return inner
+
+def log_sparse(func):
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = get_tracer()._tracer.getts()
+        ret = func(*args, **kwargs)
+        dur = get_tracer()._tracer.getts() - start
+        raw_data = {
+            "ph": "X",
+            "name": func.__qualname__,
+            "ts": start,
+            "dur": dur,
+            "cat": "FEE"
+        }
+        get_tracer()._tracer.addraw(raw_data)
+        return ret
+
+    return wrapper

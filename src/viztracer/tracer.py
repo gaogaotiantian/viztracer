@@ -193,10 +193,12 @@ class _VizTracer:
         self._tracer.stop()
 
     def pause(self):
-        self._tracer.pause()
+        if self.enable:
+            self._tracer.pause()
 
     def resume(self):
-        self._tracer.resume()
+        if self.enable:
+            self._tracer.resume()
 
     def clear(self):
         self._tracer.clear()

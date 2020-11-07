@@ -13,7 +13,7 @@ def get_tracer():
 
 from .viztracer import VizTracer
 from .flamegraph import FlameGraph
-from .decorator import ignore_function, trace_and_save
+from .decorator import ignore_function, trace_and_save, log_sparse
 from .vizcounter import VizCounter
 from .vizobject import VizObject
 from .vizlogging import VizLoggingHandler
@@ -29,6 +29,7 @@ __all__ = [
     "FlameGraph",
     "ignore_function",
     "trace_and_save",
+    "log_sparse",
     "get_tracer",
     "VizCounter",
     "VizObject",

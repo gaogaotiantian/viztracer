@@ -33,8 +33,10 @@ static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* 
 static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_getts(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_function_args(struct FunctionNode* node, PyFrameObject* frame);
@@ -127,6 +129,10 @@ static inline void clear_node(struct EventNode* node) {
         node->data.object.id = NULL;
         node->data.object.name = NULL;
         node->data.object.args = NULL;
+        break;
+    case RAW_NODE:
+        Py_DECREF(node->data.raw);
+        node->data.raw = NULL;
         break;
     default:
         printf("Unknown Node Type When Clearing!\n");
@@ -253,8 +259,10 @@ static PyMethodDef Tracer_methods[] = {
     {"addinstant", (PyCFunction)snaptrace_addinstant, METH_VARARGS, "add instant event"},
     {"addcounter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
+    {"addraw", (PyCFunction)snaptrace_addraw, METH_VARARGS, "add raw event"},
     {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
+    {"getts", (PyCFunction)snaptrace_getts, METH_VARARGS, "get timestamp"},
     {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
     {NULL, NULL, 0, NULL}
@@ -541,7 +549,17 @@ snaptrace_pause(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
-        PyEval_SetProfile(NULL, NULL);
+        struct ThreadInfo* info = get_thread_info((TracerObject*)self);
+
+        if (!info->paused) {
+            PyEval_SetProfile(NULL, NULL);
+            // When we enter this function, viztracer.pause and
+            // tracer.pause both have been called. We need to
+            // reduce the ignore_stack_depth to simulate the
+            // returns from these two functions
+            info->ignore_stack_depth -= 2;
+            info->paused = 1;
+        }
         PyGILState_Release(state);
     }
 
@@ -553,7 +571,19 @@ snaptrace_resume(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
-        PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)curr_tracer);
+        struct ThreadInfo* info = get_thread_info((TracerObject*)self);
+
+        if (info->paused) {
+            PyEval_SetProfile(snaptrace_tracefunc, self);
+            // When we enter this function, viztracer.pause and
+            // tracer.pause both have been called but not recorded.
+            // It seems like C function tracer.pause's return will not
+            // be recorded.
+            // We need to increment the ignore_stack_depth to simulate the
+            // call of the function
+            info->ignore_stack_depth += 1;
+            info->paused = 0;
+        }
         PyGILState_Release(state);
     }
 
@@ -679,6 +709,19 @@ snaptrace_load(TracerObject* self, PyObject* args)
                 PyDict_SetItemString(dict, "args", node->data.object.args);
             }
             break;
+        case RAW_NODE:
+            // We still need to tid from node and we need the pid
+            tid = PyLong_FromLong(node->tid);
+
+            Py_DECREF(dict);
+            dict = node->data.raw;
+
+            PyDict_SetItemString(dict, "pid", pid);
+            PyDict_SetItemString(dict, "tid", tid);
+            Py_DECREF(tid);
+
+            Py_INCREF(dict);
+            break;
         default:
             printf("Unknown Node Type!\n");
             exit(1);
@@ -752,6 +795,14 @@ snaptrace_setpid(TracerObject* self, PyObject* args)
     }
 
     Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_getts(TracerObject* self, PyObject* args)
+{
+    double ts = get_ts();
+
+    return PyFloat_FromDouble(ts);
 }
 
 static PyObject*
@@ -965,6 +1016,26 @@ snaptrace_addobject(TracerObject* self, PyObject* args)
     Py_INCREF(id);
     Py_INCREF(name);
     Py_INCREF(object_args);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_addraw(TracerObject* self, PyObject* args)
+{
+    PyObject* raw = NULL;
+    struct ThreadInfo* info = get_thread_info(self);
+    struct EventNode* node = NULL;
+    if (!PyArg_ParseTuple(args, "O", &raw)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    node = get_next_node(self);
+    node->tid = info->tid;
+    node->ntype = RAW_NODE;
+    node->data.raw = raw;
+    Py_INCREF(raw);
 
     Py_RETURN_NONE;
 }
