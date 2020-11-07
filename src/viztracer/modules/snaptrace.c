@@ -255,12 +255,12 @@ static PyMethodDef Tracer_methods[] = {
     {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
     {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
+    {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
+    {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
     {NULL, NULL, 0, NULL}
 };
 
 static PyMethodDef Snaptrace_methods[] = {
-    {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
-    {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -540,10 +540,13 @@ static PyObject*
 snaptrace_pause(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
-        struct ThreadInfo* info = get_thread_info(curr_tracer);
-        if (info) {
-            info->paused += 1;
-        }
+        //struct ThreadInfo* info = get_thread_info(curr_tracer);
+        PyGILState_STATE state = PyGILState_Ensure();
+        PyEval_SetProfile(NULL, NULL);
+        PyGILState_Release(state);
+        //if (info) {
+        //    info->paused += 1;
+        //}
     }
 
     Py_RETURN_NONE;
@@ -554,9 +557,12 @@ snaptrace_resume(PyObject* self, PyObject* args)
 {
     if (curr_tracer->collecting) {
         struct ThreadInfo* info = get_thread_info(curr_tracer);
-        if (info && info->paused > 0) {
-            info->paused -= 1;
-        }
+        PyGILState_STATE state = PyGILState_Ensure();
+        PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)curr_tracer);
+        PyGILState_Release(state);
+        //if (info && info->paused > 0) {
+        //    info->paused -= 1;
+        //}
     }
 
     Py_RETURN_NONE;

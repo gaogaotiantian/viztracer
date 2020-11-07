@@ -192,6 +192,12 @@ class _VizTracer:
             self.restore_print()
         self._tracer.stop()
 
+    def pause(self):
+        self._tracer.pause()
+
+    def resume(self):
+        self._tracer.resume()
+
     def clear(self):
         self._tracer.clear()
 

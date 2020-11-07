@@ -3,20 +3,30 @@
 
 import functools
 from viztracer import VizTracer
-import viztracer.snaptrace as snaptrace
 import os
 import time
 
 
-def ignore_function(func):
-    @functools.wraps(func)
-    def ignore_wrapper(*args, **kwargs):
-        snaptrace.pause()
-        ret = func(*args, **kwargs)
-        snaptrace.resume()
-        return ret
+def ignore_function(method=None, tracer=None):
 
-    return ignore_wrapper
+    print(method, tracer)
+    if not tracer:
+        tracer = __viz_tracer__
+    
+    def inner(func):
+
+        @functools.wraps(func)
+        def ignore_wrapper(*args, **kwargs):
+            tracer.pause()
+            ret = func(*args, **kwargs)
+            tracer.resume()
+            return ret
+
+        return ignore_wrapper
+
+    if method:
+        return inner(method)
+    return inner 
 
 
 def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):

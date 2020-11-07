@@ -151,12 +151,13 @@ class TestFunctionArg(BaseTmpl):
 
 class TestDecorator(BaseTmpl):
     def test_pause_resume(self):
-        @ignore_function
+        tracer = VizTracer()
+
+        @ignore_function(tracer=tracer)
         def ignore(n):
             if n == 0:
                 return 1
             return ignore(n-1) + 1
-        tracer = VizTracer()
         tracer.start()
         ignore(10)
         tracer.stop()
