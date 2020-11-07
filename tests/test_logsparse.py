@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from .cmdline_tmpl import CmdlineTmpl
+import multiprocessing
 
 
 file_basic = \
@@ -54,5 +55,5 @@ class TestLogSparse(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", expected_entries=1)
 
     def test_multiprocess(self):
-        self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"], script=file_pool, expected_output_file="result.json", expected_entries=21)
-
+        if multiprocessing.get_start_method() == "fork":
+            self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"], script=file_pool, expected_output_file="result.json", expected_entries=21)

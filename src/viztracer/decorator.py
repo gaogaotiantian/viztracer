@@ -8,8 +8,6 @@ import time
 
 
 def ignore_function(method=None, tracer=None):
-
-    print(method, tracer)
     if not tracer:
         tracer = get_tracer()
     

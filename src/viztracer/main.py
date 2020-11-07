@@ -177,6 +177,7 @@ class VizUI:
             from multiprocessing.util import Finalize
             import signal
             Finalize(tracer, exit_routine, exitpriority=32)
+
             def term_handler(signalnum, frame):
                 self.exit_routine()
             signal.signal(signal.SIGTERM, term_handler)
@@ -349,6 +350,7 @@ class VizUI:
                 except webbrowser.Error:  # pragma: no cover
                     return False, "Can not open the report"
             exit(0)
+
 
 def main():
     ui = VizUI()
