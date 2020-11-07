@@ -30,8 +30,14 @@ class AstTransformer(ast.NodeTransformer):
             for funcname in self.inst_args["funcnames"]:
                 if re.fullmatch(funcname, node.name):
                     self.log_func_exec_enable = True
+        elif self.inst_type == "log_func_entry":
+            for funcname in self.inst_args["funcnames"]:
+                if re.fullmatch(funcname, node.name):
+                    node.body.insert(0, self.get_instrument_node(node.name))
         self.generic_visit(node)
-        self.log_func_exec_enable = False
+
+        if self.inst_type == "log_func_exec":
+            self.log_func_exec_enable = False
         return node
 
     def visit_Raise(self, node):
@@ -129,6 +135,12 @@ class AstTransformer(ast.NodeTransformer):
                     name=name,
                     val=ast.Name(id=name, ctx=ast.Load()),
                     lineno=self.curr_lineno
+            )
+        elif self.inst_type == "log_func_entry":
+            return self.get_add_variable_node(
+                    name=name,
+                    var_node=ast.Constant(value="{} is called".format(name)),
+                    event="instant"
             )
         else:
             raise ValueError("{} is not supported".format(name))
