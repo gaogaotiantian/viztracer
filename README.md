@@ -100,6 +100,7 @@ VizTracer can filter out the data you don't want to reduce overhead and keep inf
 * [include files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.include_files)
 * [exclude files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.exclude_files)
 * [ignore c function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.ignore_c_function)
+* [sparse log](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-sparse)
 
 ### Extra Logs without Code Change
 
