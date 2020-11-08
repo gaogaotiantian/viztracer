@@ -254,6 +254,7 @@ class VizUI:
             "modname": self.options.module
         }
         sys.argv = [self.options.module] + self.command[:]
+        sys.path.append(os.getcwd())
         return self.run_code(code, global_dict)
 
     def run_command(self):
