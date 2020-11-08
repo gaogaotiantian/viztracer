@@ -48,7 +48,7 @@ class CmdlineTmpl(BaseTmpl):
                  cleanup=True,
                  check_func=None,
                  concurrency=None):
-        if os.getenv("COVERAGE_RUN") and "viztracer" in cmd_list:
+        if os.getenv("COVERAGE_RUN"):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")
             elif "python" in cmd_list:
