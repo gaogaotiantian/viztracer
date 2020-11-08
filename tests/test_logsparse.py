@@ -56,6 +56,9 @@ class TestLogSparse(CmdlineTmpl):
     def test_basic(self):
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", expected_entries=1)
 
+    def test_without_tracer(self):
+        self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)
+
     def test_multiprocess(self):
         if multiprocessing.get_start_method() == "fork":
             if not("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8):

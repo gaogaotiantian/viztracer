@@ -79,6 +79,30 @@ It's possible that you want to ignore some arbitrary functions and their descend
 
 For detailed usage of filters, please refer to :doc:`viztracer`
 
+Log Sparse
+----------
+
+You can make VizTracer log only certain functions using ``--log_sparse``. This is helpful when you are only interested in the time spent on
+specific functions for a big picture on larger projects. 
+
+First, you need to add decorator ``@log_sparse`` on the function you want to log
+
+.. code-block:: python
+
+    @log_sparse
+    def function_you_want_to_log():
+        # function body
+
+Then just call viztracer with ``--log_sparse``
+
+.. code-block:: 
+
+    viztracer --log_sparse your_script.py
+    
+When you are using ``--log_sparse``, due to the nature of the recording, some advanced features may not work with it.
+
+You can leave ``@log_sparse`` as it is when you are not running the script with VizTracer. It will be like a no-op.
+
 Custom Events
 -------------
 

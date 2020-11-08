@@ -48,8 +48,11 @@ class CmdlineTmpl(BaseTmpl):
                  cleanup=True,
                  check_func=None,
                  concurrency=None):
-        if os.getenv("COVERAGE_RUN"):
-            idx = cmd_list.index("viztracer")
+        if os.getenv("COVERAGE_RUN") and "viztracer" in cmd_list:
+            if "viztracer" in cmd_list:
+                idx = cmd_list.index("viztracer")
+            elif "python" in cmd_list:
+                idx = cmd_list.index("python")
             if not concurrency:
                 cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
             elif concurrency == "multiprocessing":

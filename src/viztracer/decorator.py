@@ -54,17 +54,21 @@ def log_sparse(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        start = get_tracer()._tracer.getts()
-        ret = func(*args, **kwargs)
-        dur = get_tracer()._tracer.getts() - start
-        raw_data = {
-            "ph": "X",
-            "name": func.__qualname__,
-            "ts": start,
-            "dur": dur,
-            "cat": "FEE"
-        }
-        get_tracer()._tracer.addraw(raw_data)
+        tracer = get_tracer()
+        if tracer:
+            start = tracer._tracer.getts()
+            ret = func(*args, **kwargs)
+            dur = tracer._tracer.getts() - start
+            raw_data = {
+                "ph": "X",
+                "name": func.__qualname__,
+                "ts": start,
+                "dur": dur,
+                "cat": "FEE"
+            }
+            tracer._tracer.addraw(raw_data)
+        else:
+            ret = func(*args, **kwargs)
         return ret
 
     return wrapper
