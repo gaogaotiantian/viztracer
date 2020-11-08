@@ -802,7 +802,7 @@ snaptrace_getts(TracerObject* self, PyObject* args)
 {
     double ts = get_ts();
 
-    return PyFloat_FromDouble(ts);
+    return PyFloat_FromDouble(ts / 1000);
 }
 
 static PyObject*
