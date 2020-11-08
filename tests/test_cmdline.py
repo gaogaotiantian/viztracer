@@ -18,6 +18,7 @@ lst = []
 lst.append(1)
 """
 
+
 file_main = \
 """
 if __name__ == '__main__':
@@ -25,11 +26,13 @@ if __name__ == '__main__':
     lst.append(1)
 """
 
+
 file_argv = \
 """
 import sys
 assert(sys.argv)
 """
+
 
 file_gc = \
 """
@@ -38,12 +41,14 @@ lst = []
 gc.collect()
 """
 
+
 file_exit = \
 """
 lst = []
 lst.append(1)
 exit(0)
 """
+
 
 file_log_var = \
 """
@@ -66,6 +71,7 @@ unrelated, *a = 1, 2, 3
 [abc, d] = 3, 4
 """
 
+
 file_log_attr = \
 """
 class Stub:
@@ -85,6 +91,7 @@ a, abc = (1, 2)
 unrelated, *s.a = 1, 2, 3
 [abc, d] = 3, 4
 """
+
 
 file_log_func_exec = \
 """
@@ -113,6 +120,22 @@ try:
 except Exception:
     pass
 """
+
+
+file_ignore_function = \
+"""
+from viztracer import ignore_function
+
+@ignore_function
+def f():
+    return 1
+
+def g():
+    return f()
+
+g()
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -229,6 +252,12 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=3)
         # Coverage for visit_Raise without change
         self.template(["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"], script=file_log_exception, expected_output_file="result.json", expected_entries=2)
+
+    def test_ignore_function(self):
+        def check_func(data):
+            for entry in data["traceEvents"]:
+                self.assertNotEqual(entry["name"], "f")
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_ignore_function, expected_output_file="result.json", check_func=check_func)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

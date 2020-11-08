@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import platform
-import os
 import subprocess
 
 
@@ -44,3 +43,10 @@ def get_url_from_file(file_path):
             raise Exception("Can't convert path '{}' to Windows path".format(file_path))
 
     return file_path
+
+
+def get_tracer():
+    try:
+        return __viz_tracer__
+    except NameError:
+        return None

@@ -192,6 +192,14 @@ class _VizTracer:
             self.restore_print()
         self._tracer.stop()
 
+    def pause(self):
+        if self.enable:
+            self._tracer.pause()
+
+    def resume(self):
+        if self.enable:
+            self._tracer.resume()
+
     def clear(self):
         self._tracer.clear()
 
@@ -289,12 +297,12 @@ class _VizTracer:
         self.system_print = builtins.print
 
         def new_print(*args, **kwargs):
-            snaptrace.pause()
+            self.pause()
             io = StringIO()
             kwargs["file"] = io
             self.system_print(*args, **kwargs)
             self.add_instant("print", {"string": io.getvalue()})
-            snaptrace.resume()
+            self.resume()
         builtins.print = new_print
 
     def restore_print(self):
