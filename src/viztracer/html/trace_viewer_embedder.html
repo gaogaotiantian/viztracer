@@ -149,6 +149,7 @@ function updateCodeSection() {
     var codeNode = threadRoot.getElementById("code-viewer");
 
     threadRoot.getElementById("codeView").style.height = height.toString() + "px";
+    codeNode.innerHTML = "Unable to locate the source code";
 
     var file_data = json_data["file_info"]["functions"][funcName];
     if (file_data) {
