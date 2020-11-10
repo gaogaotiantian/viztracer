@@ -4,6 +4,7 @@
 from string import Template
 import os
 import io
+import re
 try:
     import orjson as json
 except ImportError:
@@ -53,7 +54,7 @@ class ReportBuilder:
                 if "traceEvents" in one:
                     self.combined_json["traceEvents"].extend(one["traceEvents"])
 
-    def generate_json(self, allow_binary=False):
+    def generate_json(self, allow_binary=False, file_info=False):
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
@@ -66,6 +67,26 @@ class ReportBuilder:
                 color_print("WARNING", "    use --quiet to shut me up")
                 print("")
 
+        if file_info:
+            self.combined_json["file_info"] = {"files":{}, "functions":{}}
+            pattern = re.compile(r"(.*)\(([0-9]*)\)\..*")
+            file_dict = self.combined_json["file_info"]["files"]
+            func_dict = self.combined_json["file_info"]["functions"]
+            for event in self.combined_json["traceEvents"]:
+                if event["ph"] == 'X':
+                    if event["name"] not in func_dict:
+                        try:
+                            m = pattern.match(event["name"])
+                            file_name = m.group(1)
+                            lineno = m.group(2)
+                            if file_name not in file_dict:
+                                with open(file_name, "r") as f:
+                                    content = f.read()
+                                    file_dict[file_name] = [content, content.count("\n")] 
+                            func_dict[event["name"]] = [file_name, lineno]
+                        except:
+                            pass
+
         if json.__name__ == "orjson":
             if allow_binary:
                 return json.dumps(self.combined_json)
@@ -74,13 +95,13 @@ class ReportBuilder:
         else:
             return json.dumps(self.combined_json)
 
-    def generate_report(self):
+    def generate_report(self, file_info=False):
         sub = {}
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
             tmpl = f.read()
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
             sub["trace_viewer_full"] = f.read()
-        sub["json_data"] = self.generate_json()
+        sub["json_data"] = self.generate_json(file_info=file_info)
 
         if self.verbose > 0:
             print("Generating HTML report")
@@ -90,6 +111,6 @@ class ReportBuilder:
     def save(self, output_file="result.html"):
         with open(output_file, "w", encoding="utf-8") as f:
             if output_file.split(".")[-1] == "html":
-                f.write(self.generate_report())
+                f.write(self.generate_report(file_info=True))
             else:
                 f.write(self.generate_json())

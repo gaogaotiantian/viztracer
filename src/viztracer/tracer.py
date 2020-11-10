@@ -310,7 +310,7 @@ class _VizTracer:
 
     def generate_report(self):
         builder = ReportBuilder(self.data, verbose=self.verbose)
-        return builder.generate_report()
+        return builder.generate_report(file_info=True)
 
     def generate_json(self, allow_binary=False):
         builder = ReportBuilder(self.data, verbose=self.verbose)
