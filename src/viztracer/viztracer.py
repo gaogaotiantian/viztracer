@@ -25,6 +25,7 @@ class VizTracer(_VizTracer):
                  log_gc=False,
                  novdb=False,
                  pid_suffix=False,
+                 file_info=False,
                  output_file="result.html"):
         super().__init__(
                 tracer_entries=tracer_entries,
@@ -41,6 +42,7 @@ class VizTracer(_VizTracer):
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix
+        self.file_info = file_info
         self.output_file = output_file
         self.system_print = None
 
@@ -92,7 +94,9 @@ class VizTracer(_VizTracer):
         self.stop()
         self.save(output_file)
 
-    def save(self, output_file=None, save_flamegraph=False, file_info=False):
+    def save(self, output_file=None, save_flamegraph=False, file_info=None):
+        if file_info is None:
+            file_info = self.file_info
         enabled = False
         if self.enable:
             enabled = True
