@@ -172,8 +172,10 @@ function updateCodeSection() {
       var total_lineno = json_data["file_info"]["files"][file_name][1];
       var highlighted_html = Prism.highlight(raw_code, Prism.languages.python, 'python');
       codeNode.innerHTML = highlighted_html;
-      var portion = codeNode.offsetHeight * lineno / total_lineno;
-      codeViewNode.scrollTo(0, portion);
+      setTimeout(() => {
+        var portion = 5 + codeNode.offsetHeight * (lineno-1) / total_lineno;
+        codeViewNode.scrollTo(0, portion);
+      }, 100);
     }
   } catch (error) {
   }

@@ -78,7 +78,7 @@ class ReportBuilder:
                         try:
                             m = pattern.match(event["name"])
                             file_name = m.group(1)
-                            lineno = m.group(2)
+                            lineno = int(m.group(2))
                             if file_name not in file_dict:
                                 with open(file_name, "r") as f:
                                     content = f.read()
