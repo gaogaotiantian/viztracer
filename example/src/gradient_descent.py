@@ -136,7 +136,9 @@ def test_gradient_descent():
 
 
 if __name__ == "__main__":
-    with VizTracer(log_print=True, output_file=os.path.join(os.path.dirname(__file__), "../", "json/gradient_descent.json")) as tracer:
+    with VizTracer(log_print=True,
+                   output_file=os.path.join(os.path.dirname(__file__), "../", "json/gradient_descent.json"),
+                   file_info=True) as tracer:
         counter = VizCounter(tracer, "log(1 + cost)")
         run_gradient_descent()
         test_gradient_descent()

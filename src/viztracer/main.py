@@ -36,6 +36,8 @@ class VizUI:
                             help="output file path. End with .json or .html or .gz")
         parser.add_argument("--output_dir", nargs="?", default=None,
                             help="output directory. Should only be used when --pid_suffix is used")
+        parser.add_argument("--file_info", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--quiet", action="store_true", default=False,
                             help="stop VizTracer from printing anything")
         parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
@@ -337,7 +339,7 @@ class VizUI:
             else:  # pragma: no cover
                 tracer.save(save_flamegraph=options.save_flamegraph)
         else:
-            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph)
+            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph, file_info=options.file_info)
 
     def exit_routine(self):
         atexit.unregister(self.exit_routine)

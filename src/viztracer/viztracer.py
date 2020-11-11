@@ -25,6 +25,7 @@ class VizTracer(_VizTracer):
                  log_gc=False,
                  novdb=False,
                  pid_suffix=False,
+                 file_info=False,
                  output_file="result.html"):
         super().__init__(
                 tracer_entries=tracer_entries,
@@ -41,6 +42,7 @@ class VizTracer(_VizTracer):
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix
+        self.file_info = file_info
         self.output_file = output_file
         self.system_print = None
 
@@ -92,7 +94,9 @@ class VizTracer(_VizTracer):
         self.stop()
         self.save(output_file)
 
-    def save(self, output_file=None, save_flamegraph=False):
+    def save(self, output_file=None, save_flamegraph=False, file_info=None):
+        if file_info is None:
+            file_info = self.file_info
         enabled = False
         if self.enable:
             enabled = True
@@ -117,12 +121,12 @@ class VizTracer(_VizTracer):
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(self.generate_report())
         elif file_type == "json":
-            data = self.generate_json(allow_binary=True)
+            data = self.generate_json(allow_binary=True, file_info=file_info)
             open_option = "wb" if type(data) is bytes else "w"
             with open(output_file, open_option) as f:
                 f.write(data)
         elif file_type == "gz":
-            data = self.generate_json(allow_binary=True)
+            data = self.generate_json(allow_binary=True, file_info=file_info)
             if type(data) is not bytes:
                 data = data.encode("utf-8")
             with gzip.open(output_file, "wb") as f:

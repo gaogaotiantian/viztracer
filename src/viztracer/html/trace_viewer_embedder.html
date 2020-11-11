@@ -10,6 +10,9 @@ https://github.com/catapult-project/catapult/blob/master/tracing/LICENSE
 <!-- WebComponent V0 polyfill. You may want to host this in a more suitable
      place. See https://crbug.com/1036492 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/0.7.24/webcomponents.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-core.min.js" integrity="sha512-hqRrGU7ys5tkcqxx5FIZTBb7PkO2o3mU6U5+qB9b55kgMlBUT4J2wPwQfMCxeJW1fC8pBxuatxoH//z0FInhrA==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/components/prism-python.min.js" integrity="sha512-EXseTM1JV8e3AonU5PfOUmzbPkUTRm4c4hVxv206gVeWZE/FwzSQBNWrUBaHsN3Idq9k76BEjUlXpluX1UFx6Q==" crossorigin="anonymous"></script>
 <script>
 'use strict';
 
@@ -47,17 +50,16 @@ $trace_viewer_full
 <script>
 'use strict';
 
-
+var json_data;
 (function() {
   let viewer;
   let url;
   let model;
 
-  var json_data = $json_data
-
   // You can set this to true if you want to hide the WebComponentsV0 polyfill
   // warning.
-  window.__hideTraceViewerPolyfillWarning = false;
+  window.__hideTraceViewerPolyfillWarning = true;
+  json_data = $json_data
 
   function load() {
     const req = new XMLHttpRequest();
@@ -125,7 +127,82 @@ $trace_viewer_full
     const p = i.importTracesWithProgressDialog([json_data]);
     p.then(onModelLoaded, onImportFail);
   });
+
 }());
+
+var windowType = null;
+if (window.location.href.startsWith("http")) {
+  windowType = "web";
+} else if (window.location.href.startsWith("file")) {
+  windowType = "file";
+}
+
+function updateCodeSection() {
+  try {
+    if (windowType == "file") {
+      var viewer = document.getElementById("trace-viewer");
+      var tabRoot = viewer.shadowRoot
+                          .getElementById("analysis")
+                          .getElementsByTagName("tr-ui-b-tab-view")[0]
+                          .shadowRoot
+      var threadRoot = tabRoot.getElementById("subView")
+                              .getElementsByTagName("tr-ui-a-single-thread-slice-sub-view")[0]
+                              .shadowRoot;
+      var table = threadRoot.getElementById("content")
+                            .shadowRoot
+                            .getElementById("table")
+      var codeViewNode = threadRoot.getElementById("codeView");
+      var codeNode = threadRoot.getElementById("code-viewer");
+
+      var funcName = table.tableRows_[0].value.textContent;
+    } else if (windowType == "web") {
+      var codeViewNode = document.getElementById("codeView");
+      var codeNode = document.getElementById("code-viewer");
+      var funcName = document.getElementById("table").tableRows_[0].value.textContent.split("\n")[0];
+    }
+
+    resizeCodeSection();
+
+    codeNode.innerHTML = "Unable to locate the source code";
+    var file_data = json_data["file_info"]["functions"][funcName];
+    if (file_data) {
+      var file_name = file_data[0];
+      var lineno = file_data[1];
+      var raw_code = json_data["file_info"]["files"][file_name][0];
+      var total_lineno = json_data["file_info"]["files"][file_name][1];
+      var highlighted_html = Prism.highlight(raw_code, Prism.languages.python, 'python');
+      codeNode.innerHTML = highlighted_html;
+      setTimeout(() => {
+        var portion = 5 + codeNode.offsetHeight * (lineno-1) / total_lineno;
+        codeViewNode.scrollTo(0, portion);
+      }, 100);
+    }
+  } catch (error) {
+  }
+}
+
+function resizeCodeSection() {
+  try {
+    if (windowType == "file") {
+      var viewer = document.getElementById("trace-viewer");
+      var tabRoot = viewer.shadowRoot
+                          .getElementById("analysis")
+                          .getElementsByTagName("tr-ui-b-tab-view")[0]
+                          .shadowRoot
+      var threadRoot = tabRoot.getElementById("subView")
+                              .getElementsByTagName("tr-ui-a-single-thread-slice-sub-view")[0]
+                              .shadowRoot;
+  
+      var height = viewer.shadowRoot.getElementById("analysis").offsetHeight - tabRoot.getElementById("tabs").offsetHeight - 7;
+      threadRoot.getElementById("codeView").style.height = height.toString() + "px";
+    } else if (windowType == "web") {
+      var height = document.getElementById("analysis").offsetHeight - document.getElementById("tabs").offsetHeight - 7;
+      document.getElementById("codeView").style.height = height.toString() + "px";
+    }
+  } catch (error) {
+  }
+}
+
 </script>
 </head>
 <body>

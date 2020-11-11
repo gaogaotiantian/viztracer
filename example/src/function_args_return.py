@@ -8,6 +8,8 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 
 
-with VizTracer(log_function_args=True, log_return_value=True, 
-        output_file=os.path.join(os.path.dirname(__file__), "../", "json/function_args_return.json")):
+with VizTracer(log_function_args=True, 
+               log_return_value=True, 
+               file_info=True,
+               output_file=os.path.join(os.path.dirname(__file__), "../", "json/function_args_return.json")):
     fib(6)
