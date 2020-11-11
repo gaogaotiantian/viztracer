@@ -58,7 +58,7 @@ var json_data;
 
   // You can set this to true if you want to hide the WebComponentsV0 polyfill
   // warning.
-  window.__hideTraceViewerPolyfillWarning = false;
+  window.__hideTraceViewerPolyfillWarning = true;
   json_data = $json_data
 
   function load() {
@@ -130,27 +130,40 @@ var json_data;
 
 }());
 
+var windowType = null;
+if (window.location.href.startsWith("http")) {
+  windowType = "web";
+} else if (window.location.href.startsWith("file")) {
+  windowType = "file";
+}
+
 function updateCodeSection() {
   try {
-    var viewer = document.getElementById("trace-viewer");
-    var tabRoot = viewer.shadowRoot
-                        .getElementById("analysis")
-                        .getElementsByTagName("tr-ui-b-tab-view")[0]
-                        .shadowRoot
-    var threadRoot = tabRoot.getElementById("subView")
-                            .getElementsByTagName("tr-ui-a-single-thread-slice-sub-view")[0]
-                            .shadowRoot;
-    var height = viewer.shadowRoot.getElementById("analysis").offsetHeight - tabRoot.getElementById("tabs").offsetHeight - 7;
-    var table = threadRoot.getElementById("content")
-                       .shadowRoot
-                       .getElementById("table")
-    var funcName = table.tableRows_[0].value.textContent;
-    var codeViewNode = threadRoot.getElementById("codeView");
-    var codeNode = threadRoot.getElementById("code-viewer");
+    if (windowType == "file") {
+      var viewer = document.getElementById("trace-viewer");
+      var tabRoot = viewer.shadowRoot
+                          .getElementById("analysis")
+                          .getElementsByTagName("tr-ui-b-tab-view")[0]
+                          .shadowRoot
+      var threadRoot = tabRoot.getElementById("subView")
+                              .getElementsByTagName("tr-ui-a-single-thread-slice-sub-view")[0]
+                              .shadowRoot;
+      var table = threadRoot.getElementById("content")
+                            .shadowRoot
+                            .getElementById("table")
+      var codeViewNode = threadRoot.getElementById("codeView");
+      var codeNode = threadRoot.getElementById("code-viewer");
 
-    threadRoot.getElementById("codeView").style.height = height.toString() + "px";
+      var funcName = table.tableRows_[0].value.textContent;
+    } else if (windowType == "web") {
+      var codeViewNode = document.getElementById("codeView");
+      var codeNode = document.getElementById("code-viewer");
+      var funcName = document.getElementById("table").tableRows_[0].value.textContent.split("\n")[0];
+    }
+
+    resizeCodeSection();
+
     codeNode.innerHTML = "Unable to locate the source code";
-
     var file_data = json_data["file_info"]["functions"][funcName];
     if (file_data) {
       var file_name = file_data[0];
@@ -161,6 +174,28 @@ function updateCodeSection() {
       codeNode.innerHTML = highlighted_html;
       var portion = codeNode.offsetHeight * lineno / total_lineno;
       codeViewNode.scrollTo(0, portion);
+    }
+  } catch (error) {
+  }
+}
+
+function resizeCodeSection() {
+  try {
+    if (windowType == "file") {
+      var viewer = document.getElementById("trace-viewer");
+      var tabRoot = viewer.shadowRoot
+                          .getElementById("analysis")
+                          .getElementsByTagName("tr-ui-b-tab-view")[0]
+                          .shadowRoot
+      var threadRoot = tabRoot.getElementById("subView")
+                              .getElementsByTagName("tr-ui-a-single-thread-slice-sub-view")[0]
+                              .shadowRoot;
+  
+      var height = viewer.shadowRoot.getElementById("analysis").offsetHeight - tabRoot.getElementById("tabs").offsetHeight - 7;
+      threadRoot.getElementById("codeView").style.height = height.toString() + "px";
+    } else if (windowType == "web") {
+      var height = document.getElementById("analysis").offsetHeight - document.getElementById("tabs").offsetHeight - 7;
+      document.getElementById("codeView").style.height = height.toString() + "px";
     }
   } catch (error) {
   }
