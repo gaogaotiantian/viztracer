@@ -11,17 +11,13 @@ More help can be found by clicking "?" on the top right corner.
 
 [trace viewer](https://chromium.googlesource.com/catapult) is used to display the stand alone html data.
 
-VizTracer also supports json output that complies with Chrome trace event format, which can be loaded using [perfetto](https://ui.perfetto.dev/)
-
-VizTracer generates HTML report for flamegraph using [d3-flamegraph](https://github.com/spiermar/d3-flame-graph)
-
 ## Highlights
 
-* Detailed function entry/exit information on timeline, not just summary of time used
-* Super easy to use, no source code change for basic usage, no package dependency
+* Detailed function entry/exit information on timeline with source code
+* Super easy to use, no source code change for most features, no package dependency
 * Optional function filter to ignore functions you are not interested 
 * Custom events to log and track arbitrary data through time
-* Keep latest entries, dump anytime or auto save at exit
+* Log arbitrary function/variable using RegEx without code change
 * Stand alone HTML report with powerful front-end, or chrome-compatible json 
 * Works on Linux/MacOS/Windows
 
@@ -46,7 +42,7 @@ python3 my_script.py arg1 arg2
 You can simply use VizTracer by
 
 ```
-viztracer my_script arg1 arg2
+viztracer my_script.py arg1 arg2
 # OR
 python3 -m viztracer my_script.py arg1 arg2
 ```
