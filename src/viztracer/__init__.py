@@ -1,7 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-__version__ = "0.9.4"
+__version__ = "0.9.5"
 
 
 from .viztracer import VizTracer
