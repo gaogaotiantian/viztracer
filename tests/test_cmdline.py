@@ -241,7 +241,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         def check_func(data):
             for entry in data["traceEvents"]:
                 if entry["name"].startswith("a"):
-                    self.assertIn("exec_steps", entry.args)
+                    self.assertIn("exec_steps", entry["args"])
                     self.assertEqual(len(entry["args"]["exec_steps"]), 2)
         self.template(["viztracer", "--log_func_exec", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_func_exec, expected_output_file="result.json", check_func=check_func)
 
