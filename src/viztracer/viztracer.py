@@ -2,10 +2,10 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
-import gzip
 import multiprocessing
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
+from .report_builder import ReportBuilder
 
 
 # This is the interface of the package. Almost all user should use this
@@ -109,7 +109,6 @@ class VizTracer(_VizTracer):
             output_file_parts = output_file.split(".")
             output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
             output_file = ".".join(output_file_parts)
-        file_type = output_file.split(".")[-1]
 
         output_file = os.path.abspath(output_file)
         if not os.path.isdir(os.path.dirname(output_file)):
@@ -117,31 +116,23 @@ class VizTracer(_VizTracer):
 
         if self.verbose > 0:
             print("Saving report to {}...".format(os.path.abspath(output_file)))
-        if file_type == "html":
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(self.generate_report())
-        elif file_type == "json":
-            data = self.generate_json(allow_binary=True, file_info=file_info)
-            open_option = "wb" if type(data) is bytes else "w"
-            with open(output_file, open_option) as f:
-                f.write(data)
-        elif file_type == "gz":
-            data = self.generate_json(allow_binary=True, file_info=file_info)
-            if type(data) is not bytes:
-                data = data.encode("utf-8")
-            with gzip.open(output_file, "wb") as f:
-                f.write(data)
-        else:
-            raise Exception("Only html, json and gz are supported")
+
+        rb = ReportBuilder(self.data, self.verbose)
+        rb.save(output_file=output_file, file_info=self.file_info)
 
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
 
-        if self.verbose > 0:
-            print("Report saved.")
-
         if enabled:
             self.start()
+
+    def generate_json(self, allow_binary=False):
+        rb = ReportBuilder(self.data, self.verbose)
+        return rb.generate_json(allow_binary=allow_binary)
+
+    def generate_report(self):
+        rb = ReportBuilder(self.data, self.verbose)
+        return rb.generate_report()
 
     def fork_save(self, output_file=None, save_flamegraph=False):
         if multiprocessing.get_start_method() != "fork":
