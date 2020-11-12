@@ -7,7 +7,7 @@ import re
 
 
 class FuncTreeNode:
-    name_regex = r"(.*)\(([0-9]+)\)\.(.*)"
+    name_regex = r"(.*) \((.*?):([0-9]+)\)"
 
     def __init__(self, event=None):
         self.filename = None
@@ -32,9 +32,9 @@ class FuncTreeNode:
             m = re.match(self.name_regex, self.fullname)
             if m:
                 self.is_python = True
-                self.filename = m.group(1)
-                self.lineno = int(m.group(2))
-                self.funcname = m.group(3)
+                self.funcname = m.group(1)
+                self.filename = m.group(2)
+                self.lineno = int(m.group(3))
             if "caller_lineno" in self.event:
                 self.caller_lineno = self.event["caller_lineno"]
 

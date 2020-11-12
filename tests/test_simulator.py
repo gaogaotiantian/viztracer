@@ -81,7 +81,7 @@ class SimInterface:
 class TestSimulator(BaseTmpl):
     def get_func_stack(self, result):
         line = result.replace("\r\n", "").replace("\n", "").replace("> ", " ")
-        return [s.split('.')[-1] for s in line.split() if '.' in s]
+        return [s for s in line.split() if ':' not in s]
 
     def test_module_run(self):
         sim = SimInterface(vdb_fib)

@@ -632,10 +632,10 @@ snaptrace_load(TracerObject* self, PyObject* args)
         switch (node->ntype) {
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-                name = PyUnicode_FromFormat("%s(%d).%s", 
+                name = PyUnicode_FromFormat("%s (%s:%d)",
+                       PyUnicode_AsUTF8(node->data.fee.pycode->co_name),
                        PyUnicode_AsUTF8(node->data.fee.pycode->co_filename),
-                       node->data.fee.pycode->co_firstlineno,
-                       PyUnicode_AsUTF8(node->data.fee.pycode->co_name));
+                       node->data.fee.pycode->co_firstlineno);
             } else {
                 PyCFunctionObject* func = node->data.fee.cfunc;
                 if (func->m_module) {

@@ -16,7 +16,8 @@ class MyThread(threading.Thread):
         fib(7)
 
 
-with VizTracer(output_file=os.path.join(os.path.dirname(__file__), "../", "json/multithread.json")) as _:
+with VizTracer(output_file=os.path.join(os.path.dirname(__file__), "../", "json/multithread.json"),
+               file_info=True) as _:
     thread1 = MyThread()
     thread2 = MyThread()
     thread3 = MyThread()

@@ -4,6 +4,7 @@
 import os
 import json
 import subprocess
+import re
 
 
 def generate_json(filename):
@@ -23,13 +24,13 @@ def adapt_json_file(filename):
     py_path = ".".join(py_path_lst)
     with open(path) as f:
         data = json.loads(f.read())
+        name_regex = re.compile(r"(.*) \((.*):([0-9]*)\)")
         for event in data["traceEvents"]:
             if event["ph"] == "X":
                 try:
-                    idx = event["name"].index("(")
-                    if event["name"][:idx].endswith(py_filename):
-                        new_name = py_path + event["name"][idx:]
-                        event["name"] = new_name
+                    m = name_regex.match(event["name"])
+                    if m and py_filename in event["name"]:
+                        event["name"] = "{} ({}:{})".format(m.group(1), py_path, m.group(3))
                 except ValueError:
                     pass
 
