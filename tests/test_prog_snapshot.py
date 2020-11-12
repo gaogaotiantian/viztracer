@@ -79,21 +79,21 @@ class TestSnapShot(BaseTmpl):
         snap = ProgSnapshot(high_version_str)
 
     def test_object(self):
-        data = '{"traceEvents": [{"pid":1,"tid":1,"ts":0.05,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"ph": "N", "pid": 1, "tid": 1, "ts": 0.1, "id": 1000, "name": "a"}, {"ph": "D", "pid": 1, "tid": 1, "ts": 0.3, "id": 1000, "name": "a"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        data = '{"traceEvents": [{"pid":1,"tid":1,"ts":0.05,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"ph": "N", "pid": 1, "tid": 1, "ts": 0.1, "id": 1000, "name": "a"}, {"ph": "D", "pid": 1, "tid": 1, "ts": 0.3, "id": 1000, "name": "a"}], "viztracer_metadata": {"version": "0.9.5"}}'
         snap = ProgSnapshot(data)
         self.assertEqual(len(snap.object_events._objects), 1)
 
     def test_invalid(self):
-        data = '{"traceEvents": [{"ph": "hello"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        data = '{"traceEvents": [{"ph": "hello"}], "viztracer_metadata": {"version": "0.9.5"}}'
         with self.assertRaises(ValueError):
             _ = ProgSnapshot(data)
 
-        data = '{"traceEvents": [{"ph": "hello", "pid": 1, "tid": 1}], "viztracer_metadata": {"version": "0.6.2"}}'
+        data = '{"traceEvents": [{"ph": "hello", "pid": 1, "tid": 1}], "viztracer_metadata": {"version": "0.9.5"}}'
         with self.assertRaises(ValueError):
             _ = ProgSnapshot(data)
 
     def test_multiple_process(self):
-        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7761,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7761,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.9.5"}}'
         snap = ProgSnapshot(data)
         self.assertEqual(len(list(snap.get_trees())), 2)
 
@@ -101,7 +101,7 @@ class TestSnapShot(BaseTmpl):
         _ = snap.list_pid()
 
     def test_change_parent(self):
-        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":0,"dur":100,"name":"grandpa","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":50,"dur":10,"name":"grandson","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":10,"dur":80,"name":"son","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.6.2"}}'
+        data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":0,"dur":100,"name":"grandpa","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":50,"dur":10,"name":"grandson","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7762,"tid":7761,"ts":10,"dur":80,"name":"son","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.9.5"}}'
         snap = ProgSnapshot(data)
         tree = next(snap.get_trees())
         for node in tree.inorder_traverse():

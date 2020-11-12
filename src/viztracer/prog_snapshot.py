@@ -164,7 +164,7 @@ class ObjectEvents:
 
 
 class ProgSnapshot:
-    compatible_version = "0.6.2"
+    compatible_version = "0.9.5"
     def __init__(self, json_string=None, p=print):
         self.func_trees = {}
         self.curr_node = None
@@ -183,7 +183,7 @@ class ProgSnapshot:
     def load(self, json_string):
         self.func_trees = {}
         raw_data = json.loads(json_string)
-        if "viztracer_metadata" not in raw_data:
+        if "viztracer_metadata" not in raw_data.keys():
             color_print("FAIL", "Error, json file version too old.")
             return False
         else:
@@ -227,10 +227,12 @@ class ProgSnapshot:
             return
 
     def check_version(self, version):
-        if tuple(version.split(".")) < tuple(self.compatible_version.split(".")):
+        def get_version_tuple(v):
+            return tuple([int(elem) for elem in v.split(".")])
+        if get_version_tuple(version) < get_version_tuple(self.compatible_version):
             color_print("FAIL", "Error, json file version too old.")
             return False
-        elif tuple(version.split(".")) > tuple(__version__.split(".")):
+        elif get_version_tuple(version) > get_version_tuple(__version__):
             color_print("WARNING", "Warning, json file version is newer than vdb! Not sure if it's compatible")
         return True
 
