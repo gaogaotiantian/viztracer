@@ -5,6 +5,7 @@ from string import Template
 import os
 import io
 import re
+import gzip
 try:
     import orjson as json
 except ImportError:
@@ -68,7 +69,7 @@ class ReportBuilder:
                 print("")
 
         if file_info:
-            self.combined_json["file_info"] = {"files":{}, "functions":{}}
+            self.combined_json["file_info"] = {"files": {}, "functions": {}}
             pattern = re.compile(r".*\((.*):([0-9]*)\)")
             file_dict = self.combined_json["file_info"]["files"]
             func_dict = self.combined_json["file_info"]["functions"]
@@ -82,9 +83,9 @@ class ReportBuilder:
                             if file_name not in file_dict:
                                 with open(file_name, "r") as f:
                                     content = f.read()
-                                    file_dict[file_name] = [content, content.count("\n")] 
+                                    file_dict[file_name] = [content, content.count("\n")]
                             func_dict[event["name"]] = [file_name, lineno]
-                        except:
+                        except Exception:
                             pass
 
         if json.__name__ == "orjson":
@@ -108,9 +109,28 @@ class ReportBuilder:
 
         return Template(tmpl).substitute(sub)
 
-    def save(self, output_file="result.html"):
-        with open(output_file, "w", encoding="utf-8") as f:
-            if output_file.split(".")[-1] == "html":
+    def save(self, output_file="result.html", file_info=False):
+        file_type = output_file.split(".")[-1]
+
+        if self.verbose > 0:
+            print("Saving report to {}...".format(os.path.abspath(output_file)))
+
+        if file_type == "html":
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write(self.generate_report(file_info=True))
-            else:
-                f.write(self.generate_json())
+        elif file_type == "json":
+            data = self.generate_json(allow_binary=True, file_info=file_info)
+            open_option = "wb" if type(data) is bytes else "w"
+            with open(output_file, open_option) as f:
+                f.write(data)
+        elif file_type == "gz":
+            data = self.generate_json(allow_binary=True, file_info=file_info)
+            if type(data) is not bytes:
+                data = data.encode("utf-8")
+            with gzip.open(output_file, "wb") as f:
+                f.write(data)
+        else:
+            raise Exception("Only html, json and gz are supported")
+
+        if self.verbose > 0:
+            print("Report saved.")

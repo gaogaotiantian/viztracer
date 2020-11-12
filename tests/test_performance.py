@@ -5,6 +5,7 @@ import unittest
 import random
 import time
 import cProfile
+import os
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
 
@@ -42,8 +43,9 @@ class TestPerformance(BaseTmpl):
             tracer.parse()
             instrumented_c_novdb_parse = t.get_time()
         with Timer() as t:
-            tracer.generate_json(allow_binary=True)
+            tracer.save(output_file="tmp.json")
             instrumented_c_novdb_json = t.get_time()
+        os.remove("tmp.json")
         tracer.clear()
 
         # With viztracer + c tracer

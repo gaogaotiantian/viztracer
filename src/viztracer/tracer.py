@@ -6,7 +6,6 @@ import builtins
 import gc
 from io import StringIO
 from .util import color_print
-from .report_builder import ReportBuilder
 from . import __version__
 import viztracer.snaptrace as snaptrace
 
@@ -307,11 +306,3 @@ class _VizTracer:
 
     def restore_print(self):
         builtins.print = self.system_print
-
-    def generate_report(self):
-        builder = ReportBuilder(self.data, verbose=self.verbose)
-        return builder.generate_report(file_info=True)
-
-    def generate_json(self, allow_binary=False, file_info=False):
-        builder = ReportBuilder(self.data, verbose=self.verbose)
-        return builder.generate_json(allow_binary, file_info=file_info)

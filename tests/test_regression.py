@@ -21,7 +21,7 @@ class TestIssue1(BaseTmpl):
         timedelta(hours=5)
         tracer.stop()
         tracer.parse()
-        tracer.generate_json()
+        tracer.save(output_file="tmp.json")
 
         tracer = viztracer.VizTracer()
         tracer.start()
@@ -29,7 +29,8 @@ class TestIssue1(BaseTmpl):
         timedelta(hours=5)
         tracer.stop()
         tracer.parse()
-        tracer.generate_json()
+        tracer.save(output_file="tmp.json")
+        os.remove("tmp.json")
 
 
 class TestStackOptimization(BaseTmpl):

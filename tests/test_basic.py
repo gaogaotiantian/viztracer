@@ -32,7 +32,6 @@ class TestTracerBasic(BaseTmpl):
         t.stop()
         entries = t.parse()
         self.assertEqual(entries, 15)
-        t.generate_report()
 
     def test_builtin_func(self):
         import random
@@ -106,16 +105,6 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.save_flamegraph()
         self.assertTrue(os.path.exists("result_flamegraph.html"))
         os.remove("result_flamegraph.html")
-
-
-class TestVizTracerOutput(BaseTmpl):
-    def test_json(self):
-        t = _VizTracer()
-        t.start()
-        fib(10)
-        t.stop()
-        t.parse()
-        t.generate_json()
 
 
 class TestInstant(BaseTmpl):

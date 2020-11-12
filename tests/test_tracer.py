@@ -4,6 +4,7 @@
 import os
 import unittest
 from viztracer.tracer import _VizTracer
+from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
 
 
@@ -15,7 +16,7 @@ def fib(n):
 
 class TestTracer(BaseTmpl):
     def test_double_parse(self):
-        tracer = _VizTracer()
+        tracer = VizTracer()
         tracer.start()
         fib(10)
         tracer.stop()
@@ -35,7 +36,7 @@ class TestCTracer(BaseTmpl):
         tracer.parse()
 
     def test_c_run_after_clear(self):
-        tracer = _VizTracer()
+        tracer = VizTracer()
         tracer.start()
         fib(5)
         tracer.stop()
