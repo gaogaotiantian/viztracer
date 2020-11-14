@@ -4,12 +4,12 @@
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
-You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs. **Use "AWSD" to zoom/navigate**.
+You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs.
+The UI is powered by [Chrome Trace Viewer](https://chromium.googlesource.com/catapult). **Use "AWSD" to zoom/navigate**.
 More help can be found by clicking "?" on the top right corner.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
-[trace viewer](https://chromium.googlesource.com/catapult) is used to display the stand alone html data.
 
 ## Highlights
 
@@ -43,11 +43,9 @@ You can simply use VizTracer by
 
 ```
 viztracer my_script.py arg1 arg2
-# OR
-python3 -m viztracer my_script.py arg1 arg2
 ```
 
-which will generate a ```result.html``` file in the directory you run this command, which you can open with **Chrome**(**use AWSD to navigate/zoom**).
+which will generate a ```result.html``` file in the directory you run this command, which you can open with Chrome.
 
 You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
 
@@ -92,24 +90,23 @@ However, you can generate json file as well, which complies to the chrome trace 
 
 VizTracer can filter out the data you don't want to reduce overhead and keep info of a longer time period before you dump the log. 
 
-* [max stack depth](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.max_stack_depth)
-* [include files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.include_files)
-* [exclude files](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.exclude_files)
-* [ignore c function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.ignore_c_function)
-* [sparse log](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-sparse)
+* [Max Stack Depth](https://viztracer.readthedocs.io/en/stable/filter.html#max-stack-depth)
+* [Include Files](https://viztracer.readthedocs.io/en/stable/filter.html#include-files)
+* [Exclude Files](https://viztracer.readthedocs.io/en/stable/filter.html#exclude-files)
+* [Ignore C Function](https://viztracer.readthedocs.io/en/stable/filter.html#ignore-c-function)
+* [Sparse Log](https://viztracer.readthedocs.io/en/stable/filter.html#log-sparse)
 
 ### Extra Logs without Code Change
 
 VizTracer can log extra information without changing your source code
 
-* [```print()``` function](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-print)
-* [Garbage Collector Operation](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-garbage-collector)
-* [Function Input Arguments](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-arguments)
-* [Function Return Value](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-return-value)
-* [Function Entry](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-entry)
-* [Any Variable/Attribute with RegEx](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-variable)
-* [Variables in Specified Function](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-function-execution)
-* [Raised Exceptions](https://viztracer.readthedocs.io/en/stable/advanced_usage.html#log-exception)
+* [Any Variable/Attribute with RegEx](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-variable)
+* [Function Entry](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-entry)
+* [Variables in Specified Function](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-execution)
+* [Garbage Collector Operation](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-garbage-collector)
+* [Function Input Arguments](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-arguments)
+* [Function Return Value](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-return-value)
+* [Raised Exceptions](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-exception)
 
 ### Add Custom Event
 
@@ -118,9 +115,6 @@ VizTracer supports inserting custom events while the program is running. This wo
 * [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
 * [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
 * [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
-* [Arbitrary Value in Function](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_functionarg)
-
-**Check more [advanced usage](https://viztracer.readthedocs.io/en/stable/advanced_usage.html) for more features**
 
 ## Misc
 
@@ -136,7 +130,7 @@ VizTracer supports python native ```threading``` module without the need to do a
 VizTracer supports ```subprocess``` with ```--log_subprocess``` and ```multiprocessing``` or ```os.fork()``` with ```--log_multiprocess```.
 For more general multi-process cases, VizTracer can support with some extra steps. 
 
-Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_process.html) for details
+Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_thread_process.html) for details
 
 ### JSON alternative 
 
