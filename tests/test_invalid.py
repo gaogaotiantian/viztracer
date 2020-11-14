@@ -17,9 +17,9 @@ class TestInvalidArgs(BaseTmpl):
             "exclude_files": ["./src"],
             "ignore_c_function": ["hello", 1, "True"],
             "log_print": ["hello", 1, "True"],
-            "log_return_value": ["hello", 1, "True"],
+            "log_func_retval": ["hello", 1, "True"],
             "log_gc": ["hello", 1, "True"],
-            "log_function_args": ["hello", 1, "True"],
+            "log_func_args": ["hello", 1, "True"],
             "novdb": ["hello", 1, "True"]
         }
         tracer = VizTracer()

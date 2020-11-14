@@ -171,7 +171,7 @@ class TestTracerFilter(BaseTmpl):
 
 
 class TestTracerFeature(BaseTmpl):
-    def test_log_return_value(self):
+    def test_log_func_retval(self):
         tracer = _VizTracer()
         tracer.start()
         fib(5)
@@ -179,7 +179,7 @@ class TestTracerFeature(BaseTmpl):
         tracer.parse()
         self.assertFalse("args" in tracer.data["traceEvents"][0])
 
-        tracer.log_return_value = True
+        tracer.log_func_retval = True
         tracer.start()
         fib(5)
         tracer.stop()
@@ -202,8 +202,8 @@ class TestTracerFeature(BaseTmpl):
         tracer.parse()
         self.assertFalse("caller_lineno" in tracer.data["traceEvents"][0])
 
-    def test_log_function_args(self):
-        tracer = _VizTracer(log_function_args=True)
+    def test_log_func_args(self):
+        tracer = _VizTracer(log_func_args=True)
         tracer.start()
         fib(5)
         tracer.stop()

@@ -101,7 +101,7 @@ def a():
     n += 3
 
 def aba():
-    __viz_tracer__.add_functionarg("place", "holder")
+    __viz_tracer__.add_func_args("place", "holder")
     n2 = 3
     n2 += 5
 
@@ -186,14 +186,14 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_ignore_c_function(self):
         self.template(["python", "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)
 
-    def test_log_return_value(self):
-        self.template(["python", "-m", "viztracer", "--log_return_value", "cmdline_test.py"], script=file_c_function)
+    def test_log_func_retval(self):
+        self.template(["python", "-m", "viztracer", "--log_func_retval", "cmdline_test.py"], script=file_c_function)
 
     def test_novdb(self):
         self.template(["python", "-m", "viztracer", "--novdb", "cmdline_test.py"])
 
-    def test_log_function_args(self):
-        self.template(["python", "-m", "viztracer", "--log_function_args", "cmdline_test.py"])
+    def test_log_func_args(self):
+        self.template(["python", "-m", "viztracer", "--log_func_args", "cmdline_test.py"])
 
     def test_flamegraph(self):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"], expected_output_file=["result.html", "result_flamegraph.html"])

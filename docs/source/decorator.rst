@@ -12,7 +12,7 @@ Decorator
         def function_you_want_to_ignore():
             # function body
 
-        # You need to specify tracer when you are using inline 
+        # You can specify tracer if no global tracer is registered 
         @ignore_function(tracer=tracer)
         def function_you_want_to_ignore():
             # function body

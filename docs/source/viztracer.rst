@@ -9,8 +9,8 @@ VizTracer
                  exclude_files=None,\
                  ignore_c_function=False,\
                  ignore_non_file=False,\
-                 log_return_value=False,\
-                 log_function_args=False,\
+                 log_func_retval=False,\
+                 log_func_args=False,\
                  log_print=False,\
                  log_gc=False,\
                  novdb=False,\
@@ -128,7 +128,7 @@ VizTracer
 
             viztracer --ignore_non_file
 
-    .. py:attribute:: log_return_value 
+    .. py:attribute:: log_func_retval 
         :type: boolean
         :value: False
 
@@ -138,9 +138,9 @@ VizTracer
 
         .. code-block::
 
-            viztracer --log_return_value
+            viztracer --log_func_retval
     
-    .. py:attribute:: log_function_args 
+    .. py:attribute:: log_func_args 
         :type: boolean
         :value: False
 
@@ -150,7 +150,7 @@ VizTracer
 
         .. code-block::
 
-            viztracer --log_function_args
+            viztracer --log_func_args
     
     .. py:attribute:: log_print 
         :type: boolean
@@ -252,7 +252,7 @@ VizTracer
 
         Add instant event to the report. 
 
-    .. py:method:: add_functionarg(name, key, value)
+    .. py:method:: add_func_args(name, key, value)
         
         :param str key: key to display in the report
         :param object value: a jsonifiable object
