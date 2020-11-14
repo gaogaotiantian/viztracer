@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import shutil
+import re
 from .util import get_json_file_path
 from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
@@ -258,6 +259,11 @@ class TestCommandLineBasic(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 self.assertNotEqual(entry["name"], "f")
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_ignore_function, expected_output_file="result.json", check_func=check_func)
+
+    def test_show_version(self):
+        result = self.template(["viztracer", "--version"], script=None, expected_output_file=None)
+        m = re.match(".*\..*\..*", result.stdout.decode("utf-8").strip())
+        self.assertNotEqual(m, None)
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])

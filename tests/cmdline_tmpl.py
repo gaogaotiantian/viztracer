@@ -25,7 +25,8 @@ class CmdlineTmpl(BaseTmpl):
             f.write(script)
 
     def cleanup(self, output_file="result.html"):
-        os.remove("cmdline_test.py")
+        if os.path.exists("cmdline_test.py"):
+            os.remove("cmdline_test.py")
         if output_file:
             if type(output_file) is list:
                 for f in output_file:
@@ -59,7 +60,8 @@ class CmdlineTmpl(BaseTmpl):
                 idx = cmd_list.index("python")
                 cmd_list = ["coverage", "run", "--parallel-mode", "--pylib"] + cmd_list[idx+1:]
 
-        self.build_script(script)
+        if script:
+            self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=15)
         self.assertTrue(success ^ (result.returncode != 0))
         if expected_output_file:

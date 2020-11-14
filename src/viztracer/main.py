@@ -12,6 +12,7 @@ import signal
 import shutil
 from . import VizTracer
 from . import FlameGraph
+from . import __version__
 from .report_builder import ReportBuilder
 from .util import get_url_from_file
 from .code_monkey import CodeMonkey
@@ -30,6 +31,8 @@ class VizUI:
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
+        parser.add_argument("--version", action="store_true", default=False,
+                            help="show version of viztracer")
         parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
                             help="size of circular buffer. How many entries can it store")
         parser.add_argument("--output_file", "-o", nargs="?", default=None,
@@ -190,7 +193,9 @@ class VizUI:
         register_after_fork(tracer, func_after_fork)
 
     def run(self):
-        if self.options.module:
+        if self.options.version:
+            return self.show_version()
+        elif self.options.module:
             return self.run_module()
         elif self.command:
             return self.run_command()
@@ -315,6 +320,10 @@ class VizUI:
             ofile = "result.html"
         builder.save(output_file=ofile)
 
+        return True, None
+
+    def show_version(self):
+        print(__version__)
         return True, None
 
     def save(self, tracer):
