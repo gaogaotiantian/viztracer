@@ -73,6 +73,7 @@ It's possible that you want to ignore some arbitrary functions and their descend
 .. code-block:: python
 
     from viztracer import ignore_function
+    # This only works when there's a globally registered tracer
     @ignore_function
     def some_function():
         # nothing inside will be traced

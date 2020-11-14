@@ -15,6 +15,7 @@ VizTracer
                  log_gc=False,\
                  novdb=False,\
                  pid_suffix=False,\
+                 register_global=True,\
                  output_file="result.html")
 
     .. py:attribute:: tracer_entries
@@ -186,6 +187,22 @@ VizTracer
         .. code-block::
 
             viztracer --novdb
+
+    .. py:attribute:: register_global
+        :type: boolean
+        :value: True
+        
+        whether register the tracer globally, so every file can use ``get_tracer()`` to get this tracer. When command line
+        entry is used, the tracer will be automatically registered. When ``VizTracer()`` is manually instantiated, it will
+        be registered as well by default. 
+        
+        Some functions may require a globally registered tracer to work.
+
+        This attribute will only be effective when the object is initialized:
+
+        .. code-block:: python
+
+            tracer = VizTracer(register_global=False)
 
     .. py:attribute:: output_file
         :type: string
