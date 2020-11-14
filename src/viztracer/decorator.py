@@ -8,16 +8,20 @@ import time
 
 
 def ignore_function(method=None, tracer=None):
-    if not tracer:
-        tracer = get_tracer()
     
     def inner(func):
 
         @functools.wraps(func)
         def ignore_wrapper(*args, **kwargs):
-            tracer.pause()
+            # We need this to keep trace a local variable
+            t = tracer
+            if not t:
+                t = get_tracer()
+                if not t:
+                    raise NameError("ignore_function only works with global tracer")
+            t.pause()
             ret = func(*args, **kwargs)
-            tracer.resume()
+            t.resume()
             return ret
 
         return ignore_wrapper

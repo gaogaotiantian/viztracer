@@ -3,6 +3,7 @@
 
 import os
 import multiprocessing
+import builtins
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
@@ -26,6 +27,7 @@ class VizTracer(_VizTracer):
                  novdb=False,
                  pid_suffix=False,
                  file_info=False,
+                 register_global=True,
                  output_file="result.html"):
         super().__init__(
                 tracer_entries=tracer_entries,
@@ -45,6 +47,8 @@ class VizTracer(_VizTracer):
         self.file_info = file_info
         self.output_file = output_file
         self.system_print = None
+        if register_global:
+            self.register_global()
 
     @property
     def verbose(self):
@@ -81,6 +85,9 @@ class VizTracer(_VizTracer):
         self.stop()
         if type is None:
             self.save()
+
+    def register_global(self):
+        builtins.__dict__["__viz_tracer__"] = self
 
     def start(self):
         _VizTracer.start(self)

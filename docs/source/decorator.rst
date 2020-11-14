@@ -7,7 +7,7 @@ Decorator
 
     .. code-block:: python
 
-        # This only works when you are using VizTracer from command line
+        # This only works when there's a globally registered tracer
         @ignore_function
         def function_you_want_to_ignore():
             # function body
