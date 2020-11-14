@@ -1,10 +1,18 @@
-Multi Process
-=============
+Multi Thread and Multi Process
+==============================
+
+VizTracer supports both multi-thread and multi-process tracing. 
+
+threading
+---------
+
+VizTracer supports python native ``threading`` module without the need to do any modification to your code. 
+Just start ``VizTracer`` before you create threads and it will just work.
 
 subprocess
 ----------
 
-VizTracer supports ``subprocess`` module with ease. You only need to add ``--log_subprocess`` to make it work
+VizTracer supports ``subprocess`` with ``--log_subprocess``. You need to make sure the main process exits after subprocesses finish.
 
 .. code-block::
 
@@ -20,7 +28,9 @@ about solutions.
 multiprocessing or os.fork()
 ----------------------------
 
-If you are using multiprocessing library or pure ``os.fork()``. You can enable multi-process log by passing ``--log_multiprocess``. 
+VizTracer supports ``multiprocessing`` and pure ``os.fork()`` on Unix with ``--log_multiprocess``.
+You need to make sure the main process exits after the other processes finish. Presumably using
+``p.join()`` function.
 
 .. code-block::
 

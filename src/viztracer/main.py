@@ -53,13 +53,13 @@ class VizUI:
                             help="ignore all c functions including most builtin functions and libraries")
         parser.add_argument("--ignore_non_file", action="store_true", default=False,
                             help="ignore all functions that are not in a vaild file(like import)")
-        parser.add_argument("--log_return_value", action="store_true", default=False,
+        parser.add_argument("--log_func_retval", action="store_true", default=False,
                             help="log return value of the function in the report")
         parser.add_argument("--log_print", action="store_true", default=False,
                             help="replace all print() function to adding an event to the result")
         parser.add_argument("--log_sparse", action="store_true", default=False,
                             help="log only selected functions with @log_sparse")
-        parser.add_argument("--log_function_args", action="store_true", default=False,
+        parser.add_argument("--log_func_args", action="store_true", default=False,
                             help="log all function arguments, this will introduce large overhead")
         parser.add_argument("--log_gc", action="store_true", default=False,
                             help="log ref cycle garbage collection operations")
@@ -221,8 +221,8 @@ class VizUI:
             include_files=options.include_files,
             ignore_c_function=options.ignore_c_function,
             ignore_non_file=options.ignore_non_file,
-            log_return_value=options.log_return_value,
-            log_function_args=options.log_function_args,
+            log_func_retval=options.log_func_retval,
+            log_func_args=options.log_func_args,
             log_print=options.log_print,
             log_gc=options.log_gc,
             novdb=options.novdb,

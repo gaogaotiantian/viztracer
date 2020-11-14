@@ -128,7 +128,7 @@ class TestInstant(BaseTmpl):
 class TestFunctionArg(BaseTmpl):
     def test_addfunctionarg(self):
         def f(tracer):
-            tracer.add_functionarg("hello", "world")
+            tracer.add_func_args("hello", "world")
         tracer = VizTracer()
         tracer.start()
         f(tracer)

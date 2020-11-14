@@ -75,7 +75,7 @@ class TestSegFaultRegression(BaseTmpl):
 class TestFunctionArg(BaseTmpl):
     def test_functionarg(self):
         def f(n):
-            tracer.add_functionarg("input", n)
+            tracer.add_func_args("input", n)
             if n < 2:
                 return 1
             return f(n-1) + f(n-2)

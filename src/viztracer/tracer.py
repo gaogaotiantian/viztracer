@@ -18,8 +18,8 @@ class _VizTracer:
                  exclude_files=None,
                  ignore_c_function=False,
                  ignore_non_file=False,
-                 log_return_value=False,
-                 log_function_args=False,
+                 log_func_retval=False,
+                 log_func_args=False,
                  log_print=False,
                  log_gc=False,
                  novdb=False):
@@ -36,11 +36,11 @@ class _VizTracer:
         self.exclude_files = exclude_files
         self.ignore_c_function = ignore_c_function
         self.ignore_non_file = ignore_non_file
-        self.log_return_value = log_return_value
+        self.log_func_retval = log_func_retval
+        self.log_func_args = log_func_args
         self.log_print = log_print
         self.log_gc = log_gc
         self.novdb = novdb
-        self.log_function_args = log_function_args
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
@@ -106,15 +106,15 @@ class _VizTracer:
             raise ValueError("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
 
     @property
-    def log_return_value(self):
-        return self.__log_return_value
+    def log_func_retval(self):
+        return self.__log_func_retval
 
-    @log_return_value.setter
-    def log_return_value(self, log_return_value):
-        if type(log_return_value) is bool:
-            self.__log_return_value = log_return_value
+    @log_func_retval.setter
+    def log_func_retval(self, log_func_retval):
+        if type(log_func_retval) is bool:
+            self.__log_func_retval = log_func_retval
         else:
-            raise ValueError("log_return_value needs to be True or False, not {}".format(log_return_value))
+            raise ValueError("log_func_retval needs to be True or False, not {}".format(log_func_retval))
 
     @property
     def log_print(self):
@@ -128,15 +128,15 @@ class _VizTracer:
             raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
     @property
-    def log_function_args(self):
-        return self.__log_function_args
+    def log_func_args(self):
+        return self.__log_func_args
 
-    @log_function_args.setter
-    def log_function_args(self, log_function_args):
-        if type(log_function_args) is bool:
-            self.__log_function_args = log_function_args
+    @log_func_args.setter
+    def log_func_args(self, log_func_args):
+        if type(log_func_args) is bool:
+            self.__log_func_args = log_func_args
         else:
-            raise ValueError("log_function_args needs to be True or False, not {}".format(log_function_args))
+            raise ValueError("log_func_args needs to be True or False, not {}".format(log_func_args))
 
     @property
     def log_gc(self):
@@ -179,9 +179,9 @@ class _VizTracer:
             exclude_files=self.exclude_files,
             ignore_c_function=self.ignore_c_function,
             ignore_non_file=self.ignore_non_file,
-            log_return_value=self.log_return_value,
+            log_func_retval=self.log_func_retval,
             novdb=self.novdb,
-            log_function_args=self.log_function_args
+            log_func_args=self.log_func_args
         )
         self._tracer.start()
 
@@ -232,7 +232,7 @@ class _VizTracer:
         if self.enable:
             self._tracer.addobject(ph, obj_id, name, args)
 
-    def add_functionarg(self, key, value):
+    def add_func_args(self, key, value):
         if self.enable:
             self._tracer.addfunctionarg(key, value)
 
