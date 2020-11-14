@@ -221,12 +221,11 @@ class VizUI:
             log_print=options.log_print,
             log_gc=options.log_gc,
             novdb=options.novdb,
-            pid_suffix=options.pid_suffix
+            pid_suffix=options.pid_suffix,
+            register_global=True
         )
 
         self.tracer = tracer
-
-        builtins.__dict__["__viz_tracer__"] = tracer
 
         self.parent_pid = os.getpid()
         if options.log_multiprocess:

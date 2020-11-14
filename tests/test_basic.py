@@ -153,6 +153,21 @@ class TestDecorator(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
+    def test_ignore_function_without_global_tracer(self):
+
+        @ignore_function
+        def f():
+            return
+
+        if "__viz_tracer__" in builtins.__dict__:
+            builtins.__dict__.pop("__viz_tracer__")
+
+        tracer = VizTracer(register_global=False)
+
+        tracer.start()
+        with self.assertRaises(NameError):
+            f()
+
     def test_trace_and_save(self):
         @trace_and_save(output_dir="./tmp")
         def my_function(n):
@@ -227,10 +242,12 @@ class TestForkSave(BaseTmpl):
 
 class TestGlobalTracer(BaseTmpl):
     def test_get_tracer(self):
+        if "__viz_tracer__" in builtins.__dict__:
+            builtins.__dict__.pop("__viz_tracer__")
         with self.assertRaises(NameError):
             tmp = __viz_tracer__ # noqa: F821
         self.assertIs(get_tracer(), None)
-        tracer = VizTracer
+        tracer = VizTracer()
         builtins.__dict__["__viz_tracer__"] = tracer
         self.assertIs(get_tracer(), tracer)
         builtins.__dict__.pop("__viz_tracer__")

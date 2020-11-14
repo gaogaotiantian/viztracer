@@ -8,7 +8,7 @@ import os
 import time
 import sys
 import platform
-from viztracer import VizTracer
+from viztracer import VizTracer, ignore_function
 from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
 
@@ -138,3 +138,20 @@ class TestTermCaught(CmdlineTmpl):
         p.wait(timeout=10)
         self.assertTrue(os.path.exists("term.json"))
         self.cleanup(output_file="term.json")
+
+
+class TestIssue42(BaseTmpl):
+    def test_issue42(self):
+
+        @ignore_function
+        def f():
+            lst = []
+            lst.append(1)
+
+        tracer = VizTracer()
+        tracer.start()
+        f()
+        tracer.stop()
+        tracer.parse()
+        self.assertEqual(len(tracer.data["traceEvents"]), 0)
+
