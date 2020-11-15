@@ -1,5 +1,8 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
+
 import os
-import unittest
 from viztracer.report_builder import ReportBuilder
 from .base_tmpl import BaseTmpl
 

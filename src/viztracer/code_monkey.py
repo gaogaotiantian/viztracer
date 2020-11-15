@@ -45,7 +45,7 @@ class AstTransformer(ast.NodeTransformer):
             instrument_node = self.get_instrument_node_by_node(node.exc)
             return [instrument_node, node]
         return node
-    
+
     def _visit_generic_assign(self, node):
         self.generic_visit(node)
         ret = [node]
@@ -64,28 +64,28 @@ class AstTransformer(ast.NodeTransformer):
 
     def get_assign_targets(self, node):
         """
-        :param ast.Node node: 
+        :param ast.Node node:
         """
         if type(node) is ast.Name:
             return [node.id]
         elif type(node) is ast.Attribute or type(node) is ast.Subscript or type(node) is ast.Starred:
             return self.get_assign_targets(node.value)
         elif type(node) is ast.Tuple or type(node) is ast.List:
-            return reduce(lambda a, b: a+b, [self.get_assign_targets(elt) for elt in node.elts])
+            return reduce(lambda a, b: a + b, [self.get_assign_targets(elt) for elt in node.elts])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return []
 
     def get_assign_targets_with_attr(self, node):
         """
-        :param ast.Node node: 
+        :param ast.Node node:
         """
         if type(node) is ast.Attribute:
             return [node]
         elif type(node) is ast.Name or type(node) is ast.Subscript or type(node) is ast.Starred:
             return []
         elif type(node) is ast.Tuple or type(node) is ast.List:
-            return reduce(lambda a, b: a+b, [self.get_assign_targets_with_attr(elt) for elt in node.elts])
+            return reduce(lambda a, b: a + b, [self.get_assign_targets_with_attr(elt) for elt in node.elts])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return []

@@ -67,7 +67,7 @@ class FuncTreeNode:
                 other.children = new_children
                 other.parent = self
                 self.children = self.children[:start_idx] + [other] + self.children[end_idx:]
-            else: # pragma: no cover
+            else:  # pragma: no cover
                 raise Exception("This should not be possible")
         else:
             self.parent.adopt(other)
@@ -101,7 +101,7 @@ class FuncTree:
         if idx == 0:
             return self.root.children[0]
         else:
-            return self.root.children[idx-1]
+            return self.root.children[idx - 1]
 
     def normalize(self, first_ts):
         for node in self.inorder_traverse():

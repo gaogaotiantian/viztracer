@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
-import unittest
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
@@ -11,7 +10,7 @@ from .base_tmpl import BaseTmpl
 def fib(n):
     if n <= 1:
         return 1
-    return fib(n-1) + fib(n-2)
+    return fib(n - 1) + fib(n - 2)
 
 
 class TestTracer(BaseTmpl):
@@ -162,7 +161,7 @@ class TestTracerFilter(BaseTmpl):
     def test_ignore_non_file(self):
         tracer = _VizTracer(ignore_non_file=True)
         tracer.start()
-        import random
+        import random  # noqa: F401
         lst = []
         lst.append(1)
         tracer.stop()
@@ -184,8 +183,8 @@ class TestTracerFeature(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0] and
-                        "return_value" in tracer.data["traceEvents"][0]["args"])
+        self.assertTrue("args" in tracer.data["traceEvents"][0]
+                        and "return_value" in tracer.data["traceEvents"][0]["args"])
 
     def test_novdb(self):
         tracer = _VizTracer(novdb=False)

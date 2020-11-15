@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
 import ast
 from viztracer.code_monkey import CodeMonkey, AstTransformer
 from .base_tmpl import BaseTmpl
@@ -25,7 +24,7 @@ class TestAstTransformer(BaseTmpl):
         self.assertEqual(tf.get_assign_targets_with_attr("invalid"), [])
 
     def test_get_string_of_expr(self):
-        test_cases = ["a", "a[0]","a[1:]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
+        test_cases = ["a", "a[0]", "a[1:]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
         # just for coverage
         invalid_test_cases = ["a[1,2:3]", "a>b"]
         tf = AstTransformer("", "")

@@ -1,13 +1,11 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
 import viztracer
 import subprocess
 import os
 import time
 import sys
-import platform
 from viztracer import VizTracer, ignore_function
 from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
@@ -78,7 +76,7 @@ class TestFunctionArg(BaseTmpl):
             tracer.add_func_args("input", n)
             if n < 2:
                 return 1
-            return f(n-1) + f(n-2)
+            return f(n - 1) + f(n - 2)
         tracer = VizTracer()
         tracer.start()
         f(5)
@@ -101,9 +99,11 @@ print(options)
 if not options.script_option:
     exit(1)
 """
+
+
 class TestIssue21(CmdlineTmpl):
     # viztracer --run my_script --script_option
-    # is not parsed correctly because the program gets confused 
+    # is not parsed correctly because the program gets confused
     # about --script_option
     def test_issue21(self):
         self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"], script=issue21_code)
@@ -123,6 +123,8 @@ a.append(1)
 for i in range(10):
     time.sleep(1)
 """
+
+
 class TestTermCaught(CmdlineTmpl):
     def test_term(self):
         if sys.platform == "win32":
@@ -154,4 +156,3 @@ class TestIssue42(BaseTmpl):
         tracer.stop()
         tracer.parse()
         self.assertEqual(len(tracer.data["traceEvents"]), 0)
-

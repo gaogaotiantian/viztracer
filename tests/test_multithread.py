@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
 from viztracer import VizTracer
 import time
 import threading
@@ -12,7 +11,7 @@ def fib(n):
     if n < 2:
         return 1
     time.sleep(0.000001)
-    return fib(n-1) + fib(n-2)
+    return fib(n - 1) + fib(n - 2)
 
 
 class MyThread(threading.Thread):
