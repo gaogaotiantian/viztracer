@@ -25,8 +25,13 @@ jobs:
         pip install flake8
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Build manylinux Python wheels
+    - name: Build manylinux Python wheels with manylinux2014
       uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2014_x86_64
+      with:
+        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
+        pre-build-command: 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/'
+    - name: Build manylinux Python wheels with manylinux2010
+      uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2010_x86_64
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
         pre-build-command: 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/'
