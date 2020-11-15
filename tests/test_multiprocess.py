@@ -6,7 +6,6 @@ import sys
 import multiprocessing
 import platform
 from .cmdline_tmpl import CmdlineTmpl
-from .base_tmpl import BaseTmpl
 
 
 file_parent = \
@@ -123,7 +122,7 @@ class TestMultiprocessing(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
-        
+
         if multiprocessing.get_start_method() == "fork":
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func, concurrency="multiprocessing")
             if not("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8):

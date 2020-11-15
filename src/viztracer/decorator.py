@@ -8,7 +8,7 @@ import time
 
 
 def ignore_function(method=None, tracer=None):
-    
+
     def inner(func):
 
         @functools.wraps(func)
@@ -28,7 +28,7 @@ def ignore_function(method=None, tracer=None):
 
     if method:
         return inner(method)
-    return inner 
+    return inner
 
 
 def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
@@ -43,7 +43,7 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
             tracer.stop()
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
-            file_name = os.path.join(output_dir, "result_{}_{}.json".format(func.__name__, int(100000*time.time())))
+            file_name = os.path.join(output_dir, "result_{}_{}.json".format(func.__name__, int(100000 * time.time())))
             tracer.fork_save(file_name)
             tracer.cleanup()
             return ret
@@ -53,6 +53,7 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
     if method:
         return inner(method)
     return inner
+
 
 def log_sparse(func):
 

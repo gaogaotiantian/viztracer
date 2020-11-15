@@ -3,7 +3,6 @@
 
 from viztracer.event_base import _EventBase
 from viztracer import VizTracer
-import unittest
 from .base_tmpl import BaseTmpl
 
 

@@ -1,16 +1,11 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
-import subprocess
 import os
 import sys
-import json
-import shutil
 import re
 from .util import get_json_file_path
 from .cmdline_tmpl import CmdlineTmpl
-from .base_tmpl import BaseTmpl
 
 
 file_c_function = \
@@ -234,7 +229,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
         self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=19)
         self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=11)
-    
+
     def test_log_attr(self):
         self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_attr, expected_output_file="result.json", expected_entries=9)
 
@@ -262,7 +257,7 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_show_version(self):
         result = self.template(["viztracer", "--version"], script=None, expected_output_file=None)
-        m = re.match(".*\..*\..*", result.stdout.decode("utf-8").strip())
+        m = re.match(r".*\..*\..*", result.stdout.decode("utf-8").strip())
         self.assertNotEqual(m, None)
 
     def test_invalid_file(self):

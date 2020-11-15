@@ -3,7 +3,6 @@
 
 import os
 import sys
-import unittest
 import subprocess
 from .util import get_json_file_path, adapt_json_file, generate_json
 from .base_tmpl import BaseTmpl

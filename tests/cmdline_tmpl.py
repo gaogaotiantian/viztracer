@@ -5,7 +5,6 @@ import json
 import os
 import shutil
 import subprocess
-import unittest
 from .base_tmpl import BaseTmpl
 
 
@@ -40,12 +39,12 @@ class CmdlineTmpl(BaseTmpl):
             else:
                 raise Exception("Unexpected output file argument")
 
-    def template(self, 
-                 cmd_list, 
-                 expected_output_file="result.html", 
-                 success=True, 
-                 script=file_fib, 
-                 expected_entries=None, 
+    def template(self,
+                 cmd_list,
+                 expected_output_file="result.html",
+                 success=True,
+                 script=file_fib,
+                 expected_entries=None,
                  cleanup=True,
                  check_func=None,
                  concurrency=None):
@@ -58,7 +57,7 @@ class CmdlineTmpl(BaseTmpl):
                     cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
             elif "python" in cmd_list:
                 idx = cmd_list.index("python")
-                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib"] + cmd_list[idx+1:]
+                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib"] + cmd_list[idx + 1:]
 
         if script:
             self.build_script(script)

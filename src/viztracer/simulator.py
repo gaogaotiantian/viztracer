@@ -5,7 +5,7 @@ import sys
 import os
 import argparse
 try:
-    import readline
+    import readline  # noqa: F401
 except ImportError:
     pass
 

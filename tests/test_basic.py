@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
 import os
 import sys
 import subprocess
@@ -17,7 +16,7 @@ from .base_tmpl import BaseTmpl
 def fib(n):
     if n == 1 or n == 0:
         return 1
-    return fib(n-1) + fib(n-2)
+    return fib(n - 1) + fib(n - 2)
 
 
 class TestTracerBasic(BaseTmpl):
@@ -25,7 +24,7 @@ class TestTracerBasic(BaseTmpl):
         def fib(n):
             if n == 1 or n == 0:
                 return 1
-            return fib(n-1) + fib(n-2)
+            return fib(n - 1) + fib(n - 2)
         t = _VizTracer()
         t.start()
         fib(5)
@@ -35,6 +34,7 @@ class TestTracerBasic(BaseTmpl):
 
     def test_builtin_func(self):
         import random
+
         def fun(n):
             for _ in range(n):
                 random.randrange(n)
@@ -49,7 +49,7 @@ class TestTracerBasic(BaseTmpl):
         def fib(n):
             if n == 1 or n == 0:
                 return 1
-            return fib(n-1) + fib(n-2)
+            return fib(n - 1) + fib(n - 2)
         t = _VizTracer()
         t.start()
         fib(5)
@@ -134,8 +134,8 @@ class TestFunctionArg(BaseTmpl):
         f(tracer)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0] and
-                        "hello" in tracer.data["traceEvents"][0]["args"])
+        self.assertTrue("args" in tracer.data["traceEvents"][0]
+                        and "hello" in tracer.data["traceEvents"][0]["args"])
 
 
 class TestDecorator(BaseTmpl):
@@ -146,7 +146,7 @@ class TestDecorator(BaseTmpl):
         def ignore(n):
             if n == 0:
                 return 1
-            return ignore(n-1) + 1
+            return ignore(n - 1) + 1
         tracer.start()
         ignore(10)
         tracer.stop()
@@ -210,7 +210,7 @@ class TestForkSave(BaseTmpl):
         def fib(n):
             if n == 1 or n == 0:
                 return 1
-            return fib(n-1) + fib(n-2)
+            return fib(n - 1) + fib(n - 2)
         t = VizTracer(verbose=0)
         for i in range(5, 10):
             t.start()
@@ -240,12 +240,13 @@ class TestForkSave(BaseTmpl):
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
 
+
 class TestGlobalTracer(BaseTmpl):
     def test_get_tracer(self):
         if "__viz_tracer__" in builtins.__dict__:
             builtins.__dict__.pop("__viz_tracer__")
         with self.assertRaises(NameError):
-            tmp = __viz_tracer__ # noqa: F821
+            _ = __viz_tracer__  # noqa: F821
         self.assertIs(get_tracer(), None)
         tracer = VizTracer()
         builtins.__dict__["__viz_tracer__"] = tracer

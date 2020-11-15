@@ -62,7 +62,7 @@ class Frame:
                     end += 1
 
                 # clear the ending spaces
-                while lst[end-1].strip() == "":
+                while lst[end - 1].strip() == "":
                     end -= 1
             else:
                 end = len(lst)
@@ -114,7 +114,7 @@ class CounterEvents:
         if idx == 0:
             return {}
         else:
-            return self._events[idx-1]["args"]
+            return self._events[idx - 1]["args"]
 
 
 class ObjectEvents:
@@ -143,7 +143,7 @@ class ObjectEvents:
                 "ts": event["ts"],
                 "args": event["args"]["snapshot"]
             })
-        else: # pragma: no cover
+        else:  # pragma: no cover
             raise ValueError("Unexpected type for object event")
 
     def normalize(self, first_ts):
@@ -157,7 +157,7 @@ class ObjectEvents:
             ts_lst = [snapshot["ts"] for snapshot in entry["snapshots"]]
             idx = bisect.bisect(ts_lst, ts)
             if idx != 0:
-                snapshot = entry["snapshots"][idx-1]
+                snapshot = entry["snapshots"][idx - 1]
                 if snapshot["args"] is not None:
                     ret[entry["name"]] = snapshot["args"]
         return ret
@@ -165,6 +165,7 @@ class ObjectEvents:
 
 class ProgSnapshot:
     compatible_version = "0.9.5"
+
     def __init__(self, json_string=None, p=print):
         self.func_trees = {}
         self.curr_node = None
@@ -324,7 +325,7 @@ class ProgSnapshot:
             node = curr_frame.node
             idx = node.parent.children.index(node)
             if idx < len(node.parent.children) - 1:
-                self.curr_frame = Frame(None, node.parent.children[idx+1])
+                self.curr_frame = Frame(None, node.parent.children[idx + 1])
                 return True, None
             return False, "No callers available"
         curr_frame = curr_frame.parent
@@ -342,7 +343,7 @@ class ProgSnapshot:
             node = curr_frame.node
             idx = node.parent.children.index(node)
             if idx > 0:
-                self.curr_frame = Frame(None, node.parent.children[idx-1])
+                self.curr_frame = Frame(None, node.parent.children[idx - 1])
                 return True, None
             return False, "No callers available"
         curr_frame = curr_frame.parent

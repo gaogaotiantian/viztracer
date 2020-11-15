@@ -111,7 +111,7 @@ class VizUI:
             if idx == len(sys.argv) - 1:
                 return False, "You need to specify commands after --/--run"
             else:
-                options, command = self.parser.parse_args(argv[1:idx]), argv[idx+1:]
+                options, command = self.parser.parse_args(argv[1:idx]), argv[idx + 1:]
                 self.args = argv[1:idx]
         else:
             options, command = self.parser.parse_known_args(argv[1:])

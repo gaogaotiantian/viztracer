@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import unittest
 import random
 import time
 import cProfile
@@ -84,7 +83,7 @@ class TestPerformance(BaseTmpl):
             def _fib(n):
                 if n <= 1:
                     return 1
-                return _fib(n-1) + _fib(n-2)
+                return _fib(n - 1) + _fib(n - 2)
             return _fib(17)
         self.do_one_function(fib)
 
@@ -94,7 +93,7 @@ class TestPerformance(BaseTmpl):
                 if n <= 1:
                     return 1
                 time.sleep(0.00001)
-                return _fib(n-1) + _fib(n-2)
+                return _fib(n - 1) + _fib(n - 2)
             return _fib(13)
         self.do_one_function(slow_fib)
 
@@ -126,8 +125,8 @@ class TestPerformance(BaseTmpl):
             def TowerOfHanoi(n, source, destination, auxiliary):
                 if n == 1:
                     return
-                TowerOfHanoi(n-1, source, auxiliary, destination)
-                TowerOfHanoi(n-1, auxiliary, destination, source)
+                TowerOfHanoi(n - 1, source, auxiliary, destination)
+                TowerOfHanoi(n - 1, auxiliary, destination, source)
             TowerOfHanoi(12, "A", "B", "C")
         self.do_one_function(hanoi)
 
@@ -137,7 +136,7 @@ class TestPerformance(BaseTmpl):
                 if n == 1:
                     return [1]
 
-                ret = ListOperation(n-1)
+                ret = ListOperation(n - 1)
                 for i in range(n):
                     ret.append(i)
                 return ret
@@ -182,7 +181,7 @@ class TestFilterPerformance(BaseTmpl):
             def TowerOfHanoi(n, source, destination, auxiliary):
                 if n == 1:
                     return
-                TowerOfHanoi(n-1, source, auxiliary, destination)
-                TowerOfHanoi(n-1, auxiliary, destination, source)
+                TowerOfHanoi(n - 1, source, auxiliary, destination)
+                TowerOfHanoi(n - 1, auxiliary, destination, source)
             TowerOfHanoi(12, "A", "B", "C")
         self.do_one_function(hanoi)
