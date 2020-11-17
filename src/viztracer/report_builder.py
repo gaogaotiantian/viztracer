@@ -103,6 +103,7 @@ class ReportBuilder:
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
             sub["trace_viewer_full"] = f.read()
         sub["json_data"] = self.generate_json(file_info=file_info)
+        sub["json_data"] = sub["json_data"].replace("</script>", "<\\/script>")
 
         if self.verbose > 0:
             print("Generating HTML report")
