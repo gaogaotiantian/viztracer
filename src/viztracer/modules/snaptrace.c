@@ -91,8 +91,9 @@ static inline void clear_node(struct EventNode* node) {
     switch (node->ntype) {
     case FEE_NODE:
         if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-            Py_DECREF(node->data.fee.pycode);
-            node->data.fee.pycode = NULL;
+            Py_DECREF(node->data.fee.co_filename);
+            Py_DECREF(node->data.fee.co_name);
+            node->data.fee.co_firstlineno = 0;
             if (node->data.fee.args) {
                 Py_DECREF(node->data.fee.args);
                 node->data.fee.args = NULL;
@@ -102,8 +103,18 @@ static inline void clear_node(struct EventNode* node) {
                 node->data.fee.retval = NULL;
             }
         } else {
-            Py_DECREF(node->data.fee.cfunc);
-            node->data.fee.cfunc = NULL;
+            node->data.fee.ml_name = NULL;
+            if (node->data.fee.m_module) {
+                // The function belongs to a module
+                Py_DECREF(node->data.fee.m_module);
+                node->data.fee.m_module = NULL;
+            } else {
+                // The function is a class method
+                if (node->data.fee.tp_name) {
+                    // It's not a static method, has __self__
+                    node->data.fee.tp_name = NULL;
+                }
+            }
         }
         break;
     case INSTANT_NODE:
@@ -422,8 +433,11 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 node->tid = info->tid;
                 node->data.fee.type = what;
                 if (is_python) {
-                    node->data.fee.pycode = frame->f_code;
-                    Py_INCREF(node->data.fee.pycode);
+                    node->data.fee.co_name = frame->f_code->co_name;
+                    node->data.fee.co_filename = frame->f_code->co_filename;
+                    node->data.fee.co_firstlineno = frame->f_code->co_firstlineno;
+                    Py_INCREF(node->data.fee.co_name);
+                    Py_INCREF(node->data.fee.co_filename);
                     if (stack_top->args) {
                         // steal the reference when return
                         node->data.fee.args = stack_top->args;
@@ -438,13 +452,28 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                         node->data.fee.caller_lineno = -1;
                     }
                 } else if (is_c) {
-                    node->data.fee.cfunc = (PyCFunctionObject*) arg;
+                    PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
+                    node->data.fee.ml_name = cfunc->m_ml->ml_name;
+                    if (cfunc->m_module) {
+                        // The function belongs to a module
+                        node->data.fee.m_module = cfunc->m_module;
+                        Py_INCREF(cfunc->m_module);
+                    } else {
+                        // The function is a class method
+                        node->data.fee.m_module = NULL;
+                        if (cfunc->m_self) {
+                            // It's not a static method, has __self__
+                            node->data.fee.tp_name = cfunc->m_self->ob_type->tp_name;
+                        } else {
+                            // It's a static method, does not have __self__
+                            node->data.fee.tp_name = NULL;
+                        }
+                    }
                     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB)) {
                         node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
                     } else {
                         node->data.fee.caller_lineno = -1;
                     }
-                    Py_INCREF(arg);
                 } 
             }
             return 0;
@@ -452,7 +481,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             printf("Unexpected event!\n");
         }
     }
-
     return 0;
 }
 
@@ -633,27 +661,26 @@ snaptrace_load(TracerObject* self, PyObject* args)
         case FEE_NODE:
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
                 name = PyUnicode_FromFormat("%s (%s:%d)",
-                       PyUnicode_AsUTF8(node->data.fee.pycode->co_name),
-                       PyUnicode_AsUTF8(node->data.fee.pycode->co_filename),
-                       node->data.fee.pycode->co_firstlineno);
+                       PyUnicode_AsUTF8(node->data.fee.co_name),
+                       PyUnicode_AsUTF8(node->data.fee.co_filename),
+                       node->data.fee.co_firstlineno);
             } else {
-                PyCFunctionObject* func = node->data.fee.cfunc;
-                if (func->m_module) {
+                if (node->data.fee.m_module) {
                     // The function belongs to a module
                     name = PyUnicode_FromFormat("%s.%s",
-                           PyUnicode_AsUTF8(func->m_module),
-                           func->m_ml->ml_name);
+                           PyUnicode_AsUTF8(node->data.fee.m_module),
+                           node->data.fee.ml_name);
                 } else {
                     // The function is a class method
-                    if (func->m_self) {
+                    if (node->data.fee.tp_name) {
                         // It's not a static method, has __self__
                         name = PyUnicode_FromFormat("%s.%s",
-                               func->m_self->ob_type->tp_name,
-                               func->m_ml->ml_name);
+                               node->data.fee.tp_name,
+                               node->data.fee.ml_name);
                     } else {
                         // It's a static method, does not have __self__
                         name = PyUnicode_FromFormat("%s",
-                               func->m_ml->ml_name);
+                               node->data.fee.ml_name);
                     }
                 }
             }
