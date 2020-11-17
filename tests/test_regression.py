@@ -156,3 +156,26 @@ class TestIssue42(BaseTmpl):
         tracer.stop()
         tracer.parse()
         self.assertEqual(len(tracer.data["traceEvents"]), 0)
+
+
+issue47_code = \
+"""
+import sys
+import gc
+class C:
+    def __init__(self):
+        self.data = bytearray()
+
+    def change(self):
+        b = memoryview(self.data).tobytes()
+        self.data += b"123123"
+        del self.data[:1]
+
+c = C()
+c.change()
+"""
+
+
+class TestIssue47(CmdlineTmpl):
+    def test_issue47(self):
+        self.template(["viztracer", "cmdline_test.py", "-o", "result.json"], script=issue47_code, expected_output_file="result.json", expected_entries=7)

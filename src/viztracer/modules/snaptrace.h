@@ -30,8 +30,18 @@ typedef enum _NodeType {
 struct FEEData {
     PyObject* args;
     PyObject* retval;
-    PyCFunctionObject* cfunc;
-    PyCodeObject* pycode;
+    union {
+        struct {
+            PyObject* m_module;
+            const char* ml_name;
+            const char* tp_name;
+        };
+        struct {
+            PyObject* co_name;
+            PyObject* co_filename;
+            int co_firstlineno;
+        };
+    };
     int type;
     int caller_lineno;
     double dur;
