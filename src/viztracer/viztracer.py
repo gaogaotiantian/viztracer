@@ -121,9 +121,6 @@ class VizTracer(_VizTracer):
         if not os.path.isdir(os.path.dirname(output_file)):
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        if self.verbose > 0:
-            print("Saving report to {}...".format(os.path.abspath(output_file)))
-
         rb = ReportBuilder(self.data, self.verbose)
         rb.save(output_file=output_file, file_info=self.file_info)
 

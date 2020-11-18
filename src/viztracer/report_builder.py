@@ -114,7 +114,7 @@ class ReportBuilder:
         file_type = output_file.split(".")[-1]
 
         if self.verbose > 0:
-            print("Saving report to {}...".format(os.path.abspath(output_file)))
+            print("Saving report to {} ...".format(os.path.abspath(output_file)))
 
         if file_type == "html":
             with open(output_file, "w", encoding="utf-8") as f:
