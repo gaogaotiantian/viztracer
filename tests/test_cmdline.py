@@ -52,6 +52,9 @@ class Stub:
     def __init__(self):
         self.b = 0
 
+def f1(a, *a2, a3, **a4):
+    return None
+
 (a): int = 1
 a = [1, 2]
 abc = 1
@@ -65,6 +68,7 @@ abc: int = 1
 a, abc = (1, 2)
 unrelated, *a = 1, 2, 3
 [abc, d] = 3, 4
+f1(2, 3, a3=4, test=5)
 """
 
 
@@ -227,8 +231,8 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_log_var(self):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
-        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=19)
-        self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=11)
+        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=24)
+        self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=12)
 
     def test_log_attr(self):
         self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_attr, expected_output_file="result.json", expected_entries=9)

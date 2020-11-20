@@ -34,10 +34,30 @@ class AstTransformer(ast.NodeTransformer):
             for funcname in self.inst_args["funcnames"]:
                 if re.fullmatch(funcname, node.name):
                     node.body.insert(0, self.get_instrument_node(node.name))
+        elif self.inst_type in ("log_var", "log_number"):
+            instrumented_nodes = []
+            args = node.args
+            if "posonlyargs" in args._fields:
+                func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
+            else:
+                # python 3.6 does not have posonlyargs
+                func_args_name = [a.arg for a in args.args + args.kwonlyargs]
+            if "vararg" in args._fields and args.vararg:
+                func_args_name.append(args.vararg.arg)
+            if "kwarg" in args._fields and args.kwarg:
+                func_args_name.append(args.kwarg.arg)
+            for name in func_args_name:
+                for pattern in self.inst_args["varnames"]:
+                    if re.fullmatch(pattern, name):
+                        instrumented_nodes.append(self.get_instrument_node(name))
+                        break
+
         self.generic_visit(node)
 
         if self.inst_type == "log_func_exec":
             self.log_func_exec_enable = False
+        elif self.inst_type in ("log_var", "log_number") and instrumented_nodes:
+            node.body = instrumented_nodes + node.body
         return node
 
     def visit_Raise(self, node):
