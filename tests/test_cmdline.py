@@ -55,6 +55,9 @@ class Stub:
 def f1(a, *a2, a3, **a4):
     return None
 
+for a_in_for in [1,2]:
+    pass
+
 (a): int = 1
 a = [1, 2]
 abc = 1
@@ -231,7 +234,7 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_log_var(self):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"], script=file_c_function, expected_output_file="result.json", expected_entries=4)
-        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=24)
+        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=26)
         self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"], script=file_log_var, expected_output_file="result.json", expected_entries=12)
 
     def test_log_attr(self):

@@ -60,6 +60,17 @@ class AstTransformer(ast.NodeTransformer):
             node.body = instrumented_nodes + node.body
         return node
 
+    def visit_For(self, node):
+        if self.inst_type in ("log_var", "log_number"):
+            instrumented_nodes = self.get_assign_log_nodes(node.target)
+
+        self.generic_visit(node)
+
+        if self.inst_type in ("log_var", "log_number"):
+            if instrumented_nodes:
+                node.body = instrumented_nodes + node.body
+        return node
+
     def visit_Raise(self, node):
         if self.inst_type == "log_exception":
             instrument_node = self.get_instrument_node_by_node(node.exc)
