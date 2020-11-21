@@ -11,7 +11,7 @@ import sphinx_rtd_theme
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
+import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -23,7 +23,15 @@ copyright = '2020, Tian Gao'
 author = 'Tian Gao'
 
 # The full version, including alpha/beta/rc tags
-release = '0.10.0'
+release = 'unknown'
+init_path = os.path.join(os.path.dirname(__file__), "..", "..", "src", "viztracer", "__init__.py")
+with open(init_path) as f:
+    for line in f.readlines():
+        if line.startswith("__version__"):
+            # __version__ = "0.9"
+            delim = '"' if '"' in line else "'"
+            release = line.split(delim)[1]
+            break
 
 
 # -- General configuration ---------------------------------------------------
