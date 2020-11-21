@@ -74,17 +74,25 @@ static struct ThreadInfo* get_thread_info(TracerObject* self)
 
 static inline double get_ts()
 {
+    static double prev_ts = 0;
+    double curr_ts = 0;
+
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
     counter.QuadPart *= 1000000000LL;
     counter.QuadPart /= qpc_freq.QuadPart;
-    return (double) counter.QuadPart;
+    curr_ts = (double) counter.QuadPart;
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return ((double)t.tv_sec * 1e9 + t.tv_nsec);
+    curr_ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
 #endif
+    if (curr_ts == prev_ts) {
+        curr_ts += 20;
+    }
+    prev_ts = curr_ts;
+    return curr_ts;
 }
 
 static inline void clear_node(struct EventNode* node) {
