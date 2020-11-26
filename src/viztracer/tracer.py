@@ -268,6 +268,9 @@ class _VizTracer:
             else:
                 curr_args["exec_steps"] = [exec_line]
 
+    def _set_curr_stack_depth(self, stack_depth):
+        self._tracer.setcurrstack(stack_depth)
+
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
