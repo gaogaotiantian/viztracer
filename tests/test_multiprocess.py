@@ -61,6 +61,34 @@ if __name__ == "__main__":
     time.sleep(0.1)
 """
 
+file_multiprocessing_stack_limit = \
+"""
+import multiprocessing
+from multiprocessing import Process
+import time
+from viztracer import get_tracer
+
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+
+def f():
+    fib(5)
+
+def cb(tracer):
+    print(tracer)
+    tracer.max_stack_depth = 2
+
+if __name__ == "__main__":
+    get_tracer().set_afterfork(cb)
+    p = Process(target=f)
+    p.start()
+    p.join()
+    time.sleep(0.1)
+"""
+
 file_pool = \
 """
 from multiprocessing import Process, Pool
@@ -131,3 +159,10 @@ class TestMultiprocessing(CmdlineTmpl):
                 self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_pool, check_func=check_func, concurrency="multiprocessing")
         else:
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False, expected_output_file=None)
+
+    def test_multiprosessing_stack_depth(self):
+        def check_func(data):
+            for entry in data["traceEvents"]:
+                self.assertNotIn("fib", entry["name"].split())
+        if multiprocessing.get_start_method() == "fork":
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing_stack_limit, check_func=check_func, concurrency="multiprocessing")

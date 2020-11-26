@@ -61,6 +61,7 @@ class _VizTracer:
             self.__max_stack_depth = max_stack_depth
         else:
             raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
+        self._tracer.config(max_stack_depth=self.__max_stack_depth)
 
     @property
     def include_files(self):

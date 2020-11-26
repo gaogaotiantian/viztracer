@@ -50,6 +50,10 @@ class VizTracer(_VizTracer):
         if register_global:
             self.register_global()
 
+        self._afterfork_cb = None
+        self._afterfork_args = None
+        self._afterfork_kwargs = None
+
     @property
     def verbose(self):
         return self.__verbose
@@ -88,6 +92,11 @@ class VizTracer(_VizTracer):
 
     def register_global(self):
         builtins.__dict__["__viz_tracer__"] = self
+
+    def set_afterfork(self, callback, *args, **kwargs):
+        self._afterfork_cb = callback
+        self._afterfork_args = args
+        self._afterfork_kwargs = kwargs
 
     def start(self):
         _VizTracer.start(self)
