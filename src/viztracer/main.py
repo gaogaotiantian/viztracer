@@ -187,11 +187,11 @@ class VizUI:
                 self.exit_routine()
             signal.signal(signal.SIGTERM, term_handler)
 
-            if tracer._afterfork_cb:
-                tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
-
             tracer.clear()
             tracer._set_curr_stack_depth(1)
+
+            if tracer._afterfork_cb:
+                tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
         from multiprocessing.util import register_after_fork
         tracer.pid_suffix = True
