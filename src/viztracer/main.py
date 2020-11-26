@@ -187,6 +187,12 @@ class VizUI:
                 self.exit_routine()
             signal.signal(signal.SIGTERM, term_handler)
 
+            tracer.clear()
+            tracer._set_curr_stack_depth(1)
+
+            if tracer._afterfork_cb:
+                tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
+
         from multiprocessing.util import register_after_fork
         tracer.pid_suffix = True
         tracer.output_file = os.path.join(self.multiprocess_output_dir, "result.json")

@@ -61,6 +61,7 @@ class _VizTracer:
             self.__max_stack_depth = max_stack_depth
         else:
             raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
+        self._tracer.config(max_stack_depth=self.__max_stack_depth)
 
     @property
     def include_files(self):
@@ -266,6 +267,9 @@ class _VizTracer:
                 curr_args["exec_steps"].append(exec_line)
             else:
                 curr_args["exec_steps"] = [exec_line]
+
+    def _set_curr_stack_depth(self, stack_depth):
+        self._tracer.setcurrstack(stack_depth)
 
     def parse(self):
         # parse() is also performance sensitive. We could have a lot of entries

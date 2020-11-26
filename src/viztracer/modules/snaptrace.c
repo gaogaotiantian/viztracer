@@ -37,6 +37,7 @@ static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
@@ -282,6 +283,7 @@ static PyMethodDef Tracer_methods[] = {
     {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_VARARGS, "get timestamp"},
+    {"setcurrstack", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
     {NULL, NULL, 0, NULL}
@@ -838,6 +840,22 @@ snaptrace_getts(TracerObject* self, PyObject* args)
     double ts = get_ts();
 
     return PyFloat_FromDouble(ts / 1000);
+}
+
+static PyObject*
+snaptrace_setcurrstack(TracerObject* self, PyObject* args)
+{
+    int stack_depth = 1;
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!PyArg_ParseTuple(args, "|i", &stack_depth)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    info->curr_stack_depth = stack_depth;
+
+    Py_RETURN_NONE;
 }
 
 static PyObject*
