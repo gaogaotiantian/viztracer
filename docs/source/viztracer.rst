@@ -258,3 +258,23 @@ VizTracer
         :param object value: a jsonifiable object
 
         This method allows you to attach args to the current function, which will show in the report when you click on the function 
+
+    .. py:method:: set_afterfork(callback, *args, **kwargs)
+
+        :param callable callback: the callback function after fork, should take a ``VizTracer`` object as the first argument
+        :param list args: positional arguments to ``callback``
+        :param dict kwargs: keyword arguments to ``callback``
+
+        This method will register a callback function after the process is forked. If you want different behavior on child
+        processes with ``multiprocessing``, you can utilize this method
+
+        Notice that the ``callback`` argument should be a ``callable`` that takes a ``VizTracer`` object as the first argument
+
+        .. code-block:: python
+
+            from viztracer import get_tracer
+
+            def afterfork_callback(tracer):
+                tracer.max_stack_depth = 10
+            
+            get_tracer().set_afterfork(afterfork_callback)
