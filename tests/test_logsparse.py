@@ -54,7 +54,12 @@ if __name__ == "__main__":
 
 class TestLogSparse(CmdlineTmpl):
     def test_basic(self):
+        def check_func(data):
+            for entry in data["traceEvents"]:
+                self.assertNotEqual(entry["name"], "f")
+
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", expected_entries=1)
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", check_func=check_func)
 
     def test_without_tracer(self):
         self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)

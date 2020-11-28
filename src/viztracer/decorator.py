@@ -56,6 +56,9 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
 
 
 def log_sparse(func):
+    tracer = get_tracer()
+    if not tracer or not tracer.log_sparse:
+        return func
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

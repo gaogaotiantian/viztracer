@@ -24,6 +24,7 @@ class VizTracer(_VizTracer):
                  log_func_args=False,
                  log_print=False,
                  log_gc=False,
+                 log_sparse=False,
                  novdb=False,
                  pid_suffix=False,
                  file_info=False,
@@ -47,6 +48,7 @@ class VizTracer(_VizTracer):
         self.file_info = file_info
         self.output_file = output_file
         self.system_print = None
+        self.log_sparse = log_sparse
         if register_global:
             self.register_global()
 
