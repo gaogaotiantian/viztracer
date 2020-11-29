@@ -231,6 +231,7 @@ class VizUI:
             log_func_args=options.log_func_args,
             log_print=options.log_print,
             log_gc=options.log_gc,
+            log_sparse=options.log_sparse,
             novdb=options.novdb,
             pid_suffix=options.pid_suffix,
             register_global=True
