@@ -64,6 +64,7 @@ def log_sparse(func):
     def wrapper(*args, **kwargs):
         tracer = get_tracer()
         if tracer:
+            # This should always be true
             start = tracer._tracer.getts()
             ret = func(*args, **kwargs)
             dur = tracer._tracer.getts() - start
@@ -75,8 +76,8 @@ def log_sparse(func):
                 "cat": "FEE"
             }
             tracer._tracer.addraw(raw_data)
-        else:
-            ret = func(*args, **kwargs)
+        else:  # pragma: no cover
+            raise Exception("This should not be possible")
         return ret
 
     return wrapper
