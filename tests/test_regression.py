@@ -6,6 +6,7 @@ import subprocess
 import os
 import time
 import sys
+import multiprocessing
 from viztracer import VizTracer, ignore_function
 from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
@@ -179,3 +180,9 @@ c.change()
 class TestIssue47(CmdlineTmpl):
     def test_issue47(self):
         self.template(["viztracer", "cmdline_test.py", "-o", "result.json"], script=issue47_code, expected_output_file="result.json", expected_entries=7)
+
+
+class TestIssue58(CmdlineTmpl):
+    def test_issue58(self):
+        if multiprocessing.get_start_method() == "fork":
+            self.template(["viztracer", "--log_multiprocess", "-m", "tests.modules.issue58"], expected_output_file="result.html")
