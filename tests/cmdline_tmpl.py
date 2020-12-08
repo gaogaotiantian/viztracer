@@ -62,6 +62,8 @@ class CmdlineTmpl(BaseTmpl):
         if script:
             self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=15)
+        if not (success ^ (result.returncode != 0)):
+            print(result.stdout)
         self.assertTrue(success ^ (result.returncode != 0))
         if expected_output_file:
             if type(expected_output_file) is list:
