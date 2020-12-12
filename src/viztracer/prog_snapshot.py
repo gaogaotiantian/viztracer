@@ -223,6 +223,8 @@ class ProgSnapshot:
             self.counter_events.add_event(event)
         elif ph in ["N", "D", "O"]:
             self.object_events.add_event(event)
+        elif ph == "M":
+            return
         else:
             print("Unsupported event type: {}".format(ph))
             return

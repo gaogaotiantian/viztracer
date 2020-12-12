@@ -44,6 +44,7 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
 
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
+PyObject* multiprocessing_module = NULL;
 
 #if _WIN32
 LARGE_INTEGER qpc_freq; 
@@ -641,8 +642,10 @@ snaptrace_load(TracerObject* self, PyObject* args)
     PyObject* ph_I = PyUnicode_FromString("I");
     PyObject* ph_X = PyUnicode_FromString("X");
     PyObject* ph_C = PyUnicode_FromString("C");
+    PyObject* ph_M = PyUnicode_FromString("M");
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
+    struct MetadataNode* metadata_node = NULL;
 
     if (self->fix_pid > 0) {
         pid = PyLong_FromLong(self->fix_pid);
@@ -654,6 +657,58 @@ snaptrace_load(TracerObject* self, PyObject* args)
 #endif
     }
 
+    // == Load the metadata first ==
+    //    Process Name
+    {
+        PyObject* dict = PyDict_New();
+        PyObject* args = PyDict_New();
+        PyObject* process_name_string = PyUnicode_FromString("process_name");
+        PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
+        if (!current_process_method) {
+            perror("Failed to access multiprocessing.current_process()");
+            exit(-1);
+        }
+        PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+        if (!current_process_method) {
+            perror("Failed to access multiprocessing.current_process()");
+            exit(-1);
+        }
+        PyObject* process_name = PyObject_GetAttrString(current_process, "name");
+
+        Py_DECREF(current_process_method);
+        PyDict_SetItemString(dict, "ph", ph_M);
+        PyDict_SetItemString(dict, "pid", pid);
+        PyDict_SetItemString(dict, "tid", pid);
+        PyDict_SetItemString(dict, "name", process_name_string);
+        Py_DECREF(process_name_string);
+        PyDict_SetItemString(args, "name", process_name);
+        PyDict_SetItemString(dict, "args", args);
+        Py_DECREF(args);
+        Py_DECREF(process_name);
+        PyList_Append(lst, dict);
+    }
+
+    
+    //    Thread Name
+    metadata_node = self->metadata_head;
+    while (metadata_node) {
+        PyObject* dict = PyDict_New();
+        PyObject* args = PyDict_New();
+        PyObject* tid = PyLong_FromLong(metadata_node->tid);
+        PyObject* thread_name_string = PyUnicode_FromString("thread_name");
+
+        PyDict_SetItemString(dict, "ph", ph_M);
+        PyDict_SetItemString(dict, "pid", pid);
+        PyDict_SetItemString(dict, "tid", tid);
+        Py_DECREF(tid);
+        PyDict_SetItemString(dict, "name", thread_name_string);
+        Py_DECREF(thread_name_string);
+        PyDict_SetItemString(args, "name", metadata_node->name);
+        PyDict_SetItemString(dict, "args", args);
+        Py_DECREF(args);
+        metadata_node = metadata_node->next;
+        PyList_Append(lst, dict);
+    }
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
         PyObject* dict = PyDict_New();
@@ -785,6 +840,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(ph_I);
     Py_DECREF(ph_X);
     Py_DECREF(ph_C);
+    Py_DECREF(ph_M);
     self->buffer_tail_idx = self->buffer_head_idx;
     return lst;
 }
@@ -1132,6 +1188,50 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     pthread_setspecific(self->thread_key, info);
 #endif
 
+    PyGILState_STATE state = PyGILState_Ensure();
+
+    PyObject* current_thread_method = PyObject_GetAttrString(threading_module, "current_thread");
+    if (!current_thread_method) {
+        perror("Failed to access threading.current_thread()");
+        exit(-1);
+    }
+    PyObject* current_thread = PyObject_CallObject(current_thread_method, NULL);
+    if (!current_thread) {
+        perror("Failed to access threading.current_thread()");
+        exit(-1);
+    }
+    PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
+
+    Py_DECREF(current_thread_method);
+
+    // Check for existing node for the same tid first
+    struct MetadataNode* node = self->metadata_head;
+    int found_node = 0;
+
+    while (node) {
+        if (node->tid == info->tid) {
+            Py_DECREF(node->name);
+            node->name = thread_name;
+            found_node = 1;
+            break;
+        }
+        node = node->next;
+    }
+
+    if (!found_node) {
+        node = (struct MetadataNode*) PyMem_Calloc(1, sizeof(struct MetadataNode));
+        if (!node) {
+            perror("Out of memory!");
+            exit(-1);
+        }
+        node->name = thread_name;
+        node->tid = info->tid;
+        node->next = self->metadata_head;
+        self->metadata_head = node;
+    }
+
+    PyGILState_Release(state);
+
     return info;
 }
 
@@ -1189,7 +1289,6 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         }
         // We need an extra slot for circular buffer
         self->buffer_size += 1;
-        snaptrace_createthreadinfo(self);
         self->collecting = 0;
         self->fix_pid = 0;
         self->total_entries = 0;
@@ -1206,6 +1305,8 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         }
         self->buffer_head_idx = 0;
         self->buffer_tail_idx = 0;
+        self->metadata_head = NULL;
+        snaptrace_createthreadinfo(self);
     }
 
     return (PyObject*) self;
@@ -1225,6 +1326,16 @@ Tracer_dealloc(TracerObject* self)
         Py_DECREF(self->exclude_files);
     }
     PyMem_FREE(self->buffer);
+
+    struct MetadataNode* node = self->metadata_head;
+    struct MetadataNode* prev = NULL;
+    while (node) {
+        prev = node;
+        Py_DECREF(node->name);
+        node->name = NULL;
+        node = node->next;
+        PyMem_FREE(prev);
+    }
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
@@ -1264,6 +1375,7 @@ PyInit_snaptrace(void)
     }
 
     threading_module = PyImport_ImportModule("threading");
+    multiprocessing_module = PyImport_ImportModule("multiprocessing");
 
     return m;
 }

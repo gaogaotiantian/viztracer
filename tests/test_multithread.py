@@ -43,6 +43,10 @@ class TestMultithread(BaseTmpl):
         entries = tracer.parse()
         self.assertGreater(entries, 160)
 
+        metadata = [e for e in tracer.data["traceEvents"] if e["ph"] == "M"]
+        self.assertEqual(len([e for e in metadata if e["name"] == "process_name"]), 1)
+        self.assertEqual(len([e for e in metadata if e["name"] == "thread_name"]), 5)
+
     def test_with_small_buffer(self):
         tracer = VizTracer(tracer_entries=300)
         tracer.start()

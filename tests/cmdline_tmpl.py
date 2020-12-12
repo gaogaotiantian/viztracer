@@ -76,7 +76,7 @@ class CmdlineTmpl(BaseTmpl):
             assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
             with open(expected_output_file) as f:
                 data = json.load(f)
-                self.assertEqual(len(data["traceEvents"]), expected_entries)
+                self.assertEventNumber(data, expected_entries)
 
         if check_func:
             assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")

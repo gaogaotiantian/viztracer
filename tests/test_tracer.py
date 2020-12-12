@@ -176,15 +176,17 @@ class TestTracerFeature(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertFalse("args" in tracer.data["traceEvents"][0])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertFalse("args" in events[0])
 
         tracer.log_func_retval = True
         tracer.start()
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0]
-                        and "return_value" in tracer.data["traceEvents"][0]["args"])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertTrue("args" in events[0]
+                        and "return_value" in events[0]["args"])
 
     def test_novdb(self):
         tracer = _VizTracer(novdb=False)
@@ -192,14 +194,16 @@ class TestTracerFeature(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("caller_lineno" in tracer.data["traceEvents"][0])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertTrue("caller_lineno" in events[0])
 
         tracer = _VizTracer(novdb=True)
         tracer.start()
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertFalse("caller_lineno" in tracer.data["traceEvents"][0])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertFalse("caller_lineno" in events[0])
 
     def test_log_func_args(self):
         tracer = _VizTracer(log_func_args=True)
@@ -207,7 +211,8 @@ class TestTracerFeature(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0] and "func_args" in tracer.data["traceEvents"][0]["args"])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertTrue("args" in events[0] and "func_args" in events[0]["args"])
 
     def test_log_gc(self):
         import gc
@@ -217,10 +222,10 @@ class TestTracerFeature(BaseTmpl):
         gc.collect()
         tracer.stop()
         tracer.parse()
-        self.assertEqual(len(tracer.data["traceEvents"]), 3)
+        self.assertEventNumber(tracer.data, 3)
         tracer.log_gc = False
         tracer.start()
         gc.collect()
         tracer.stop()
         tracer.parse()
-        self.assertEqual(len(tracer.data["traceEvents"]), 1)
+        self.assertEventNumber(tracer.data, 1)

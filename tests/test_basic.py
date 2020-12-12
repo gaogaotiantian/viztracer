@@ -29,8 +29,8 @@ class TestTracerBasic(BaseTmpl):
         t.start()
         fib(5)
         t.stop()
-        entries = t.parse()
-        self.assertEqual(entries, 15)
+        t.parse()
+        self.assertEventNumber(t.data, 15)
 
     def test_builtin_func(self):
         import random
@@ -42,8 +42,8 @@ class TestTracerBasic(BaseTmpl):
         t.start()
         fun(10)
         t.stop()
-        entries = t.parse()
-        self.assertEqual(entries, 21)
+        t.parse()
+        self.assertEventNumber(t.data, 21)
 
     def test_cleanup(self):
         def fib(n):
@@ -55,8 +55,8 @@ class TestTracerBasic(BaseTmpl):
         fib(5)
         t.stop()
         t.cleanup()
-        entries = t.parse()
-        self.assertEqual(entries, 0)
+        t.parse()
+        self.assertEventNumber(t.data, 0)
 
 
 class TestVizTracerBasic(BaseTmpl):
@@ -77,8 +77,8 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.start()
         fib(10)
         tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 10)
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 10)
 
     def test_save(self):
         tracer = VizTracer(tracer_entries=10)
@@ -113,16 +113,16 @@ class TestInstant(BaseTmpl):
         tracer.start()
         tracer.add_instant("instant", {"karma": True})
         tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 1)
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 1)
 
     def test_invalid_scope(self):
         tracer = VizTracer()
         tracer.start()
         tracer.add_instant("instant", {"karma": True}, scope="invalid")
         tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 0)
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 0)
 
 
 class TestFunctionArg(BaseTmpl):
@@ -134,8 +134,9 @@ class TestFunctionArg(BaseTmpl):
         f(tracer)
         tracer.stop()
         tracer.parse()
-        self.assertTrue("args" in tracer.data["traceEvents"][0]
-                        and "hello" in tracer.data["traceEvents"][0]["args"])
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertTrue("args" in events[0]
+                        and "hello" in events[0]["args"])
 
 
 class TestDecorator(BaseTmpl):
@@ -150,8 +151,8 @@ class TestDecorator(BaseTmpl):
         tracer.start()
         ignore(10)
         tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 0)
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 0)
 
     def test_ignore_function_without_global_tracer(self):
 
@@ -201,8 +202,8 @@ class TestLogPrint(BaseTmpl):
         print("hello")
         print("hello")
         tracer.stop()
-        entries = tracer.parse()
-        self.assertEqual(entries, 4)
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 4)
 
 
 class TestForkSave(BaseTmpl):
@@ -234,7 +235,7 @@ class TestForkSave(BaseTmpl):
             with open(path) as f:
                 data = json.load(f)
             os.remove(path)
-            self.assertEqual(len(data["traceEvents"]), expected[i])
+            self.assertEventNumber(data, expected[i])
             if pid is None:
                 pid = data["traceEvents"][0]["pid"]
             else:
