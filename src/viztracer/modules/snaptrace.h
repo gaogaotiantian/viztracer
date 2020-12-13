@@ -93,6 +93,12 @@ struct ThreadInfo {
     struct FunctionNode* stack_top;
 };
 
+struct MetadataNode {
+    unsigned long tid;
+    PyObject* name;
+    struct MetadataNode* next;
+};
+
 typedef struct {
     PyObject_HEAD
 #if _WIN32
@@ -117,6 +123,7 @@ typedef struct {
     long buffer_size;
     long buffer_head_idx;
     long buffer_tail_idx;
+    struct MetadataNode* metadata_head;
 } TracerObject;
 
 #endif

@@ -284,7 +284,13 @@ class _VizTracer:
                     "version": __version__
                 }
             }
-            self.total_entries = len(self.data["traceEvents"])
+            metadata_count = 0
+            for d in self.data["traceEvents"]:
+                if d["ph"] == "M":
+                    metadata_count += 1
+                else:
+                    break
+            self.total_entries = len(self.data["traceEvents"]) - metadata_count
             if self.total_entries == self.tracer_entries and self.verbose > 0:
                 print("")
                 color_print("WARNING", "Circular buffer is full, you lost some early data, but you still have the most recent data.")

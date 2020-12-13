@@ -85,7 +85,8 @@ class TestFunctionArg(BaseTmpl):
         tracer.parse()
         inputs = set()
         for d in tracer.data["traceEvents"]:
-            inputs.add(d["args"]["input"])
+            if d["ph"] == "X":
+                inputs.add(d["args"]["input"])
         self.assertEqual(inputs, set([0, 1, 2, 3, 4, 5]))
 
 
@@ -156,7 +157,7 @@ class TestIssue42(BaseTmpl):
         f()
         tracer.stop()
         tracer.parse()
-        self.assertEqual(len(tracer.data["traceEvents"]), 0)
+        self.assertEventNumber(tracer.data, 0)
 
 
 issue47_code = \
