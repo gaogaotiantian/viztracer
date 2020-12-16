@@ -7,6 +7,7 @@ import builtins
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
+from .vizplugin import VizPluginManager
 
 
 # This is the interface of the package. Almost all user should use this
@@ -29,7 +30,8 @@ class VizTracer(_VizTracer):
                  pid_suffix=False,
                  file_info=False,
                  register_global=True,
-                 output_file="result.html"):
+                 output_file="result.html",
+                 plugins=[]):
         super().__init__(
                 tracer_entries=tracer_entries,
                 max_stack_depth=max_stack_depth,
@@ -55,6 +57,9 @@ class VizTracer(_VizTracer):
         self._afterfork_cb = None
         self._afterfork_args = None
         self._afterfork_kwargs = None
+
+        # load in plugins
+        self._plugin_manager = VizPluginManager(self, plugins)
 
     @property
     def verbose(self):
@@ -101,10 +106,14 @@ class VizTracer(_VizTracer):
         self._afterfork_kwargs = kwargs
 
     def start(self):
-        _VizTracer.start(self)
+        if not self.enable:
+            self._plugin_manager.event("pre-start")
+            _VizTracer.start(self)
 
     def stop(self):
-        _VizTracer.stop(self)
+        if self.enable:
+            _VizTracer.stop(self)
+            self._plugin_manager.event("post-stop")
 
     def run(self, command, output_file=None):
         self.start()
@@ -127,6 +136,8 @@ class VizTracer(_VizTracer):
             output_file_parts = output_file.split(".")
             output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
             output_file = ".".join(output_file_parts)
+
+        self._plugin_manager.event("pre-save")
 
         output_file = os.path.abspath(output_file)
         if not os.path.isdir(os.path.dirname(output_file)):
