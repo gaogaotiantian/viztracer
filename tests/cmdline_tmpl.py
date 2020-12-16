@@ -63,26 +63,28 @@ class CmdlineTmpl(BaseTmpl):
             self.build_script(script)
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=15)
         if not (success ^ (result.returncode != 0)):
+            print(success, result.returncode)
             print(result.stdout)
         self.assertTrue(success ^ (result.returncode != 0))
-        if expected_output_file:
-            if type(expected_output_file) is list:
-                for f in expected_output_file:
-                    self.assertTrue(os.path.exists(f))
-            elif type(expected_output_file) is str:
-                self.assertTrue(os.path.exists(expected_output_file))
+        if success:
+            if expected_output_file:
+                if type(expected_output_file) is list:
+                    for f in expected_output_file:
+                        self.assertTrue(os.path.exists(f))
+                elif type(expected_output_file) is str:
+                    self.assertTrue(os.path.exists(expected_output_file))
 
-        if expected_entries:
-            assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
-            with open(expected_output_file) as f:
-                data = json.load(f)
-                self.assertEventNumber(data, expected_entries)
+            if expected_entries:
+                assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+                with open(expected_output_file) as f:
+                    data = json.load(f)
+                    self.assertEventNumber(data, expected_entries)
 
-        if check_func:
-            assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
-            with open(expected_output_file) as f:
-                data = json.load(f)
-                check_func(data)
+            if check_func:
+                assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+                with open(expected_output_file) as f:
+                    data = json.load(f)
+                    check_func(data)
 
         if cleanup:
             self.cleanup(output_file=expected_output_file)
