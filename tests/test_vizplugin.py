@@ -10,14 +10,15 @@ from viztracer.vizplugin import VizPluginBase
 class MyPlugin(VizPluginBase):
     def __init__(self):
         self.event_counter = 0
+        self.handler_triggered = False
 
     def message(self, m_type, payload):
 
         def f(data):
-            pass
+            self.handler_triggered = True
 
         self.event_counter += 1
-        if m_type == "pre-parse":
+        if m_type == "event" and payload["when"] == "pre-save":
             return {
                 "action": "handle_data",
                 "handler": f
@@ -33,6 +34,7 @@ class TestVizPlugin(CmdlineTmpl):
         tracer.stop()
         tracer.save()
         self.assertEqual(pl.event_counter, 4)
+        self.assertEqual(pl.handler_triggered, True)
 
     def test_invalid(self):
         invalid_pl = []
