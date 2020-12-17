@@ -24,7 +24,6 @@ jobs:
       run: |
         pip install flake8
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Build manylinux Python wheels with manylinux2014
       uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2014_x86_64
       with:
@@ -43,8 +42,8 @@ jobs:
       run: |
         twine upload dist/*-manylinux*.whl dist/*tar*
   deploy-mac:
-    runs-on: macos-latest 
-    strategy: 
+    runs-on: macos-latest
+    strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
     steps:
@@ -66,8 +65,8 @@ jobs:
       run: |
         twine upload dist/*.whl
   deploy-windows:
-    runs-on: windows-latest 
-    strategy: 
+    runs-on: windows-latest
+    strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
     steps:

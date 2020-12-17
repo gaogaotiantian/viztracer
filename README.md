@@ -1,6 +1,6 @@
 # VizTracer
 
-[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master) [![twitter](https://img.shields.io/twitter/follow/viztracer?label=viztracer&style=flat&logo=twitter)](https://twitter.com/viztracer)
+[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)  [![flake8](https://github.com/luoos/viztracer/workflows/Lint/badge.svg)](https://github.com/luoos/viztracer/actions?query=workflow%3ALint)  [![twitter](https://img.shields.io/twitter/follow/viztracer?label=viztracer&style=flat&logo=twitter)](https://twitter.com/viztracer)
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
@@ -15,10 +15,10 @@ More help can be found by clicking "?" on the top right corner.
 
 * Detailed function entry/exit information on timeline with source code
 * Super easy to use, no source code change for most features, no package dependency
-* Optional function filter to ignore functions you are not interested 
+* Optional function filter to ignore functions you are not interested
 * Custom events to log and track arbitrary data through time
 * Log arbitrary function/variable using RegEx without code change
-* Stand alone HTML report with powerful front-end, or chrome-compatible json 
+* Stand alone HTML report with powerful front-end, or chrome-compatible json
 * Works on Linux/MacOS/Windows
 
 ## Install
@@ -88,7 +88,7 @@ However, you can generate json file as well, which complies to the chrome trace 
 
 ### Trace Filter
 
-VizTracer can filter out the data you don't want to reduce overhead and keep info of a longer time period before you dump the log. 
+VizTracer can filter out the data you don't want to reduce overhead and keep info of a longer time period before you dump the log.
 
 * [Max Stack Depth](https://viztracer.readthedocs.io/en/stable/filter.html#max-stack-depth)
 * [Include Files](https://viztracer.readthedocs.io/en/stable/filter.html#include-files)
@@ -110,7 +110,7 @@ VizTracer can log extra information without changing your source code
 
 ### Add Custom Event
 
-VizTracer supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data. 
+VizTracer supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data.
 
 * [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
 * [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
@@ -128,11 +128,11 @@ VizTracer supports python native ```threading``` module without the need to do a
 ### Multi Process Support
 
 VizTracer supports ```subprocess``` with ```--log_subprocess``` and ```multiprocessing``` or ```os.fork()``` with ```--log_multiprocess```.
-For more general multi-process cases, VizTracer can support with some extra steps. 
+For more general multi-process cases, VizTracer can support with some extra steps.
 
 Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_thread_process.html) for details
 
-### JSON alternative 
+### JSON alternative
 
 VizTracer needs to dump the internal data to json format. It is recommended for the users to install ```orjson```, which is much faster than the builtin ```json``` library. VizTracer will try to import ```orjson``` and fall back to the builtin ```json``` library if ```orjson``` does not exist.
 
@@ -155,31 +155,31 @@ An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github V
 
 ```
 fib:
-0.000678067(1.00)[origin] 
-0.019880272(29.32)[py] 0.011103901(16.38)[parse] 0.021165599(31.21)[json] 
-0.001344933(1.98)[c] 0.008181911(12.07)[parse] 0.015789866(23.29)[json] 
-0.001472846(2.17)[cProfile]  
+0.000678067(1.00)[origin]
+0.019880272(29.32)[py] 0.011103901(16.38)[parse] 0.021165599(31.21)[json]
+0.001344933(1.98)[c] 0.008181911(12.07)[parse] 0.015789866(23.29)[json]
+0.001472846(2.17)[cProfile]
 
 hanoi     (6148, 4100):
-0.000550255(1.00)[origin] 
-0.016343521(29.70)[py] 0.007299123(13.26)[parse] 0.016779364(30.49)[json] 
-0.001062505(1.93)[c] 0.006416136(11.66)[parse] 0.011463236(20.83)[json] 
-0.001144914(2.08)[cProfile] 
+0.000550255(1.00)[origin]
+0.016343521(29.70)[py] 0.007299123(13.26)[parse] 0.016779364(30.49)[json]
+0.001062505(1.93)[c] 0.006416136(11.66)[parse] 0.011463236(20.83)[json]
+0.001144914(2.08)[cProfile]
 
 qsort     (8289, 5377):
-0.002817679(1.00)[origin] 
-0.052747431(18.72)[py] 0.011339725(4.02)[parse] 0.023644345(8.39)[json] 
-0.004767673(1.69)[c] 0.008735166(3.10)[parse] 0.017173703(6.09)[json] 
-0.007248019(2.57)[cProfile] 
+0.002817679(1.00)[origin]
+0.052747431(18.72)[py] 0.011339725(4.02)[parse] 0.023644345(8.39)[json]
+0.004767673(1.69)[c] 0.008735166(3.10)[parse] 0.017173703(6.09)[json]
+0.007248019(2.57)[cProfile]
 
 slow_fib  (1135, 758):
-0.028759652(1.00)[origin] 
-0.033994071(1.18)[py] 0.001630461(0.06)[parse] 0.003386635(0.12)[json] 
-0.029481623(1.03)[c] 0.001152415(0.04)[parse] 0.002191417(0.08)[json] 
-0.028289305(0.98)[cProfile] 
+0.028759652(1.00)[origin]
+0.033994071(1.18)[py] 0.001630461(0.06)[parse] 0.003386635(0.12)[json]
+0.029481623(1.03)[c] 0.001152415(0.04)[parse] 0.002191417(0.08)[json]
+0.028289305(0.98)[cProfile]
 ```
 
-## Documentation 
+## Documentation
 
 For full documentation, please see [https://viztracer.readthedocs.io/en/stable](https://viztracer.readthedocs.io/en/stable)
 
