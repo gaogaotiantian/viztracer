@@ -20,10 +20,6 @@ jobs:
     - name: Build source tar
       run: |
         python setup.py sdist
-    - name: Lint with flake8 for syntax errors
-      run: |
-        pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Build manylinux Python wheels with manylinux2014
       uses: RalfG/python-wheels-manylinux-build@v0.3.1-manylinux2014_x86_64
       with:
