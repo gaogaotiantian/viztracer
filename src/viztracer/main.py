@@ -48,9 +48,11 @@ class VizUI:
         parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
                             help="maximum stack depth you want to trace.")
         parser.add_argument("--exclude_files", nargs="*", default=None,
-                            help="specify the files(directories) you want to exclude from tracing. Can't be used with --include_files")
+                            help=("specify the files(directories) you want to exclude from tracing. "
+                                  "Can't be used with --include_files"))
         parser.add_argument("--include_files", nargs="*", default=None,
-                            help="specify the only files(directories) you want to include from tracing. Can't be used with --exclude_files")
+                            help=("specify the only files(directories) you want to include from tracing. "
+                                  "Can't be used with --exclude_files"))
         parser.add_argument("--ignore_c_function", action="store_true", default=False,
                             help="ignore all c functions including most builtin functions and libraries")
         parser.add_argument("--ignore_non_file", action="store_true", default=False,
@@ -86,7 +88,9 @@ class VizUI:
         parser.add_argument("--novdb", action="store_true", default=False,
                             help="Do not instrument for vdb, will reduce the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
-                            help="append pid to file name. This should be used when you try to trace multi process programs. Will by default generate json files")
+                            help=("append pid to file name. "
+                                  "This should be used when you try to trace multi process programs. "
+                                  "Will by default generate json files"))
         parser.add_argument("--save_flamegraph", action="store_true", default=False,
                             help="save flamegraph after generating the VizTracer report")
         parser.add_argument("--generate_flamegraph", nargs="?", default=None,
@@ -94,7 +98,8 @@ class VizUI:
         parser.add_argument("--module", "-m", nargs="?", default=None,
                             help="run module with VizTracer")
         parser.add_argument("--combine", nargs="*", default=[],
-                            help="combine all json reports to a single report. Specify all the json reports you want to combine")
+                            help=("combine all json reports to a single report. "
+                                  "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
         return parser
@@ -134,7 +139,8 @@ class VizUI:
 
         if options.log_subprocess:
             if not options.subprocess_child:
-                self.args = self.args + ["--subprocess_child", "--output_dir", self.multiprocess_output_dir, "-o", "result.json", "--pid_suffix"]
+                self.args += ["--subprocess_child", "--output_dir", self.multiprocess_output_dir,
+                              "-o", "result.json", "--pid_suffix"]
             self.patch_subprocess()
 
         self.options, self.command = options, command
@@ -351,7 +357,8 @@ class VizUI:
             tracer.pid_suffix = True
             if is_main_process:
                 tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
-                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f) for f in os.listdir(self.multiprocess_output_dir)])
+                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f)
+                                         for f in os.listdir(self.multiprocess_output_dir)])
                 builder.save(output_file=ofile)
                 shutil.rmtree(self.multiprocess_output_dir)
             else:  # pragma: no cover

@@ -33,17 +33,17 @@ class VizTracer(_VizTracer):
                  output_file="result.html",
                  plugins=[]):
         super().__init__(
-                tracer_entries=tracer_entries,
-                max_stack_depth=max_stack_depth,
-                include_files=include_files,
-                exclude_files=exclude_files,
-                ignore_c_function=ignore_c_function,
-                ignore_non_file=ignore_non_file,
-                log_func_retval=log_func_retval,
-                log_print=log_print,
-                log_gc=log_gc,
-                novdb=novdb,
-                log_func_args=log_func_args
+            tracer_entries=tracer_entries,
+            max_stack_depth=max_stack_depth,
+            include_files=include_files,
+            exclude_files=exclude_files,
+            ignore_c_function=ignore_c_function,
+            ignore_non_file=ignore_non_file,
+            log_func_retval=log_func_retval,
+            log_print=log_print,
+            log_gc=log_gc,
+            novdb=novdb,
+            log_func_args=log_func_args
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix

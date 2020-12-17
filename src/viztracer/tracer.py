@@ -293,8 +293,10 @@ class _VizTracer:
             self.total_entries = len(self.data["traceEvents"]) - metadata_count
             if self.total_entries == self.tracer_entries and self.verbose > 0:
                 print("")
-                color_print("WARNING", "Circular buffer is full, you lost some early data, but you still have the most recent data.")
-                color_print("WARNING", "    If you need more buffer, use \"viztracer --tracer_entries <entry_number>(current: {})\"".format(self.tracer_entries))
+                color_print("WARNING", ("Circular buffer is full, you lost some early data, "
+                                        "but you still have the most recent data."))
+                color_print("WARNING", ("    If you need more buffer, use \"viztracer --tracer_entries "
+                                        "<entry_number>(current: {})\"").format(self.tracer_entries))
                 color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
                 color_print("WARNING", "    use --quiet to shut me up")
                 print("")

@@ -74,6 +74,7 @@ def quick_sort(collection):
                 lesser.append(element)
         return quick_sort(lesser) + [pivot] + quick_sort(greater)
 
+
 def heapify(unsorted, index, heap_size):
     largest = index
     left_index = 2 * index + 1

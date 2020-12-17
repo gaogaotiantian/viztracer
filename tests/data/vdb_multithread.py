@@ -7,14 +7,14 @@ import time
 def ig(n):
     if n < 2:
         return 1
-    return ig(n-1) + ig(n-2)
+    return ig(n - 1) + ig(n - 2)
 
 
 def fib(n):
     if n < 2:
         return 1
     time.sleep(0.0000001)
-    return fib(n-1) + fib(n-2)
+    return fib(n - 1) + fib(n - 2)
 
 
 class MyThread(threading.Thread):

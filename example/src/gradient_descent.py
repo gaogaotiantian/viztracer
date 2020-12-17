@@ -117,7 +117,7 @@ def run_gradient_descent():
             temp_parameter_vector[i] = (
                 parameter_vector[i] - LEARNING_RATE * cost_derivative
             )
-        counter.cost = math.log(1+err)
+        counter.cost = math.log(1 + err)
         if numpy.allclose(
             parameter_vector,
             temp_parameter_vector,
