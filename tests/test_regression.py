@@ -90,8 +90,7 @@ class TestFunctionArg(BaseTmpl):
         self.assertEqual(inputs, set([0, 1, 2, 3, 4, 5]))
 
 
-issue21_code = \
-"""
+issue21_code = """
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--script_option", action="store_true")
@@ -108,8 +107,10 @@ class TestIssue21(CmdlineTmpl):
     # is not parsed correctly because the program gets confused
     # about --script_option
     def test_issue21(self):
-        self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"], script=issue21_code)
-        self.template(["viztracer", "--include_files", "/", "--", "cmdline_test.py", "--script_option"], script=issue21_code)
+        self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"],
+                      script=issue21_code)
+        self.template(["viztracer", "--include_files", "/", "--", "cmdline_test.py", "--script_option"],
+                      script=issue21_code)
         self.template(["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
@@ -117,8 +118,7 @@ class TestIssue21(CmdlineTmpl):
         self.template(["viztracer", "--"], script=issue21_code, success=False, expected_output_file=None)
 
 
-term_code = \
-"""
+term_code = """
 import time
 a = []
 a.append(1)
@@ -160,8 +160,7 @@ class TestIssue42(BaseTmpl):
         self.assertEventNumber(tracer.data, 0)
 
 
-issue47_code = \
-"""
+issue47_code = """
 import sys
 import gc
 class C:
@@ -180,10 +179,14 @@ c.change()
 
 class TestIssue47(CmdlineTmpl):
     def test_issue47(self):
-        self.template(["viztracer", "cmdline_test.py", "-o", "result.json"], script=issue47_code, expected_output_file="result.json", expected_entries=7)
+        self.template(["viztracer", "cmdline_test.py", "-o", "result.json"],
+                      script=issue47_code,
+                      expected_output_file="result.json",
+                      expected_entries=7)
 
 
 class TestIssue58(CmdlineTmpl):
     def test_issue58(self):
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "--log_multiprocess", "-m", "tests.modules.issue58"], expected_output_file="result.html")
+            self.template(["viztracer", "--log_multiprocess", "-m", "tests.modules.issue58"],
+                          expected_output_file="result.html")

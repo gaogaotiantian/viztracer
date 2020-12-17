@@ -8,15 +8,13 @@ import platform
 from .cmdline_tmpl import CmdlineTmpl
 
 
-file_parent = \
-"""
+file_parent = """
 import subprocess
 subprocess.run(["python", "child.py"])
 """
 
 
-file_child = \
-"""
+file_child = """
 def fib(n):
     if n < 2:
         return 1
@@ -24,8 +22,7 @@ def fib(n):
 fib(5)
 """
 
-file_fork = \
-"""
+file_fork = """
 import os
 import time
 
@@ -38,8 +35,7 @@ else:
     print("child")
 """
 
-file_multiprocessing = \
-"""
+file_multiprocessing = """
 import multiprocessing
 from multiprocessing import Process
 import time
@@ -61,8 +57,7 @@ if __name__ == "__main__":
     time.sleep(0.1)
 """
 
-file_multiprocessing_stack_limit = \
-"""
+file_multiprocessing_stack_limit = """
 import multiprocessing
 from multiprocessing import Process
 import time
@@ -89,8 +84,7 @@ if __name__ == "__main__":
     time.sleep(0.1)
 """
 
-file_pool = \
-"""
+file_pool = """
 from multiprocessing import Process, Pool
 import os
 import time
@@ -131,7 +125,8 @@ class TestSubprocess(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
-        self.template(["viztracer", "--log_subprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_parent, check_func=check_func)
+        self.template(["viztracer", "--log_subprocess", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json", script=file_parent, check_func=check_func)
 
 
 class TestMultiprocessing(CmdlineTmpl):
@@ -142,7 +137,8 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
         if sys.platform in ["linux", "linux2"]:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_fork, check_func=check_func)
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                          expected_output_file="result.json", script=file_fork, check_func=check_func)
 
     def test_multiprosessing(self):
         def check_func(data):
@@ -152,17 +148,30 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
 
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing, check_func=check_func, concurrency="multiprocessing")
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                          expected_output_file="result.json",
+                          script=file_multiprocessing,
+                          check_func=check_func,
+                          concurrency="multiprocessing")
             if not("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8):
                 # I could not reproduce the stuck failure locally. This is only for
                 # coverage anyway, just skip it on 3.8+
-                self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_pool, check_func=check_func, concurrency="multiprocessing")
+                self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                              expected_output_file="result.json",
+                              script=file_pool,
+                              check_func=check_func,
+                              concurrency="multiprocessing")
         else:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], script=file_multiprocessing, success=False, expected_output_file=None)
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                          script=file_multiprocessing, success=False, expected_output_file=None)
 
     def test_multiprosessing_stack_depth(self):
         def check_func(data):
             for entry in data["traceEvents"]:
                 self.assertNotIn("fib", entry["name"].split())
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json", script=file_multiprocessing_stack_limit, check_func=check_func, concurrency="multiprocessing")
+            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                          expected_output_file="result.json",
+                          script=file_multiprocessing_stack_limit,
+                          check_func=check_func,
+                          concurrency="multiprocessing")

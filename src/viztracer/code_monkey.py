@@ -157,30 +157,30 @@ class AstTransformer(ast.NodeTransformer):
             elif self.inst_type == "log_number":
                 event = "counter"
             return self.get_add_variable_node(
-                    name=name,
-                    var_node=ast.Name(id=name, ctx=ast.Load()),
-                    event=event
+                name=name,
+                var_node=ast.Name(id=name, ctx=ast.Load()),
+                event=event
             )
         elif self.inst_type == "log_func_exec":
             return self.get_add_func_exec_node(
-                    name=name,
-                    val=ast.Name(id=name, ctx=ast.Load()),
-                    lineno=self.curr_lineno
+                name=name,
+                val=ast.Name(id=name, ctx=ast.Load()),
+                lineno=self.curr_lineno
             )
         elif self.inst_type == "log_func_entry":
             return self.get_add_variable_node(
-                    name=name,
-                    var_node=ast.Constant(value="{} is called".format(name)),
-                    event="instant"
+                name=name,
+                var_node=ast.Constant(value="{} is called".format(name)),
+                event="instant"
             )
         else:
             raise ValueError("{} is not supported".format(name))
 
     def get_instrument_node_by_node(self, node):
         return self.get_add_variable_node(
-                name=self.get_string_of_expr(node),
-                var_node=self.copy_node_with_load(node),
-                event="instant"
+            name=self.get_string_of_expr(node),
+            var_node=self.copy_node_with_load(node),
+            event="instant"
         )
 
     def get_add_variable_node(self, name, var_node, event):

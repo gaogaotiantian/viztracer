@@ -42,9 +42,9 @@ class FuncTreeNode:
         return self.start < other.start and self.end > other.end
 
     def is_same(self, other):
-        return self.fullname == other.fullname and \
-                len(self.children) == len(other.children) and \
-                all([t[0].is_same(t[1]) for t in zip(self.children, other.children)])
+        return (self.fullname == other.fullname
+                and len(self.children) == len(other.children)
+                and all([t[0].is_same(t[1]) for t in zip(self.children, other.children)]))
 
     def adopt(self, other):
         new_children = []

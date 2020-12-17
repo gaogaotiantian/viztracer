@@ -59,12 +59,12 @@ class ReportBuilder:
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
-            print("Dumping trace data to json, total entries: {}, estimated json file size: {}"
-                    .format(entries, size_fmt(120 * entries)))
+            print(f"Dumping trace data to json, total entries: {entries}, estimated json file size: {size_fmt(120 * entries)}")
             if entries >= self.entry_number_threshold:
                 print("")
                 color_print("WARNING", "Large trace requires a lot of RAM and is slow to load.")
-                color_print("WARNING", "    If you need faster loading time or smaller trace file, try a smaller tracer_entries or use filters")
+                color_print("WARNING", ("    If you need faster loading time or smaller trace file, "
+                                        "try a smaller tracer_entries or use filters"))
                 color_print("WARNING", "    use --quiet to shut me up")
                 print("")
 

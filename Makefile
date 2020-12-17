@@ -3,7 +3,7 @@ refresh: clean build install lint
 build:
 	python setup.py build
 
-install: 
+install:
 	python setup.py install
 
 build_dist:
@@ -19,8 +19,7 @@ release:
 	python -m twine upload dist/*
 
 lint:
-	flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 src tests --exclude tests/data/ --count --exit-zero --statistic --ignore=E501,E122,E126,E127,E128,W503
+	flake8 . --count --ignore=W503 --max-line-length=127 --statistics
 
 test:
 	python -m unittest
@@ -31,6 +30,6 @@ clean:
 	rm -rf src/viztracer/__pycache__
 	rm -rf build
 	rm -rf dist
-	rm -rf viztracer.egg-info 
+	rm -rf viztracer.egg-info
 	rm -rf src/viztracer.egg-info
 	pip uninstall -y viztracer

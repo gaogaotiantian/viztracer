@@ -7,8 +7,7 @@ import sys
 import platform
 
 
-file_basic = \
-"""
+file_basic = """
 from viztracer import log_sparse
 
 @log_sparse
@@ -22,8 +21,7 @@ g()
 """
 
 
-file_pool = \
-"""
+file_pool = """
 from multiprocessing import Process, Pool
 from viztracer import log_sparse
 import os
@@ -58,8 +56,14 @@ class TestLogSparse(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 self.assertNotEqual(entry["name"], "f")
 
-        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", expected_entries=1)
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], script=file_basic, expected_output_file="result.json", check_func=check_func)
+        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+                      script=file_basic,
+                      expected_output_file="result.json",
+                      expected_entries=1)
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      script=file_basic,
+                      expected_output_file="result.json",
+                      check_func=check_func)
 
     def test_without_tracer(self):
         self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)
@@ -69,4 +73,8 @@ class TestLogSparse(CmdlineTmpl):
             if not("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8):
                 # I could not reproduce the stuck failure locally. This is only for
                 # coverage anyway, just skip it on 3.8
-                self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"], script=file_pool, expected_output_file="result.json", expected_entries=21, concurrency="multiprocessing")
+                self.template(["viztracer", "-o", "result.json", "--log_multiprocess", "--log_sparse", "cmdline_test.py"],
+                              script=file_pool,
+                              expected_output_file="result.json",
+                              expected_entries=21,
+                              concurrency="multiprocessing")

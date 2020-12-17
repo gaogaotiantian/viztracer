@@ -74,8 +74,12 @@ class TestPerformance(BaseTmpl):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 
         print(time_str("origin", origin, origin))
-        print(time_str("c+novdb", origin, instrumented_c_novdb) + time_str("parse", origin, instrumented_c_novdb_parse) + time_str("json", origin, instrumented_c_novdb_json))
-        print(time_str("c", origin, instrumented_c) + time_str("parse", origin, instrumented_c_parse) + time_str("json", origin, instrumented_c_json))
+        print(time_str("c+novdb", origin, instrumented_c_novdb)
+              + time_str("parse", origin, instrumented_c_novdb_parse)
+              + time_str("json", origin, instrumented_c_novdb_json))
+        print(time_str("c", origin, instrumented_c)
+              + time_str("parse", origin, instrumented_c_parse)
+              + time_str("json", origin, instrumented_c_json))
         print(time_str("cProfile", origin, cprofile))
 
     def test_fib(self):

@@ -34,20 +34,14 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 setuptools wheel twine coverage rich orjson
+        pip install setuptools wheel twine coverage rich orjson
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 setuptools wheel twine coverage
+        pip install setuptools wheel twine coverage
         if (Test-Path -Path '.\requirements.txt' -PathType Leaf) {pip install -r requirements.txt}
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. 
-        flake8 src tests --exclude tests/data/ --count --exit-zero --statistic --ignore=E501,E122,E126,E127,E128,W503
     - name: Build dist and test with unittest
       if: matrix.os != 'windows-latest'
       run: |

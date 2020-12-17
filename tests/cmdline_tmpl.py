@@ -8,8 +8,7 @@ import subprocess
 from .base_tmpl import BaseTmpl
 
 
-file_fib = \
-"""
+file_fib = """
 def fib(n):
     if n < 2:
         return 1

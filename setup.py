@@ -25,7 +25,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/gaogaotiantian/viztracer",
     packages=setuptools.find_packages("src"),
-    package_dir={"":"src"},
+    package_dir={"": "src"},
     package_data={
         "viztracer": [
             "html/*.js",
@@ -36,7 +36,7 @@ setuptools.setup(
     ext_modules=[
         Extension(
             "viztracer.snaptrace",
-            sources = [
+            sources=[
                 "src/viztracer/modules/snaptrace.c",
             ],
             extra_link_args=["-lpthread"]
