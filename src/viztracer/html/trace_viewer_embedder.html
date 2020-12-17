@@ -101,7 +101,7 @@ var json_data;
     viewer.viewTitle = url;
   }
 
-  function onImportFail() {
+  function onImportFail(err) {
     const overlay = new tr.ui.b.Overlay();
     overlay.textContent = tr.b.normalizeException(err).message;
     overlay.title = 'Import error';
