@@ -90,6 +90,11 @@ class TestSnapShot(BaseTmpl):
         with self.assertRaises(ValueError):
             _ = ProgSnapshot(data)
 
+    def test_invalid_filename(self):
+        data = '{"traceEvents": [{"pid":7761,"tid":7761,"ts":23668655769.443,"dur":0.4,"name":"_handle_fromlist (<frozen importlib._bootstrap>:1017)","caller_lineno":10,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.9.5"}}'  # noqa: E501
+        prog = ProgSnapshot(data)
+        prog.show()
+
     def test_multiple_process(self):
         data = '{"traceEvents": [{"pid":7762,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}, {"pid":7761,"tid":7761,"ts":23668655766.343,"dur":5.8,"name":"builtins.exec","caller_lineno":147,"ph":"X","cat":"FEE"}], "viztracer_metadata": {"version": "0.9.5"}}'  # noqa: E501
         snap = ProgSnapshot(data)

@@ -6,6 +6,7 @@ try:
 except ImportError:
     import json
 import bisect
+import os
 from .functree import FuncTree
 from .util import color_print
 from . import __version__
@@ -38,6 +39,10 @@ class Frame:
         node = self.node
         firstlineno = node.lineno
         if node.filename:
+            if not os.path.exists(node.filename):
+                p("> Not able to locate the source")
+                return
+
             with open(node.filename) as f:
                 lst = f.readlines()
 
