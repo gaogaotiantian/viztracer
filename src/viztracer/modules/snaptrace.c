@@ -20,6 +20,7 @@
 // Function declarations
 
 int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
+int snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
 static PyObject* snaptrace_start(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_stop(TracerObject* self, PyObject* args);
@@ -309,11 +310,25 @@ static struct PyModuleDef snaptracemodule = {
 // =============================================================================
 // Tracing function, triggered when FEE
 // =============================================================================
+int
+snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
+{
+    TracerObject* self = (TracerObject*) obj;
+    if (self->collecting) {
+        PyEval_SetProfile(snaptrace_tracefunc, obj);
+        return snaptrace_tracefunc(obj, frame, what, arg);
+    }
+    return 0;
+}
 
 int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
+    if (!self->collecting) {
+        PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
+        return 0;
+    }
     if (what == PyTrace_CALL || what == PyTrace_RETURN || 
             (!CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
         struct EventNode* node = NULL;
@@ -506,7 +521,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
         exit(1);
     }
     snaptrace_createthreadinfo((TracerObject*) obj);
-    PyEval_SetProfile(snaptrace_tracefunc, obj);
+    PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
     if (!strcmp(event, "call")) {
         what = PyTrace_CALL;
     } else if (!strcmp(event, "c_call")) {
@@ -518,7 +533,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
     } else {
         printf("Unexpected event type: %s\n", event);
     }
-    snaptrace_tracefunc(obj, frame, what, trace_args);
+    snaptrace_tracefuncdisabled(obj, frame, what, trace_args);
     Py_RETURN_NONE;
 }
 
@@ -534,22 +549,9 @@ snaptrace_start(TracerObject* self, PyObject* args)
     } else {
         curr_tracer = self;
     }
-    // Python: threading.setprofile(tracefunc)
-    {
-        PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
-
-        PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
-        PyObject* callback = Py_BuildValue("(N)", handler);
-
-        if (PyObject_CallObject(setprofile, callback) == NULL) {
-            perror("Failed to call threading.setprofile() properly");
-            exit(-1);
-        }
-        Py_DECREF(callback);
-    }
-    PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
 
     self->collecting = 1;
+    PyEval_SetProfile(snaptrace_tracefunc, (PyObject*) self);
 
     Py_RETURN_NONE;
 }
@@ -557,21 +559,9 @@ snaptrace_start(TracerObject* self, PyObject* args)
 static PyObject*
 snaptrace_stop(TracerObject* self, PyObject* args)
 {
-    PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
-
-    // threading.setprofile(None)
-    // This is important to keep REFCNT normal
-    PyObject* tuple = PyTuple_New(1);
-    PyTuple_SetItem(tuple, 0, Py_None);
-    if (PyObject_CallObject(setprofile, tuple) == NULL) {
-        perror("Failed to call threading.setprofile() properly");
-        exit(-1);
-    }
-    Py_DECREF(tuple);
-
-    PyEval_SetProfile(NULL, NULL);
-    
     struct ThreadInfo* info = get_thread_info(self);
+    self->collecting = 0;
+
     if (info) {
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
@@ -579,6 +569,7 @@ snaptrace_stop(TracerObject* self, PyObject* args)
         clear_stack(&info->stack_top);
     }
     curr_tracer = NULL;
+    PyEval_SetProfile(NULL, NULL);
 
     Py_RETURN_NONE;
 }
@@ -1307,6 +1298,20 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->buffer_tail_idx = 0;
         self->metadata_head = NULL;
         snaptrace_createthreadinfo(self);
+        // Python: threading.setprofile(tracefuncdisabled)
+        {
+            PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
+
+            PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
+            PyObject* callback = Py_BuildValue("(N)", handler);
+
+            if (PyObject_CallObject(setprofile, callback) == NULL) {
+                perror("Failed to call threading.setprofile() properly");
+                exit(-1);
+            }
+            Py_DECREF(callback);
+        }
+        PyEval_SetProfile(snaptrace_tracefuncdisabled, (PyObject*)self);
     }
 
     return (PyObject*) self;
@@ -1336,6 +1341,20 @@ Tracer_dealloc(TracerObject* self)
         node = node->next;
         PyMem_FREE(prev);
     }
+
+    // threading.setprofile(None)
+    PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
+    // This is important to keep REFCNT normal
+    if (setprofile != Py_None) {
+        PyObject* tuple = PyTuple_New(1);
+        PyTuple_SetItem(tuple, 0, Py_None);
+        if (PyObject_CallObject(setprofile, tuple) == NULL) {
+            perror("Failed to call threading.setprofile() properly dealloc");
+            exit(-1);
+        }
+        Py_DECREF(tuple);
+    }
+
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
 

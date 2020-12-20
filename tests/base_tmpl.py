@@ -1,4 +1,5 @@
 from unittest import TestCase
+import gc
 
 
 class BaseTmpl(TestCase):
@@ -7,6 +8,7 @@ class BaseTmpl(TestCase):
 
     def tearDown(self):
         print("{} finish".format(self.id()))
+        gc.collect()
 
     def assertEventNumber(self, data, expected_entries):
         entries = len([1 for entry in data["traceEvents"] if entry["ph"] != "M"])

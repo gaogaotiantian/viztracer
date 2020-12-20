@@ -5,6 +5,7 @@ from viztracer import VizTracer
 import time
 import threading
 from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 
 
 def fib(n):
@@ -69,3 +70,36 @@ class TestMultithread(BaseTmpl):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 300)
+
+
+file_log_sparse = """
+import threading
+from viztracer import log_sparse
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        self.sparse_func()
+
+    @log_sparse
+    def sparse_func(self):
+        return 0
+
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+
+thread1.start()
+thread2.start()
+
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+"""
+
+
+class TestMultithreadCmdline(CmdlineTmpl):
+    def test_with_log_sparse(self):
+        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_log_sparse,
+                      expected_entries=2)
