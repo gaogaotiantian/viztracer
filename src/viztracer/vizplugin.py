@@ -30,12 +30,13 @@ class VizPluginManager:
         self._plugins = []
         for plugin in plugins:
             if isinstance(plugin, VizPluginBase):
-                self._plugins.append(plugin)
-                plugin.message("event", {"when": "initialize"})
+                plugin_instance = plugin
             elif isinstance(plugin, str):
-                self._plugins.append(self._get_plugin_from_string(plugin))
+                plugin_instance = self._get_plugin_from_string(plugin)
             else:
                 raise TypeError("Invalid plugin!")
+            self._plugins.append(plugin_instance)
+            plugin_instance.message("event", {"when": "initialize"})
 
     def _get_plugin_from_string(self, plugin):
         args = plugin.split()

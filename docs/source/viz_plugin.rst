@@ -3,7 +3,7 @@ VizPlugin
 
 In this doc, we will show how to build your own plugin for VizTracer.
 
-Every plugin should inherit ``VizPluginBase`` from ``viztracer.viz_plugin``
+Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
 
 .. py:class:: VizPluginBase(self)
 
