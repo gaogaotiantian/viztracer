@@ -217,6 +217,8 @@ class TestTracerFeature(BaseTmpl):
     def test_log_gc(self):
         import gc
         tracer = _VizTracer(log_gc=True)
+        # do collect first to get rid of the garbage tracer
+        gc.collect()
         self.assertTrue(tracer.log_gc)
         tracer.start()
         gc.collect()
