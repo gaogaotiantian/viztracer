@@ -11,6 +11,8 @@ from .cmdline_tmpl import CmdlineTmpl
 file_parent = """
 import subprocess
 subprocess.run(["python", "child.py"])
+subprocess.run(("python", "child.py"))
+subprocess.run("python child.py")
 """
 
 
@@ -124,7 +126,7 @@ class TestSubprocess(CmdlineTmpl):
             pids = set()
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
-            self.assertGreater(len(pids), 1)
+            self.assertEqual(len(pids), 4)
         self.template(["viztracer", "--log_subprocess", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", script=file_parent, check_func=check_func)
 
