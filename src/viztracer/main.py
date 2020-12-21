@@ -8,6 +8,7 @@ import os
 from multiprocessing import get_start_method
 import types
 import builtins
+import platform
 import signal
 import shutil
 from . import VizTracer
@@ -171,8 +172,15 @@ class VizUI:
         ui = self
 
         def subprocess_init(self, args, **kwargs):
-            if type(args) is list:
-                if args[0].startswith("python"):
+            if int(platform.python_version_tuple()[1]) >= 7:
+                from collections.abc import Sequence
+            else:
+                from collections import Sequence
+            if isinstance(args, str):
+                args = args.split()
+            if isinstance(args, Sequence):
+                args = list(args)
+                if "python" in os.path.basename(args[0]):
                     args = ["viztracer"] + ui.args + ["--"] + args[1:]
             self.__originit__(args, **kwargs)
 
