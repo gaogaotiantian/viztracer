@@ -137,7 +137,7 @@ def main():
     options = parser.parse_args(sys.argv[1:])
 
     filename = options.file[0]
-    with open(filename) as f:
+    with open(filename, encoding="utf-8") as f:
         s = f.read()
 
     sim = Simulator(s, no_clear=options.no_clear, extra_newline=options.extra_newline)
