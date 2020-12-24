@@ -43,7 +43,7 @@ class Frame:
                 p("> Not able to locate the source")
                 return
 
-            with open(node.filename) as f:
+            with open(node.filename, encoding="utf-8") as f:
                 lst = f.readlines()
 
             start = firstlineno - 1

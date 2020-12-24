@@ -97,14 +97,14 @@ class FlameGraph:
         return ret
 
     def load(self, input_file):
-        with open(input_file) as f:
+        with open(input_file, encoding="utf-8") as f:
             self._data = self.parse(json.loads(f.read()))
 
     def save(self, output_file="result_flamegraph.html"):
         sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html")) as f:
+        with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html"), encoding="utf-8") as f:
             tmpl = f.read()
         sub["data"] = self._data
 
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(Template(tmpl).substitute(sub))

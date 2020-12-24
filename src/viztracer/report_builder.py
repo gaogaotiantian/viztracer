@@ -22,7 +22,7 @@ def get_json(data):
     elif isinstance(data, io.IOBase):
         json_str = data.read()
     elif type(data) is str:
-        with open(data) as f:
+        with open(data, encoding="utf-8") as f:
             json_str = f.read()
     else:
         raise TypeError("Unexpected Type{}!", type(data))
@@ -81,7 +81,7 @@ class ReportBuilder:
                             file_name = m.group(1)
                             lineno = int(m.group(2))
                             if file_name not in file_dict:
-                                with open(file_name, "r") as f:
+                                with open(file_name, "r", encoding="utf-8") as f:
                                     content = f.read()
                                     file_dict[file_name] = [content, content.count("\n")]
                             func_dict[event["name"]] = [file_name, lineno]
@@ -121,9 +121,12 @@ class ReportBuilder:
                 f.write(self.generate_report(file_info=True))
         elif file_type == "json":
             data = self.generate_json(allow_binary=True, file_info=file_info)
-            open_option = "wb" if type(data) is bytes else "w"
-            with open(output_file, open_option) as f:
-                f.write(data)
+            if type(data) is bytes:
+                with open(output_file, "wb") as f:
+                    f.write(data)
+            else:
+                with open(output_file, "w", encoding="utf-8") as f:
+                    f.write(data)
         elif file_type == "gz":
             data = self.generate_json(allow_binary=True, file_info=file_info)
             if type(data) is not bytes:
