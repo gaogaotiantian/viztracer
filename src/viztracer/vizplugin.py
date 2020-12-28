@@ -2,6 +2,10 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+class VizPluginError(Exception):
+    pass
+
+
 # A third party developer who wants to develop based on VizTracer can do a plugin
 # Simply inherit VizPluginBase class and finish the methods. Then you can load it
 # by VizTracer(plugins=[YourVizPlugin()])
@@ -21,6 +25,10 @@ class VizPluginBase:
         :return dict: always return a dict. Return None if nothing needs to be done
                       by VizTracer. Otherwise refer to the docs
         """
+        if m_type == "command":
+            if payload["cmd_type"] == "terminate":
+                return {"success": True}
+
         return {}
 
 
@@ -74,6 +82,19 @@ class VizPluginManager:
         for plugin in self._plugins:
             ret = plugin.message("event", {"when": when})
             self.resolve(ret)
+
+    def terminate(self):
+        self.command({"cmd_type": "terminate"})
+        del self._plugins
+
+    def command(self, cmd):
+        for plugin in self._plugins:
+            ret = plugin.message("command", cmd)
+            self.assert_success(plugin, cmd, ret)
+
+    def assert_success(self, plugin, cmd, ret):
+        if not ret or "success" not in ret or not ret["success"]:
+            raise VizPluginError(f"{plugin} failed to process {cmd}")
 
     def resolve(self, ret):
         if not ret or "action" not in ret:

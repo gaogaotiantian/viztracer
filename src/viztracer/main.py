@@ -379,6 +379,7 @@ class VizUI:
         if not self._exiting:
             self._exiting = True
             self.save(self.tracer)
+            self.tracer.terminate()
             if self.options.open:
                 import webbrowser
                 try:
