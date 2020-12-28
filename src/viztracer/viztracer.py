@@ -96,6 +96,7 @@ class VizTracer(_VizTracer):
         self.stop()
         if type is None:
             self.save()
+        self.terminate()
 
     def register_global(self):
         builtins.__dict__["__viz_tracer__"] = self
@@ -189,3 +190,6 @@ class VizTracer(_VizTracer):
             name_list = self.output_file.split(".")
             output_file = ".".join(name_list[:-1]) + "_flamegraph." + name_list[-1]
         flamegraph.save(output_file)
+
+    def terminate(self):
+        self._plugin_manager.terminate()

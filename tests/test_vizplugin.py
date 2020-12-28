@@ -4,13 +4,14 @@
 
 from .cmdline_tmpl import CmdlineTmpl
 from viztracer import VizTracer
-from viztracer.vizplugin import VizPluginBase
+from viztracer.vizplugin import VizPluginBase, VizPluginError
 
 
 class MyPlugin(VizPluginBase):
-    def __init__(self):
+    def __init__(self, terminate_well=True):
         self.event_counter = 0
         self.handler_triggered = False
+        self.terminate_well = terminate_well
 
     def message(self, m_type, payload):
 
@@ -23,6 +24,10 @@ class MyPlugin(VizPluginBase):
                 "action": "handle_data",
                 "handler": f
             }
+
+        if m_type == "command":
+            if payload["cmd_type"] == "terminate":
+                return {"success": self.terminate_well}
         return {}
 
 
@@ -40,6 +45,16 @@ class TestVizPlugin(CmdlineTmpl):
         invalid_pl = []
         with self.assertRaises(TypeError):
             _ = VizTracer(plugins=[invalid_pl])
+
+    def test_terminate(self):
+        pl = MyPlugin()
+        with VizTracer(plugins=[pl]):
+            _ = []
+
+        pl = MyPlugin(terminate_well=False)
+        with self.assertRaises(VizPluginError):
+            with VizTracer(plugins=[pl]):
+                _ = []
 
     def test_cmdline(self):
         self.template(["viztracer", "--plugin", "tests.modules.dummy_vizplugin", "--", "cmdline_test.py"])
