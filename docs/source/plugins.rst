@@ -39,4 +39,13 @@ You can also do it inline, just pass the string or the plugin object itself in a
     # Or
     tracer = VizTracer(plugins=[vizplugins.CpuTimePlugin()])
 
+    # To gracefully terminate all plugins, you need to do terminate
+    tracer.terminate()
+
+.. code-block:: python
+
+    # You can use with statement to avoid explicitly terminate
+    with VizTracer(plugins=["vizplugins.cpu_time"]):
+        # Do your stuff here
+
 If you want to develop your own plugin for VizTracer, take a look at :doc:`viz_plugin`

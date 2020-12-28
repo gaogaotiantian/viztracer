@@ -11,20 +11,29 @@ Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
 
         :param str m_type: type of message
         :param dict payload: a very flexible payload with the message
-        :return: the action you want VizTracer to do
+        :return: the corresponding return value. Could be an action, or a respond.
         :rtype: dict
 
-        As of now, ``message()`` only supports one kind if ``m_type`` - ``"event"``. which
-        works like a hook when VizTracer is doing something. 
+        As of now, ``message()`` only supports two kinds of ``m_type`` - ``"event"`` and ``"command"``.
 
         ``"event"`` has a payload that has key ``"when"``, to indicate when the event happens. 
 
         ``"when"`` could be ``initialize``, ``pre-start``, ``post-stop`` or ``pre-save``.
 
-        For now, the only action VizTracer supports is ``handle_data``, with which you also
+        When ``"event"`` type message is received, the plugin can return an action, with key ``"action"`` set to the
+        action it needs. For now the only one supported is ``"handle_data"``, with which you also
         needs to provide a data handler ``"handler"``
 
         return ``{}`` if you don't want to do anything
+
+        ``"command"`` has a payload that has key ``"cmd_type"``, to indicate what VizTracer expects the plugin to do.
+
+        ``"cmd_type"`` could only be ``"terminate"`` for now. ``"terminate"`` command is guaranteed before viztracer exits
+        when commandline interface is used. However, if you are using viztracer inline, you will have to explicitly run
+        ``tracer.terminate()`` unless you are using ``with VizTracer()``.
+
+        When ``"command"`` type message is received, the plugin has to return a dict like ``{"success": True}`` to 
+        inform VizTracer that the plugin received the command and did what it asked.
 
         .. code-block::python
 
@@ -33,7 +42,11 @@ Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
                     if payload["when"] == "pre-start":
                         self.do_something()
                     elif payload["when"] == "pre-save":
-                        self.return({"action":"handle_data", "handler", self.handler})
+                        return({"action":"handle_data", "handler", self.handler})
+                elif m_type == "command":
+                    if payload["cmd_type"] == "terminate":
+                        # release all the resources here
+                        return({"success": True})
                 
                 return {}
 
