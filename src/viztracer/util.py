@@ -45,6 +45,23 @@ def get_url_from_file(file_path):
     return file_path
 
 
+def compare_version(ver1, ver2):
+    # assuming ver1, ver2 are both str and in a pattern of
+    # major.minor.micro with only numbers
+    # return 1 if ver1 > ver2
+    # return 0 if ver1 == ver2
+    # return -1 if ver1 < ver2
+    tuple1 = tuple((int(v) for v in ver1.split(".")))
+    tuple2 = tuple((int(v) for v in ver2.split(".")))
+
+    if tuple1 > tuple2:
+        return 1
+    elif tuple1 == tuple2:
+        return 0
+    else:
+        return -1
+
+
 def get_tracer():
     try:
         return __viz_tracer__

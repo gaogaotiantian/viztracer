@@ -7,6 +7,19 @@ Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
 
 .. py:class:: VizPluginBase(self)
 
+    .. py:method:: support_version(self)
+
+        :return: the string for the latest version of viztracer supported to have API compatibility
+        :rtype: dict
+
+        You must have this method overloaded and return the version, otherwise viztracer
+        will raise an exception
+
+        .. code-block:: python
+
+            def support_version(self):
+                return "0.11.0"
+
     .. py:method:: message(self, m_type, payload)
 
         :param str m_type: type of message
@@ -16,7 +29,7 @@ Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
 
         As of now, ``message()`` only supports two kinds of ``m_type`` - ``"event"`` and ``"command"``.
 
-        ``"event"`` has a payload that has key ``"when"``, to indicate when the event happens. 
+        ``"event"`` has a ``payload`` that has key ``"when"``, to indicate when the event happens. 
 
         ``"when"`` could be ``initialize``, ``pre-start``, ``post-stop`` or ``pre-save``.
 
@@ -50,6 +63,24 @@ Every plugin should inherit ``VizPluginBase`` from ``viztracer.vizplugin``
                 
                 return {}
 
+Possible Actions
+----------------
+
+This sections lists all the possible actions you can take after you received an event. You should
+return ``{"action": "the action name" ...}`` with specific payload for each action
+
+``"handle_data"``
+
+When you want to modify the data, which is a common way to change the result viztracer has, you need
+to use ``"handle_data"`` action.
+
+You should return ``{"action": "handle_data", "handler": my_handler}`` where ``my_handler`` should be
+a function with a prototype ``def my_handler(data)``. VizTracer will call this handler to modify the
+original data before it saves the report
+
+Make Your Plugin Accessible
+---------------------------
+
 You will also need a magic function defined to enable VizTracer to load your plugins from command line.
 The function has to be named ```get_vizplugin(arg)```, which will return an instance of your plugin object
 based on the arg given when it's called. You also need to put this function in the module that you want 
@@ -57,8 +88,8 @@ your use to use on command line.
 
 For example, if I want my user to use my plugin as ``viztracer --plugins vizplugins -- my_script.py``, I
 should put ``get_vizplugin()`` function in ``vizplugins/__init__.py``. Or if I want them to use as 
-``viztracer --plugins vizplugins.cpu_time -- my_script.py``, I should put the function in
-``vizplugins/cpu_time.py``
+``viztracer --plugins vizplugins.cpu_usage -- my_script.py``, I should put the function in
+``vizplugins/cpu_usage.py``
 
 Be aware that **arg is an unparsed string** like "vizplugins.cpu_time f 100". You can split it yourself
 and parse it the way you like. Or you can specify something special for your own plugin

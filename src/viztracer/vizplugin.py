@@ -1,6 +1,9 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+from .util import compare_version, color_print
+from . import __version__
+
 
 class VizPluginError(Exception):
     pass
@@ -14,9 +17,17 @@ class VizPluginBase:
     def __init__(self):
         pass
 
+    def support_version(self):
+        # You have to overload this to return the latest version of viztracer
+        # your plugin supports. This is for API backward compatibility.
+        # Simply return the version string
+        # For example:
+        #     return "0.10.5"
+        raise NotImplementedError("Plugin of viztracer has to implement support_version method")
+
     def message(self, m_type: str, payload: dict):
         """
-        This is the only interface with VizTracer. To make it simple and flexible,
+        This is the only logical interface with VizTracer. To make it simple and flexible,
         we use m_type for message type, and the payload could be any json compatible
         data. This is more extensible in the future
         :param m_type str: the message type VizPlugin is receiving
@@ -44,7 +55,7 @@ class VizPluginManager:
             else:
                 raise TypeError("Invalid plugin!")
             self._plugins.append(plugin_instance)
-            plugin_instance.message("event", {"when": "initialize"})
+            self._send_message(plugin_instance, "event", {"when": "initialize"})
 
     def _get_plugin_from_string(self, plugin):
         args = plugin.split()
@@ -78,25 +89,38 @@ class VizPluginManager:
             print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
             exit(1)
 
+    def _send_message(self, plugin, m_type, payload):
+        # this is the only interface to communicate with vizplugin
+        # in the future we may need to do version compatibility
+        # here
+        support_version = plugin.support_version()
+        if compare_version(support_version, __version__) > 0:
+            color_print("WARNING", "The plugin support version is higher than "
+                                   "viztracer version. Consider update your viztracer")
+
+        ret = plugin.message(m_type, payload)
+        if m_type == "command":
+            self.assert_success(plugin, payload, ret)
+        else:
+            self.resolve(support_version, ret)
+
     def event(self, when):
         for plugin in self._plugins:
-            ret = plugin.message("event", {"when": when})
-            self.resolve(ret)
+            self._send_message(plugin, "event", {"when": when})
+
+    def command(self, cmd):
+        for plugin in self._plugins:
+            self._send_message(plugin, "command", cmd)
 
     def terminate(self):
         self.command({"cmd_type": "terminate"})
         del self._plugins
 
-    def command(self, cmd):
-        for plugin in self._plugins:
-            ret = plugin.message("command", cmd)
-            self.assert_success(plugin, cmd, ret)
-
     def assert_success(self, plugin, cmd, ret):
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 
-    def resolve(self, ret):
+    def resolve(self, version, ret):
         if not ret or "action" not in ret:
             return
         if ret["action"] == "handle_data":
