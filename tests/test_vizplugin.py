@@ -2,6 +2,8 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+from contextlib import redirect_stdout
+import io
 from .cmdline_tmpl import CmdlineTmpl
 from viztracer import VizTracer
 from viztracer.vizplugin import VizPluginBase, VizPluginError
@@ -12,6 +14,9 @@ class MyPlugin(VizPluginBase):
         self.event_counter = 0
         self.handler_triggered = False
         self.terminate_well = terminate_well
+
+    def support_version(self):
+        return "0.10.5"
 
     def message(self, m_type, payload):
 
@@ -31,6 +36,15 @@ class MyPlugin(VizPluginBase):
         return {}
 
 
+class MyPluginIncomplete(VizPluginBase):
+    pass
+
+
+class MyPluginFuture(VizPluginBase):
+    def support_version(self):
+        return "9999.999.99"
+
+
 class TestVizPlugin(CmdlineTmpl):
     def test_basic(self):
         pl = MyPlugin()
@@ -45,6 +59,8 @@ class TestVizPlugin(CmdlineTmpl):
         invalid_pl = []
         with self.assertRaises(TypeError):
             _ = VizTracer(plugins=[invalid_pl])
+        with self.assertRaises(NotImplementedError):
+            _ = VizTracer(plugins=[MyPluginIncomplete()])
 
     def test_terminate(self):
         pl = MyPlugin()
@@ -55,6 +71,14 @@ class TestVizPlugin(CmdlineTmpl):
         with self.assertRaises(VizPluginError):
             with VizTracer(plugins=[pl]):
                 _ = []
+
+    def test_version(self):
+        pl = MyPluginFuture()
+        s = io.StringIO()
+        with redirect_stdout(s):
+            with VizTracer(plugins=[pl]):
+                _ = []
+        self.assertIn("support version is higher", s.getvalue())
 
     def test_cmdline(self):
         self.template(["viztracer", "--plugin", "tests.modules.dummy_vizplugin", "--", "cmdline_test.py"])

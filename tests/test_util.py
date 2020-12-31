@@ -15,3 +15,11 @@ class TestUtil(BaseTmpl):
     def test_get_url_from_file(self):
         get_url_from_file = viztracer.util.get_url_from_file
         get_url_from_file(os.path.join(os.path.dirname(__file__), "data", "fib.json"))
+
+    def test_compare_version(self):
+        compare_version = viztracer.util.compare_version
+        self.assertEqual(compare_version("0.10.1", "0.10.0"), 1)
+        self.assertEqual(compare_version("0.10.0", "0.9.10"), 1)
+        self.assertEqual(compare_version("0.10.0", "0.10.0"), 0)
+        self.assertEqual(compare_version("0.7.3", "0.8.1"), -1)
+        self.assertEqual(compare_version("0.20.3", "0.31.0"), -1)

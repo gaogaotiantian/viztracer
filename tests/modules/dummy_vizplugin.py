@@ -5,7 +5,8 @@ from viztracer.vizplugin import VizPluginBase
 
 
 class DummyVizPlugin(VizPluginBase):
-    pass
+    def support_version(self):
+        return "0.10.5"
 
 
 def get_vizplugin(arg):
