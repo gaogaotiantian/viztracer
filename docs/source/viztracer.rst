@@ -8,7 +8,7 @@ VizTracer
                  include_files=None,\
                  exclude_files=None,\
                  ignore_c_function=False,\
-                 ignore_non_file=False,\
+                 ignore_frozen=False,\
                  log_func_retval=False,\
                  log_func_args=False,\
                  log_print=False,\
@@ -116,17 +116,17 @@ VizTracer
 
             viztracer --ignore_c_function
 
-    .. py:attribute:: ignore_non_file
+    .. py:attribute:: ignore_frozen
         :type: boolean
         :value: False
 
-        Whether trace functions from invalid files(mostly import stuff)
+        Whether trace functions from frozen functions(mostly import stuff)
 
         Setting it to ``True`` is equivalent to 
 
         .. code-block::
 
-            viztracer --ignore_non_file
+            viztracer --ignore_frozen
 
     .. py:attribute:: log_func_retval 
         :type: boolean

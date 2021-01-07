@@ -11,7 +11,7 @@
 #define SNAPTRACE_LOG_RETURN_VALUE (1 << 4)
 #define SNAPTRACE_NOVDB (1 << 5)
 #define SNAPTRACE_LOG_FUNCTION_ARGS (1 << 6)
-#define SNAPTRACE_IGNORE_NON_FILE (1 << 7)
+#define SNAPTRACE_IGNORE_FROZEN (1 << 7)
 
 #define SET_FLAG(reg, flag) ((reg) |= (flag))
 #define UNSET_FLAG(reg, flag) ((reg) &= (~(flag)))
