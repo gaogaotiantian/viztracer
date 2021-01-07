@@ -73,17 +73,17 @@ ignoring C functions often improves the overhead and file size significantly.
 Ignore Non File
 ---------------
 
-You can ask VizTracer not to trace any functions that are not in a valid file(mostly import stuff) using ``ignore_non_file``
+You can ask VizTracer not to trace any functions that are not in a valid file(mostly import stuff) using ``ignore_frozen``
 
 .. code-block:: 
 
-    viztracer --ignore_non_file my_script.py
+    viztracer --ignore_frozen my_script.py
 
 OR
 
 .. code-block:: python
     
-    tracer = VizTracer(ignore_non_file=True)
+    tracer = VizTracer(ignore_frozen=True)
 
 
 Ignore Function

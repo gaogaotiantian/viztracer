@@ -158,8 +158,8 @@ class TestTracerFilter(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
-    def test_ignore_non_file(self):
-        tracer = _VizTracer(ignore_non_file=True)
+    def test_ignore_frozen(self):
+        tracer = _VizTracer(ignore_frozen=True)
         tracer.start()
         import random  # noqa: F401
         lst = []
