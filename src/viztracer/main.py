@@ -278,7 +278,7 @@ class VizUI:
 
     def run_module(self):
         import runpy
-        code = "run_module(modname, alter_sys=True)"
+        code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
             "run_module": runpy.run_module,
             "modname": self.options.module

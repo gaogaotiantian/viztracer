@@ -44,6 +44,7 @@ class CmdlineTmpl(BaseTmpl):
                  success=True,
                  script=file_fib,
                  expected_entries=None,
+                 expected_stdout=None,
                  cleanup=True,
                  check_func=None,
                  concurrency=None):
@@ -78,6 +79,9 @@ class CmdlineTmpl(BaseTmpl):
                 with open(expected_output_file) as f:
                     data = json.load(f)
                     self.assertEventNumber(data, expected_entries)
+
+            if expected_stdout:
+                self.assertRegex(result.stdout.decode("utf-8"), expected_stdout)
 
             if check_func:
                 assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
