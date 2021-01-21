@@ -114,7 +114,9 @@ class VizPluginManager:
 
     def terminate(self):
         self.command({"cmd_type": "terminate"})
-        del self._plugins
+        for plugin in self._plugins:
+            del plugin
+        self._plugins = []
 
     def assert_success(self, plugin, cmd, ret):
         if not ret or "success" not in ret or not ret["success"]:
