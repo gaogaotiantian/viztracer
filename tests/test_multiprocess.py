@@ -149,7 +149,7 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        if multiprocessing.get_start_method() == "fork":
+        if multiprocessing.get_start_method() in ("fork", "spawn"):
             self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json",
                           script=file_multiprocessing,
