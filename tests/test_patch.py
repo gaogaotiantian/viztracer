@@ -69,6 +69,7 @@ class TestPatchSpawn(CmdlineTmpl):
         self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
         shutil.rmtree("./test_spawn")
 
+    @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
         self.template(["python", "cmdline_test.py"],
                       expected_output_file=None,
