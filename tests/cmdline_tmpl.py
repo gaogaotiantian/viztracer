@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from .base_tmpl import BaseTmpl
 
 
@@ -47,7 +48,8 @@ class CmdlineTmpl(BaseTmpl):
                  expected_stdout=None,
                  cleanup=True,
                  check_func=None,
-                 concurrency=None):
+                 concurrency=None,
+                 send_term=False):
         if os.getenv("COVERAGE_RUN"):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")
@@ -61,6 +63,13 @@ class CmdlineTmpl(BaseTmpl):
 
         if script:
             self.build_script(script)
+        if send_term:
+            p = subprocess.Popen(cmd_list)
+            time.sleep(2)
+            p.terminate()
+            p.wait()
+            return None
+
         result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=15)
         if not (success ^ (result.returncode != 0)):
             print(success, result.returncode)
