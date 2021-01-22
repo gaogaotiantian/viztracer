@@ -5,6 +5,7 @@ import os
 import sys
 import multiprocessing
 import platform
+import unittest
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -149,23 +150,28 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        if multiprocessing.get_start_method() in ("fork", "spawn"):
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=file_multiprocessing,
-                          check_func=check_func,
-                          concurrency="multiprocessing")
-            if not("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8):
-                # I could not reproduce the stuck failure locally. This is only for
-                # coverage anyway, just skip it on 3.8+
-                self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
-                              expected_output_file="result.json",
-                              script=file_pool,
-                              check_func=check_func,
-                              concurrency="multiprocessing")
-        else:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
-                          script=file_multiprocessing, success=False, expected_output_file=None)
+        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_multiprocessing,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
+    @unittest.skipIf(("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8)
+                     or "win32" in sys.platform, "Does not support Windows, Don't know why stuck on Linux 3.8+")
+    def test_multiprocessing_pool(self):
+        # I could not reproduce the stuck failure locally. This is only for
+        # coverage anyway, just skip it on 3.8+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertGreater(len(pids), 1)
+
+        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_pool,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
 
     def test_multiprosessing_stack_depth(self):
         def check_func(data):
