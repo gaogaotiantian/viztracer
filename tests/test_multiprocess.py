@@ -156,8 +156,8 @@ class TestMultiprocessing(CmdlineTmpl):
                       check_func=check_func,
                       concurrency="multiprocessing")
 
-    @unittest.skipIf(("linux" in sys.platform and int(platform.python_version_tuple()[1]) >= 8)
-                     or "win32" in sys.platform, "Does not support Windows, Don't know why stuck on Linux 3.8+")
+    @unittest.skipIf(int(platform.python_version_tuple()[1]) >= 8
+                     or "win32" in sys.platform, "Does not support Windows, Don't know why stuck on 3.8+")
     def test_multiprocessing_pool(self):
         # I could not reproduce the stuck failure locally. This is only for
         # coverage anyway, just skip it on 3.8+
