@@ -5,7 +5,6 @@ import atexit
 import sys
 import argparse
 import os
-from multiprocessing import get_start_method
 import types
 import builtins
 import signal
@@ -210,8 +209,6 @@ class VizUI:
 
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
-            if get_start_method() not in ("fork", "spawn"):
-                return False, "Only fork and spawn based multiprocess is supported"
             patch_multiprocessing(self, tracer)
 
         def term_handler(signalnum, frame):
