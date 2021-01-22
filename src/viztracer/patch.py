@@ -61,7 +61,7 @@ def patch_multiprocessing(ui, tracer):
         '''
         Returns prefix of command line used for spawning a child process
         '''
-        if getattr(sys, 'frozen', False):
+        if getattr(sys, 'frozen', False):  # pragma: no cover
             return ([sys.executable, '--multiprocessing-fork']
                     + ['%s=%r' % item for item in kwds.items()])
         else:
