@@ -6,6 +6,8 @@ from .cmdline_tmpl import CmdlineTmpl
 import os
 import shutil
 import re
+import sys
+import unittest
 
 
 file_spawn = """
@@ -44,6 +46,7 @@ spawn_main(pipe_handle=child_r)
 
 
 class TestPatchSpawn(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
         self.template(["python", "cmdline_test.py"], expected_output_file=None, script=file_spawn)
 
