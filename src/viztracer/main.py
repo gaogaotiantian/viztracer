@@ -5,10 +5,8 @@ import atexit
 import sys
 import argparse
 import os
-from multiprocessing import get_start_method
 import types
 import builtins
-import platform
 import signal
 import shutil
 from . import VizTracer
@@ -17,6 +15,7 @@ from . import __version__
 from .report_builder import ReportBuilder
 from .util import get_url_from_file
 from .code_monkey import CodeMonkey
+from .patch import patch_multiprocessing, patch_subprocess
 
 
 class VizUI:
@@ -142,9 +141,28 @@ class VizUI:
             if not options.subprocess_child:
                 self.args += ["--subprocess_child", "--output_dir", self.multiprocess_output_dir,
                               "-o", "result.json", "--pid_suffix"]
-            self.patch_subprocess()
+            patch_subprocess(self)
 
         self.options, self.command = options, command
+        self.init_kwargs = {
+            "tracer_entries": options.tracer_entries,
+            "verbose": self.verbose,
+            "output_file": self.ofile,
+            "max_stack_depth": options.max_stack_depth,
+            "exclude_files": options.exclude_files,
+            "include_files": options.include_files,
+            "ignore_c_function": options.ignore_c_function,
+            "ignore_frozen": options.ignore_frozen,
+            "log_func_retval": options.log_func_retval,
+            "log_func_args": options.log_func_args,
+            "log_print": options.log_print,
+            "log_gc": options.log_gc,
+            "log_sparse": options.log_sparse,
+            "novdb": options.novdb,
+            "pid_suffix": options.pid_suffix,
+            "register_global": True,
+            "plugins": options.plugins
+        }
 
         return True, None
 
@@ -168,52 +186,6 @@ class VizUI:
 
         return None
 
-    def patch_subprocess(self):
-        ui = self
-
-        def subprocess_init(self, args, **kwargs):
-            if int(platform.python_version_tuple()[1]) >= 7:
-                from collections.abc import Sequence
-            else:
-                from collections import Sequence
-            if isinstance(args, str):
-                args = args.split()
-            if isinstance(args, Sequence):
-                args = list(args)
-                if "python" in os.path.basename(args[0]):
-                    args = ["viztracer"] + ui.args + ["--"] + args[1:]
-            self.__originit__(args, **kwargs)
-
-        import subprocess
-        subprocess.Popen.__originit__ = subprocess.Popen.__init__
-        subprocess.Popen.__init__ = subprocess_init
-
-    def patch_multiprocessing(self, tracer):
-
-        def func_after_fork(tracer):
-
-            def exit_routine():
-                self.exit_routine()
-
-            from multiprocessing.util import Finalize
-            import signal
-            Finalize(tracer, exit_routine, exitpriority=32)
-
-            def term_handler(signalnum, frame):
-                self.exit_routine()
-            signal.signal(signal.SIGTERM, term_handler)
-
-            tracer.clear()
-            tracer._set_curr_stack_depth(1)
-
-            if tracer._afterfork_cb:
-                tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
-
-        from multiprocessing.util import register_after_fork
-        tracer.pid_suffix = True
-        tracer.output_file = os.path.join(self.multiprocess_output_dir, "result.json")
-        register_after_fork(tracer, func_after_fork)
-
     def run(self):
         if self.options.version:
             return self.show_version()
@@ -231,36 +203,13 @@ class VizUI:
 
     def run_code(self, code, global_dict):
         options = self.options
-        verbose = self.verbose
-        ofile = self.ofile
 
-        tracer = VizTracer(
-            tracer_entries=options.tracer_entries,
-            verbose=verbose,
-            output_file=ofile,
-            max_stack_depth=options.max_stack_depth,
-            exclude_files=options.exclude_files,
-            include_files=options.include_files,
-            ignore_c_function=options.ignore_c_function,
-            ignore_frozen=options.ignore_frozen,
-            log_func_retval=options.log_func_retval,
-            log_func_args=options.log_func_args,
-            log_print=options.log_print,
-            log_gc=options.log_gc,
-            log_sparse=options.log_sparse,
-            novdb=options.novdb,
-            pid_suffix=options.pid_suffix,
-            register_global=True,
-            plugins=options.plugins
-        )
-
+        tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
-            if get_start_method() != "fork":
-                return False, "Only fork based multiprocess is supported"
-            self.patch_multiprocessing(tracer)
+            patch_multiprocessing(self, tracer)
 
         def term_handler(signalnum, frame):
             self.exit_routine()

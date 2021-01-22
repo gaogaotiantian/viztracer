@@ -28,7 +28,7 @@ about solutions.
 multiprocessing or os.fork()
 ----------------------------
 
-VizTracer supports ``multiprocessing`` and pure ``os.fork()`` on Unix with ``--log_multiprocess``.
+VizTracer supports ``multiprocessing`` and pure ``os.fork()`` with ``--log_multiprocess``.
 You need to make sure the main process exits after the other processes finish. Presumably using
 ``p.join()`` function.
 
@@ -38,8 +38,9 @@ You need to make sure the main process exits after the other processes finish. P
 
 This will generate an HTML file for all processes.
 
-This feature is only available on UNIX, not Windows. Also it will only work when ``multiprocessing.get_start_method()`` is ``fork``. 
-After python3.8, MacOS has start method "spawn" by default and "fork" should be considered unsafe. 
+This feature is available on all platforms and for both ``fork`` and ``spawn`` type ``Process``.
+
+However, on Windows, ``Pool`` won't work with VizTracer because there's no way to gracefully catch the exit of the process
 
 combine reports
 ---------------
