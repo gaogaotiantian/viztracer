@@ -28,6 +28,7 @@ VizTracer can display every function executed and the corresponding entry/exit t
    custom_event_intro
    extra_log
    multi_thread_process
+   remote_attach
    plugins
 
 .. toctree::
