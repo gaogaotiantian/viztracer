@@ -42,6 +42,9 @@ class TestRemote(CmdlineTmpl):
         else:
             script_cmd = ["python", "attached_script.py"]
         p_script = subprocess.Popen(script_cmd)
+        
+        # Give it some time for viztracer to install
+        time.sleep(1)
 
         # Test with -t
         if os.getenv("COVERAGE_RUN"):
@@ -52,7 +55,7 @@ class TestRemote(CmdlineTmpl):
         p_attach = subprocess.Popen(attach_cmd)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
-        for _ in range(60):
+        for _ in range(20):
             time.sleep(1)
             if os.path.exists("remote.json"):
                 break
@@ -74,7 +77,7 @@ class TestRemote(CmdlineTmpl):
         time.sleep(0.5)
         p_script.terminate()
         p_script.wait()
-        for _ in range(30):
+        for _ in range(20):
             time.sleep(1)
             if os.path.exists("remote.json"):
                 break
