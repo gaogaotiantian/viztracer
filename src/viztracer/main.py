@@ -326,7 +326,7 @@ class VizUI:
 
         try:
             os.kill(pid, signal.SIGUSR2)
-        except OSError:
+        except OSError:  # pragma: no cover
             return False, f"pid {pid} already finished"
 
         return True, None

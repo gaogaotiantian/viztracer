@@ -83,10 +83,19 @@ class TestRemote(CmdlineTmpl):
         os.remove("attached_script.py")
         os.remove("remote.json")
 
+        if os.getenv("COVERAGE_RUN"):
+            attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
+                          "viztracer", "attach", "--attach", str(p_script.pid)]
+        else:
+            attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
+        p_attach = subprocess.Popen(attach_cmd)
+        p_attach.wait()
+        self.assertTrue(p_attach.returncode != 0)
+
     @unittest.skipIf(sys.platform != "win32", "Only test Windows")
     def test_windows(self):
         tracer = VizTracer(output_file="remote.json")
         with self.assertRaises(SystemExit):
             tracer.install()
 
-        self.template(["viztracer", "--attach"], success=False)
+        self.template(["viztracer", "--attach", "1234"], success=False)
