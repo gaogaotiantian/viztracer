@@ -46,9 +46,9 @@ class TestRemote(CmdlineTmpl):
         # Test with -t
         if os.getenv("COVERAGE_RUN"):
             attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
-                          "viztracer", "attach", "-p", str(p_script.pid), "-t", "0.5"]
+                          "viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
         else:
-            attach_cmd = ["viztracer", "attach", "-p", str(p_script.pid), "-t", "0.5"]
+            attach_cmd = ["viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
         p_attach = subprocess.Popen(attach_cmd)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
@@ -58,9 +58,9 @@ class TestRemote(CmdlineTmpl):
 
         if os.getenv("COVERAGE_RUN"):
             attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
-                          "viztracer", "attach", "-p", str(p_script.pid)]
+                          "viztracer", "attach", "--attach", str(p_script.pid)]
         else:
-            attach_cmd = ["viztracer", "attach", "-p", str(p_script.pid)]
+            attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
         p_attach = subprocess.Popen(attach_cmd)
         time.sleep(0.5)
         p_attach.send_signal(signal.SIGINT)
@@ -79,4 +79,4 @@ class TestRemote(CmdlineTmpl):
         with self.assertRaises(SystemExit):
             tracer.install()
 
-        self.template(["viztracer", "attach"], success=False)
+        self.template(["viztracer", "--attach"], success=False)

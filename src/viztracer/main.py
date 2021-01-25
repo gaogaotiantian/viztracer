@@ -103,12 +103,10 @@ class VizUI:
                                   "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
-        subparsers = parser.add_subparsers(dest="attach")
-        parser_attach = subparsers.add_parser("attach")
-        parser_attach.add_argument("-p", type=int, nargs=1, required=True,
-                                   help="pid of process with VizTracer installed")
-        parser_attach.add_argument("-t", type=float, nargs="?", default=-1,
-                                   help="time you want to trace the process")
+        parser.add_argument("--attach", type=int, nargs="?", default=-1,
+                            help="pid of process with VizTracer installed")
+        parser.add_argument("-t", type=float, nargs="?", default=-1,
+                            help="time you want to trace the process")
         return parser
 
     def parse(self, argv):
@@ -196,7 +194,7 @@ class VizUI:
     def run(self):
         if self.options.version:
             return self.show_version()
-        elif self.options.attach == "attach":
+        elif self.options.attach > 0:
             return self.attach()
         elif self.options.module:
             return self.run_module()
@@ -311,7 +309,7 @@ class VizUI:
     def attach(self):
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
-        pid = self.options.p[0]
+        pid = self.options.attach
         interval = self.options.t
         try:
             os.kill(pid, signal.SIGUSR1)
