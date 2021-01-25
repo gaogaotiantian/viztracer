@@ -42,7 +42,7 @@ class TestRemote(CmdlineTmpl):
         else:
             script_cmd = ["python", "attached_script.py"]
         p_script = subprocess.Popen(script_cmd)
-        
+
         # Give it some time for viztracer to install
         time.sleep(1)
 
