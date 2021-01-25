@@ -4,6 +4,8 @@
 import os
 import multiprocessing
 import builtins
+import signal
+import sys
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
@@ -100,6 +102,21 @@ class VizTracer(_VizTracer):
 
     def register_global(self):
         builtins.__dict__["__viz_tracer__"] = self
+
+    def install(self):
+        if sys.platform == "win32":
+            print("remote install is not supported on Windows!")
+            exit(1)
+
+        def signal_start(signum, frame):
+            self.start()
+
+        def signal_stop(signum, frame):
+            self.stop()
+            self.save()
+
+        signal.signal(signal.SIGUSR1, signal_start)
+        signal.signal(signal.SIGUSR2, signal_stop)
 
     def set_afterfork(self, callback, *args, **kwargs):
         self._afterfork_cb = callback

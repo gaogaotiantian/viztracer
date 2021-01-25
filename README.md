@@ -132,6 +132,12 @@ For more general multi-process cases, VizTracer can support with some extra step
 
 Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/multi_thread_process.html) for details
 
+### Remote attach
+
+VizTracer supports remote attach to a process as long as you installed VizTracer on that process.
+
+Refer to [remote attach docs](https://viztracer.readthedocs.io/en/stable/remote_attach.html)
+
 ### JSON alternative
 
 VizTracer needs to dump the internal data to json format. It is recommended for the users to install ```orjson```, which is much faster than the builtin ```json``` library. VizTracer will try to import ```orjson``` and fall back to the builtin ```json``` library if ```orjson``` does not exist.
