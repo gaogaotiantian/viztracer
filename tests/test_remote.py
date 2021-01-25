@@ -52,7 +52,7 @@ class TestRemote(CmdlineTmpl):
         p_attach = subprocess.Popen(attach_cmd)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
-        for _ in range(10):
+        for _ in range(30):
             time.sleep(1)
             if os.path.exists("remote.json"):
                 break
@@ -74,7 +74,7 @@ class TestRemote(CmdlineTmpl):
         time.sleep(0.5)
         p_script.terminate()
         p_script.wait()
-        for _ in range(10):
+        for _ in range(30):
             time.sleep(1)
             if os.path.exists("remote.json"):
                 break
