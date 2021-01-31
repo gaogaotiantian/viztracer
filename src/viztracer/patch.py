@@ -115,7 +115,7 @@ class SpawnProcess:
             tracer.start()
             tracer.pid_suffix = True
             tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")
-            self._target(*self._args, **self._kwargs)
+            self._run()
 
 
 def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
@@ -131,6 +131,7 @@ def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
                 sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                self._run = self.run
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
@@ -144,6 +145,7 @@ def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
                 sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                self._run = self.run
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
