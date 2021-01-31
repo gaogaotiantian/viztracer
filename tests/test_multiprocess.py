@@ -60,6 +60,28 @@ if __name__ == "__main__":
     time.sleep(0.1)
 """
 
+file_multiprocessing_overload_run = """
+import multiprocessing
+from multiprocessing import Process
+import time
+
+
+class MyProcess(Process):
+    def run(self):
+        self.fib(5)
+
+    def fib(self, n):
+        if n < 2:
+            return 1
+        return self.fib(n-1) + self.fib(n-2)
+
+if __name__ == "__main__":
+    p = MyProcess()
+    p.start()
+    p.join()
+    time.sleep(0.1)
+"""
+
 file_multiprocessing_stack_limit = """
 import multiprocessing
 from multiprocessing import Process
@@ -153,6 +175,22 @@ class TestMultiprocessing(CmdlineTmpl):
         self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=file_multiprocessing,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
+    def test_multiprocessing_overload(self):
+        def check_func(data):
+            fib_count = 0
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+                fib_count += 1 if "fib" in entry["name"] else 0
+            self.assertGreater(len(pids), 1)
+            self.assertEqual(fib_count, 15)
+
+        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_multiprocessing_overload_run,
                       check_func=check_func,
                       concurrency="multiprocessing")
 
