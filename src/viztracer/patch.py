@@ -89,33 +89,32 @@ class SpawnProcess:
         self._exiting = False
 
     def run(self):
-        if self._target:
-            import os
-            import viztracer
-            import signal
-            import atexit
+        import os
+        import viztracer
+        import signal
+        import atexit
 
-            def exit_routine():
-                atexit.unregister(exit_routine)
-                if not self._exiting:
-                    self._exiting = True
-                    tracer = viztracer.get_tracer()
-                    tracer.stop()
-                    tracer.save()
-                    tracer.terminate()
-                    exit(0)
+        def exit_routine():
+            atexit.unregister(exit_routine)
+            if not self._exiting:
+                self._exiting = True
+                tracer = viztracer.get_tracer()
+                tracer.stop()
+                tracer.save()
+                tracer.terminate()
+                exit(0)
 
-            def term_handler(signalnum, frame):
-                exit_routine()
+        def term_handler(signalnum, frame):
+            exit_routine()
 
-            atexit.register(exit_routine)
-            signal.signal(signal.SIGTERM, term_handler)
+        atexit.register(exit_routine)
+        signal.signal(signal.SIGTERM, term_handler)
 
-            tracer = viztracer.VizTracer(**self._viztracer_kwargs)
-            tracer.start()
-            tracer.pid_suffix = True
-            tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")
-            self._target(*self._args, **self._kwargs)
+        tracer = viztracer.VizTracer(**self._viztracer_kwargs)
+        tracer.start()
+        tracer.pid_suffix = True
+        tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")
+        self._run()
 
 
 def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
@@ -131,6 +130,7 @@ def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
                 sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                sp._run = self.run
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
@@ -144,6 +144,7 @@ def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
                 sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                sp._run = self.run
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
