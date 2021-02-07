@@ -68,9 +68,10 @@ def log_sparse(func):
             start = tracer._tracer.getts()
             ret = func(*args, **kwargs)
             dur = tracer._tracer.getts() - start
+            code = func.__code__
             raw_data = {
                 "ph": "X",
-                "name": func.__qualname__,
+                "name": f"{code.co_name} ({code.co_filename}:{code.co_firstlineno})",
                 "ts": start,
                 "dur": dur,
                 "cat": "FEE"
