@@ -10,6 +10,7 @@ from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
 from .vizplugin import VizPluginManager
+from .vizevent import VizEvent
 
 
 # This is the interface of the package. Almost all user should use this
@@ -117,6 +118,10 @@ class VizTracer(_VizTracer):
 
         signal.signal(signal.SIGUSR1, signal_start)
         signal.signal(signal.SIGUSR2, signal_stop)
+
+    def log_event(self, event_name):
+        call_frame = sys._getframe(1)
+        return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
     def set_afterfork(self, callback, *args, **kwargs):
         self._afterfork_cb = callback
