@@ -115,6 +115,7 @@ VizTracer supports inserting custom events while the program is running. This wo
 * [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
 * [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
 * [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
+* [Duration Event](https://viztracer.readthedocs.io/en/stable/custom_event_intro.html#duration-event)
 
 ## Misc
 

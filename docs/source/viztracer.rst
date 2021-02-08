@@ -259,6 +259,17 @@ VizTracer
 
         This method allows you to attach args to the current function, which will show in the report when you click on the function 
 
+    .. py:method:: log_event(event_name)
+
+        :param str event_name: name of this event that will appear in the result
+        :return: VizEvent object that should only be used with ``with`` statement
+        :rtype: VizEvent
+
+        .. code-block:: python
+
+            with get_tracer().log_event("event name"):
+                # some code here
+
     .. py:method:: set_afterfork(callback, *args, **kwargs)
 
         :param callable callback: the callback function after fork, should take a ``VizTracer`` object as the first argument
