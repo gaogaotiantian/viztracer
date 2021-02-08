@@ -206,6 +206,9 @@ class _VizTracer:
     def cleanup(self):
         self._tracer.cleanup()
 
+    def getts(self):
+        return self._tracer.getts()
+
     def add_instant(self, name, args, scope="g"):
         if self.enable:
             if scope not in ["g", "p", "t"]:
@@ -236,6 +239,9 @@ class _VizTracer:
     def add_func_args(self, key, value):
         if self.enable:
             self._tracer.addfunctionarg(key, value)
+
+    def add_raw(self, raw):
+        self._tracer.addraw(raw)
 
     def add_garbage_collection(self, phase, info):
         if self.enable:

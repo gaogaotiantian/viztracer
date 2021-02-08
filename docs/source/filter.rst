@@ -99,6 +99,8 @@ It's possible that you want to ignore some arbitrary functions and their descend
     def some_function():
         # nothing inside will be traced
 
+.. _log_sparse_label:
+
 Log Sparse
 ----------
 
@@ -124,3 +126,6 @@ Then just call viztracer with ``--log_sparse``
 When you are using ``--log_sparse``, due to the nature of the recording, some advanced features may not work with it.
 
 You can leave ``@log_sparse`` as it is when you are not running the script with VizTracer. It will be like a no-op
+
+If you want to log a piece of code, rather than a full function, please check :ref:`duration_event_label`. Duration Event
+is compatible with ``log_sparse``
