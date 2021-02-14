@@ -12,6 +12,7 @@
 #define SNAPTRACE_NOVDB (1 << 5)
 #define SNAPTRACE_LOG_FUNCTION_ARGS (1 << 6)
 #define SNAPTRACE_IGNORE_FROZEN (1 << 7)
+#define SNAPTRACE_LOG_ASYNC (1 << 8)
 
 #define SET_FLAG(reg, flag) ((reg) |= (flag))
 #define UNSET_FLAG(reg, flag) ((reg) &= (~(flag)))
@@ -45,6 +46,7 @@ struct FEEData {
     int type;
     int caller_lineno;
     double dur;
+    PyObject* asyncio_task;
 };
 
 struct InstantData {
@@ -91,6 +93,8 @@ struct ThreadInfo {
     int ignore_stack_depth;
     unsigned long tid;
     struct FunctionNode* stack_top;
+    PyObject* curr_task;
+    PyFrameObject* curr_task_frame;
 };
 
 struct MetadataNode {

@@ -3,6 +3,7 @@
 
 import os
 import sys
+import platform
 import re
 from .util import get_json_file_path
 from .cmdline_tmpl import CmdlineTmpl
@@ -127,6 +128,26 @@ def g():
     return f()
 
 g()
+"""
+
+
+file_log_async = """
+import asyncio
+
+async def compute(x, y):
+    await asyncio.sleep(0.03)
+    return x + y
+
+async def print_sum(x, y):
+    t1 =  asyncio.create_task(compute(x, y))
+    t2 = asyncio.create_task( compute(x+1, y) )
+
+    await t1
+    await t2
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(print_sum(1, 2))
+loop.close()
 """
 
 
@@ -287,6 +308,24 @@ class TestCommandLineBasic(CmdlineTmpl):
                       script=file_log_exception,
                       expected_output_file="result.json",
                       expected_entries=2)
+
+    def test_log_async(self):
+        def check_func(data):
+            tids = set()
+            for entry in data["traceEvents"]:
+                tids.add(entry["tid"])
+            self.assertEqual(len(tids), 4)
+
+        if int(platform.python_version_tuple()[1]) >= 7:
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_async,
+                          expected_output_file="result.json",
+                          check_func=check_func)
+        else:
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_async,
+                          expected_output_file="result.json",
+                          success=False)
 
     def test_ignore_function(self):
         def check_func(data):

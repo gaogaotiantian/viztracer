@@ -16,6 +16,7 @@
 #endif
 
 #include "snaptrace.h"
+#include "util.h"
 
 // Function declarations
 
@@ -46,19 +47,13 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
 PyObject* multiprocessing_module = NULL;
+PyObject* asyncio_module = NULL;
+PyObject* asyncio_tasks_module = NULL;
+PyObject* asyncio_tasks_current_task = NULL;
 
 #if _WIN32
-LARGE_INTEGER qpc_freq; 
+extern LARGE_INTEGER qpc_freq; 
 #endif
-
-// Utility functions
-
-static void Print_Py(PyObject* o)
-{
-    PyObject* repr = PyObject_Repr(o);
-    printf("%s\n", PyUnicode_AsUTF8(repr));
-    Py_DECREF(repr);
-}
 
 static struct ThreadInfo* get_thread_info(TracerObject* self)
 {
@@ -73,29 +68,6 @@ static struct ThreadInfo* get_thread_info(TracerObject* self)
     info = pthread_getspecific(self->thread_key);
 #endif
     return info;
-}
-
-static inline double get_ts()
-{
-    static double prev_ts = 0;
-    double curr_ts = 0;
-
-#if _WIN32
-    LARGE_INTEGER counter = {0};
-    QueryPerformanceCounter(&counter);
-    counter.QuadPart *= 1000000000LL;
-    counter.QuadPart /= qpc_freq.QuadPart;
-    curr_ts = (double) counter.QuadPart;
-#else
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    curr_ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
-#endif
-    if (curr_ts == prev_ts) {
-        curr_ts += 20;
-    }
-    prev_ts = curr_ts;
-    return curr_ts;
 }
 
 static inline void clear_node(struct EventNode* node) {
@@ -126,6 +98,10 @@ static inline void clear_node(struct EventNode* node) {
                     node->data.fee.tp_name = NULL;
                 }
             }
+        }
+        if (node->data.fee.asyncio_task != NULL) {
+            Py_DECREF(node->data.fee.asyncio_task);
+            node->data.fee.asyncio_task = NULL;
         }
         break;
     case INSTANT_NODE:
@@ -226,33 +202,6 @@ static void verbose_printf(TracerObject* self, int v, const char* fmt, ...)
         va_end(args);
         fflush(stdout);
     }
-}
-
-// target and prefix has to be NULL-terminated
-static inline int startswith(const char* target, const char* prefix)
-{
-    while(*target != 0 && *prefix != 0) {
-#if _WIN32
-        // Windows path has double slashes and case-insensitive
-        if (*prefix == '\\' && prefix[-1] == '\\') {
-            prefix++;
-        }
-        if (*target == '\\' && target[-1] == '\\') {
-            target++;
-        }
-        if (*target != *prefix && *target != *prefix - ('a'-'A') && *target != *prefix + ('a'-'A')) {
-            return 0;
-        }
-#else
-        if (*target != *prefix) {
-            return 0;
-        }
-#endif
-        target++;
-        prefix++;
-    }
-
-    return (*prefix) == 0;
 }
 
 void clear_stack(struct FunctionNode** stack_top) {
@@ -436,6 +385,20 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+            if (info->curr_task == NULL) {
+                if (is_python && is_call && (frame->f_code->co_flags & CO_COROUTINE) != 0) {
+                    info->paused = 1;
+                    PyObject* curr_task = PyObject_CallObject(asyncio_tasks_current_task, NULL);
+                    info->paused = 0;
+                    info->curr_task = curr_task;
+                    Py_INCREF(curr_task);
+                    info->curr_task_frame = frame;
+                    Py_INCREF(frame);
+                }
+            }
+        }
+
         if (is_call) {
             // If it's a call, we need a new node, and we need to update the stack
             if (!info->stack_top->next) {
@@ -451,6 +414,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             struct FunctionNode* stack_top = info->stack_top;
             if (stack_top->prev) {
                 // if stack_top has prev, it's not the fake node so it's at least root
+
                 node = get_next_node(self);
                 node->ntype = FEE_NODE;
                 node->ts = info->stack_top->ts;
@@ -501,6 +465,19 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                         node->data.fee.caller_lineno = -1;
                     }
                 } 
+
+                if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+                    if (info->curr_task) {
+                        node->data.fee.asyncio_task = info->curr_task;
+                        Py_INCREF(info->curr_task);
+                        if (is_python && frame == info->curr_task_frame) {
+                            Py_DECREF(info->curr_task);
+                            info->curr_task = NULL;
+                            Py_DECREF(info->curr_task_frame);
+                            info->curr_task_frame = NULL;
+                        }
+                    }
+                }
             }
             return 0;
         } else {
@@ -637,6 +614,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
     struct MetadataNode* metadata_node = NULL;
+    PyObject* task_dict = NULL;
 
     if (self->fix_pid > 0) {
         pid = PyLong_FromLong(self->fix_pid);
@@ -700,6 +678,13 @@ snaptrace_load(TracerObject* self, PyObject* args)
         metadata_node = metadata_node->next;
         PyList_Append(lst, dict);
     }
+
+    // Task Name if using LOG_ASYNC
+    // We need to make up some thread id for the task
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+        task_dict = PyDict_New();
+    }
+
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
         PyObject* dict = PyDict_New();
@@ -708,7 +693,24 @@ snaptrace_load(TracerObject* self, PyObject* args)
         PyObject* ts = PyFloat_FromDouble(node->ts / 1000);
 
         PyDict_SetItemString(dict, "pid", pid);
-        PyDict_SetItemString(dict, "tid", tid);
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+            if (curr->data.fee.asyncio_task == NULL) {
+                PyDict_SetItemString(dict, "tid", tid);
+            } else {
+                PyObject* task_id = PyLong_FromLong((long)curr->data.fee.asyncio_task);
+                PyDict_SetItemString(dict, "tid", task_id);
+                if (!PyDict_Contains(task_dict, task_id)) {
+                    PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
+                    PyObject* task_name = PyObject_CallObject(task_name_method, NULL);
+                    PyDict_SetItem(task_dict, task_id, task_name);
+                    Py_DECREF(task_name_method);
+                    Py_DECREF(task_name);
+                }
+                Py_DECREF(task_id);
+            }
+        } else {
+            PyDict_SetItemString(dict, "tid", tid);
+        }
         Py_DECREF(tid);
         PyDict_SetItemString(dict, "ts", ts);
         Py_DECREF(ts);
@@ -822,6 +824,30 @@ snaptrace_load(TracerObject* self, PyObject* args)
             prev_counter = counter;
         }
     }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+        Py_ssize_t pos = 0;
+        PyObject* key = NULL;
+        PyObject* value = NULL;
+        while (PyDict_Next(task_dict, &pos, &key, &value)) {
+            PyObject* dict = PyDict_New();
+            PyObject* args = PyDict_New();
+            PyObject* tid = key;
+            PyObject* thread_name_string = PyUnicode_FromString("thread_name");
+
+            PyDict_SetItemString(dict, "ph", ph_M);
+            PyDict_SetItemString(dict, "pid", pid);
+            PyDict_SetItemString(dict, "tid", tid);
+            Py_DECREF(tid);
+            PyDict_SetItemString(dict, "name", thread_name_string);
+            Py_DECREF(thread_name_string);
+            PyDict_SetItemString(args, "name", value);
+            PyDict_SetItemString(dict, "args", args);
+            Py_DECREF(args);
+            PyList_Append(lst, dict);
+        }
+    }
+
     verbose_printf(self, 1, "Loading finish                                        \n");
     Py_DECREF(pid);
     Py_DECREF(cat_fee);
@@ -910,7 +936,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
-            "log_func_retval", "novdb", "log_func_args",
+            "log_func_retval", "novdb", "log_func_args", "log_async",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -922,7 +948,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_log_func_retval = -1;
     int kw_novdb = -1;
     int kw_log_func_args = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppp", kwlist, 
+    int kw_log_async = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppppp", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -932,7 +959,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_ignore_frozen,
             &kw_log_func_retval,
             &kw_novdb,
-            &kw_log_func_args)) {
+            &kw_log_func_args,
+            &kw_log_async)) {
         return NULL;
     }
 
@@ -984,6 +1012,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
     } else if (kw_log_func_args == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
+    }
+
+    if (kw_log_async == 1) {
+        SET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
+    } else if (kw_log_async == 0) {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
     }
 
     if (kw_max_stack_depth >= 0) {
@@ -1221,6 +1255,9 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
         self->metadata_head = node;
     }
 
+    info->curr_task = NULL;
+    info->curr_task_frame = NULL;
+
     PyGILState_Release(state);
 
     return info;
@@ -1251,6 +1288,8 @@ static void snaptrace_threaddestructor(void* key) {
             PyGILState_Release(state);
         }
         info->stack_top = NULL;
+        info->curr_task = NULL;
+        info->curr_task_frame = NULL;
     }
 }
 
@@ -1395,6 +1434,12 @@ PyInit_snaptrace(void)
 
     threading_module = PyImport_ImportModule("threading");
     multiprocessing_module = PyImport_ImportModule("multiprocessing");
+    asyncio_module = PyImport_ImportModule("asyncio");
+    asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
+    asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
+    if (asyncio_tasks_current_task == NULL) {
+        PyErr_Clear();
+    }
 
     return m;
 }
