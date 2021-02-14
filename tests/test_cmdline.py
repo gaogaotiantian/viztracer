@@ -314,7 +314,7 @@ class TestCommandLineBasic(CmdlineTmpl):
             tids = set()
             for entry in data["traceEvents"]:
                 tids.add(entry["tid"])
-            self.assertEqual(len(tids), 4)
+            self.assertGreaterEqual(len(tids), 4)
 
         if int(platform.python_version_tuple()[1]) >= 7:
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],

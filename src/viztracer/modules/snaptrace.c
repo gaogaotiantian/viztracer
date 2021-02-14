@@ -1442,9 +1442,8 @@ PyInit_snaptrace(void)
     multiprocessing_module = PyImport_ImportModule("multiprocessing");
     asyncio_module = PyImport_ImportModule("asyncio");
     asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
-    asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
-    if (asyncio_tasks_current_task == NULL) {
-        PyErr_Clear();
+    if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
+        asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
     }
 
     return m;
