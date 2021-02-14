@@ -700,10 +700,16 @@ snaptrace_load(TracerObject* self, PyObject* args)
                 PyObject* task_id = PyLong_FromLong((long)curr->data.fee.asyncio_task);
                 PyDict_SetItemString(dict, "tid", task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
-                    PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
-                    PyObject* task_name = PyObject_CallObject(task_name_method, NULL);
+                    PyObject* task_name = NULL;
+                    if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
+                        PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
+                        task_name = PyObject_CallObject(task_name_method, NULL);
+                        Py_DECREF(task_name_method);
+                    } else {
+                        task_name = PyUnicode_FromString("Task");
+                    }
+                    
                     PyDict_SetItem(task_dict, task_id, task_name);
-                    Py_DECREF(task_name_method);
                     Py_DECREF(task_name);
                 }
                 Py_DECREF(task_id);
