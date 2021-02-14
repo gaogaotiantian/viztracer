@@ -1,7 +1,20 @@
-Multi Thread and Multi Process
-==============================
+Concurrency
+===========
 
-VizTracer supports both multi-thread and multi-process tracing. 
+VizTracer supports concurrency tracing, including asyncio, multi-thread and multi-process. 
+
+asyncio
+-------
+
+VizTracer supports ``asyncio`` module natively. However, you can use ``--log_async`` to make the report clearer.
+
+Under the rug, asyncio is a single-thread program that's scheduled by Python built-ins. With ``--log_async``, you can visualize
+different tasks as "threads", which could seperate the real work from the underlying structure, and giving you a more intuitive
+understanding of how different tasks consume the runtime.
+
+.. code-block::
+
+    viztracer --log_async my_script.py
 
 threading
 ---------

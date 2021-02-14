@@ -37,7 +37,8 @@ setuptools.setup(
         Extension(
             "viztracer.snaptrace",
             sources=[
-                "src/viztracer/modules/snaptrace.c",
+                "src/viztracer/modules/util.c",
+                "src/viztracer/modules/snaptrace.c"
             ],
             extra_link_args=["-lpthread"]
         )

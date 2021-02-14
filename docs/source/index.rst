@@ -27,7 +27,7 @@ VizTracer can display every function executed and the corresponding entry/exit t
    filter
    custom_event_intro
    extra_log
-   multi_thread_process
+   concurrency
    remote_attach
    plugins
 

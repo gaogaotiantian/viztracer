@@ -22,6 +22,7 @@ class _VizTracer:
                  log_func_args=False,
                  log_print=False,
                  log_gc=False,
+                 log_async=False,
                  novdb=False):
         self.buffer = []
         self.enable = False
@@ -40,6 +41,7 @@ class _VizTracer:
         self.log_func_args = log_func_args
         self.log_print = log_print
         self.log_gc = log_gc
+        self.log_async = log_async
         self.novdb = novdb
         self.system_print = builtins.print
         self.total_entries = 0
@@ -182,7 +184,8 @@ class _VizTracer:
             ignore_frozen=self.ignore_frozen,
             log_func_retval=self.log_func_retval,
             novdb=self.novdb,
-            log_func_args=self.log_func_args
+            log_func_args=self.log_func_args,
+            log_async=self.log_async
         )
         self._tracer.start()
 

@@ -8,6 +8,7 @@ import os
 import types
 import time
 import builtins
+import platform
 import signal
 import shutil
 from . import VizTracer
@@ -86,6 +87,8 @@ class VizUI:
                             help=argparse.SUPPRESS)
         parser.add_argument("--log_multiprocess", action="store_true", default=False,
                             help="log multiprocesses")
+        parser.add_argument("--log_async", action="store_true", default=False,
+                            help="log as async format")
         parser.add_argument("--novdb", action="store_true", default=False,
                             help="Do not instrument for vdb, will reduce the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -148,6 +151,10 @@ class VizUI:
                               "-o", "result.json", "--pid_suffix"]
             patch_subprocess(self)
 
+        if options.log_async:
+            if int(platform.python_version_tuple()[1]) < 7:
+                return False, "log_async only supports python 3.7+"
+
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
@@ -163,6 +170,7 @@ class VizUI:
             "log_print": options.log_print,
             "log_gc": options.log_gc,
             "log_sparse": options.log_sparse,
+            "log_async": options.log_async,
             "novdb": options.novdb,
             "pid_suffix": options.pid_suffix,
             "register_global": True,

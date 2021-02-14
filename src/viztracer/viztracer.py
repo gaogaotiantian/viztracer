@@ -29,6 +29,7 @@ class VizTracer(_VizTracer):
                  log_print=False,
                  log_gc=False,
                  log_sparse=False,
+                 log_async=False,
                  novdb=False,
                  pid_suffix=False,
                  file_info=False,
@@ -46,7 +47,8 @@ class VizTracer(_VizTracer):
             log_print=log_print,
             log_gc=log_gc,
             novdb=novdb,
-            log_func_args=log_func_args
+            log_func_args=log_func_args,
+            log_async=log_async
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix
