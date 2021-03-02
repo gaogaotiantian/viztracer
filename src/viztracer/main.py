@@ -29,7 +29,7 @@ class VizUI:
         self.options = None
         self.args = []
         self._exiting = False
-        self.multiprocess_output_dir = "./viztracer_multiprocess_tmp"
+        self.multiprocess_output_dir = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
