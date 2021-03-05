@@ -258,9 +258,6 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_log_gc(self):
         self.template(["viztracer", "--log_gc", "cmdline_test.py"], script=file_gc)
 
-    def test_open(self):
-        self.template(["viztracer", "--open", "cmdline_test.py"])
-
     def test_log_var(self):
         self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"],
                       script=file_c_function,
