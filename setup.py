@@ -65,6 +65,7 @@ setuptools.setup(
     entry_points={
         "console_scripts": [
             "viztracer = viztracer:main",
+            "vizviewer = viztracer:viewer_main",
             "vdb = viztracer:sim_main"
         ]
     },
