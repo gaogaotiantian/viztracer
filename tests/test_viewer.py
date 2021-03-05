@@ -74,7 +74,14 @@ class TestViewer(CmdlineTmpl):
             with open("test.html", "w") as f:
                 f.write(html)
             with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.html"]):
-                with socketserver.TCPServer(("127.0.0.1", 9001), MyTCPHandler) as _:
+                try:
+                    with socketserver.TCPServer(("127.0.0.1", 9001), MyTCPHandler) as _:
+                        with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
+                            viewer_main()
+                            mock_obj.p.join()
+                            self.assertEqual(mock_obj.p.exitcode, 0)
+                except OSError:
+                    # If the port is already occupied, just connect
                     with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
                         viewer_main()
                         mock_obj.p.join()
