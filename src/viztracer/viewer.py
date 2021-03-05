@@ -29,7 +29,8 @@ def viewer_main():
     # import webbrowser only if necessary
     import webbrowser
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", nargs=1)
+    parser.add_argument("file", nargs=1, help="html/json/gz file to open")
+    parser.add_argument("-p", "--port", type=int, default=9001, help="port you want to host your html server")
 
     options = parser.parse_args(sys.argv[1:])
     f = options.file[0]
@@ -37,26 +38,33 @@ def viewer_main():
         path = os.path.abspath(options.file[0])
         os.chdir(os.path.dirname(path))
         filename = os.path.basename(path)
-        PORT = 9001
+        port = options.port
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(('127.0.0.1', PORT), HttpHandler) as httpd:
-            if filename.endswith("html"):
-                webbrowser.open_new_tab(
-                    f'http://127.0.0.1:{PORT}/{filename}'
-                )
-            elif filename.endswith("json") or filename.endswith("gz"):
-                webbrowser.open_new_tab(
-                    f'https://ui.perfetto.dev/#!/?url=http://127.0.0.1:{PORT}/{filename}'
-                )
-            else:
-                print(f"Do not support file type {filename}")
-                return 1
-            while httpd.__dict__.get('last_request') != '/' + filename:
-                httpd.handle_request()
+        while port < 65535:
+            try:
+                with socketserver.TCPServer(('127.0.0.1', port), HttpHandler) as httpd:
+                    if filename.endswith("html"):
+                        webbrowser.open_new_tab(
+                            f'http://127.0.0.1:{port}/{filename}'
+                        )
+                    elif filename.endswith("json") or filename.endswith("gz"):
+                        webbrowser.open_new_tab(
+                            f'https://ui.perfetto.dev/#!/?url=http://127.0.0.1:{port}/{filename}'
+                        )
+                    else:
+                        print(f"Do not support file type {filename}")
+                        return 1
+                    while httpd.__dict__.get('last_request') != '/' + filename:
+                        httpd.handle_request()
+                return 0
+            except OSError:
+                port += 1
+        else:
+            print("No port is available!")
+            return 1
     else:
         print(f"File {f} does not exist!")
         return 1
-    return 0
 
 
 if __name__ == "__main__":
