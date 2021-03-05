@@ -6,6 +6,7 @@ import http.server
 import os
 import socketserver
 import sys
+import time
 
 
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
@@ -51,8 +52,12 @@ def viewer_main():
                     else:
                         print(f"Do not support file type {filename}")
                         return 1
+                    start_time = time.time()
                     while httpd.__dict__.get('last_request') != '/' + filename:
                         httpd.handle_request()
+                        if time.time() - start_time > 10:  # pragma: no cover
+                            # set a 10s timeout
+                            break
                 return 0
             except OSError:
                 port += 1

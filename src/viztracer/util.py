@@ -1,9 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import platform
-import subprocess
-
 
 def size_fmt(num, suffix='B'):
     for unit in ['', 'Ki', 'Mi', 'Gi']:
@@ -29,20 +26,6 @@ bcolors = _bcolors()
 
 def color_print(color, s):
     print(bcolors.__getattribute__(color) + s + bcolors.ENDC)
-
-
-def get_url_from_file(file_path):
-    # file_path should be absolute
-    uname = platform.uname()
-    if uname.system.lower() == "linux" and "microsoft" in uname.release.lower():
-        # We are on WSL, need to convert file_path
-        p = subprocess.run(["wslpath", "-w", file_path], stdout=subprocess.PIPE)
-        if p.returncode == 0:
-            file_path = p.stdout.decode("utf-8")
-        else:
-            raise Exception("Can't convert path '{}' to Windows path".format(file_path))
-
-    return file_path
 
 
 def compare_version(ver1, ver2):
