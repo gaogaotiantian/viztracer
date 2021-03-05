@@ -80,7 +80,25 @@ with VizTracer(output_file="optional.html") as tracer:
 
 By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome.
 
-However, you can generate json file as well, which complies to the chrome trace event format. You can load the json file on [perfetto](https://ui.perfetto.dev/) or [chrome://tracing](chrome://tracing/).
+Or, you can use ``vizviewer`` to open generated HTML/json/gz file.
+
+```
+vizviewer result.json
+```
+
+You can also pass ``--open`` to ``viztracer`` so it will automatically open the report after tracing
+
+```
+# Open with perfetto
+viztracer -o result.json --open my_script.py
+# Open with chrome trace viewer
+viztracer -o result.html --open my_script.py
+```
+
+As Chrome Trace Viewer is already deprecated, we will gradually lean towards [perfetto](https://ui.perfetto.dev/).
+Using ``vizviewer`` to open json/gz reports will bring up perfetto to view trace data.
+
+If you prefer Chrome Trace Viewer, you can use html output, or use chrome://tracing to load the json/gz file.
 
 **When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file**
 
