@@ -37,7 +37,6 @@ def viewer_main():
         os.chdir(os.path.dirname(path))
         filename = os.path.basename(path)
         port = options.port
-        socketserver.TCPServer.allow_reuse_address = True
         while port < 65535:
             try:
                 with socketserver.TCPServer(('127.0.0.1', port), HttpHandler) as httpd:
