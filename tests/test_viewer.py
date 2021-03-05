@@ -21,18 +21,17 @@ class MockOpen(unittest.TestCase):
         self.file_content = file_content
         super().__init__()
 
+    def get_and_check(self, url, expected):
+        time.sleep(0.5)
+        resp = urllib.request.urlopen(url)
+        self.assertEqual(resp.read().decode("utf-8"), expected)
+
     def __call__(self, url):
-
-        def get_and_check(url, expected):
-            time.sleep(0.5)
-            resp = urllib.request.urlopen(url)
-            self.assertEqual(resp.read().decode("utf-8"), expected)
-
         if url.endswith("json"):
             m = re.search("url=(.*)", url)
-            self.p = multiprocessing.Process(target=get_and_check, args=(m.group(1), self.file_content))
+            self.p = multiprocessing.Process(target=self.get_and_check, args=(m.group(1), self.file_content))
         elif url.endswith("html"):
-            self.p = multiprocessing.Process(target=get_and_check, args=(url, self.file_content))
+            self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
         self.p.start()
 
 
