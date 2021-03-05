@@ -288,7 +288,6 @@ class _VizTracer:
         if not self.parsed:
             self.data = {
                 "traceEvents": self._tracer.load(),
-                "displayTimeUnit": "ns",
                 "viztracer_metadata": {
                     "version": __version__
                 }
