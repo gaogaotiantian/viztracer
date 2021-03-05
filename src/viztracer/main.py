@@ -368,7 +368,7 @@ class VizUI:
             self._exiting = True
             self.save(self.tracer)
             self.tracer.terminate()
-            if self.options.open:
+            if self.options.open:  # pragma: no cover
                 import subprocess
                 subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
             exit(0)

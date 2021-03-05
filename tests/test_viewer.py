@@ -6,6 +6,7 @@ from .cmdline_tmpl import CmdlineTmpl
 import multiprocessing
 import os
 import re
+import socketserver
 import sys
 import time
 import unittest.mock
@@ -35,6 +36,11 @@ class MockOpen(unittest.TestCase):
         self.p.start()
 
 
+class MyTCPHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        pass
+
+
 class TestViewer(CmdlineTmpl):
     def test_json(self):
         json_script = '{"traceEvents":[{"ph":"M","pid":17088,"tid":17088,"name":"process_name","args":{"name":"MainProcess"}},{"ph":"M","pid":17088,"tid":17088,"name":"thread_name","args":{"name":"MainThread"}},{"pid":17088,"tid":17088,"ts":20889378694.06,"dur":1001119.1,"name":"time.sleep","caller_lineno":4,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.96,"dur":1001122.5,"name":"<module> (/home/gaogaotiantian/programs/codesnap/scrabble4.py:1)","caller_lineno":238,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.46,"dur":1001124.7,"name":"builtins.exec","caller_lineno":238,"ph":"X","cat":"FEE"}],"viztracer_metadata":{"version":"0.12.0"}}'  # noqa: E501
@@ -62,6 +68,20 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove("test.html")
 
+    def test_port_occupied(self):
+        html = '<html></html>'
+        try:
+            with open("test.html", "w") as f:
+                f.write(html)
+            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.html"]):
+                with socketserver.TCPServer(("127.0.0.1", 9001), MyTCPHandler) as _:
+                    with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
+                        viewer_main()
+                        mock_obj.p.join()
+                        self.assertEqual(mock_obj.p.exitcode, 0)
+        finally:
+            os.remove("test.html")
+
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
-        self.template(["vizviewer", "ext_wrong.wrong"], success=False, expected_output_file=None)
+        self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)

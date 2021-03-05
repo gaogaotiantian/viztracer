@@ -18,9 +18,6 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         self.server.last_request = self.path
         return super().do_GET()
 
-    def do_POST(self):
-        pass
-
     def log_message(self, format, *args):
         pass
 
@@ -59,7 +56,7 @@ def viewer_main():
                 return 0
             except OSError:
                 port += 1
-        else:
+        else:  # pragma: no cover
             print("No port is available!")
             return 1
     else:
