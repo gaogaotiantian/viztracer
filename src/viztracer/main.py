@@ -15,7 +15,6 @@ from . import VizTracer
 from . import FlameGraph
 from . import __version__
 from .report_builder import ReportBuilder
-from .util import get_url_from_file
 from .code_monkey import CodeMonkey
 from .patch import patch_multiprocessing, patch_subprocess
 
@@ -369,12 +368,9 @@ class VizUI:
             self._exiting = True
             self.save(self.tracer)
             self.tracer.terminate()
-            if self.options.open:
-                import webbrowser
-                try:
-                    webbrowser.open(get_url_from_file(os.path.abspath(self.ofile)))
-                except webbrowser.Error:  # pragma: no cover
-                    return False, "Can not open the report"
+            if self.options.open:  # pragma: no cover
+                import subprocess
+                subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
             exit(0)
 
 

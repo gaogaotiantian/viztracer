@@ -13,12 +13,14 @@ from .vizobject import VizObject
 from .vizlogging import VizLoggingHandler
 from .main import main
 from .simulator import main as sim_main
+from .viewer import viewer_main
 
 
 __all__ = [
     "__version__",
     "main",
     "sim_main",
+    "viewer_main",
     "VizTracer",
     "FlameGraph",
     "ignore_function",

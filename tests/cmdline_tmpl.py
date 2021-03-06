@@ -19,13 +19,13 @@ fib(5)
 
 
 class CmdlineTmpl(BaseTmpl):
-    def build_script(self, script):
-        with open("cmdline_test.py", "w") as f:
+    def build_script(self, script, name="cmdline_test.py"):
+        with open(name, "w") as f:
             f.write(script)
 
-    def cleanup(self, output_file="result.html"):
-        if os.path.exists("cmdline_test.py"):
-            os.remove("cmdline_test.py")
+    def cleanup(self, output_file="result.html", script_name="cmdline_test.py"):
+        if os.path.exists(script_name):
+            os.remove(script_name)
         if output_file:
             if type(output_file) is list:
                 for f in output_file:
@@ -44,6 +44,7 @@ class CmdlineTmpl(BaseTmpl):
                  expected_output_file="result.html",
                  success=True,
                  script=file_fib,
+                 script_name="cmdline_test.py",
                  expected_entries=None,
                  expected_stdout=None,
                  cleanup=True,
@@ -57,12 +58,15 @@ class CmdlineTmpl(BaseTmpl):
                     cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
                 elif concurrency == "multiprocessing":
                     cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
+            elif "vizviewer" in cmd_list:
+                idx = cmd_list.index("vizviewer")
+                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + ["viztracer.viewer"] + cmd_list[idx + 1:]
             elif "python" in cmd_list:
                 idx = cmd_list.index("python")
                 cmd_list = ["coverage", "run", "--parallel-mode", "--pylib"] + cmd_list[idx + 1:]
 
         if script:
-            self.build_script(script)
+            self.build_script(script, script_name)
         if send_term:
             p = subprocess.Popen(cmd_list)
             time.sleep(2)
@@ -99,5 +103,5 @@ class CmdlineTmpl(BaseTmpl):
                     check_func(data)
 
         if cleanup:
-            self.cleanup(output_file=expected_output_file)
+            self.cleanup(output_file=expected_output_file, script_name=script_name)
         return result

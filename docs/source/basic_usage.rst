@@ -91,6 +91,46 @@ Or you can create a ``VizTracer`` object and manually enable/disable the profile
     tracer.stop()
     tracer.save() # also takes output_file as an optional argument
 
+Display Report
+--------------
+
+VizTracer will generate a ``result.html`` by default, which could be opened in Chrome directly. However, there are multiple ways
+to display VizTracer report.
+
+Currently, there are three front-end tools that could be used for VizTracer reports
+
+- Catapult Trace Viewer(Chrome Trace Viewer)
+- Perfetto
+- Modified Catapult Trace Viewer
+
+The Modified Catapult Trace Viewer can show source code of the program, while perfetto is actively maintained and uses
+latest technologies.
+
+The easiest way is to use ``vizviewer`` to load the report, which will open the webbrowser for you and load your report.
+
+.. code-block::
+
+    # Use Modified Catapult Trace Viewer
+    vizviewer result.html
+
+    # Use Perfetto
+    vizviewer result.json
+    vizviewer result.json.gz
+
+Or, you can use ``--open`` for ``viztracer``, it will then open the report after it generates it
+
+.. code-block::
+
+    # Use Modified Catapult Trace Viewer
+    viztracer -o result.html --open my_script.py
+
+    # Use Perfetto
+    viztracer -o result.json --open my_script.py
+    viztracer -o result.json.gz --open my_script.py
+
+If you generate an ``html`` report, you can also just open it in Chrome. If you generate ``json`` or ``gz`` report, you can
+load it in `Perfetto <https://ui.perfetto.dev/>`_ or chrome://tracing.
+
 Circular Buffer Size
 --------------------
 
