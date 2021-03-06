@@ -54,7 +54,7 @@ def viewer_main():
             httpd.timeout = 2
             while httpd.__dict__.get('last_request') != '/' + filename:
                 httpd.handle_request()
-                if time.time() - start_time > 10:
+                if time.time() - start_time > 10:  # pragma: no cover
                     break
         return 0
     else:
