@@ -42,6 +42,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
 
 
 class TestViewer(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
     def test_json(self):
         json_script = '{"traceEvents":[{"ph":"M","pid":17088,"tid":17088,"name":"process_name","args":{"name":"MainProcess"}},{"ph":"M","pid":17088,"tid":17088,"name":"thread_name","args":{"name":"MainThread"}},{"pid":17088,"tid":17088,"ts":20889378694.06,"dur":1001119.1,"name":"time.sleep","caller_lineno":4,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.96,"dur":1001122.5,"name":"<module> (/home/gaogaotiantian/programs/codesnap/scrabble4.py:1)","caller_lineno":238,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.46,"dur":1001124.7,"name":"builtins.exec","caller_lineno":238,"ph":"X","cat":"FEE"}],"viztracer_metadata":{"version":"0.12.0"}}'  # noqa: E501
         try:
@@ -55,6 +56,7 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove("test.json")
 
+    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
     def test_html(self):
         html = '<html></html>'
         try:
