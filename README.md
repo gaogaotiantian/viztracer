@@ -43,38 +43,21 @@ You can simply use VizTracer by
 
 ```
 viztracer my_script.py arg1 arg2
+# Or use --open to open the report after execution
+viztracer --open my_script.py arg1 arg2
 ```
 
 which will generate a ```result.html``` file in the directory you run this command, which you can open with Chrome.
 
-You can also generate ```json``` file or ```gz``` file and load it with [chrome://tracing/](chrome://tracing/) or [perfetto](https://ui.perfetto.dev/). ```gz``` file is especially helpful when your trace file is large
+You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/) or. ```gz``` file is especially helpful when your trace file is large
 
 ```
 viztracer -o result.json my_script.py arg1 arg2
 viztracer -o result.json.gz my_script.py arg1 arg2
+# --open still works
+viztracer -o result.json --open my_script.py arg1 arg2
+viztracer -o result.json.gz --open my_script.py arg1 arg2
 ```
-
-### Inline
-
-You can also manually start/stop VizTracer in your script as well.
-
-```python
-from viztracer import VizTracer
-
-tracer = VizTracer()
-tracer.start()
-# Something happens here
-tracer.stop()
-tracer.save() # also takes output_file as an optional argument
-```
-
-Or, you can do it with ```with``` statement
-
-```python
-with VizTracer(output_file="optional.html") as tracer:
-    # Something happens here
-```
-
 
 ### Display Result
 
@@ -103,6 +86,27 @@ As Chrome Trace Viewer is already deprecated, we will gradually lean towards [pe
 If you prefer Chrome Trace Viewer, you can use html output, or use chrome://tracing to load the json/gz file.
 
 **When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file**
+
+### Inline
+
+You can also manually start/stop VizTracer in your script as well.
+
+```python
+from viztracer import VizTracer
+
+tracer = VizTracer()
+tracer.start()
+# Something happens here
+tracer.stop()
+tracer.save() # also takes output_file as an optional argument
+```
+
+Or, you can do it with ```with``` statement
+
+```python
+with VizTracer(output_file="optional.html") as tracer:
+    # Something happens here
+```
 
 ## Advanced Usage
 
