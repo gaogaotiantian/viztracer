@@ -68,6 +68,8 @@ class ReportBuilder:
                 color_print("WARNING", "    use --quiet to shut me up")
                 print("")
 
+        self.combined_json["displayTimeUnit"] = "ns"
+
         if file_info:
             self.combined_json["file_info"] = {"files": {}, "functions": {}}
             pattern = re.compile(r".*\((.*):([0-9]*)\)")

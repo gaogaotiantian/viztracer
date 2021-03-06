@@ -57,9 +57,9 @@ double get_ts(void)
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
-    counter.QuadPart *= 1000000000LL;
-    counter.QuadPart /= qpc_freq.QuadPart;
     curr_ts = (double) counter.QuadPart;
+    curr_ts *= 1000000000LL;
+    curr_ts /= qpc_freq.QuadPart;
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);

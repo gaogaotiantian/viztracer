@@ -29,6 +29,7 @@ class VizUI:
         self.args = []
         self._exiting = False
         self.multiprocess_output_dir = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
+        self.is_main_process = False
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
@@ -345,13 +346,15 @@ class VizUI:
         tracer.stop()
 
         if options.log_multiprocess:
-            is_main_process = os.getpid() == self.parent_pid
+            self.is_main_process = os.getpid() == self.parent_pid
         elif options.log_subprocess:
-            is_main_process = not options.subprocess_child
+            self.is_main_process = not options.subprocess_child
+        else:
+            self.is_main_process = True
 
         if options.log_subprocess or options.log_multiprocess:
             tracer.pid_suffix = True
-            if is_main_process:
+            if self.is_main_process:
                 tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
                 builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f)
                                          for f in os.listdir(self.multiprocess_output_dir)])
@@ -368,7 +371,7 @@ class VizUI:
             self._exiting = True
             self.save(self.tracer)
             self.tracer.terminate()
-            if self.options.open:  # pragma: no cover
+            if self.is_main_process and self.options.open:  # pragma: no cover
                 import subprocess
                 subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
             exit(0)
