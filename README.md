@@ -43,18 +43,18 @@ You can simply use VizTracer by
 
 ```
 viztracer my_script.py arg1 arg2
-# Or use --open to open the report after execution
+# Or use "--open" to open the report after execution
 viztracer --open my_script.py arg1 arg2
 ```
 
 which will generate a ```result.html``` file in the directory you run this command, which you can open with Chrome.
 
-You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/) or. ```gz``` file is especially helpful when your trace file is large
+You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/). ```gz``` file is especially helpful when your trace file is large
 
 ```
 viztracer -o result.json my_script.py arg1 arg2
 viztracer -o result.json.gz my_script.py arg1 arg2
-# --open still works
+# "--open" still works
 viztracer -o result.json --open my_script.py arg1 arg2
 viztracer -o result.json.gz --open my_script.py arg1 arg2
 ```
