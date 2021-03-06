@@ -176,7 +176,6 @@ class TestSimulator(BaseTmpl):
         for _ in range(101):
             sim.command("nb")
         result = sim.command("w")
-        self.assertEqual(self.get_func_stack(result), ["__init__"])
         result1 = sim.command("tid")
         self.assertEqual(len(result1.strip().split()), 6)
         sim.close()
