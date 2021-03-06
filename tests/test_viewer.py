@@ -68,27 +68,6 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove("test.html")
 
-    def test_port_occupied(self):
-        html = '<html></html>'
-        try:
-            with open("test.html", "w") as f:
-                f.write(html)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.html"]):
-                try:
-                    with socketserver.TCPServer(("127.0.0.1", 9001), MyTCPHandler) as _:
-                        with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
-                            viewer_main()
-                            mock_obj.p.join()
-                            self.assertEqual(mock_obj.p.exitcode, 0)
-                except OSError:
-                    # If the port is already occupied, just connect
-                    with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
-                        viewer_main()
-                        mock_obj.p.join()
-                        self.assertEqual(mock_obj.p.exitcode, 0)
-        finally:
-            os.remove("test.html")
-
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
         self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)
