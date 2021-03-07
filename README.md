@@ -43,49 +43,39 @@ You can simply use VizTracer by
 
 ```
 viztracer my_script.py arg1 arg2
-# Or use "--open" to open the report after execution
-viztracer --open my_script.py arg1 arg2
 ```
 
 which will generate a ```result.html``` file in the directory you run this command, which you can open with Chrome.
 
-You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/). ```gz``` file is especially helpful when your trace file is large
+You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/).
 
 ```
 viztracer -o result.json my_script.py arg1 arg2
 viztracer -o result.json.gz my_script.py arg1 arg2
-# "--open" still works
-viztracer -o result.json --open my_script.py arg1 arg2
-viztracer -o result.json.gz --open my_script.py arg1 arg2
 ```
 
-### Display Result
-
-By default, VizTracer will generate a stand alone HTML file which you can simply open with Chrome.
-
-Or, you can use ``vizviewer`` to open generated HTML/json/gz file.
+Use ```vizviewer``` to open the reports to save trouble
 
 ```
 # Open with chrome trace viewer that shows source code
 vizviewer result.html
 # Open with perfetto
 vizviewer result.json
+vizviewer result.json.gz
 ```
 
-You can also pass ``--open`` to ``viztracer`` so it will automatically open the report after tracing
+Or add ```--open``` to open the reports right after tracing
 
 ```
 # Open with chrome trace viewer that shows source code
-viztracer -o result.html --open my_script.py
+viztracer --open my_scripy.py arg1 arg2
 # Open with perfetto
-viztracer -o result.json --open my_script.py
+viztracer -o result.json --open my_script.py arg1 arg2
+viztracer -o result.json.gz --open my_script.py arg1 arg2
 ```
 
-As Chrome Trace Viewer is already deprecated, we will gradually lean towards [perfetto](https://ui.perfetto.dev/).
-
-If you prefer Chrome Trace Viewer, you can use html output, or use chrome://tracing to load the json/gz file.
-
-**When you are dealing with big traces, a stand alone HTML file might be very large and hard to load. You should try to dump a compressed ```filename.json.gz``` file**
+As Chrome Trace Viewer is already deprecated, we will gradually lean towards [perfetto](https://ui.perfetto.dev/) which is
+much faster when loading large trace files.
 
 ### Inline
 
