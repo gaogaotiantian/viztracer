@@ -13,7 +13,7 @@ VizTracer
                  log_func_args=False,\
                  log_print=False,\
                  log_gc=False,\
-                 novdb=False,\
+                 vdb=False,\
                  pid_suffix=False,\
                  register_global=True,\
                  output_file="result.html")
@@ -176,17 +176,17 @@ VizTracer
 
             viztracer --log_gc
     
-    .. py:attribute:: novdb
+    .. py:attribute:: vdb
         :type: boolean
         :value: False
 
-        whether made viztracer to stop instrumenting for vdb, which would improve the overhead and the file size a bit
+        whether make viztracer instrument for vdb, which would affect the overhead and the file size a bit
 
         Setting it to ``True`` is equivalent to 
 
         .. code-block::
 
-            viztracer --novdb
+            viztracer --vdb
 
     .. py:attribute:: register_global
         :type: boolean

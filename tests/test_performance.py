@@ -31,19 +31,19 @@ class TestPerformance(BaseTmpl):
             func()
             origin = t.get_time()
 
-        # With viztracer + c tracer + novdb
-        tracer = VizTracer(verbose=0, novdb=True)
+        # With viztracer + c tracer + vdb
+        tracer = VizTracer(verbose=0, vdb=True)
         tracer.start()
         with Timer() as t:
             func()
-            instrumented_c_novdb = t.get_time()
+            instrumented_c_vdb = t.get_time()
         tracer.stop()
         with Timer() as t:
             tracer.parse()
-            instrumented_c_novdb_parse = t.get_time()
+            instrumented_c_vdb_parse = t.get_time()
         with Timer() as t:
             tracer.save(output_file="tmp.json")
-            instrumented_c_novdb_json = t.get_time()
+            instrumented_c_vdb_json = t.get_time()
         os.remove("tmp.json")
         tracer.clear()
 
@@ -74,9 +74,9 @@ class TestPerformance(BaseTmpl):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
 
         print(time_str("origin", origin, origin))
-        print(time_str("c+novdb", origin, instrumented_c_novdb)
-              + time_str("parse", origin, instrumented_c_novdb_parse)
-              + time_str("json", origin, instrumented_c_novdb_json))
+        print(time_str("c+vdb", origin, instrumented_c_vdb)
+              + time_str("parse", origin, instrumented_c_vdb_parse)
+              + time_str("json", origin, instrumented_c_vdb_json))
         print(time_str("c", origin, instrumented_c)
               + time_str("parse", origin, instrumented_c_parse)
               + time_str("json", origin, instrumented_c_json))

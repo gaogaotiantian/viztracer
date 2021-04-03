@@ -30,7 +30,7 @@ class VizTracer(_VizTracer):
                  log_gc=False,
                  log_sparse=False,
                  log_async=False,
-                 novdb=False,
+                 vdb=False,
                  pid_suffix=False,
                  file_info=False,
                  register_global=True,
@@ -46,7 +46,7 @@ class VizTracer(_VizTracer):
             log_func_retval=log_func_retval,
             log_print=log_print,
             log_gc=log_gc,
-            novdb=novdb,
+            vdb=vdb,
             log_func_args=log_func_args,
             log_async=log_async
         )

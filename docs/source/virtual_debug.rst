@@ -1,7 +1,13 @@
 Virtual Debug
 =============
 
-To use virtual debug, use ``vdb`` with your json report
+To use virtual debug, you need to trace your program with ``--vdb`` using ``viztracer``
+
+.. code-block:
+
+    viztracer --vdb -o result.json your_program.py
+
+ use ``vdb`` with your json report
 
 .. code-block::
 
