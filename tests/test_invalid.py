@@ -19,7 +19,7 @@ class TestInvalidArgs(BaseTmpl):
             "log_func_retval": ["hello", 1, "True"],
             "log_gc": ["hello", 1, "True"],
             "log_func_args": ["hello", 1, "True"],
-            "novdb": ["hello", 1, "True"]
+            "vdb": ["hello", 1, "True"]
         }
         tracer = VizTracer()
         for args, vals in invalid_args.items():

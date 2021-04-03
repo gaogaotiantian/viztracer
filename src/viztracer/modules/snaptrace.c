@@ -57,11 +57,8 @@ extern LARGE_INTEGER qpc_freq;
 
 static struct ThreadInfo* get_thread_info(TracerObject* self)
 {
+    // self is non-NULL value
     struct ThreadInfo* info = NULL;
-
-    if (!self) {
-        return NULL;
-    }
 #if _WIN32
     info = TlsGetValue(self->dwTlsIndex);
 #else
@@ -143,9 +140,16 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     struct EventNode* node = NULL;
 
     node = self->buffer + self->buffer_tail_idx;
-    self->buffer_tail_idx = (self->buffer_tail_idx + 1) % self->buffer_size;
+    // This is actually faster than modulo
+    self->buffer_tail_idx = self->buffer_tail_idx + 1;
+    if (self->buffer_tail_idx >= self->buffer_size) {
+        self->buffer_tail_idx = 0;
+    }
     if (self->buffer_tail_idx == self->buffer_head_idx) {
-        self->buffer_head_idx = (self->buffer_head_idx + 1) % self->buffer_size;
+        self->buffer_head_idx = self->buffer_head_idx + 1;
+        if (self->buffer_head_idx >= self->buffer_size) {
+            self->buffer_head_idx = 0;
+        }
         clear_node(self->buffer + self->buffer_tail_idx);
     } else {
         self->total_entries += 1;
@@ -536,10 +540,10 @@ snaptrace_start(TracerObject* self, PyObject* args)
 static PyObject*
 snaptrace_stop(TracerObject* self, PyObject* args)
 {
-    struct ThreadInfo* info = get_thread_info(self);
-    self->collecting = 0;
+    if (self) {
+        struct ThreadInfo* info = get_thread_info(self);
+        self->collecting = 0;
 
-    if (info) {
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
         info->paused = 0;
@@ -942,7 +946,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
-            "log_func_retval", "novdb", "log_func_args", "log_async",
+            "log_func_retval", "vdb", "log_func_args", "log_async",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -952,7 +956,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_ignore_c_function = -1;
     int kw_ignore_frozen = -1;
     int kw_log_func_retval = -1;
-    int kw_novdb = -1;
+    int kw_vdb = -1;
     int kw_log_func_args = -1;
     int kw_log_async = -1;
     if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppppp", kwlist,
@@ -964,7 +968,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_ignore_c_function,
             &kw_ignore_frozen,
             &kw_log_func_retval,
-            &kw_novdb,
+            &kw_vdb,
             &kw_log_func_args,
             &kw_log_async)) {
         return NULL;
@@ -1008,9 +1012,9 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
     }
 
-    if (kw_novdb == 1) {
+    if (kw_vdb == 0) {
         SET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
-    } else if (kw_novdb == 0) {
+    } else if (kw_vdb == 1) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
     }
 

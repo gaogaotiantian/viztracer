@@ -211,8 +211,8 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_log_func_retval(self):
         self.template(["python", "-m", "viztracer", "--log_func_retval", "cmdline_test.py"], script=file_c_function)
 
-    def test_novdb(self):
-        self.template(["python", "-m", "viztracer", "--novdb", "cmdline_test.py"])
+    def test_vdb(self):
+        self.template(["python", "-m", "viztracer", "--vdb", "cmdline_test.py"])
 
     def test_log_func_args(self):
         self.template(["python", "-m", "viztracer", "--log_func_args", "cmdline_test.py"])

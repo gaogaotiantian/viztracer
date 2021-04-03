@@ -89,8 +89,8 @@ class VizUI:
                             help="log multiprocesses")
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
-        parser.add_argument("--novdb", action="store_true", default=False,
-                            help="Do not instrument for vdb, will reduce the overhead")
+        parser.add_argument("--vdb", action="store_true", default=False,
+                            help="Instrument for vdb, will increase the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
                             help=("append pid to file name. "
                                   "This should be used when you try to trace multi process programs. "
@@ -171,7 +171,7 @@ class VizUI:
             "log_gc": options.log_gc,
             "log_sparse": options.log_sparse,
             "log_async": options.log_async,
-            "novdb": options.novdb,
+            "vdb": options.vdb,
             "pid_suffix": options.pid_suffix,
             "register_global": True,
             "plugins": options.plugins

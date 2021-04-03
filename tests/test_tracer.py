@@ -189,7 +189,7 @@ class TestTracerFeature(BaseTmpl):
                         and "return_value" in events[0]["args"])
 
     def test_novdb(self):
-        tracer = _VizTracer(novdb=False)
+        tracer = _VizTracer(vdb=True)
         tracer.start()
         fib(5)
         tracer.stop()
@@ -197,7 +197,7 @@ class TestTracerFeature(BaseTmpl):
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
         self.assertTrue("caller_lineno" in events[0])
 
-        tracer = _VizTracer(novdb=True)
+        tracer = _VizTracer(vdb=False)
         tracer.start()
         fib(5)
         tracer.stop()
