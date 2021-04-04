@@ -23,7 +23,7 @@ try:
 
             display(button)
 
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 
