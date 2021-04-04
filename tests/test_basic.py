@@ -175,7 +175,7 @@ class TestDecorator(BaseTmpl):
             fib(n)
         for _ in range(5):
             my_function(10)
-        time.sleep(0.5)
+        time.sleep(1.5)
         counter = len(os.listdir("./tmp"))
         shutil.rmtree("./tmp")
         self.assertEqual(counter, 5)
@@ -219,7 +219,7 @@ class TestForkSave(BaseTmpl):
             t.stop()
             t.parse()
             t.fork_save(output_file=str(i) + ".json")
-        time.sleep(0.6)
+        time.sleep(1.5)
 
         expected = {
             5: 15,
