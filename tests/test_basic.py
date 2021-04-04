@@ -175,10 +175,15 @@ class TestDecorator(BaseTmpl):
             fib(n)
         for _ in range(5):
             my_function(10)
-        time.sleep(1.5)
-        counter = len(os.listdir("./tmp"))
-        shutil.rmtree("./tmp")
-        self.assertEqual(counter, 5)
+        time.sleep(0.5)
+
+        def t():
+            self.assertEqual(len(os.listdir("./tmp")), 5)
+
+        try:
+            self.assertTrueTimeout(t, 10)
+        finally:
+            shutil.rmtree("./tmp")
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
@@ -219,7 +224,6 @@ class TestForkSave(BaseTmpl):
             t.stop()
             t.parse()
             t.fork_save(output_file=str(i) + ".json")
-        time.sleep(1.5)
 
         expected = {
             5: 15,
@@ -231,7 +235,7 @@ class TestForkSave(BaseTmpl):
         pid = None
         for i in range(5, 10):
             path = str(i) + ".json"
-            self.assertTrue(os.path.exists(path))
+            self.assertFileExists(path, timeout=10)
             with open(path) as f:
                 data = json.load(f)
             os.remove(path)
