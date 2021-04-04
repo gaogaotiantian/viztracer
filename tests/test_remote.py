@@ -65,7 +65,7 @@ class TestRemote(CmdlineTmpl):
         else:
             attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
         p_attach = subprocess.Popen(attach_cmd)
-        time.sleep(0.5)
+        time.sleep(1.5)
         p_attach.send_signal(signal.SIGINT)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
