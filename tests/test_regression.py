@@ -140,7 +140,7 @@ class TestTermCaught(CmdlineTmpl):
         time.sleep(0.5)
         p.terminate()
         p.wait(timeout=10)
-        self.assertTrue(os.path.exists("term.json"))
+        self.assertFileExists("term.json", 10)
         self.cleanup(output_file="term.json")
 
 
