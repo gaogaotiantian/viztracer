@@ -1,7 +1,8 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
 try:
     from IPython.core.magic import cell_magic, magics_class, Magics, needs_local_scope
-    from IPython.display import display
-    import ipywidgets
 
     @magics_class
     class VizTracerMagics(Magics):
@@ -10,12 +11,14 @@ try:
         def viztracer(self, line, cell, local_ns):
             from .viztracer import VizTracer
             from .viewer import view
+            from IPython.display import display
+            from ipywidgets import Button
             code = self.shell.transform_cell(cell)
             file_path = "./viztracer_report.html"
             with VizTracer(verbose=0, output_file=file_path):
                 exec(code, local_ns, local_ns)
 
-            button = ipywidgets.Button(description="Show VizTracer Report")
+            button = Button(description="Show VizTracer Report")
             button.on_click(lambda b: view(file_path))
 
             display(button)
