@@ -1,0 +1,5 @@
+setuptools
+wheel
+twine
+coverage
+jupyter

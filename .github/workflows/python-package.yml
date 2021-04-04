@@ -34,14 +34,13 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine coverage rich orjson
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip rich orjson
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
     - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel twine coverage
-        if (Test-Path -Path '.\requirements.txt' -PathType Leaf) {pip install -r requirements.txt}
+        if (Test-Path -Path '.\requirements-dev.txt' -PathType Leaf) {pip install -r requirements-dev.txt}
     - name: Build dist and test with unittest
       if: matrix.os != 'windows-latest'
       run: |
