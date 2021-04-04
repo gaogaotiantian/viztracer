@@ -194,12 +194,16 @@ class TestDecorator(BaseTmpl):
             time.sleep(0.5)
 
             def t1():
-                a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                a = subprocess.run(
+                    ["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
                 self.assertEqual(a.returncode, 0)
             self.assertTrueTimeout(t1, 10)
 
             def t2():
-                a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                a = subprocess.run(
+                    ["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
                 self.assertEqual(a.returncode, 0)
             self.assertTrueTimeout(t2, 10)
 
