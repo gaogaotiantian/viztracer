@@ -98,6 +98,22 @@ with VizTracer(output_file="optional.html") as tracer:
     # Something happens here
 ```
 
+### Jupyter
+
+If you are using Jupyter, you can use viztracer cell magics.
+
+```python
+# You need to load the extension first
+%load_ext viztracer
+```
+
+```python
+%%viztracer
+# Your code after
+```
+
+A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
+
 ## Advanced Usage
 
 ### Trace Filter

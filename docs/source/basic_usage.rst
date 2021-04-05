@@ -91,6 +91,23 @@ Or you can create a ``VizTracer`` object and manually enable/disable the profile
     tracer.stop()
     tracer.save() # also takes output_file as an optional argument
 
+Jupyter
+-------
+
+If you are using Jupyter, you can use viztracer cell magics.
+
+.. code-block:: python
+
+    # You need to load the extension first
+    %load_ext viztracer
+
+.. code-block:: python
+
+    %%viztracer
+    # Your code after
+
+A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
+
 Display Report
 --------------
 

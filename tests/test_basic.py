@@ -176,9 +176,14 @@ class TestDecorator(BaseTmpl):
         for _ in range(5):
             my_function(10)
         time.sleep(0.5)
-        counter = len(os.listdir("./tmp"))
-        shutil.rmtree("./tmp")
-        self.assertEqual(counter, 5)
+
+        def t():
+            self.assertEqual(len(os.listdir("./tmp")), 5)
+
+        try:
+            self.assertTrueTimeout(t, 10)
+        finally:
+            shutil.rmtree("./tmp")
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
@@ -187,10 +192,20 @@ class TestDecorator(BaseTmpl):
                 fib(n)
             my_function2(10)
             time.sleep(0.5)
-            a = subprocess.run(["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(a.returncode, 0)
-            a = subprocess.run(["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(a.returncode, 0)
+
+            def t1():
+                a = subprocess.run(
+                    ["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                self.assertEqual(a.returncode, 0)
+            self.assertTrueTimeout(t1, 10)
+
+            def t2():
+                a = subprocess.run(
+                    ["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                self.assertEqual(a.returncode, 0)
+            self.assertTrueTimeout(t2, 10)
 
 
 class TestLogPrint(BaseTmpl):
@@ -219,7 +234,6 @@ class TestForkSave(BaseTmpl):
             t.stop()
             t.parse()
             t.fork_save(output_file=str(i) + ".json")
-        time.sleep(0.6)
 
         expected = {
             5: 15,
@@ -231,7 +245,7 @@ class TestForkSave(BaseTmpl):
         pid = None
         for i in range(5, 10):
             path = str(i) + ".json"
-            self.assertTrue(os.path.exists(path))
+            self.assertFileExists(path, timeout=10)
             with open(path) as f:
                 data = json.load(f)
             os.remove(path)

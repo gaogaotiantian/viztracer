@@ -32,7 +32,7 @@ class TestRemote(CmdlineTmpl):
             tracer = VizTracer(output_file='remote.json')
             tracer.install()
             while True:
-                time.sleep(0.1)
+                time.sleep(0.5)
         """)
         with open("attached_script.py", "w") as f:
             f.write(file_attach)
@@ -55,12 +55,7 @@ class TestRemote(CmdlineTmpl):
         p_attach = subprocess.Popen(attach_cmd)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
-        for _ in range(20):
-            time.sleep(1)
-            if os.path.exists("remote.json"):
-                break
-        else:
-            self.assertFalse(True)
+        self.assertFileExists("remote.json", 20)
 
         os.remove("remote.json")
 
@@ -70,19 +65,14 @@ class TestRemote(CmdlineTmpl):
         else:
             attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
         p_attach = subprocess.Popen(attach_cmd)
-        time.sleep(0.5)
+        time.sleep(1.5)
         p_attach.send_signal(signal.SIGINT)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
         time.sleep(0.5)
         p_script.terminate()
         p_script.wait()
-        for _ in range(20):
-            time.sleep(1)
-            if os.path.exists("remote.json"):
-                break
-        else:
-            self.assertFalse(True)
+        self.assertFileExists("remote.json", 20)
         os.remove("attached_script.py")
         os.remove("remote.json")
 

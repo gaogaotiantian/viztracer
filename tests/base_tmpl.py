@@ -1,5 +1,10 @@
+# Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+# For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
 from unittest import TestCase
 import gc
+import os
+import time
 
 
 class BaseTmpl(TestCase):
@@ -13,3 +18,27 @@ class BaseTmpl(TestCase):
     def assertEventNumber(self, data, expected_entries):
         entries = len([1 for entry in data["traceEvents"] if entry["ph"] != "M"])
         self.assertEqual(entries, expected_entries)
+
+    def assertFileExists(self, path, timeout=None):
+        if timeout is None:
+            if not os.path.exists(path):
+                raise AssertionError(f"file {path} does not exist!")
+        else:
+            start = time.time()
+            while True:
+                if os.path.exists(path):
+                    return
+                elif time.time() - start > timeout:
+                    raise AssertionError(f"file {path} does not exist!")
+                else:
+                    time.sleep(0.5)
+
+    def assertTrueTimeout(self, func, timeout):
+        start = time.time()
+        while True:
+            try:
+                func()
+                break
+            except AssertionError as e:
+                if time.time() - start > timeout:
+                    raise e
