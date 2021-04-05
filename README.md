@@ -161,11 +161,15 @@ VizTracer supports python native ```threading``` module without the need to do a
 VizTracer supports ```subprocess``` with ```--log_subprocess``` and ```multiprocessing``` or ```os.fork()``` with ```--log_multiprocess```.
 For more general multi-process cases, VizTracer can support with some extra steps.
 
+[![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/multiprocess_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/multiprocess_example.png)
+
 Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/concurrency.html) for details
 
 ### Async Support
 
 VizTracer supports ```asyncio``` natively, but could enhance the report by using ```--log_async```. 
+
+[![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/async_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/async_example.png)
 
 Refer to [async docs](https://viztracer.readthedocs.io/en/stable/concurrency.html) for details
 
