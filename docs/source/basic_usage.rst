@@ -166,6 +166,26 @@ OR
 
     tracer = VizTracer(tracer_entries=500000)
 
+Combine Reports
+---------------
+
+VizTracer can put multiple json reports together and generate a new trace file. This is especially helpful when you have multiple
+trace generators, for example, running multiple processes with VizTracer. As VizTracer uses Monotonic Clock, you can save reports
+with different VizTracer instances without worrying about timestamp alignment issue. You can even generate your own data and
+combine with VizTracer reports, like VizPlugins does.
+
+.. code-block::
+
+    viztracer --combine process1.json process2.json -o full_report.html
+
+Another usage of combining reports would be to compare between different runs of the same program. Unlike combining from multiple
+sources, this requires a pre-alignment of all the trace data. VizTracer also provides a way to align the start of all reports for
+this usage.
+
+.. code-block::
+
+    viztracer --align_combine run1.json run2.json -o compare_report.html
+
 Debug Your Saved Report
 -----------------------
 
