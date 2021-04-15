@@ -35,10 +35,11 @@ def get_json(data):
 
 
 class ReportBuilder:
-    def __init__(self, data, verbose=1):
+    def __init__(self, data, verbose=1, align=False):
         self.verbose = verbose
         self.combined_json = None
         self.entry_number_threshold = 4000000
+        self.align = align
         if type(data) is list:
             self.jsons = [get_json(j) for j in data]
         else:
@@ -49,11 +50,26 @@ class ReportBuilder:
             return 0
         if not self.jsons:
             raise Exception("Can't get report of nothing")
+        if self.align:
+            for one in self.jsons:
+                self.align_events(one["traceEvents"])
         self.combined_json = self.jsons[0]
-        if len(self.jsons) > 1:
-            for one in self.jsons[1:]:
-                if "traceEvents" in one:
-                    self.combined_json["traceEvents"].extend(one["traceEvents"])
+        for one in self.jsons[1:]:
+            if "traceEvents" in one:
+                self.combined_json["traceEvents"].extend(one["traceEvents"])
+
+    def align_events(self, original_events):
+        """
+        Apply an offset to all the trace events, making the start timestamp 0
+        This is useful when comparing multiple runs of the same script
+
+        This function will change the timestamp in place, and return the original list
+        """
+        offset_ts = min((event["ts"] for event in original_events if "ts" in event))
+        for event in original_events:
+            if "ts" in event:
+                event["ts"] -= offset_ts
+        return original_events
 
     def generate_json(self, allow_binary=False, file_info=False):
         self.combine_json()

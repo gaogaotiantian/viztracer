@@ -104,6 +104,9 @@ class VizUI:
         parser.add_argument("--combine", nargs="*", default=[],
                             help=("combine all json reports to a single report. "
                                   "Specify all the json reports you want to combine"))
+        parser.add_argument("--align_combine", nargs="*", default=[],
+                            help=("combine all json reports to a single report and align them from the start "
+                                  "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
@@ -211,7 +214,9 @@ class VizUI:
         elif self.options.generate_flamegraph:
             return self.run_generate_flamegraph()
         elif self.options.combine:
-            return self.run_combine()
+            return self.run_combine(files=self.options.combine)
+        elif self.options.align_combine:
+            return self.run_combine(files=self.options.align_combine, align=True)
         else:
             self.parser.print_help()
             return True, None
@@ -299,9 +304,9 @@ class VizUI:
 
         return True, None
 
-    def run_combine(self):
+    def run_combine(self, files=[], align=False):
         options = self.options
-        builder = ReportBuilder(options.combine)
+        builder = ReportBuilder(files, align=align)
         if options.output_file:
             ofile = options.output_file
         else:

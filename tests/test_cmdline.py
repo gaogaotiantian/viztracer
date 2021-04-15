@@ -231,6 +231,10 @@ class TestCommandLineBasic(CmdlineTmpl):
                        os.path.join(example_json_dir, "multithread.json"),
                        os.path.join(example_json_dir, "different_sorts.json")],
                       expected_output_file="my_result.html")
+        self.template(["python", "-m", "viztracer", "--align_combine",
+                       os.path.join(example_json_dir, "multithread.json"),
+                       os.path.join(example_json_dir, "different_sorts.json")],
+                      expected_output_file="result.html")
 
     def test_tracer_entries(self):
         self.template(["python", "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
