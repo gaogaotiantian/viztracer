@@ -15,9 +15,8 @@ More help can be found by clicking "?" on the top right corner.
 
 * Detailed function entry/exit information on timeline with source code
 * Super easy to use, no source code change for most features, no package dependency
-* Optional function filter to ignore functions you are not interested
-* Custom events to log and track arbitrary data through time
-* Log arbitrary function/variable using RegEx without code change
+* Supports threading, multiprocessing, subprocess and async
+* Logs arbitrary function/variable using RegEx without code change
 * Stand alone HTML report with powerful front-end, or chrome-compatible json
 * Works on Linux/MacOS/Windows
 
@@ -45,16 +44,26 @@ You can simply use VizTracer by
 viztracer my_script.py arg1 arg2
 ```
 
-which will generate a ```result.html``` file in the directory you run this command, which you can open with Chrome.
+A ```result.html``` file will be generated, which you can open with Chrome.
 
+<details>
+
+<summary>
 You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/).
+</summary>
 
 ```
 viztracer -o result.json my_script.py arg1 arg2
 viztracer -o result.json.gz my_script.py arg1 arg2
 ```
 
+</details>
+
+<details>
+
+<summary>
 Use ```vizviewer``` to open the reports to save trouble
+</summary>
 
 ```
 # Open with chrome trace viewer that shows source code
@@ -64,7 +73,13 @@ vizviewer result.json
 vizviewer result.json.gz
 ```
 
+</details>
+
+<details>
+
+<summary>
 Or add ```--open``` to open the reports right after tracing
+</summary>
 
 ```
 # Open with chrome trace viewer that shows source code
@@ -73,6 +88,8 @@ viztracer --open my_scripy.py arg1 arg2
 viztracer -o result.json --open my_script.py arg1 arg2
 viztracer -o result.json.gz --open my_script.py arg1 arg2
 ```
+
+</details>
 
 As Chrome Trace Viewer is already deprecated, we will gradually lean towards [perfetto](https://ui.perfetto.dev/) which is
 much faster when loading large trace files.
@@ -198,7 +215,11 @@ Refer to the [docs](https://viztracer.readthedocs.io/en/stable/virtual_debug.htm
 
 VizTracer will introduce 2x to 3x overhead in the worst case. The overhead is much better if there are less function calls or if filters are applied correctly.
 
+<details>
+
+<summary>
 An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github VM
+</summary>
 
 ```
 fib:
@@ -225,6 +246,8 @@ slow_fib  (1135, 758):
 0.029481623(1.03)[c] 0.001152415(0.04)[parse] 0.002191417(0.08)[json]
 0.028289305(0.98)[cProfile]
 ```
+
+</details>
 
 ## Documentation
 
