@@ -49,7 +49,7 @@ A ```result.html``` file will be generated, which you can open with Chrome.
 <details>
 
 <summary>
-You can also generate ```json``` file or ```gz``` file and load it with [perfetto](https://ui.perfetto.dev/) or [chrome://tracing/](chrome://tracing/).
+You can also generate <code>json</code> file or <code>gz</code> file and load it with https://ui.perfetto.dev/ or chrome://tracing/.
 </summary>
 
 ```
@@ -62,7 +62,7 @@ viztracer -o result.json.gz my_script.py arg1 arg2
 <details>
 
 <summary>
-Use ```vizviewer``` to open the reports to save trouble
+Use <code>vizviewer</code> to open the reports to save trouble
 </summary>
 
 ```
@@ -78,7 +78,7 @@ vizviewer result.json.gz
 <details>
 
 <summary>
-Or add ```--open``` to open the reports right after tracing
+Or add <code>--open</code> to open the reports right after tracing
 </summary>
 
 ```
