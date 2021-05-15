@@ -21,34 +21,6 @@ void Print_Py(PyObject* o)
     Py_DECREF(repr);
 }
 
-// target and prefix has to be NULL-terminated
-int startswith(const char* target, const char* prefix)
-{
-    while(*target != 0 && *prefix != 0) {
-#if _WIN32
-        // Windows path has double slashes and case-insensitive
-        if (*prefix == '\\' && prefix[-1] == '\\') {
-            prefix++;
-        }
-        if (*target == '\\' && target[-1] == '\\') {
-            target++;
-        }
-        if (*target != *prefix && *target != *prefix - ('a'-'A') && *target != *prefix + ('a'-'A')) {
-            return 0;
-        }
-#else
-        if (*target != *prefix) {
-            return 0;
-        }
-#endif
-        target++;
-        prefix++;
-    }
-
-    return (*prefix) == 0;
-}
-
-
 double get_ts(void)
 {
     static double prev_ts = 0;
@@ -65,8 +37,13 @@ double get_ts(void)
     clock_gettime(CLOCK_MONOTONIC, &t);
     curr_ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
 #endif
-    if (curr_ts == prev_ts) {
-        curr_ts += 20;
+    if (curr_ts <= prev_ts) {
+        // We use artificial timestamp to avoid timestamp conflict.
+        // 20 ns should be a safe granularity because that's normally
+        // how long clock_gettime() takes.
+        // It's possible to have three same timestamp in a row so we
+        // need to check if curr_ts <= prev_ts instead of ==
+        curr_ts = prev_ts + 20;
     }
     prev_ts = curr_ts;
     return curr_ts;
