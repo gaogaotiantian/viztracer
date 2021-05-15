@@ -55,12 +55,12 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-                v = Viewer(f.name)
-                v.run()
-                time.sleep(0.5)
-                resp = urllib.request.urlopen("http://127.0.0.1:9001")
-                v.stop()
-                self.assertTrue(resp.code == 200)
+            v = Viewer(f.name)
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            v.stop()
+            self.assertTrue(resp.code == 200)
         finally:
             os.remove(f.name)
 
@@ -70,12 +70,12 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-                v = Viewer(f.name)
-                v.run()
-                time.sleep(0.5)
-                resp = urllib.request.urlopen("http://127.0.0.1:9001")
-                v.stop()
-                self.assertTrue(resp.code == 200)
+            v = Viewer(f.name)
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            v.stop()
+            self.assertTrue(resp.code == 200)
         finally:
             os.remove(f.name)
 
@@ -84,13 +84,13 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-                v = Viewer(f.name, once=True)
-                v.run()
-                time.sleep(0.5)
-                resp = urllib.request.urlopen("http://127.0.0.1:9001")
-                v.process.wait()
-                self.assertTrue(resp.code == 200)
-                self.assertTrue(v.process.returncode == 0)
+            v = Viewer(f.name, once=True)
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            v.process.wait()
+            self.assertTrue(resp.code == 200)
+            self.assertTrue(v.process.returncode == 0)
         finally:
             os.remove(f.name)
 
