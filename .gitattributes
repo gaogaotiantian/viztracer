@@ -1,2 +1,3 @@
 src/viztracer/html/* linguist-vendored
 example_json/* linguist-generated
+src/viztracer/web_dist/* linguist-generated

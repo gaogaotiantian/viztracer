@@ -3,42 +3,33 @@
 
 
 from .cmdline_tmpl import CmdlineTmpl
-import multiprocessing
 import os
-import re
-import socketserver
+import signal
+import subprocess
 import sys
 import time
 import unittest.mock
 import urllib.request
-import webbrowser
-
-from viztracer import viewer_main
 
 
-class MockOpen(unittest.TestCase):
-    def __init__(self, file_content):
-        self.p = None
-        self.file_content = file_content
-        super().__init__()
+class Viewer(unittest.TestCase):
+    def __init__(self, file_path, once=False):
+        if os.getenv("COVERAGE_RUN"):
+            self.cmd = ["coverage", "run", "-m", "--parallel-mode", "--pylib", "viztracer.viewer", "-s", file_path]
+        else:
+            self.cmd = ["vizviewer", "-s", file_path]
 
-    def get_and_check(self, url, expected):
-        time.sleep(0.5)
-        resp = urllib.request.urlopen(url)
-        self.assertEqual(resp.read().decode("utf-8"), expected)
+        if once:
+            self.cmd.append("--once")
+        self.process = None
 
-    def __call__(self, url):
-        if url.endswith("json"):
-            m = re.search("url=(.*)", url)
-            self.p = multiprocessing.Process(target=self.get_and_check, args=(m.group(1), self.file_content))
-        elif url.endswith("html"):
-            self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
-        self.p.start()
+    def run(self):
+        self.process = subprocess.Popen(self.cmd)
 
-
-class MyTCPHandler(socketserver.BaseRequestHandler):
-    def handle(self):
-        pass
+    def stop(self):
+        self.process.send_signal(signal.SIGINT)
+        self.process.wait()
+        self.assertTrue(self.process.returncode == 0)
 
 
 class TestViewer(CmdlineTmpl):
@@ -48,11 +39,12 @@ class TestViewer(CmdlineTmpl):
         try:
             with open("test.json", "w") as f:
                 f.write(json_script)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.json"]):
-                with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(json_script)) as mock_obj:
-                    viewer_main()
-                    mock_obj.p.join()
-                    self.assertEqual(mock_obj.p.exitcode, 0)
+            v = Viewer("test.json")
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            self.assertTrue(resp.code == 200)
+            v.stop()
         finally:
             os.remove("test.json")
 
@@ -62,11 +54,27 @@ class TestViewer(CmdlineTmpl):
         try:
             with open("test.html", "w") as f:
                 f.write(html)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.html"]):
-                with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
-                    viewer_main()
-                    mock_obj.p.join()
-                    self.assertEqual(mock_obj.p.exitcode, 0)
+            v = Viewer("test.html")
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            self.assertTrue(resp.code == 200)
+            v.stop()
+        finally:
+            os.remove("test.html")
+
+    def test_once(self):
+        html = '<html></html>'
+        try:
+            with open("test.html", "w") as f:
+                f.write(html)
+            v = Viewer("test.html", once=True)
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            self.assertTrue(resp.code == 200)
+            v.process.wait()
+            self.assertTrue(v.process.returncode == 0)
         finally:
             os.remove("test.html")
 

@@ -10,7 +10,7 @@ try:
     import orjson as json
 except ImportError:
     import json
-from .util import size_fmt, color_print
+from .util import color_print
 
 
 def get_json(data):
@@ -71,20 +71,13 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def generate_json(self, allow_binary=False, file_info=False):
+    def generate_json(self, allow_binary=False, file_info=True, display_time_unit="ms"):
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
-            print(f"Dumping trace data to json, total entries: {entries}, estimated json file size: {size_fmt(120 * entries)}")
-            if entries >= self.entry_number_threshold:
-                print("")
-                color_print("WARNING", "Large trace requires a lot of RAM and is slow to load.")
-                color_print("WARNING", ("    If you need faster loading time or smaller trace file, "
-                                        "try a smaller tracer_entries or use filters"))
-                color_print("WARNING", "    use --quiet to shut me up")
-                print("")
+            print(f"Dumping trace data, total entries: {entries}")
 
-        self.combined_json["displayTimeUnit"] = "ns"
+        self.combined_json["displayTimeUnit"] = display_time_unit
 
         if file_info:
             self.combined_json["file_info"] = {"files": {}, "functions": {}}
@@ -114,25 +107,26 @@ class ReportBuilder:
         else:
             return json.dumps(self.combined_json)
 
-    def generate_report(self, file_info=False):
+    def generate_report(self, file_info=True):
         sub = {}
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
             tmpl = f.read()
         with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
             sub["trace_viewer_full"] = f.read()
-        sub["json_data"] = self.generate_json(file_info=file_info)
+        sub["json_data"] = self.generate_json(file_info=file_info, display_time_unit="ns")
         sub["json_data"] = sub["json_data"].replace("</script>", "<\\/script>")
-
-        if self.verbose > 0:
-            print("Generating HTML report")
 
         return Template(tmpl).substitute(sub)
 
-    def save(self, output_file="result.html", file_info=False):
+    def save(self, output_file="result.html", file_info=True):
         file_type = output_file.split(".")[-1]
 
         if self.verbose > 0:
-            print("Saving report to {} ...".format(os.path.abspath(output_file)))
+            print("==================================================")
+            print("== Starting from version 0.13.0, VizTracer will ==")
+            print("== use json as the default report file. You can ==")
+            print('== generate HTML report with "-o result.html"   ==')
+            print("==================================================")
 
         if file_type == "html":
             with open(output_file, "w", encoding="utf-8") as f:
@@ -155,4 +149,7 @@ class ReportBuilder:
             raise Exception("Only html, json and gz are supported")
 
         if self.verbose > 0:
-            print("Report saved.")
+            print("Saving report to {} ...".format(os.path.abspath(output_file)))
+            print('Use', end=" ")
+            color_print("OKGREEN", '"vizviewer <your_report>"', end=" ")
+            print('to open the report')

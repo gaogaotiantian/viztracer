@@ -24,7 +24,7 @@ class VizUI:
         self.tracer = None
         self.parser = self.create_parser()
         self.verbose = 1
-        self.ofile = "result.html"
+        self.ofile = "result.json"
         self.options = None
         self.args = []
         self._exiting = False
@@ -310,7 +310,7 @@ class VizUI:
         if options.output_file:
             ofile = options.output_file
         else:
-            ofile = "result.html"
+            ofile = "result.json"
         builder.save(output_file=ofile)
 
         return True, None
@@ -360,15 +360,15 @@ class VizUI:
         if options.log_subprocess or options.log_multiprocess:
             tracer.pid_suffix = True
             if self.is_main_process:
-                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"))
+                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"), file_info=True)
                 builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f)
                                          for f in os.listdir(self.multiprocess_output_dir)])
                 builder.save(output_file=ofile)
                 shutil.rmtree(self.multiprocess_output_dir)
             else:  # pragma: no cover
-                tracer.save(save_flamegraph=options.save_flamegraph)
+                tracer.save(save_flamegraph=options.save_flamegraph, file_info=False)
         else:
-            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph, file_info=options.file_info)
+            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph, file_info=True)
 
     def exit_routine(self):
         atexit.unregister(self.exit_routine)

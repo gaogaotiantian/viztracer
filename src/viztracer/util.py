@@ -24,8 +24,8 @@ class _bcolors:
 bcolors = _bcolors()
 
 
-def color_print(color, s):
-    print(bcolors.__getattribute__(color) + s + bcolors.ENDC)
+def color_print(color, s, **kwargs):
+    print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
 
 
 def compare_version(ver1, ver2):

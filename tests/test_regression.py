@@ -189,10 +189,10 @@ class TestIssue58(CmdlineTmpl):
     def test_issue58(self):
         if multiprocessing.get_start_method() == "fork":
             self.template(["viztracer", "--log_multiprocess", "-m", "tests.modules.issue58"],
-                          expected_output_file="result.html")
+                          expected_output_file="result.json")
 
 
 class TestIssue83(CmdlineTmpl):
     def test_issue83(self):
         self.template(["viztracer", "--quiet", "-m", "tests.modules.issue83"],
-                      expected_output_file="result.html", expected_stdout="__main__")
+                      expected_stdout="__main__")

@@ -34,7 +34,7 @@ class VizTracer(_VizTracer):
                  pid_suffix=False,
                  file_info=False,
                  register_global=True,
-                 output_file="result.html",
+                 output_file="result.json",
                  plugins=[]):
         super().__init__(
             tracer_entries=tracer_entries,
@@ -169,7 +169,7 @@ class VizTracer(_VizTracer):
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         rb = ReportBuilder(self.data, self.verbose)
-        rb.save(output_file=output_file, file_info=self.file_info)
+        rb.save(output_file=output_file, file_info=file_info)
 
         if save_flamegraph:
             self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
@@ -212,7 +212,7 @@ class VizTracer(_VizTracer):
         flamegraph = FlameGraph(self.data)
         if output_file is None:
             name_list = self.output_file.split(".")
-            output_file = ".".join(name_list[:-1]) + "_flamegraph." + name_list[-1]
+            output_file = ".".join(name_list[:-1]) + "_flamegraph.html"
         flamegraph.save(output_file)
 
     def terminate(self):
