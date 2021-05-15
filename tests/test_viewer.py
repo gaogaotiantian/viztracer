@@ -5,6 +5,7 @@
 from .cmdline_tmpl import CmdlineTmpl
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -23,14 +24,31 @@ class Viewer(unittest.TestCase):
         if once:
             self.cmd.append("--once")
         self.process = None
+        super().__init__()
 
     def run(self):
         self.process = subprocess.Popen(self.cmd)
+        self._wait_until_socket_on()
+        self.assertIs(self.process.poll(), None)
 
     def stop(self):
         self.process.send_signal(signal.SIGINT)
         self.process.wait()
         self.assertTrue(self.process.returncode == 0)
+
+    def _wait_until_socket_on(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            for _ in range(5):
+                result = sock.connect_ex(('127.0.0.1', 9001))
+                if result == 0:
+                    break
+                time.sleep(0.5)
+            else:
+                self.fail("Can't connect to 127.0.0.1:9001")
+        finally:
+            sock.close()
 
 
 class TestViewer(CmdlineTmpl):
