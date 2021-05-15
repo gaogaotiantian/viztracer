@@ -65,8 +65,13 @@ double get_ts(void)
     clock_gettime(CLOCK_MONOTONIC, &t);
     curr_ts = ((double)t.tv_sec * 1e9 + t.tv_nsec);
 #endif
-    if (curr_ts == prev_ts) {
-        curr_ts += 20;
+    if (curr_ts <= prev_ts) {
+        // We use artificial timestamp to avoid timestamp conflict.
+        // 20 ns should be a safe granularity because that's normally
+        // how long clock_gettime() takes.
+        // It's possible to have three same timestamp in a row so we
+        // need to check if curr_ts <= prev_ts instead of ==
+        curr_ts = prev_ts + 20;
     }
     prev_ts = curr_ts;
     return curr_ts;
