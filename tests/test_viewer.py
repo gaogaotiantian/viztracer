@@ -40,11 +40,11 @@ class Viewer(unittest.TestCase):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
-            for _ in range(5):
+            for _ in range(10):
                 result = sock.connect_ex(('127.0.0.1', 9001))
                 if result == 0:
                     break
-                time.sleep(0.5)
+                time.sleep(1)
             else:
                 self.fail("Can't connect to 127.0.0.1:9001")
         finally:
