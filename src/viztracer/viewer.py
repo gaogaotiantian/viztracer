@@ -63,7 +63,7 @@ class HtmlHandler(HttpHandler):
         return super().do_GET()
 
 
-def view(path, options):
+def view(path, server_only=False, once=False):
     # For official perfetto, only localhost:9001 is allowed
     port = 9001
 
@@ -85,16 +85,16 @@ def view(path, options):
 
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(('127.0.0.1', port), Handler) as httpd:
-        if not options.once:
+        if not once:
             print("Running vizviewer")
             print("You can also view your trace on http://localhost:9001")
             print("Press Ctrl+C to quit")
-        if not options.server_only:
+        if not server_only:
             # import webbrowser only if necessary
             import webbrowser
             webbrowser.open_new_tab(f'http://127.0.0.1:{port}')
         try:
-            if options.once:
+            if once:
                 while not httpd.__dict__.get("trace_served", False):
                     httpd.handle_request()
             else:
@@ -119,7 +119,11 @@ def viewer_main():
         path = os.path.abspath(options.file[0])
         cwd = os.getcwd()
         try:
-            ret_code = view(path, options)
+            ret_code = view(
+                path,
+                server_only=options.server_only,
+                once=options.once
+            )
         finally:
             os.chdir(cwd)
         return ret_code
