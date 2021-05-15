@@ -144,7 +144,7 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
-    @unittest.skipIf(sys.platform == "darwen", "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
     def test_browser(self):
         html = '<html></html>'
         try:
