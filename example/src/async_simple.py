@@ -1,7 +1,9 @@
 import asyncio
 
+
 async def io_task():
     await asyncio.sleep(0.01)
+
 
 async def main():
     t1 = asyncio.create_task(io_task())
