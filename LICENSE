@@ -174,3 +174,10 @@
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
+
+   ======================================================================
+
+   VizTracer uses source code or generated code from following components:
+
+     perfetto - https://github.com/google/perfetto (Apache License V2)
+       - /src/web_dist/*

@@ -701,7 +701,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
             if (curr->data.fee.asyncio_task == NULL) {
                 PyDict_SetItemString(dict, "tid", tid);
             } else {
-                PyObject* task_id = PyLong_FromLong((long)curr->data.fee.asyncio_task);
+                PyObject* task_id = PyLong_FromLong(((long)curr->data.fee.asyncio_task) & 0xffffff);
                 PyDict_SetItemString(dict, "tid", task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;

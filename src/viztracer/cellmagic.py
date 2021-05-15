@@ -14,12 +14,12 @@ try:
             from IPython.display import display
             from ipywidgets import Button
             code = self.shell.transform_cell(cell)
-            file_path = "./viztracer_report.html"
+            file_path = "./viztracer_report.json"
             with VizTracer(verbose=0, output_file=file_path):
                 exec(code, local_ns, local_ns)
 
-            button = Button(description="Show VizTracer Report")
-            button.on_click(lambda b: view(file_path))
+            button = Button(description="VizTracer Report")
+            button.on_click(lambda b: view(file_path, once=True))
 
             display(button)
 

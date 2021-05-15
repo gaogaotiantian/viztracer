@@ -23,7 +23,7 @@ class CmdlineTmpl(BaseTmpl):
         with open(name, "w") as f:
             f.write(script)
 
-    def cleanup(self, output_file="result.html", script_name="cmdline_test.py"):
+    def cleanup(self, output_file="result.json", script_name="cmdline_test.py"):
         if os.path.exists(script_name):
             os.remove(script_name)
         if output_file:
@@ -41,7 +41,7 @@ class CmdlineTmpl(BaseTmpl):
 
     def template(self,
                  cmd_list,
-                 expected_output_file="result.html",
+                 expected_output_file="result.json",
                  success=True,
                  script=file_fib,
                  script_name="cmdline_test.py",

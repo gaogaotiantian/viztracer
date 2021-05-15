@@ -30,7 +30,10 @@ setuptools.setup(
         "viztracer": [
             "html/*.js",
             "html/*.css",
-            "html/*.html"
+            "html/*.html",
+            "web_dist/*",
+            "web_dist/*/*",
+            "web_dist/*/*/*"
         ]
     },
     ext_modules=[

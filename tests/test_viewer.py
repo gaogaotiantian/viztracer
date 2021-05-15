@@ -3,17 +3,53 @@
 
 
 from .cmdline_tmpl import CmdlineTmpl
+import json
 import multiprocessing
 import os
-import re
-import socketserver
+import signal
+import socket
+import subprocess
 import sys
 import time
+import tempfile
 import unittest.mock
 import urllib.request
+from viztracer.viewer import viewer_main
 import webbrowser
 
-from viztracer import viewer_main
+
+class Viewer(unittest.TestCase):
+    def __init__(self, file_path, once=False):
+        if os.getenv("COVERAGE_RUN"):
+            self.cmd = ["coverage", "run", "-m", "--parallel-mode", "--pylib", "viztracer.viewer", "-s", file_path]
+        else:
+            self.cmd = ["vizviewer", "-s", file_path]
+
+        if once:
+            self.cmd.append("--once")
+        self.process = None
+        super().__init__()
+
+    def run(self):
+        self.process = subprocess.Popen(self.cmd)
+        self._wait_until_socket_on()
+        self.assertIs(self.process.poll(), None)
+
+    def stop(self):
+        self.process.send_signal(signal.SIGINT)
+        self.process.wait(timeout=20)
+        self.assertEqual(self.process.returncode, 0)
+
+    def _wait_until_socket_on(self):
+        for _ in range(10):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            result = sock.connect_ex(('127.0.0.1', 9001))
+            sock.close()
+            if result == 0:
+                return
+            time.sleep(1)
+        self.fail("Can't connect to 127.0.0.1:9001")
 
 
 class MockOpen(unittest.TestCase):
@@ -28,47 +64,99 @@ class MockOpen(unittest.TestCase):
         self.assertEqual(resp.read().decode("utf-8"), expected)
 
     def __call__(self, url):
-        if url.endswith("json"):
-            m = re.search("url=(.*)", url)
-            self.p = multiprocessing.Process(target=self.get_and_check, args=(m.group(1), self.file_content))
-        elif url.endswith("html"):
-            self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
+        self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
         self.p.start()
 
 
-class MyTCPHandler(socketserver.BaseRequestHandler):
-    def handle(self):
-        pass
-
-
 class TestViewer(CmdlineTmpl):
-    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_json(self):
-        json_script = '{"traceEvents":[{"ph":"M","pid":17088,"tid":17088,"name":"process_name","args":{"name":"MainProcess"}},{"ph":"M","pid":17088,"tid":17088,"name":"thread_name","args":{"name":"MainThread"}},{"pid":17088,"tid":17088,"ts":20889378694.06,"dur":1001119.1,"name":"time.sleep","caller_lineno":4,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.96,"dur":1001122.5,"name":"<module> (/home/gaogaotiantian/programs/codesnap/scrabble4.py:1)","caller_lineno":238,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.46,"dur":1001124.7,"name":"builtins.exec","caller_lineno":238,"ph":"X","cat":"FEE"}],"viztracer_metadata":{"version":"0.12.0"}}'  # noqa: E501
+        json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with open("test.json", "w") as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.json"]):
-                with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(json_script)) as mock_obj:
-                    viewer_main()
-                    mock_obj.p.join()
-                    self.assertEqual(mock_obj.p.exitcode, 0)
+            v = Viewer(f.name)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/localtrace")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+            finally:
+                v.stop()
         finally:
-            os.remove("test.json")
+            os.remove(f.name)
 
-    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_html(self):
         html = '<html></html>'
         try:
-            with open("test.html", "w") as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "test.html"]):
+            v = Viewer(f.name)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+            finally:
+                v.stop()
+        finally:
+            os.remove(f.name)
+
+    def test_once(self):
+        html = '<html></html>'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+                f.write(html)
+            v = Viewer(f.name, once=True)
+            v.run()
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001")
+            v.process.wait(timeout=20)
+            self.assertTrue(resp.code == 200)
+            self.assertTrue(v.process.returncode == 0)
+        finally:
+            os.remove(f.name)
+
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, once=True)
+            v.run()
+            try:
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/localtrace")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+            except Exception:
+                v.stop()
+                raise
+            finally:
+                v.process.wait(timeout=20)
+        finally:
+            os.remove(f.name)
+
+    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
+    def test_browser(self):
+        html = '<html></html>'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+                f.write(html)
+            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "--once", f.name]):
                 with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
         finally:
-            os.remove("test.html")
+            os.remove(f.name)
 
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)

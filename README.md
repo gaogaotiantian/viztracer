@@ -4,9 +4,8 @@
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
-You can take a look at the [demo](http://www.minkoder.com/viztracer/result.html) result of multiple example programs.
-The UI is powered by [Chrome Trace Viewer](https://chromium.googlesource.com/catapult). **Use "AWSD" to zoom/navigate**.
-More help can be found by clicking "?" on the top right corner.
+The front-end UI is powered by [Perfetto](https://perfetto.dev/). **Use "AWSD" to zoom/navigate**.
+More help can be found in "Support - Controls".
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/example.png)
 
@@ -17,7 +16,7 @@ More help can be found by clicking "?" on the top right corner.
 * Super easy to use, no source code change for most features, no package dependency
 * Supports threading, multiprocessing, subprocess and async
 * Logs arbitrary function/variable using RegEx without code change
-* Stand alone HTML report with powerful front-end, or chrome-compatible json
+* Powerful front-end, able to render GB-level trace smoothly
 * Works on Linux/MacOS/Windows
 
 ## Install
@@ -44,36 +43,60 @@ You can simply use VizTracer by
 viztracer my_script.py arg1 arg2
 ```
 
-A ```result.html``` file will be generated, which you can open with Chrome.
-
 <details>
 
 <summary>
-You can also generate <code>json</code> file or <code>gz</code> file and load it with https://ui.perfetto.dev/ or chrome://tracing/.
+A <code>result.json</code> file will be generated, which you can open with <code>vizviewer</code>
 </summary>
 
 ```
-viztracer -o result.json my_script.py arg1 arg2
-viztracer -o result.json.gz my_script.py arg1 arg2
-```
-
-</details>
-
-<details>
-
-<summary>
-Use <code>vizviewer</code> to open the reports to save trouble
-</summary>
-
-```
-# Open with chrome trace viewer that shows source code
-vizviewer result.html
-# Open with perfetto
 vizviewer result.json
-vizviewer result.json.gz
+```
+
+vizviewer will host an HTTP server on ``http://localhost:9001``. You can also open your browser
+and use that address.
+
+If you do not want vizviewer to open the webbrowser automatically, you can use
+
+```
+vizviewer --server_only result.json
+```
+
+If you just need to bring up the trace report once, and do not want the persistent server, use
+
+```
+vizviewer --once result.json
 ```
 
 </details>
+
+<details>
+
+<summary>
+You can also generate standalone <code>html</code> file
+</summary>
+
+```
+viztracer -o result.html my_script.py arg1 arg2
+```
+
+The standalone HTML file is powered by [catapult](https://github.com/catapult-project/catapult) trace viewer
+which is an old tool Google made and is being replaced by [Perfetto](https://perfetto.dev/) gradually.
+
+Catapult trace viewer is sluggish with larger traces and is not actively maintained. It is recommended to use
+Perfetto instead.
+
+However, if you really need a standalone HTML file, this is the only option. Perfetto does not support
+standalone files.
+
+You can use vizviewer to open the html file as well, just to make the interface consistent
+
+```
+vizviewer result.html
+```
+
+</details>
+
 
 <details>
 
@@ -82,17 +105,11 @@ Or add <code>--open</code> to open the reports right after tracing
 </summary>
 
 ```
-# Open with chrome trace viewer that shows source code
 viztracer --open my_scripy.py arg1 arg2
-# Open with perfetto
-viztracer -o result.json --open my_script.py arg1 arg2
-viztracer -o result.json.gz --open my_script.py arg1 arg2
+viztracer -o result.html --open my_script.py arg1 arg2
 ```
 
 </details>
-
-As Chrome Trace Viewer is already deprecated, we will gradually lean towards [perfetto](https://ui.perfetto.dev/) which is
-much faster when loading large trace files.
 
 ### Inline
 
@@ -111,7 +128,7 @@ tracer.save() # also takes output_file as an optional argument
 Or, you can do it with ```with``` statement
 
 ```python
-with VizTracer(output_file="optional.html") as tracer:
+with VizTracer(output_file="optional.json") as tracer:
     # Something happens here
 ```
 
@@ -129,7 +146,7 @@ If you are using Jupyter, you can use viztracer cell magics.
 # Your code after
 ```
 
-A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
+A ``VizTracer Report`` button will appear after the cell and you can click it to view the results
 
 ## Advanced Usage
 

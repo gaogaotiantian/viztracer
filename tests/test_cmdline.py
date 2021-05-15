@@ -161,17 +161,18 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "cmdline_test.py"])
 
     def test_outputfile(self):
-        self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"])
-        self.template(["python", "-m", "viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json")
+        self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"],
+                      expected_output_file="result.html")
+        self.template(["python", "-m", "viztracer", "-o", "result.json", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "-o", "result.json.gz", "cmdline_test.py"],
                       expected_output_file="result.json.gz")
-        self.template(["python", "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"])
+        self.template(["python", "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"],
+                      expected_output_file="result.html")
         self.template(["python", "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json")
         self.template(["python", "-m", "viztracer", "--output_file", "result.json.gz", "cmdline_test.py"],
                       expected_output_file="result.json.gz")
-        self.template(["viztracer", "-o", "result.html", "cmdline_test.py"])
+        self.template(["viztracer", "-o", "result.html", "cmdline_test.py"], expected_output_file="result.html")
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
 
@@ -219,14 +220,14 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_flamegraph(self):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"],
-                      expected_output_file=["result.html", "result_flamegraph.html"])
+                      expected_output_file=["result.json", "result_flamegraph.html"])
 
     def test_combine(self):
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
         self.template(["python", "-m", "viztracer", "--combine",
                        os.path.join(example_json_dir, "multithread.json"),
                        os.path.join(example_json_dir, "different_sorts.json")],
-                      expected_output_file="result.html")
+                      expected_output_file="result.json")
         self.template(["python", "-m", "viztracer", "-o", "my_result.html", "--combine",
                        os.path.join(example_json_dir, "multithread.json"),
                        os.path.join(example_json_dir, "different_sorts.json")],
@@ -234,7 +235,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["python", "-m", "viztracer", "--align_combine",
                        os.path.join(example_json_dir, "multithread.json"),
                        os.path.join(example_json_dir, "different_sorts.json")],
-                      expected_output_file="result.html")
+                      expected_output_file="result.json")
 
     def test_tracer_entries(self):
         self.template(["python", "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
