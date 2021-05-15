@@ -32,7 +32,7 @@ class VizTracer(_VizTracer):
                  log_async=False,
                  vdb=False,
                  pid_suffix=False,
-                 file_info=False,
+                 file_info=True,
                  register_global=True,
                  output_file="result.json",
                  plugins=[]):

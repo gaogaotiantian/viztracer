@@ -3,6 +3,7 @@
 
 
 from .cmdline_tmpl import CmdlineTmpl
+import json
 import os
 import signal
 import socket
@@ -51,16 +52,22 @@ class Viewer(unittest.TestCase):
 class TestViewer(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_json(self):
-        json_script = '{"traceEvents":[{"ph":"M","pid":17088,"tid":17088,"name":"process_name","args":{"name":"MainProcess"}},{"ph":"M","pid":17088,"tid":17088,"name":"thread_name","args":{"name":"MainThread"}},{"pid":17088,"tid":17088,"ts":20889378694.06,"dur":1001119.1,"name":"time.sleep","caller_lineno":4,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.96,"dur":1001122.5,"name":"<module> (/home/gaogaotiantian/programs/codesnap/scrabble4.py:1)","caller_lineno":238,"ph":"X","cat":"FEE"},{"pid":17088,"tid":17088,"ts":20889378692.46,"dur":1001124.7,"name":"builtins.exec","caller_lineno":238,"ph":"X","cat":"FEE"}],"viztracer_metadata":{"version":"0.12.0"}}'  # noqa: E501
+        json_script = '{"file_info": {}, "traceEvents": []}'  # noqa: E501
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
             v = Viewer(f.name)
-            v.run()
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001")
-            v.stop()
-            self.assertTrue(resp.code == 200)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/localtrace")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+            finally:
+                v.stop()
         finally:
             os.remove(f.name)
 
@@ -71,11 +78,13 @@ class TestViewer(CmdlineTmpl):
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
             v = Viewer(f.name)
-            v.run()
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001")
-            v.stop()
-            self.assertTrue(resp.code == 200)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+            finally:
+                v.stop()
         finally:
             os.remove(f.name)
 
