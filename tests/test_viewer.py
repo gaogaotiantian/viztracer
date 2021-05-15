@@ -37,7 +37,7 @@ class Viewer(unittest.TestCase):
 
     def stop(self):
         self.process.send_signal(signal.SIGINT)
-        self.process.wait()
+        self.process.wait(timeout=20)
         self.assertEqual(self.process.returncode, 0)
 
     def _wait_until_socket_on(self):
@@ -116,7 +116,7 @@ class TestViewer(CmdlineTmpl):
             v.run()
             time.sleep(0.5)
             resp = urllib.request.urlopen("http://127.0.0.1:9001")
-            v.process.wait()
+            v.process.wait(timeout=20)
             self.assertTrue(resp.code == 200)
             self.assertTrue(v.process.returncode == 0)
         finally:
@@ -140,7 +140,7 @@ class TestViewer(CmdlineTmpl):
                 v.stop()
                 raise
             finally:
-                v.process.wait()
+                v.process.wait(timeout=20)
         finally:
             os.remove(f.name)
 
