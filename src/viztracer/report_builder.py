@@ -71,7 +71,7 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def generate_json(self, allow_binary=False, file_info=True, display_time_unit="ms"):
+    def generate_json(self, allow_binary=False, file_info=True, display_time_unit="us"):
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])

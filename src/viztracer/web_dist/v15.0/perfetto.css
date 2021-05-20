@@ -2229,11 +2229,19 @@ a.inline-chip, a.inline-chip:link, a.inline-chip:visited {
       .details-panel .details-panel-heading.heap-profile .time {
         justify-self: end;
         margin-right: 10px; }
+      .details-panel .details-panel-heading.heap-profile .selected {
+        justify-self: end;
+        margin-right: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 200px; }
   .details-panel table {
     transition: opacity 0.1s ease, color 0.1s ease, background-color 0.1s ease, border-color 0.1s ease, width 0.1s ease, height 0.1s ease, max-width 0.1s ease, max-height 0.1s ease, margin 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease, border-radius 0.1s ease;
     font-size: 14px;
     line-height: 18px;
     width: 100%;
+    table-layout: fixed;
     word-wrap: break-word;
     padding: 0px 10px; }
     .details-panel table tr:hover {
@@ -2244,6 +2252,8 @@ a.inline-chip, a.inline-chip:link, a.inline-chip:visited {
       font-weight: normal; }
     .details-panel table .array-index {
       text-align: right; }
+  .details-panel .auto-layout {
+    table-layout: auto; }
   .details-panel button {
     background-color: #262f3c;
     color: #fff;
@@ -2468,7 +2478,7 @@ table.half-width {
   display: inline-block;
   vertical-align: top; }
 
-.details-table table {
+.details-table table.half-width {
   display: inline-block;
   vertical-align: top; }
 

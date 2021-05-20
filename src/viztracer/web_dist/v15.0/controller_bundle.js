@@ -306,7 +306,7 @@ var perfetto_version = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCM_REVISION = exports.VERSION = void 0;
 exports.VERSION = "v15.0";
-exports.SCM_REVISION = "688da1fb96a797e283c0c063cc807ac4f16e136e";
+exports.SCM_REVISION = "1a90ce17150c2b0c17b5e463a1cb7bab1c01d353";
 
 });
 
@@ -3167,6 +3167,29 @@ function defer() {
     return Object.assign(p, { resolve, reject });
 }
 exports.defer = defer;
+
+});
+
+var conversion_jobs = createCommonjsModule(function (module, exports) {
+// Copyright (C) 2021 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ConversionJobStatus = void 0;
+(function (ConversionJobStatus) {
+    ConversionJobStatus["InProgress"] = "InProgress";
+    ConversionJobStatus["NotRunning"] = "NotRunning";
+})(exports.ConversionJobStatus || (exports.ConversionJobStatus = {}));
 
 });
 
@@ -8646,6 +8669,8 @@ Module["dynCall_viij"] = createExportWrapper("dynCall_viij", asm);
 
 Module["dynCall_viji"] = createExportWrapper("dynCall_viji", asm);
 
+Module["dynCall_iiij"] = createExportWrapper("dynCall_iiij", asm);
+
 Module["dynCall_viijdi"] = createExportWrapper("dynCall_viijdi", asm);
 
 Module["dynCall_viijdii"] = createExportWrapper("dynCall_viijdii", asm);
@@ -9658,7 +9683,8 @@ var trace_converter = createCommonjsModule(function (module, exports) {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConvertTraceToPprof = exports.ConvertTrace = void 0;
+exports.ConvertTraceToPprof = exports.ConvertTraceAndDownload = exports.ConvertTrace = void 0;
+
 
 
 
@@ -9666,22 +9692,65 @@ exports.ConvertTraceToPprof = exports.ConvertTrace = void 0;
 
 
 function ConvertTrace(trace, format, truncate) {
+    const jobName = 'open_in_legacy';
+    globals.globals.publish('ConversionJobStatusUpdate', {
+        jobName,
+        jobStatus: conversion_jobs.ConversionJobStatus.InProgress,
+    });
     const outPath = '/trace.json';
     const args = [format];
     if (truncate !== undefined) {
         args.push('--truncate', truncate);
     }
     args.push('/fs/trace.proto', outPath);
-    runTraceconv(trace, args).then(module => {
+    runTraceconv(trace, args)
+        .then(module => {
         const fsNode = module.FS.lookupPath(outPath).node;
         const data = fsNode.contents.buffer;
         const size = fsNode.usedBytes;
         globals.globals.publish('LegacyTrace', { data, size }, /*transfer=*/ [data]);
         module.FS.unlink(outPath);
+    })
+        .finally(() => {
+        globals.globals.publish('ConversionJobStatusUpdate', {
+            jobName,
+            jobStatus: conversion_jobs.ConversionJobStatus.NotRunning,
+        });
     });
 }
 exports.ConvertTrace = ConvertTrace;
+function ConvertTraceAndDownload(trace, format, truncate) {
+    const jobName = `convert_${format}`;
+    globals.globals.publish('ConversionJobStatusUpdate', {
+        jobName,
+        jobStatus: conversion_jobs.ConversionJobStatus.InProgress,
+    });
+    const outPath = '/trace.json';
+    const args = [format];
+    if (truncate !== undefined) {
+        args.push('--truncate', truncate);
+    }
+    args.push('/fs/trace.proto', outPath);
+    runTraceconv(trace, args)
+        .then(module => {
+        const fsNode = module.FS.lookupPath(outPath).node;
+        downloadFile(fsNodeToBlob(fsNode), `trace.${format}`);
+        module.FS.unlink(outPath);
+    })
+        .finally(() => {
+        globals.globals.publish('ConversionJobStatusUpdate', {
+            jobName,
+            jobStatus: conversion_jobs.ConversionJobStatus.NotRunning,
+        });
+    });
+}
+exports.ConvertTraceAndDownload = ConvertTraceAndDownload;
 function ConvertTraceToPprof(pid, src, ts1, ts2) {
+    const jobName = 'convert_pprof';
+    globals.globals.publish('ConversionJobStatusUpdate', {
+        jobName,
+        jobStatus: conversion_jobs.ConversionJobStatus.InProgress,
+    });
     const timestamps = `${ts1}${ts2 === undefined ? '' : `,${ts2}`}`;
     const args = [
         'profile',
@@ -9691,19 +9760,25 @@ function ConvertTraceToPprof(pid, src, ts1, ts2) {
         timestamps,
         '/fs/trace.proto'
     ];
-    generateBlob(src).then(traceBlob => {
+    generateBlob(src)
+        .then(traceBlob => {
         runTraceconv(traceBlob, args).then(module => {
             const heapDirName = Object.keys(module.FS.lookupPath('/tmp/').node.contents)[0];
             const heapDirContents = module.FS.lookupPath(`/tmp/${heapDirName}`).node.contents;
             const heapDumpFiles = Object.keys(heapDirContents);
             let fileNum = 0;
             heapDumpFiles.forEach(heapDump => {
-                const fileContents = module.FS.lookupPath(`/tmp/${heapDirName}/${heapDump}`)
-                    .node.contents;
+                const fileNode = module.FS.lookupPath(`/tmp/${heapDirName}/${heapDump}`).node;
                 fileNum++;
                 const fileName = `/heap_dump.${fileNum}.${pid}.pb`;
-                downloadFile(new Blob([fileContents]), fileName);
+                downloadFile(fsNodeToBlob(fileNode), fileName);
             });
+        });
+    })
+        .finally(() => {
+        globals.globals.publish('ConversionJobStatusUpdate', {
+            jobName,
+            jobStatus: conversion_jobs.ConversionJobStatus.NotRunning,
         });
     });
 }
@@ -9748,6 +9823,11 @@ function generateBlob(src) {
         }
         return blob;
     });
+}
+function fsNodeToBlob(fsNode) {
+    const fileSize = logging.assertExists(fsNode.usedBytes);
+    const bufView = new Uint8Array(fsNode.contents.buffer, 0, fileSize);
+    return new Blob([bufView]);
 }
 function downloadFile(file, name) {
     globals.globals.publish('FileDownload', { file, name });
@@ -10010,7 +10090,8 @@ var state = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getContainingTrackId = exports.createEmptyState = exports.getBuiltinChromeCategoryList = exports.getDefaultRecordingTargets = exports.createEmptyRecordConfig = exports.hasActiveProbes = exports.isAdbTarget = exports.isLinuxTarget = exports.isCrOSTarget = exports.isChromeTarget = exports.isAndroidTarget = exports.isAndroidP = exports.defaultTraceTime = exports.TrackKindPriority = exports.SCROLLING_TRACK_GROUP = exports.STATE_VERSION = exports.MAX_TIME = void 0;
 exports.MAX_TIME = 180;
-exports.STATE_VERSION = 2;
+// 3: TrackKindPriority and related sorting changes.
+exports.STATE_VERSION = 3;
 exports.SCROLLING_TRACK_GROUP = 'ScrollingTracks';
 (function (TrackKindPriority) {
     TrackKindPriority[TrackKindPriority["MAIN_THREAD"] = 0] = "MAIN_THREAD";
@@ -10559,15 +10640,17 @@ exports.StateActions = {
         state.videoEnabled = true;
     },
     // TODO(b/141359485): Actions should only modify state.
-    convertTraceToJson(state, args) {
-        state.traceConversionInProgress = true;
+    convertTraceToJson(_, args) {
         trace_converter.ConvertTrace(args.file, 'json', args.truncate);
+    },
+    convertTraceToSystraceAndDownload(_, args) {
+        trace_converter.ConvertTraceAndDownload(args.file, 'systrace');
+    },
+    convertTraceToJsonAndDownload(_, args) {
+        trace_converter.ConvertTraceAndDownload(args.file, 'json');
     },
     convertTraceToPprof(_, args) {
         trace_converter.ConvertTraceToPprof(args.pid, args.src, args.ts1, args.ts2);
-    },
-    clearConversionInProgress(state, _args) {
-        state.traceConversionInProgress = false;
     },
     addTracks(state$1, args) {
         args.tracks.forEach(track => {
@@ -12909,7 +12992,7 @@ class AsyncSliceTrackController extends track_controller.TrackController {
             const bucketNs = Math.max(Math.round(resolution * 1e9 * pxSize / 2) * 2, 1);
             if (this.maxDurNs === 0) {
                 const maxDurResult = yield this.query(`
-        select max(dur)
+        select max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
         from experimental_slice_layout
         where filter_track_ids = '${this.config.trackIds.join(',')}'
       `);
@@ -12921,7 +13004,7 @@ class AsyncSliceTrackController extends track_controller.TrackController {
       SELECT
         (ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
         ts,
-        max(dur) as dur,
+        max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur)) as dur,
         layout_depth,
         name,
         id,
@@ -22883,6 +22966,7 @@ $root.perfetto = (function() {
              * @property {number|null} [chunksDiscarded] TraceStats chunksDiscarded
              * @property {number|null} [patchesDiscarded] TraceStats patchesDiscarded
              * @property {number|null} [invalidPackets] TraceStats invalidPackets
+             * @property {perfetto.protos.TraceStats.IFilterStats|null} [filterStats] TraceStats filterStats
              */
 
             /**
@@ -22982,6 +23066,14 @@ $root.perfetto = (function() {
             TraceStats.prototype.invalidPackets = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
             /**
+             * TraceStats filterStats.
+             * @member {perfetto.protos.TraceStats.IFilterStats|null|undefined} filterStats
+             * @memberof perfetto.protos.TraceStats
+             * @instance
+             */
+            TraceStats.prototype.filterStats = null;
+
+            /**
              * Creates a new TraceStats instance using the specified properties.
              * @function create
              * @memberof perfetto.protos.TraceStats
@@ -23026,6 +23118,8 @@ $root.perfetto = (function() {
                     writer.uint32(/* id 9, wireType 0 =*/72).uint64(message.patchesDiscarded);
                 if (message.invalidPackets != null && Object.hasOwnProperty.call(message, "invalidPackets"))
                     writer.uint32(/* id 10, wireType 0 =*/80).uint64(message.invalidPackets);
+                if (message.filterStats != null && Object.hasOwnProperty.call(message, "filterStats"))
+                    $root.perfetto.protos.TraceStats.FilterStats.encode(message.filterStats, writer.uint32(/* id 11, wireType 2 =*/90).fork()).ldelim();
                 return writer;
             };
 
@@ -23091,6 +23185,9 @@ $root.perfetto = (function() {
                         break;
                     case 10:
                         message.invalidPackets = reader.uint64();
+                        break;
+                    case 11:
+                        message.filterStats = $root.perfetto.protos.TraceStats.FilterStats.decode(reader, reader.uint32());
                         break;
                     default:
                         reader.skipType(tag & 7);
@@ -23163,6 +23260,11 @@ $root.perfetto = (function() {
                 if (message.invalidPackets != null && message.hasOwnProperty("invalidPackets"))
                     if (!$util.isInteger(message.invalidPackets) && !(message.invalidPackets && $util.isInteger(message.invalidPackets.low) && $util.isInteger(message.invalidPackets.high)))
                         return "invalidPackets: integer|Long expected";
+                if (message.filterStats != null && message.hasOwnProperty("filterStats")) {
+                    var error = $root.perfetto.protos.TraceStats.FilterStats.verify(message.filterStats);
+                    if (error)
+                        return "filterStats." + error;
+                }
                 return null;
             };
 
@@ -23241,6 +23343,11 @@ $root.perfetto = (function() {
                         message.invalidPackets = object.invalidPackets;
                     else if (typeof object.invalidPackets === "object")
                         message.invalidPackets = new $util.LongBits(object.invalidPackets.low >>> 0, object.invalidPackets.high >>> 0).toNumber(true);
+                if (object.filterStats != null) {
+                    if (typeof object.filterStats !== "object")
+                        throw TypeError(".perfetto.protos.TraceStats.filterStats: object expected");
+                    message.filterStats = $root.perfetto.protos.TraceStats.FilterStats.fromObject(object.filterStats);
+                }
                 return message;
             };
 
@@ -23289,6 +23396,7 @@ $root.perfetto = (function() {
                         object.invalidPackets = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
                     } else
                         object.invalidPackets = options.longs === String ? "0" : 0;
+                    object.filterStats = null;
                 }
                 if (message.bufferStats && message.bufferStats.length) {
                     object.bufferStats = [];
@@ -23328,6 +23436,8 @@ $root.perfetto = (function() {
                         object.invalidPackets = options.longs === String ? String(message.invalidPackets) : message.invalidPackets;
                     else
                         object.invalidPackets = options.longs === String ? $util.Long.prototype.toString.call(message.invalidPackets) : options.longs === Number ? new $util.LongBits(message.invalidPackets.low >>> 0, message.invalidPackets.high >>> 0).toNumber(true) : message.invalidPackets;
+                if (message.filterStats != null && message.hasOwnProperty("filterStats"))
+                    object.filterStats = $root.perfetto.protos.TraceStats.FilterStats.toObject(message.filterStats, options);
                 return object;
             };
 
@@ -24190,6 +24300,316 @@ $root.perfetto = (function() {
                 };
 
                 return BufferStats;
+            })();
+
+            TraceStats.FilterStats = (function() {
+
+                /**
+                 * Properties of a FilterStats.
+                 * @memberof perfetto.protos.TraceStats
+                 * @interface IFilterStats
+                 * @property {number|null} [inputPackets] FilterStats inputPackets
+                 * @property {number|null} [inputBytes] FilterStats inputBytes
+                 * @property {number|null} [outputBytes] FilterStats outputBytes
+                 * @property {number|null} [errors] FilterStats errors
+                 */
+
+                /**
+                 * Constructs a new FilterStats.
+                 * @memberof perfetto.protos.TraceStats
+                 * @classdesc Represents a FilterStats.
+                 * @implements IFilterStats
+                 * @constructor
+                 * @param {perfetto.protos.TraceStats.IFilterStats=} [properties] Properties to set
+                 */
+                function FilterStats(properties) {
+                    if (properties)
+                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * FilterStats inputPackets.
+                 * @member {number} inputPackets
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @instance
+                 */
+                FilterStats.prototype.inputPackets = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+                /**
+                 * FilterStats inputBytes.
+                 * @member {number} inputBytes
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @instance
+                 */
+                FilterStats.prototype.inputBytes = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+                /**
+                 * FilterStats outputBytes.
+                 * @member {number} outputBytes
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @instance
+                 */
+                FilterStats.prototype.outputBytes = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+                /**
+                 * FilterStats errors.
+                 * @member {number} errors
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @instance
+                 */
+                FilterStats.prototype.errors = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+                /**
+                 * Creates a new FilterStats instance using the specified properties.
+                 * @function create
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {perfetto.protos.TraceStats.IFilterStats=} [properties] Properties to set
+                 * @returns {perfetto.protos.TraceStats.FilterStats} FilterStats instance
+                 */
+                FilterStats.create = function create(properties) {
+                    return new FilterStats(properties);
+                };
+
+                /**
+                 * Encodes the specified FilterStats message. Does not implicitly {@link perfetto.protos.TraceStats.FilterStats.verify|verify} messages.
+                 * @function encode
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {perfetto.protos.TraceStats.IFilterStats} message FilterStats message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                FilterStats.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.inputPackets != null && Object.hasOwnProperty.call(message, "inputPackets"))
+                        writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.inputPackets);
+                    if (message.inputBytes != null && Object.hasOwnProperty.call(message, "inputBytes"))
+                        writer.uint32(/* id 2, wireType 0 =*/16).uint64(message.inputBytes);
+                    if (message.outputBytes != null && Object.hasOwnProperty.call(message, "outputBytes"))
+                        writer.uint32(/* id 3, wireType 0 =*/24).uint64(message.outputBytes);
+                    if (message.errors != null && Object.hasOwnProperty.call(message, "errors"))
+                        writer.uint32(/* id 4, wireType 0 =*/32).uint64(message.errors);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified FilterStats message, length delimited. Does not implicitly {@link perfetto.protos.TraceStats.FilterStats.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {perfetto.protos.TraceStats.IFilterStats} message FilterStats message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                FilterStats.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a FilterStats message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {perfetto.protos.TraceStats.FilterStats} FilterStats
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                FilterStats.decode = function decode(reader, length) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.TraceStats.FilterStats();
+                    while (reader.pos < end) {
+                        var tag = reader.uint32();
+                        switch (tag >>> 3) {
+                        case 1:
+                            message.inputPackets = reader.uint64();
+                            break;
+                        case 2:
+                            message.inputBytes = reader.uint64();
+                            break;
+                        case 3:
+                            message.outputBytes = reader.uint64();
+                            break;
+                        case 4:
+                            message.errors = reader.uint64();
+                            break;
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a FilterStats message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {perfetto.protos.TraceStats.FilterStats} FilterStats
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                FilterStats.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a FilterStats message.
+                 * @function verify
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                FilterStats.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.inputPackets != null && message.hasOwnProperty("inputPackets"))
+                        if (!$util.isInteger(message.inputPackets) && !(message.inputPackets && $util.isInteger(message.inputPackets.low) && $util.isInteger(message.inputPackets.high)))
+                            return "inputPackets: integer|Long expected";
+                    if (message.inputBytes != null && message.hasOwnProperty("inputBytes"))
+                        if (!$util.isInteger(message.inputBytes) && !(message.inputBytes && $util.isInteger(message.inputBytes.low) && $util.isInteger(message.inputBytes.high)))
+                            return "inputBytes: integer|Long expected";
+                    if (message.outputBytes != null && message.hasOwnProperty("outputBytes"))
+                        if (!$util.isInteger(message.outputBytes) && !(message.outputBytes && $util.isInteger(message.outputBytes.low) && $util.isInteger(message.outputBytes.high)))
+                            return "outputBytes: integer|Long expected";
+                    if (message.errors != null && message.hasOwnProperty("errors"))
+                        if (!$util.isInteger(message.errors) && !(message.errors && $util.isInteger(message.errors.low) && $util.isInteger(message.errors.high)))
+                            return "errors: integer|Long expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a FilterStats message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {perfetto.protos.TraceStats.FilterStats} FilterStats
+                 */
+                FilterStats.fromObject = function fromObject(object) {
+                    if (object instanceof $root.perfetto.protos.TraceStats.FilterStats)
+                        return object;
+                    var message = new $root.perfetto.protos.TraceStats.FilterStats();
+                    if (object.inputPackets != null)
+                        if ($util.Long)
+                            (message.inputPackets = $util.Long.fromValue(object.inputPackets)).unsigned = true;
+                        else if (typeof object.inputPackets === "string")
+                            message.inputPackets = parseInt(object.inputPackets, 10);
+                        else if (typeof object.inputPackets === "number")
+                            message.inputPackets = object.inputPackets;
+                        else if (typeof object.inputPackets === "object")
+                            message.inputPackets = new $util.LongBits(object.inputPackets.low >>> 0, object.inputPackets.high >>> 0).toNumber(true);
+                    if (object.inputBytes != null)
+                        if ($util.Long)
+                            (message.inputBytes = $util.Long.fromValue(object.inputBytes)).unsigned = true;
+                        else if (typeof object.inputBytes === "string")
+                            message.inputBytes = parseInt(object.inputBytes, 10);
+                        else if (typeof object.inputBytes === "number")
+                            message.inputBytes = object.inputBytes;
+                        else if (typeof object.inputBytes === "object")
+                            message.inputBytes = new $util.LongBits(object.inputBytes.low >>> 0, object.inputBytes.high >>> 0).toNumber(true);
+                    if (object.outputBytes != null)
+                        if ($util.Long)
+                            (message.outputBytes = $util.Long.fromValue(object.outputBytes)).unsigned = true;
+                        else if (typeof object.outputBytes === "string")
+                            message.outputBytes = parseInt(object.outputBytes, 10);
+                        else if (typeof object.outputBytes === "number")
+                            message.outputBytes = object.outputBytes;
+                        else if (typeof object.outputBytes === "object")
+                            message.outputBytes = new $util.LongBits(object.outputBytes.low >>> 0, object.outputBytes.high >>> 0).toNumber(true);
+                    if (object.errors != null)
+                        if ($util.Long)
+                            (message.errors = $util.Long.fromValue(object.errors)).unsigned = true;
+                        else if (typeof object.errors === "string")
+                            message.errors = parseInt(object.errors, 10);
+                        else if (typeof object.errors === "number")
+                            message.errors = object.errors;
+                        else if (typeof object.errors === "object")
+                            message.errors = new $util.LongBits(object.errors.low >>> 0, object.errors.high >>> 0).toNumber(true);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a FilterStats message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @static
+                 * @param {perfetto.protos.TraceStats.FilterStats} message FilterStats
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                FilterStats.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    var object = {};
+                    if (options.defaults) {
+                        if ($util.Long) {
+                            var long = new $util.Long(0, 0, true);
+                            object.inputPackets = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.inputPackets = options.longs === String ? "0" : 0;
+                        if ($util.Long) {
+                            var long = new $util.Long(0, 0, true);
+                            object.inputBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.inputBytes = options.longs === String ? "0" : 0;
+                        if ($util.Long) {
+                            var long = new $util.Long(0, 0, true);
+                            object.outputBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.outputBytes = options.longs === String ? "0" : 0;
+                        if ($util.Long) {
+                            var long = new $util.Long(0, 0, true);
+                            object.errors = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.errors = options.longs === String ? "0" : 0;
+                    }
+                    if (message.inputPackets != null && message.hasOwnProperty("inputPackets"))
+                        if (typeof message.inputPackets === "number")
+                            object.inputPackets = options.longs === String ? String(message.inputPackets) : message.inputPackets;
+                        else
+                            object.inputPackets = options.longs === String ? $util.Long.prototype.toString.call(message.inputPackets) : options.longs === Number ? new $util.LongBits(message.inputPackets.low >>> 0, message.inputPackets.high >>> 0).toNumber(true) : message.inputPackets;
+                    if (message.inputBytes != null && message.hasOwnProperty("inputBytes"))
+                        if (typeof message.inputBytes === "number")
+                            object.inputBytes = options.longs === String ? String(message.inputBytes) : message.inputBytes;
+                        else
+                            object.inputBytes = options.longs === String ? $util.Long.prototype.toString.call(message.inputBytes) : options.longs === Number ? new $util.LongBits(message.inputBytes.low >>> 0, message.inputBytes.high >>> 0).toNumber(true) : message.inputBytes;
+                    if (message.outputBytes != null && message.hasOwnProperty("outputBytes"))
+                        if (typeof message.outputBytes === "number")
+                            object.outputBytes = options.longs === String ? String(message.outputBytes) : message.outputBytes;
+                        else
+                            object.outputBytes = options.longs === String ? $util.Long.prototype.toString.call(message.outputBytes) : options.longs === Number ? new $util.LongBits(message.outputBytes.low >>> 0, message.outputBytes.high >>> 0).toNumber(true) : message.outputBytes;
+                    if (message.errors != null && message.hasOwnProperty("errors"))
+                        if (typeof message.errors === "number")
+                            object.errors = options.longs === String ? String(message.errors) : message.errors;
+                        else
+                            object.errors = options.longs === String ? $util.Long.prototype.toString.call(message.errors) : options.longs === Number ? new $util.LongBits(message.errors.low >>> 0, message.errors.high >>> 0).toNumber(true) : message.errors;
+                    return object;
+                };
+
+                /**
+                 * Converts this FilterStats to JSON.
+                 * @function toJSON
+                 * @memberof perfetto.protos.TraceStats.FilterStats
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                FilterStats.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
+                };
+
+                return FilterStats;
             })();
 
             return TraceStats;
@@ -32130,6 +32550,7 @@ $root.perfetto = (function() {
              * @property {Array.<number>|null} [pid] HeapprofdConfig pid
              * @property {Array.<string>|null} [targetInstalledBy] HeapprofdConfig targetInstalledBy
              * @property {Array.<string>|null} [heaps] HeapprofdConfig heaps
+             * @property {Array.<string>|null} [excludeHeaps] HeapprofdConfig excludeHeaps
              * @property {boolean|null} [streamAllocations] HeapprofdConfig streamAllocations
              * @property {Array.<number>|null} [heapSamplingIntervals] HeapprofdConfig heapSamplingIntervals
              * @property {boolean|null} [allHeaps] HeapprofdConfig allHeaps
@@ -32162,6 +32583,7 @@ $root.perfetto = (function() {
                 this.pid = [];
                 this.targetInstalledBy = [];
                 this.heaps = [];
+                this.excludeHeaps = [];
                 this.heapSamplingIntervals = [];
                 this.skipSymbolPrefix = [];
                 if (properties)
@@ -32225,6 +32647,14 @@ $root.perfetto = (function() {
              * @instance
              */
             HeapprofdConfig.prototype.heaps = $util.emptyArray;
+
+            /**
+             * HeapprofdConfig excludeHeaps.
+             * @member {Array.<string>} excludeHeaps
+             * @memberof perfetto.protos.HeapprofdConfig
+             * @instance
+             */
+            HeapprofdConfig.prototype.excludeHeaps = $util.emptyArray;
 
             /**
              * HeapprofdConfig streamAllocations.
@@ -32440,6 +32870,9 @@ $root.perfetto = (function() {
                 if (message.targetInstalledBy != null && message.targetInstalledBy.length)
                     for (var i = 0; i < message.targetInstalledBy.length; ++i)
                         writer.uint32(/* id 26, wireType 2 =*/210).string(message.targetInstalledBy[i]);
+                if (message.excludeHeaps != null && message.excludeHeaps.length)
+                    for (var i = 0; i < message.excludeHeaps.length; ++i)
+                        writer.uint32(/* id 27, wireType 2 =*/218).string(message.excludeHeaps[i]);
                 return writer;
             };
 
@@ -32507,6 +32940,11 @@ $root.perfetto = (function() {
                         if (!(message.heaps && message.heaps.length))
                             message.heaps = [];
                         message.heaps.push(reader.string());
+                        break;
+                    case 27:
+                        if (!(message.excludeHeaps && message.excludeHeaps.length))
+                            message.excludeHeaps = [];
+                        message.excludeHeaps.push(reader.string());
                         break;
                     case 23:
                         message.streamAllocations = reader.bool();
@@ -32639,6 +33077,13 @@ $root.perfetto = (function() {
                     for (var i = 0; i < message.heaps.length; ++i)
                         if (!$util.isString(message.heaps[i]))
                             return "heaps: string[] expected";
+                }
+                if (message.excludeHeaps != null && message.hasOwnProperty("excludeHeaps")) {
+                    if (!Array.isArray(message.excludeHeaps))
+                        return "excludeHeaps: array expected";
+                    for (var i = 0; i < message.excludeHeaps.length; ++i)
+                        if (!$util.isString(message.excludeHeaps[i]))
+                            return "excludeHeaps: string[] expected";
                 }
                 if (message.streamAllocations != null && message.hasOwnProperty("streamAllocations"))
                     if (typeof message.streamAllocations !== "boolean")
@@ -32778,6 +33223,13 @@ $root.perfetto = (function() {
                     for (var i = 0; i < object.heaps.length; ++i)
                         message.heaps[i] = String(object.heaps[i]);
                 }
+                if (object.excludeHeaps) {
+                    if (!Array.isArray(object.excludeHeaps))
+                        throw TypeError(".perfetto.protos.HeapprofdConfig.excludeHeaps: array expected");
+                    message.excludeHeaps = [];
+                    for (var i = 0; i < object.excludeHeaps.length; ++i)
+                        message.excludeHeaps[i] = String(object.excludeHeaps[i]);
+                }
                 if (object.streamAllocations != null)
                     message.streamAllocations = Boolean(object.streamAllocations);
                 if (object.heapSamplingIntervals) {
@@ -32869,6 +33321,7 @@ $root.perfetto = (function() {
                     object.heaps = [];
                     object.heapSamplingIntervals = [];
                     object.targetInstalledBy = [];
+                    object.excludeHeaps = [];
                 }
                 if (options.defaults) {
                     if ($util.Long) {
@@ -32996,6 +33449,11 @@ $root.perfetto = (function() {
                     object.targetInstalledBy = [];
                     for (var j = 0; j < message.targetInstalledBy.length; ++j)
                         object.targetInstalledBy[j] = message.targetInstalledBy[j];
+                }
+                if (message.excludeHeaps && message.excludeHeaps.length) {
+                    object.excludeHeaps = [];
+                    for (var j = 0; j < message.excludeHeaps.length; ++j)
+                        object.excludeHeaps[j] = message.excludeHeaps[j];
                 }
                 return object;
             };
@@ -39461,6 +39919,7 @@ $root.perfetto = (function() {
              * @property {perfetto.protos.TraceConfig.StatsdLogging|null} [statsdLogging] TraceConfig statsdLogging
              * @property {number|null} [traceUuidMsb] TraceConfig traceUuidMsb
              * @property {number|null} [traceUuidLsb] TraceConfig traceUuidLsb
+             * @property {perfetto.protos.TraceConfig.ITraceFilter|null} [traceFilter] TraceConfig traceFilter
              */
 
             /**
@@ -39715,6 +40174,14 @@ $root.perfetto = (function() {
             TraceConfig.prototype.traceUuidLsb = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
 
             /**
+             * TraceConfig traceFilter.
+             * @member {perfetto.protos.TraceConfig.ITraceFilter|null|undefined} traceFilter
+             * @memberof perfetto.protos.TraceConfig
+             * @instance
+             */
+            TraceConfig.prototype.traceFilter = null;
+
+            /**
              * Creates a new TraceConfig instance using the specified properties.
              * @function create
              * @memberof perfetto.protos.TraceConfig
@@ -39800,6 +40267,8 @@ $root.perfetto = (function() {
                     writer.uint32(/* id 30, wireType 0 =*/240).int32(message.bugreportScore);
                 if (message.statsdLogging != null && Object.hasOwnProperty.call(message, "statsdLogging"))
                     writer.uint32(/* id 31, wireType 0 =*/248).int32(message.statsdLogging);
+                if (message.traceFilter != null && Object.hasOwnProperty.call(message, "traceFilter"))
+                    $root.perfetto.protos.TraceConfig.TraceFilter.encode(message.traceFilter, writer.uint32(/* id 32, wireType 2 =*/258).fork()).ldelim();
                 return writer;
             };
 
@@ -39928,6 +40397,9 @@ $root.perfetto = (function() {
                         break;
                     case 28:
                         message.traceUuidLsb = reader.int64();
+                        break;
+                    case 32:
+                        message.traceFilter = $root.perfetto.protos.TraceConfig.TraceFilter.decode(reader, reader.uint32());
                         break;
                     default:
                         reader.skipType(tag & 7);
@@ -40102,6 +40574,11 @@ $root.perfetto = (function() {
                 if (message.traceUuidLsb != null && message.hasOwnProperty("traceUuidLsb"))
                     if (!$util.isInteger(message.traceUuidLsb) && !(message.traceUuidLsb && $util.isInteger(message.traceUuidLsb.low) && $util.isInteger(message.traceUuidLsb.high)))
                         return "traceUuidLsb: integer|Long expected";
+                if (message.traceFilter != null && message.hasOwnProperty("traceFilter")) {
+                    var error = $root.perfetto.protos.TraceConfig.TraceFilter.verify(message.traceFilter);
+                    if (error)
+                        return "traceFilter." + error;
+                }
                 return null;
             };
 
@@ -40275,6 +40752,11 @@ $root.perfetto = (function() {
                         message.traceUuidLsb = object.traceUuidLsb;
                     else if (typeof object.traceUuidLsb === "object")
                         message.traceUuidLsb = new $util.LongBits(object.traceUuidLsb.low >>> 0, object.traceUuidLsb.high >>> 0).toNumber();
+                if (object.traceFilter != null) {
+                    if (typeof object.traceFilter !== "object")
+                        throw TypeError(".perfetto.protos.TraceConfig.traceFilter: object expected");
+                    message.traceFilter = $root.perfetto.protos.TraceConfig.TraceFilter.fromObject(object.traceFilter);
+                }
                 return message;
             };
 
@@ -40335,6 +40817,7 @@ $root.perfetto = (function() {
                     object.outputPath = "";
                     object.bugreportScore = 0;
                     object.statsdLogging = options.enums === String ? "STATSD_LOGGING_UNSPECIFIED" : 0;
+                    object.traceFilter = null;
                 }
                 if (message.buffers && message.buffers.length) {
                     object.buffers = [];
@@ -40415,6 +40898,8 @@ $root.perfetto = (function() {
                     object.bugreportScore = message.bugreportScore;
                 if (message.statsdLogging != null && message.hasOwnProperty("statsdLogging"))
                     object.statsdLogging = options.enums === String ? $root.perfetto.protos.TraceConfig.StatsdLogging[message.statsdLogging] : message.statsdLogging;
+                if (message.traceFilter != null && message.hasOwnProperty("traceFilter"))
+                    object.traceFilter = $root.perfetto.protos.TraceConfig.TraceFilter.toObject(message.traceFilter, options);
                 return object;
             };
 
@@ -43106,6 +43591,202 @@ $root.perfetto = (function() {
                 values[valuesById[1] = "STATSD_LOGGING_ENABLED"] = 1;
                 values[valuesById[2] = "STATSD_LOGGING_DISABLED"] = 2;
                 return values;
+            })();
+
+            TraceConfig.TraceFilter = (function() {
+
+                /**
+                 * Properties of a TraceFilter.
+                 * @memberof perfetto.protos.TraceConfig
+                 * @interface ITraceFilter
+                 * @property {Uint8Array|null} [bytecode] TraceFilter bytecode
+                 */
+
+                /**
+                 * Constructs a new TraceFilter.
+                 * @memberof perfetto.protos.TraceConfig
+                 * @classdesc Represents a TraceFilter.
+                 * @implements ITraceFilter
+                 * @constructor
+                 * @param {perfetto.protos.TraceConfig.ITraceFilter=} [properties] Properties to set
+                 */
+                function TraceFilter(properties) {
+                    if (properties)
+                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * TraceFilter bytecode.
+                 * @member {Uint8Array} bytecode
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @instance
+                 */
+                TraceFilter.prototype.bytecode = $util.newBuffer([]);
+
+                /**
+                 * Creates a new TraceFilter instance using the specified properties.
+                 * @function create
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {perfetto.protos.TraceConfig.ITraceFilter=} [properties] Properties to set
+                 * @returns {perfetto.protos.TraceConfig.TraceFilter} TraceFilter instance
+                 */
+                TraceFilter.create = function create(properties) {
+                    return new TraceFilter(properties);
+                };
+
+                /**
+                 * Encodes the specified TraceFilter message. Does not implicitly {@link perfetto.protos.TraceConfig.TraceFilter.verify|verify} messages.
+                 * @function encode
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {perfetto.protos.TraceConfig.ITraceFilter} message TraceFilter message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TraceFilter.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.bytecode != null && Object.hasOwnProperty.call(message, "bytecode"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.bytecode);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified TraceFilter message, length delimited. Does not implicitly {@link perfetto.protos.TraceConfig.TraceFilter.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {perfetto.protos.TraceConfig.ITraceFilter} message TraceFilter message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TraceFilter.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a TraceFilter message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {perfetto.protos.TraceConfig.TraceFilter} TraceFilter
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TraceFilter.decode = function decode(reader, length) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.TraceConfig.TraceFilter();
+                    while (reader.pos < end) {
+                        var tag = reader.uint32();
+                        switch (tag >>> 3) {
+                        case 1:
+                            message.bytecode = reader.bytes();
+                            break;
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a TraceFilter message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {perfetto.protos.TraceConfig.TraceFilter} TraceFilter
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TraceFilter.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a TraceFilter message.
+                 * @function verify
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                TraceFilter.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.bytecode != null && message.hasOwnProperty("bytecode"))
+                        if (!(message.bytecode && typeof message.bytecode.length === "number" || $util.isString(message.bytecode)))
+                            return "bytecode: buffer expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a TraceFilter message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {perfetto.protos.TraceConfig.TraceFilter} TraceFilter
+                 */
+                TraceFilter.fromObject = function fromObject(object) {
+                    if (object instanceof $root.perfetto.protos.TraceConfig.TraceFilter)
+                        return object;
+                    var message = new $root.perfetto.protos.TraceConfig.TraceFilter();
+                    if (object.bytecode != null)
+                        if (typeof object.bytecode === "string")
+                            $util.base64.decode(object.bytecode, message.bytecode = $util.newBuffer($util.base64.length(object.bytecode)), 0);
+                        else if (object.bytecode.length)
+                            message.bytecode = object.bytecode;
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a TraceFilter message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @static
+                 * @param {perfetto.protos.TraceConfig.TraceFilter} message TraceFilter
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                TraceFilter.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    var object = {};
+                    if (options.defaults)
+                        if (options.bytes === String)
+                            object.bytecode = "";
+                        else {
+                            object.bytecode = [];
+                            if (options.bytes !== Array)
+                                object.bytecode = $util.newBuffer(object.bytecode);
+                        }
+                    if (message.bytecode != null && message.hasOwnProperty("bytecode"))
+                        object.bytecode = options.bytes === String ? $util.base64.encode(message.bytecode, 0, message.bytecode.length) : options.bytes === Array ? Array.prototype.slice.call(message.bytecode) : message.bytecode;
+                    return object;
+                };
+
+                /**
+                 * Converts this TraceFilter to JSON.
+                 * @function toJSON
+                 * @memberof perfetto.protos.TraceConfig.TraceFilter
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                TraceFilter.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
+                };
+
+                return TraceFilter;
             })();
 
             return TraceConfig;
@@ -51709,7 +52390,6 @@ $root.perfetto = (function() {
              * @property {perfetto.protos.IAndroidLmkMetric|null} [androidLmk] TraceMetrics androidLmk
              * @property {perfetto.protos.IAndroidPowerRails|null} [androidPowrails] TraceMetrics androidPowrails
              * @property {perfetto.protos.IAndroidStartupMetric|null} [androidStartup] TraceMetrics androidStartup
-             * @property {perfetto.protos.IHeapProfileCallsites|null} [heapProfileCallsites] TraceMetrics heapProfileCallsites
              * @property {perfetto.protos.ITraceMetadata|null} [traceMetadata] TraceMetrics traceMetadata
              * @property {perfetto.protos.ITraceAnalysisStats|null} [traceStats] TraceMetrics traceStats
              * @property {perfetto.protos.IUnsymbolizedFrames|null} [unsymbolizedFrames] TraceMetrics unsymbolizedFrames
@@ -51823,14 +52503,6 @@ $root.perfetto = (function() {
              * @instance
              */
             TraceMetrics.prototype.androidStartup = null;
-
-            /**
-             * TraceMetrics heapProfileCallsites.
-             * @member {perfetto.protos.IHeapProfileCallsites|null|undefined} heapProfileCallsites
-             * @memberof perfetto.protos.TraceMetrics
-             * @instance
-             */
-            TraceMetrics.prototype.heapProfileCallsites = null;
 
             /**
              * TraceMetrics traceMetadata.
@@ -52014,8 +52686,6 @@ $root.perfetto = (function() {
                     $root.perfetto.protos.AndroidPackageList.encode(message.androidPackageList, writer.uint32(/* id 12, wireType 2 =*/98).fork()).ldelim();
                 if (message.unsymbolizedFrames != null && Object.hasOwnProperty.call(message, "unsymbolizedFrames"))
                     $root.perfetto.protos.UnsymbolizedFrames.encode(message.unsymbolizedFrames, writer.uint32(/* id 15, wireType 2 =*/122).fork()).ldelim();
-                if (message.heapProfileCallsites != null && Object.hasOwnProperty.call(message, "heapProfileCallsites"))
-                    $root.perfetto.protos.HeapProfileCallsites.encode(message.heapProfileCallsites, writer.uint32(/* id 16, wireType 2 =*/130).fork()).ldelim();
                 if (message.javaHeapStats != null && Object.hasOwnProperty.call(message, "javaHeapStats"))
                     $root.perfetto.protos.JavaHeapStats.encode(message.javaHeapStats, writer.uint32(/* id 17, wireType 2 =*/138).fork()).ldelim();
                 if (message.androidLmkReason != null && Object.hasOwnProperty.call(message, "androidLmkReason"))
@@ -52111,9 +52781,6 @@ $root.perfetto = (function() {
                         break;
                     case 2:
                         message.androidStartup = $root.perfetto.protos.AndroidStartupMetric.decode(reader, reader.uint32());
-                        break;
-                    case 16:
-                        message.heapProfileCallsites = $root.perfetto.protos.HeapProfileCallsites.decode(reader, reader.uint32());
                         break;
                     case 3:
                         message.traceMetadata = $root.perfetto.protos.TraceMetadata.decode(reader, reader.uint32());
@@ -52250,11 +52917,6 @@ $root.perfetto = (function() {
                     var error = $root.perfetto.protos.AndroidStartupMetric.verify(message.androidStartup);
                     if (error)
                         return "androidStartup." + error;
-                }
-                if (message.heapProfileCallsites != null && message.hasOwnProperty("heapProfileCallsites")) {
-                    var error = $root.perfetto.protos.HeapProfileCallsites.verify(message.heapProfileCallsites);
-                    if (error)
-                        return "heapProfileCallsites." + error;
                 }
                 if (message.traceMetadata != null && message.hasOwnProperty("traceMetadata")) {
                     var error = $root.perfetto.protos.TraceMetadata.verify(message.traceMetadata);
@@ -52406,11 +53068,6 @@ $root.perfetto = (function() {
                         throw TypeError(".perfetto.protos.TraceMetrics.androidStartup: object expected");
                     message.androidStartup = $root.perfetto.protos.AndroidStartupMetric.fromObject(object.androidStartup);
                 }
-                if (object.heapProfileCallsites != null) {
-                    if (typeof object.heapProfileCallsites !== "object")
-                        throw TypeError(".perfetto.protos.TraceMetrics.heapProfileCallsites: object expected");
-                    message.heapProfileCallsites = $root.perfetto.protos.HeapProfileCallsites.fromObject(object.heapProfileCallsites);
-                }
                 if (object.traceMetadata != null) {
                     if (typeof object.traceMetadata !== "object")
                         throw TypeError(".perfetto.protos.TraceMetrics.traceMetadata: object expected");
@@ -52524,7 +53181,6 @@ $root.perfetto = (function() {
                     object.androidMemUnagg = null;
                     object.androidPackageList = null;
                     object.unsymbolizedFrames = null;
-                    object.heapProfileCallsites = null;
                     object.javaHeapStats = null;
                     object.androidLmkReason = null;
                     object.androidHwuiMetric = null;
@@ -52564,8 +53220,6 @@ $root.perfetto = (function() {
                     object.androidPackageList = $root.perfetto.protos.AndroidPackageList.toObject(message.androidPackageList, options);
                 if (message.unsymbolizedFrames != null && message.hasOwnProperty("unsymbolizedFrames"))
                     object.unsymbolizedFrames = $root.perfetto.protos.UnsymbolizedFrames.toObject(message.unsymbolizedFrames, options);
-                if (message.heapProfileCallsites != null && message.hasOwnProperty("heapProfileCallsites"))
-                    object.heapProfileCallsites = $root.perfetto.protos.HeapProfileCallsites.toObject(message.heapProfileCallsites, options);
                 if (message.javaHeapStats != null && message.hasOwnProperty("javaHeapStats"))
                     object.javaHeapStats = $root.perfetto.protos.JavaHeapStats.toObject(message.javaHeapStats, options);
                 if (message.androidLmkReason != null && message.hasOwnProperty("androidLmkReason"))
@@ -58336,1983 +58990,6 @@ $root.perfetto = (function() {
             return AndroidGpuMetric;
         })();
 
-        protos.HeapProfileCallsites = (function() {
-
-            /**
-             * Properties of a HeapProfileCallsites.
-             * @memberof perfetto.protos
-             * @interface IHeapProfileCallsites
-             * @property {Array.<perfetto.protos.HeapProfileCallsites.IInstanceStats>|null} [instanceStats] HeapProfileCallsites instanceStats
-             */
-
-            /**
-             * Constructs a new HeapProfileCallsites.
-             * @memberof perfetto.protos
-             * @classdesc Represents a HeapProfileCallsites.
-             * @implements IHeapProfileCallsites
-             * @constructor
-             * @param {perfetto.protos.IHeapProfileCallsites=} [properties] Properties to set
-             */
-            function HeapProfileCallsites(properties) {
-                this.instanceStats = [];
-                if (properties)
-                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                        if (properties[keys[i]] != null)
-                            this[keys[i]] = properties[keys[i]];
-            }
-
-            /**
-             * HeapProfileCallsites instanceStats.
-             * @member {Array.<perfetto.protos.HeapProfileCallsites.IInstanceStats>} instanceStats
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @instance
-             */
-            HeapProfileCallsites.prototype.instanceStats = $util.emptyArray;
-
-            /**
-             * Creates a new HeapProfileCallsites instance using the specified properties.
-             * @function create
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {perfetto.protos.IHeapProfileCallsites=} [properties] Properties to set
-             * @returns {perfetto.protos.HeapProfileCallsites} HeapProfileCallsites instance
-             */
-            HeapProfileCallsites.create = function create(properties) {
-                return new HeapProfileCallsites(properties);
-            };
-
-            /**
-             * Encodes the specified HeapProfileCallsites message. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.verify|verify} messages.
-             * @function encode
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {perfetto.protos.IHeapProfileCallsites} message HeapProfileCallsites message or plain object to encode
-             * @param {$protobuf.Writer} [writer] Writer to encode to
-             * @returns {$protobuf.Writer} Writer
-             */
-            HeapProfileCallsites.encode = function encode(message, writer) {
-                if (!writer)
-                    writer = $Writer.create();
-                if (message.instanceStats != null && message.instanceStats.length)
-                    for (var i = 0; i < message.instanceStats.length; ++i)
-                        $root.perfetto.protos.HeapProfileCallsites.InstanceStats.encode(message.instanceStats[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
-                return writer;
-            };
-
-            /**
-             * Encodes the specified HeapProfileCallsites message, length delimited. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.verify|verify} messages.
-             * @function encodeDelimited
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {perfetto.protos.IHeapProfileCallsites} message HeapProfileCallsites message or plain object to encode
-             * @param {$protobuf.Writer} [writer] Writer to encode to
-             * @returns {$protobuf.Writer} Writer
-             */
-            HeapProfileCallsites.encodeDelimited = function encodeDelimited(message, writer) {
-                return this.encode(message, writer).ldelim();
-            };
-
-            /**
-             * Decodes a HeapProfileCallsites message from the specified reader or buffer.
-             * @function decode
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-             * @param {number} [length] Message length if known beforehand
-             * @returns {perfetto.protos.HeapProfileCallsites} HeapProfileCallsites
-             * @throws {Error} If the payload is not a reader or valid buffer
-             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-             */
-            HeapProfileCallsites.decode = function decode(reader, length) {
-                if (!(reader instanceof $Reader))
-                    reader = $Reader.create(reader);
-                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.HeapProfileCallsites();
-                while (reader.pos < end) {
-                    var tag = reader.uint32();
-                    switch (tag >>> 3) {
-                    case 1:
-                        if (!(message.instanceStats && message.instanceStats.length))
-                            message.instanceStats = [];
-                        message.instanceStats.push($root.perfetto.protos.HeapProfileCallsites.InstanceStats.decode(reader, reader.uint32()));
-                        break;
-                    default:
-                        reader.skipType(tag & 7);
-                        break;
-                    }
-                }
-                return message;
-            };
-
-            /**
-             * Decodes a HeapProfileCallsites message from the specified reader or buffer, length delimited.
-             * @function decodeDelimited
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-             * @returns {perfetto.protos.HeapProfileCallsites} HeapProfileCallsites
-             * @throws {Error} If the payload is not a reader or valid buffer
-             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-             */
-            HeapProfileCallsites.decodeDelimited = function decodeDelimited(reader) {
-                if (!(reader instanceof $Reader))
-                    reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
-            };
-
-            /**
-             * Verifies a HeapProfileCallsites message.
-             * @function verify
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {Object.<string,*>} message Plain object to verify
-             * @returns {string|null} `null` if valid, otherwise the reason why it is not
-             */
-            HeapProfileCallsites.verify = function verify(message) {
-                if (typeof message !== "object" || message === null)
-                    return "object expected";
-                if (message.instanceStats != null && message.hasOwnProperty("instanceStats")) {
-                    if (!Array.isArray(message.instanceStats))
-                        return "instanceStats: array expected";
-                    for (var i = 0; i < message.instanceStats.length; ++i) {
-                        var error = $root.perfetto.protos.HeapProfileCallsites.InstanceStats.verify(message.instanceStats[i]);
-                        if (error)
-                            return "instanceStats." + error;
-                    }
-                }
-                return null;
-            };
-
-            /**
-             * Creates a HeapProfileCallsites message from a plain object. Also converts values to their respective internal types.
-             * @function fromObject
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {Object.<string,*>} object Plain object
-             * @returns {perfetto.protos.HeapProfileCallsites} HeapProfileCallsites
-             */
-            HeapProfileCallsites.fromObject = function fromObject(object) {
-                if (object instanceof $root.perfetto.protos.HeapProfileCallsites)
-                    return object;
-                var message = new $root.perfetto.protos.HeapProfileCallsites();
-                if (object.instanceStats) {
-                    if (!Array.isArray(object.instanceStats))
-                        throw TypeError(".perfetto.protos.HeapProfileCallsites.instanceStats: array expected");
-                    message.instanceStats = [];
-                    for (var i = 0; i < object.instanceStats.length; ++i) {
-                        if (typeof object.instanceStats[i] !== "object")
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.instanceStats: object expected");
-                        message.instanceStats[i] = $root.perfetto.protos.HeapProfileCallsites.InstanceStats.fromObject(object.instanceStats[i]);
-                    }
-                }
-                return message;
-            };
-
-            /**
-             * Creates a plain object from a HeapProfileCallsites message. Also converts values to other types if specified.
-             * @function toObject
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @static
-             * @param {perfetto.protos.HeapProfileCallsites} message HeapProfileCallsites
-             * @param {$protobuf.IConversionOptions} [options] Conversion options
-             * @returns {Object.<string,*>} Plain object
-             */
-            HeapProfileCallsites.toObject = function toObject(message, options) {
-                if (!options)
-                    options = {};
-                var object = {};
-                if (options.arrays || options.defaults)
-                    object.instanceStats = [];
-                if (message.instanceStats && message.instanceStats.length) {
-                    object.instanceStats = [];
-                    for (var j = 0; j < message.instanceStats.length; ++j)
-                        object.instanceStats[j] = $root.perfetto.protos.HeapProfileCallsites.InstanceStats.toObject(message.instanceStats[j], options);
-                }
-                return object;
-            };
-
-            /**
-             * Converts this HeapProfileCallsites to JSON.
-             * @function toJSON
-             * @memberof perfetto.protos.HeapProfileCallsites
-             * @instance
-             * @returns {Object.<string,*>} JSON object
-             */
-            HeapProfileCallsites.prototype.toJSON = function toJSON() {
-                return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-            };
-
-            HeapProfileCallsites.Frame = (function() {
-
-                /**
-                 * Properties of a Frame.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @interface IFrame
-                 * @property {string|null} [name] Frame name
-                 * @property {string|null} [mappingName] Frame mappingName
-                 */
-
-                /**
-                 * Constructs a new Frame.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @classdesc Represents a Frame.
-                 * @implements IFrame
-                 * @constructor
-                 * @param {perfetto.protos.HeapProfileCallsites.IFrame=} [properties] Properties to set
-                 */
-                function Frame(properties) {
-                    if (properties)
-                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                            if (properties[keys[i]] != null)
-                                this[keys[i]] = properties[keys[i]];
-                }
-
-                /**
-                 * Frame name.
-                 * @member {string} name
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @instance
-                 */
-                Frame.prototype.name = "";
-
-                /**
-                 * Frame mappingName.
-                 * @member {string} mappingName
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @instance
-                 */
-                Frame.prototype.mappingName = "";
-
-                /**
-                 * Creates a new Frame instance using the specified properties.
-                 * @function create
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IFrame=} [properties] Properties to set
-                 * @returns {perfetto.protos.HeapProfileCallsites.Frame} Frame instance
-                 */
-                Frame.create = function create(properties) {
-                    return new Frame(properties);
-                };
-
-                /**
-                 * Encodes the specified Frame message. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Frame.verify|verify} messages.
-                 * @function encode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IFrame} message Frame message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Frame.encode = function encode(message, writer) {
-                    if (!writer)
-                        writer = $Writer.create();
-                    if (message.name != null && Object.hasOwnProperty.call(message, "name"))
-                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-                    if (message.mappingName != null && Object.hasOwnProperty.call(message, "mappingName"))
-                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.mappingName);
-                    return writer;
-                };
-
-                /**
-                 * Encodes the specified Frame message, length delimited. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Frame.verify|verify} messages.
-                 * @function encodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IFrame} message Frame message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Frame.encodeDelimited = function encodeDelimited(message, writer) {
-                    return this.encode(message, writer).ldelim();
-                };
-
-                /**
-                 * Decodes a Frame message from the specified reader or buffer.
-                 * @function decode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @param {number} [length] Message length if known beforehand
-                 * @returns {perfetto.protos.HeapProfileCallsites.Frame} Frame
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Frame.decode = function decode(reader, length) {
-                    if (!(reader instanceof $Reader))
-                        reader = $Reader.create(reader);
-                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.HeapProfileCallsites.Frame();
-                    while (reader.pos < end) {
-                        var tag = reader.uint32();
-                        switch (tag >>> 3) {
-                        case 1:
-                            message.name = reader.string();
-                            break;
-                        case 2:
-                            message.mappingName = reader.string();
-                            break;
-                        default:
-                            reader.skipType(tag & 7);
-                            break;
-                        }
-                    }
-                    return message;
-                };
-
-                /**
-                 * Decodes a Frame message from the specified reader or buffer, length delimited.
-                 * @function decodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @returns {perfetto.protos.HeapProfileCallsites.Frame} Frame
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Frame.decodeDelimited = function decodeDelimited(reader) {
-                    if (!(reader instanceof $Reader))
-                        reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
-                };
-
-                /**
-                 * Verifies a Frame message.
-                 * @function verify
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {Object.<string,*>} message Plain object to verify
-                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
-                 */
-                Frame.verify = function verify(message) {
-                    if (typeof message !== "object" || message === null)
-                        return "object expected";
-                    if (message.name != null && message.hasOwnProperty("name"))
-                        if (!$util.isString(message.name))
-                            return "name: string expected";
-                    if (message.mappingName != null && message.hasOwnProperty("mappingName"))
-                        if (!$util.isString(message.mappingName))
-                            return "mappingName: string expected";
-                    return null;
-                };
-
-                /**
-                 * Creates a Frame message from a plain object. Also converts values to their respective internal types.
-                 * @function fromObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {Object.<string,*>} object Plain object
-                 * @returns {perfetto.protos.HeapProfileCallsites.Frame} Frame
-                 */
-                Frame.fromObject = function fromObject(object) {
-                    if (object instanceof $root.perfetto.protos.HeapProfileCallsites.Frame)
-                        return object;
-                    var message = new $root.perfetto.protos.HeapProfileCallsites.Frame();
-                    if (object.name != null)
-                        message.name = String(object.name);
-                    if (object.mappingName != null)
-                        message.mappingName = String(object.mappingName);
-                    return message;
-                };
-
-                /**
-                 * Creates a plain object from a Frame message. Also converts values to other types if specified.
-                 * @function toObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.Frame} message Frame
-                 * @param {$protobuf.IConversionOptions} [options] Conversion options
-                 * @returns {Object.<string,*>} Plain object
-                 */
-                Frame.toObject = function toObject(message, options) {
-                    if (!options)
-                        options = {};
-                    var object = {};
-                    if (options.defaults) {
-                        object.name = "";
-                        object.mappingName = "";
-                    }
-                    if (message.name != null && message.hasOwnProperty("name"))
-                        object.name = message.name;
-                    if (message.mappingName != null && message.hasOwnProperty("mappingName"))
-                        object.mappingName = message.mappingName;
-                    return object;
-                };
-
-                /**
-                 * Converts this Frame to JSON.
-                 * @function toJSON
-                 * @memberof perfetto.protos.HeapProfileCallsites.Frame
-                 * @instance
-                 * @returns {Object.<string,*>} JSON object
-                 */
-                Frame.prototype.toJSON = function toJSON() {
-                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-                };
-
-                return Frame;
-            })();
-
-            HeapProfileCallsites.Counters = (function() {
-
-                /**
-                 * Properties of a Counters.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @interface ICounters
-                 * @property {number|null} [totalCount] Counters totalCount
-                 * @property {number|null} [totalBytes] Counters totalBytes
-                 * @property {number|null} [deltaCount] Counters deltaCount
-                 * @property {number|null} [deltaBytes] Counters deltaBytes
-                 */
-
-                /**
-                 * Constructs a new Counters.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @classdesc Represents a Counters.
-                 * @implements ICounters
-                 * @constructor
-                 * @param {perfetto.protos.HeapProfileCallsites.ICounters=} [properties] Properties to set
-                 */
-                function Counters(properties) {
-                    if (properties)
-                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                            if (properties[keys[i]] != null)
-                                this[keys[i]] = properties[keys[i]];
-                }
-
-                /**
-                 * Counters totalCount.
-                 * @member {number} totalCount
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @instance
-                 */
-                Counters.prototype.totalCount = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Counters totalBytes.
-                 * @member {number} totalBytes
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @instance
-                 */
-                Counters.prototype.totalBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Counters deltaCount.
-                 * @member {number} deltaCount
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @instance
-                 */
-                Counters.prototype.deltaCount = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Counters deltaBytes.
-                 * @member {number} deltaBytes
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @instance
-                 */
-                Counters.prototype.deltaBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Creates a new Counters instance using the specified properties.
-                 * @function create
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICounters=} [properties] Properties to set
-                 * @returns {perfetto.protos.HeapProfileCallsites.Counters} Counters instance
-                 */
-                Counters.create = function create(properties) {
-                    return new Counters(properties);
-                };
-
-                /**
-                 * Encodes the specified Counters message. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Counters.verify|verify} messages.
-                 * @function encode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICounters} message Counters message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Counters.encode = function encode(message, writer) {
-                    if (!writer)
-                        writer = $Writer.create();
-                    if (message.totalCount != null && Object.hasOwnProperty.call(message, "totalCount"))
-                        writer.uint32(/* id 1, wireType 0 =*/8).int64(message.totalCount);
-                    if (message.totalBytes != null && Object.hasOwnProperty.call(message, "totalBytes"))
-                        writer.uint32(/* id 2, wireType 0 =*/16).int64(message.totalBytes);
-                    if (message.deltaCount != null && Object.hasOwnProperty.call(message, "deltaCount"))
-                        writer.uint32(/* id 3, wireType 0 =*/24).int64(message.deltaCount);
-                    if (message.deltaBytes != null && Object.hasOwnProperty.call(message, "deltaBytes"))
-                        writer.uint32(/* id 4, wireType 0 =*/32).int64(message.deltaBytes);
-                    return writer;
-                };
-
-                /**
-                 * Encodes the specified Counters message, length delimited. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Counters.verify|verify} messages.
-                 * @function encodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICounters} message Counters message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Counters.encodeDelimited = function encodeDelimited(message, writer) {
-                    return this.encode(message, writer).ldelim();
-                };
-
-                /**
-                 * Decodes a Counters message from the specified reader or buffer.
-                 * @function decode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @param {number} [length] Message length if known beforehand
-                 * @returns {perfetto.protos.HeapProfileCallsites.Counters} Counters
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Counters.decode = function decode(reader, length) {
-                    if (!(reader instanceof $Reader))
-                        reader = $Reader.create(reader);
-                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.HeapProfileCallsites.Counters();
-                    while (reader.pos < end) {
-                        var tag = reader.uint32();
-                        switch (tag >>> 3) {
-                        case 1:
-                            message.totalCount = reader.int64();
-                            break;
-                        case 2:
-                            message.totalBytes = reader.int64();
-                            break;
-                        case 3:
-                            message.deltaCount = reader.int64();
-                            break;
-                        case 4:
-                            message.deltaBytes = reader.int64();
-                            break;
-                        default:
-                            reader.skipType(tag & 7);
-                            break;
-                        }
-                    }
-                    return message;
-                };
-
-                /**
-                 * Decodes a Counters message from the specified reader or buffer, length delimited.
-                 * @function decodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @returns {perfetto.protos.HeapProfileCallsites.Counters} Counters
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Counters.decodeDelimited = function decodeDelimited(reader) {
-                    if (!(reader instanceof $Reader))
-                        reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
-                };
-
-                /**
-                 * Verifies a Counters message.
-                 * @function verify
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {Object.<string,*>} message Plain object to verify
-                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
-                 */
-                Counters.verify = function verify(message) {
-                    if (typeof message !== "object" || message === null)
-                        return "object expected";
-                    if (message.totalCount != null && message.hasOwnProperty("totalCount"))
-                        if (!$util.isInteger(message.totalCount) && !(message.totalCount && $util.isInteger(message.totalCount.low) && $util.isInteger(message.totalCount.high)))
-                            return "totalCount: integer|Long expected";
-                    if (message.totalBytes != null && message.hasOwnProperty("totalBytes"))
-                        if (!$util.isInteger(message.totalBytes) && !(message.totalBytes && $util.isInteger(message.totalBytes.low) && $util.isInteger(message.totalBytes.high)))
-                            return "totalBytes: integer|Long expected";
-                    if (message.deltaCount != null && message.hasOwnProperty("deltaCount"))
-                        if (!$util.isInteger(message.deltaCount) && !(message.deltaCount && $util.isInteger(message.deltaCount.low) && $util.isInteger(message.deltaCount.high)))
-                            return "deltaCount: integer|Long expected";
-                    if (message.deltaBytes != null && message.hasOwnProperty("deltaBytes"))
-                        if (!$util.isInteger(message.deltaBytes) && !(message.deltaBytes && $util.isInteger(message.deltaBytes.low) && $util.isInteger(message.deltaBytes.high)))
-                            return "deltaBytes: integer|Long expected";
-                    return null;
-                };
-
-                /**
-                 * Creates a Counters message from a plain object. Also converts values to their respective internal types.
-                 * @function fromObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {Object.<string,*>} object Plain object
-                 * @returns {perfetto.protos.HeapProfileCallsites.Counters} Counters
-                 */
-                Counters.fromObject = function fromObject(object) {
-                    if (object instanceof $root.perfetto.protos.HeapProfileCallsites.Counters)
-                        return object;
-                    var message = new $root.perfetto.protos.HeapProfileCallsites.Counters();
-                    if (object.totalCount != null)
-                        if ($util.Long)
-                            (message.totalCount = $util.Long.fromValue(object.totalCount)).unsigned = false;
-                        else if (typeof object.totalCount === "string")
-                            message.totalCount = parseInt(object.totalCount, 10);
-                        else if (typeof object.totalCount === "number")
-                            message.totalCount = object.totalCount;
-                        else if (typeof object.totalCount === "object")
-                            message.totalCount = new $util.LongBits(object.totalCount.low >>> 0, object.totalCount.high >>> 0).toNumber();
-                    if (object.totalBytes != null)
-                        if ($util.Long)
-                            (message.totalBytes = $util.Long.fromValue(object.totalBytes)).unsigned = false;
-                        else if (typeof object.totalBytes === "string")
-                            message.totalBytes = parseInt(object.totalBytes, 10);
-                        else if (typeof object.totalBytes === "number")
-                            message.totalBytes = object.totalBytes;
-                        else if (typeof object.totalBytes === "object")
-                            message.totalBytes = new $util.LongBits(object.totalBytes.low >>> 0, object.totalBytes.high >>> 0).toNumber();
-                    if (object.deltaCount != null)
-                        if ($util.Long)
-                            (message.deltaCount = $util.Long.fromValue(object.deltaCount)).unsigned = false;
-                        else if (typeof object.deltaCount === "string")
-                            message.deltaCount = parseInt(object.deltaCount, 10);
-                        else if (typeof object.deltaCount === "number")
-                            message.deltaCount = object.deltaCount;
-                        else if (typeof object.deltaCount === "object")
-                            message.deltaCount = new $util.LongBits(object.deltaCount.low >>> 0, object.deltaCount.high >>> 0).toNumber();
-                    if (object.deltaBytes != null)
-                        if ($util.Long)
-                            (message.deltaBytes = $util.Long.fromValue(object.deltaBytes)).unsigned = false;
-                        else if (typeof object.deltaBytes === "string")
-                            message.deltaBytes = parseInt(object.deltaBytes, 10);
-                        else if (typeof object.deltaBytes === "number")
-                            message.deltaBytes = object.deltaBytes;
-                        else if (typeof object.deltaBytes === "object")
-                            message.deltaBytes = new $util.LongBits(object.deltaBytes.low >>> 0, object.deltaBytes.high >>> 0).toNumber();
-                    return message;
-                };
-
-                /**
-                 * Creates a plain object from a Counters message. Also converts values to other types if specified.
-                 * @function toObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.Counters} message Counters
-                 * @param {$protobuf.IConversionOptions} [options] Conversion options
-                 * @returns {Object.<string,*>} Plain object
-                 */
-                Counters.toObject = function toObject(message, options) {
-                    if (!options)
-                        options = {};
-                    var object = {};
-                    if (options.defaults) {
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.totalCount = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.totalCount = options.longs === String ? "0" : 0;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.totalBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.totalBytes = options.longs === String ? "0" : 0;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.deltaCount = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.deltaCount = options.longs === String ? "0" : 0;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.deltaBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.deltaBytes = options.longs === String ? "0" : 0;
-                    }
-                    if (message.totalCount != null && message.hasOwnProperty("totalCount"))
-                        if (typeof message.totalCount === "number")
-                            object.totalCount = options.longs === String ? String(message.totalCount) : message.totalCount;
-                        else
-                            object.totalCount = options.longs === String ? $util.Long.prototype.toString.call(message.totalCount) : options.longs === Number ? new $util.LongBits(message.totalCount.low >>> 0, message.totalCount.high >>> 0).toNumber() : message.totalCount;
-                    if (message.totalBytes != null && message.hasOwnProperty("totalBytes"))
-                        if (typeof message.totalBytes === "number")
-                            object.totalBytes = options.longs === String ? String(message.totalBytes) : message.totalBytes;
-                        else
-                            object.totalBytes = options.longs === String ? $util.Long.prototype.toString.call(message.totalBytes) : options.longs === Number ? new $util.LongBits(message.totalBytes.low >>> 0, message.totalBytes.high >>> 0).toNumber() : message.totalBytes;
-                    if (message.deltaCount != null && message.hasOwnProperty("deltaCount"))
-                        if (typeof message.deltaCount === "number")
-                            object.deltaCount = options.longs === String ? String(message.deltaCount) : message.deltaCount;
-                        else
-                            object.deltaCount = options.longs === String ? $util.Long.prototype.toString.call(message.deltaCount) : options.longs === Number ? new $util.LongBits(message.deltaCount.low >>> 0, message.deltaCount.high >>> 0).toNumber() : message.deltaCount;
-                    if (message.deltaBytes != null && message.hasOwnProperty("deltaBytes"))
-                        if (typeof message.deltaBytes === "number")
-                            object.deltaBytes = options.longs === String ? String(message.deltaBytes) : message.deltaBytes;
-                        else
-                            object.deltaBytes = options.longs === String ? $util.Long.prototype.toString.call(message.deltaBytes) : options.longs === Number ? new $util.LongBits(message.deltaBytes.low >>> 0, message.deltaBytes.high >>> 0).toNumber() : message.deltaBytes;
-                    return object;
-                };
-
-                /**
-                 * Converts this Counters to JSON.
-                 * @function toJSON
-                 * @memberof perfetto.protos.HeapProfileCallsites.Counters
-                 * @instance
-                 * @returns {Object.<string,*>} JSON object
-                 */
-                Counters.prototype.toJSON = function toJSON() {
-                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-                };
-
-                return Counters;
-            })();
-
-            HeapProfileCallsites.Callsite = (function() {
-
-                /**
-                 * Properties of a Callsite.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @interface ICallsite
-                 * @property {number|null} [hash] Callsite hash
-                 * @property {number|null} [parentHash] Callsite parentHash
-                 * @property {perfetto.protos.HeapProfileCallsites.IFrame|null} [frame] Callsite frame
-                 * @property {perfetto.protos.HeapProfileCallsites.ICounters|null} [selfAllocs] Callsite selfAllocs
-                 * @property {perfetto.protos.HeapProfileCallsites.ICounters|null} [childAllocs] Callsite childAllocs
-                 */
-
-                /**
-                 * Constructs a new Callsite.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @classdesc Represents a Callsite.
-                 * @implements ICallsite
-                 * @constructor
-                 * @param {perfetto.protos.HeapProfileCallsites.ICallsite=} [properties] Properties to set
-                 */
-                function Callsite(properties) {
-                    if (properties)
-                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                            if (properties[keys[i]] != null)
-                                this[keys[i]] = properties[keys[i]];
-                }
-
-                /**
-                 * Callsite hash.
-                 * @member {number} hash
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 */
-                Callsite.prototype.hash = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Callsite parentHash.
-                 * @member {number} parentHash
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 */
-                Callsite.prototype.parentHash = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Callsite frame.
-                 * @member {perfetto.protos.HeapProfileCallsites.IFrame|null|undefined} frame
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 */
-                Callsite.prototype.frame = null;
-
-                /**
-                 * Callsite selfAllocs.
-                 * @member {perfetto.protos.HeapProfileCallsites.ICounters|null|undefined} selfAllocs
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 */
-                Callsite.prototype.selfAllocs = null;
-
-                /**
-                 * Callsite childAllocs.
-                 * @member {perfetto.protos.HeapProfileCallsites.ICounters|null|undefined} childAllocs
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 */
-                Callsite.prototype.childAllocs = null;
-
-                /**
-                 * Creates a new Callsite instance using the specified properties.
-                 * @function create
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICallsite=} [properties] Properties to set
-                 * @returns {perfetto.protos.HeapProfileCallsites.Callsite} Callsite instance
-                 */
-                Callsite.create = function create(properties) {
-                    return new Callsite(properties);
-                };
-
-                /**
-                 * Encodes the specified Callsite message. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Callsite.verify|verify} messages.
-                 * @function encode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICallsite} message Callsite message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Callsite.encode = function encode(message, writer) {
-                    if (!writer)
-                        writer = $Writer.create();
-                    if (message.hash != null && Object.hasOwnProperty.call(message, "hash"))
-                        writer.uint32(/* id 1, wireType 0 =*/8).int64(message.hash);
-                    if (message.parentHash != null && Object.hasOwnProperty.call(message, "parentHash"))
-                        writer.uint32(/* id 2, wireType 0 =*/16).int64(message.parentHash);
-                    if (message.frame != null && Object.hasOwnProperty.call(message, "frame"))
-                        $root.perfetto.protos.HeapProfileCallsites.Frame.encode(message.frame, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
-                    if (message.selfAllocs != null && Object.hasOwnProperty.call(message, "selfAllocs"))
-                        $root.perfetto.protos.HeapProfileCallsites.Counters.encode(message.selfAllocs, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
-                    if (message.childAllocs != null && Object.hasOwnProperty.call(message, "childAllocs"))
-                        $root.perfetto.protos.HeapProfileCallsites.Counters.encode(message.childAllocs, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
-                    return writer;
-                };
-
-                /**
-                 * Encodes the specified Callsite message, length delimited. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.Callsite.verify|verify} messages.
-                 * @function encodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.ICallsite} message Callsite message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Callsite.encodeDelimited = function encodeDelimited(message, writer) {
-                    return this.encode(message, writer).ldelim();
-                };
-
-                /**
-                 * Decodes a Callsite message from the specified reader or buffer.
-                 * @function decode
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @param {number} [length] Message length if known beforehand
-                 * @returns {perfetto.protos.HeapProfileCallsites.Callsite} Callsite
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Callsite.decode = function decode(reader, length) {
-                    if (!(reader instanceof $Reader))
-                        reader = $Reader.create(reader);
-                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.HeapProfileCallsites.Callsite();
-                    while (reader.pos < end) {
-                        var tag = reader.uint32();
-                        switch (tag >>> 3) {
-                        case 1:
-                            message.hash = reader.int64();
-                            break;
-                        case 2:
-                            message.parentHash = reader.int64();
-                            break;
-                        case 3:
-                            message.frame = $root.perfetto.protos.HeapProfileCallsites.Frame.decode(reader, reader.uint32());
-                            break;
-                        case 4:
-                            message.selfAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.decode(reader, reader.uint32());
-                            break;
-                        case 5:
-                            message.childAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.decode(reader, reader.uint32());
-                            break;
-                        default:
-                            reader.skipType(tag & 7);
-                            break;
-                        }
-                    }
-                    return message;
-                };
-
-                /**
-                 * Decodes a Callsite message from the specified reader or buffer, length delimited.
-                 * @function decodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @returns {perfetto.protos.HeapProfileCallsites.Callsite} Callsite
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Callsite.decodeDelimited = function decodeDelimited(reader) {
-                    if (!(reader instanceof $Reader))
-                        reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
-                };
-
-                /**
-                 * Verifies a Callsite message.
-                 * @function verify
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {Object.<string,*>} message Plain object to verify
-                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
-                 */
-                Callsite.verify = function verify(message) {
-                    if (typeof message !== "object" || message === null)
-                        return "object expected";
-                    if (message.hash != null && message.hasOwnProperty("hash"))
-                        if (!$util.isInteger(message.hash) && !(message.hash && $util.isInteger(message.hash.low) && $util.isInteger(message.hash.high)))
-                            return "hash: integer|Long expected";
-                    if (message.parentHash != null && message.hasOwnProperty("parentHash"))
-                        if (!$util.isInteger(message.parentHash) && !(message.parentHash && $util.isInteger(message.parentHash.low) && $util.isInteger(message.parentHash.high)))
-                            return "parentHash: integer|Long expected";
-                    if (message.frame != null && message.hasOwnProperty("frame")) {
-                        var error = $root.perfetto.protos.HeapProfileCallsites.Frame.verify(message.frame);
-                        if (error)
-                            return "frame." + error;
-                    }
-                    if (message.selfAllocs != null && message.hasOwnProperty("selfAllocs")) {
-                        var error = $root.perfetto.protos.HeapProfileCallsites.Counters.verify(message.selfAllocs);
-                        if (error)
-                            return "selfAllocs." + error;
-                    }
-                    if (message.childAllocs != null && message.hasOwnProperty("childAllocs")) {
-                        var error = $root.perfetto.protos.HeapProfileCallsites.Counters.verify(message.childAllocs);
-                        if (error)
-                            return "childAllocs." + error;
-                    }
-                    return null;
-                };
-
-                /**
-                 * Creates a Callsite message from a plain object. Also converts values to their respective internal types.
-                 * @function fromObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {Object.<string,*>} object Plain object
-                 * @returns {perfetto.protos.HeapProfileCallsites.Callsite} Callsite
-                 */
-                Callsite.fromObject = function fromObject(object) {
-                    if (object instanceof $root.perfetto.protos.HeapProfileCallsites.Callsite)
-                        return object;
-                    var message = new $root.perfetto.protos.HeapProfileCallsites.Callsite();
-                    if (object.hash != null)
-                        if ($util.Long)
-                            (message.hash = $util.Long.fromValue(object.hash)).unsigned = false;
-                        else if (typeof object.hash === "string")
-                            message.hash = parseInt(object.hash, 10);
-                        else if (typeof object.hash === "number")
-                            message.hash = object.hash;
-                        else if (typeof object.hash === "object")
-                            message.hash = new $util.LongBits(object.hash.low >>> 0, object.hash.high >>> 0).toNumber();
-                    if (object.parentHash != null)
-                        if ($util.Long)
-                            (message.parentHash = $util.Long.fromValue(object.parentHash)).unsigned = false;
-                        else if (typeof object.parentHash === "string")
-                            message.parentHash = parseInt(object.parentHash, 10);
-                        else if (typeof object.parentHash === "number")
-                            message.parentHash = object.parentHash;
-                        else if (typeof object.parentHash === "object")
-                            message.parentHash = new $util.LongBits(object.parentHash.low >>> 0, object.parentHash.high >>> 0).toNumber();
-                    if (object.frame != null) {
-                        if (typeof object.frame !== "object")
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.Callsite.frame: object expected");
-                        message.frame = $root.perfetto.protos.HeapProfileCallsites.Frame.fromObject(object.frame);
-                    }
-                    if (object.selfAllocs != null) {
-                        if (typeof object.selfAllocs !== "object")
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.Callsite.selfAllocs: object expected");
-                        message.selfAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.fromObject(object.selfAllocs);
-                    }
-                    if (object.childAllocs != null) {
-                        if (typeof object.childAllocs !== "object")
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.Callsite.childAllocs: object expected");
-                        message.childAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.fromObject(object.childAllocs);
-                    }
-                    return message;
-                };
-
-                /**
-                 * Creates a plain object from a Callsite message. Also converts values to other types if specified.
-                 * @function toObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.Callsite} message Callsite
-                 * @param {$protobuf.IConversionOptions} [options] Conversion options
-                 * @returns {Object.<string,*>} Plain object
-                 */
-                Callsite.toObject = function toObject(message, options) {
-                    if (!options)
-                        options = {};
-                    var object = {};
-                    if (options.defaults) {
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.hash = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.hash = options.longs === String ? "0" : 0;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.parentHash = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.parentHash = options.longs === String ? "0" : 0;
-                        object.frame = null;
-                        object.selfAllocs = null;
-                        object.childAllocs = null;
-                    }
-                    if (message.hash != null && message.hasOwnProperty("hash"))
-                        if (typeof message.hash === "number")
-                            object.hash = options.longs === String ? String(message.hash) : message.hash;
-                        else
-                            object.hash = options.longs === String ? $util.Long.prototype.toString.call(message.hash) : options.longs === Number ? new $util.LongBits(message.hash.low >>> 0, message.hash.high >>> 0).toNumber() : message.hash;
-                    if (message.parentHash != null && message.hasOwnProperty("parentHash"))
-                        if (typeof message.parentHash === "number")
-                            object.parentHash = options.longs === String ? String(message.parentHash) : message.parentHash;
-                        else
-                            object.parentHash = options.longs === String ? $util.Long.prototype.toString.call(message.parentHash) : options.longs === Number ? new $util.LongBits(message.parentHash.low >>> 0, message.parentHash.high >>> 0).toNumber() : message.parentHash;
-                    if (message.frame != null && message.hasOwnProperty("frame"))
-                        object.frame = $root.perfetto.protos.HeapProfileCallsites.Frame.toObject(message.frame, options);
-                    if (message.selfAllocs != null && message.hasOwnProperty("selfAllocs"))
-                        object.selfAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.toObject(message.selfAllocs, options);
-                    if (message.childAllocs != null && message.hasOwnProperty("childAllocs"))
-                        object.childAllocs = $root.perfetto.protos.HeapProfileCallsites.Counters.toObject(message.childAllocs, options);
-                    return object;
-                };
-
-                /**
-                 * Converts this Callsite to JSON.
-                 * @function toJSON
-                 * @memberof perfetto.protos.HeapProfileCallsites.Callsite
-                 * @instance
-                 * @returns {Object.<string,*>} JSON object
-                 */
-                Callsite.prototype.toJSON = function toJSON() {
-                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-                };
-
-                return Callsite;
-            })();
-
-            HeapProfileCallsites.InstanceStats = (function() {
-
-                /**
-                 * Properties of an InstanceStats.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @interface IInstanceStats
-                 * @property {number|null} [pid] InstanceStats pid
-                 * @property {string|null} [processName] InstanceStats processName
-                 * @property {perfetto.protos.IAndroidProcessMetadata|null} [process] InstanceStats process
-                 * @property {Array.<perfetto.protos.HeapProfileCallsites.ICallsite>|null} [callsites] InstanceStats callsites
-                 * @property {number|null} [profileDeltaBytes] InstanceStats profileDeltaBytes
-                 * @property {number|null} [profileTotalBytes] InstanceStats profileTotalBytes
-                 * @property {number|null} [maxAnonRssAndSwapBytes] InstanceStats maxAnonRssAndSwapBytes
-                 */
-
-                /**
-                 * Constructs a new InstanceStats.
-                 * @memberof perfetto.protos.HeapProfileCallsites
-                 * @classdesc Represents an InstanceStats.
-                 * @implements IInstanceStats
-                 * @constructor
-                 * @param {perfetto.protos.HeapProfileCallsites.IInstanceStats=} [properties] Properties to set
-                 */
-                function InstanceStats(properties) {
-                    this.callsites = [];
-                    if (properties)
-                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                            if (properties[keys[i]] != null)
-                                this[keys[i]] = properties[keys[i]];
-                }
-
-                /**
-                 * InstanceStats pid.
-                 * @member {number} pid
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.pid = 0;
-
-                /**
-                 * InstanceStats processName.
-                 * @member {string} processName
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.processName = "";
-
-                /**
-                 * InstanceStats process.
-                 * @member {perfetto.protos.IAndroidProcessMetadata|null|undefined} process
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.process = null;
-
-                /**
-                 * InstanceStats callsites.
-                 * @member {Array.<perfetto.protos.HeapProfileCallsites.ICallsite>} callsites
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.callsites = $util.emptyArray;
-
-                /**
-                 * InstanceStats profileDeltaBytes.
-                 * @member {number} profileDeltaBytes
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.profileDeltaBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * InstanceStats profileTotalBytes.
-                 * @member {number} profileTotalBytes
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.profileTotalBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * InstanceStats maxAnonRssAndSwapBytes.
-                 * @member {number} maxAnonRssAndSwapBytes
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 */
-                InstanceStats.prototype.maxAnonRssAndSwapBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Creates a new InstanceStats instance using the specified properties.
-                 * @function create
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IInstanceStats=} [properties] Properties to set
-                 * @returns {perfetto.protos.HeapProfileCallsites.InstanceStats} InstanceStats instance
-                 */
-                InstanceStats.create = function create(properties) {
-                    return new InstanceStats(properties);
-                };
-
-                /**
-                 * Encodes the specified InstanceStats message. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.InstanceStats.verify|verify} messages.
-                 * @function encode
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IInstanceStats} message InstanceStats message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                InstanceStats.encode = function encode(message, writer) {
-                    if (!writer)
-                        writer = $Writer.create();
-                    if (message.pid != null && Object.hasOwnProperty.call(message, "pid"))
-                        writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.pid);
-                    if (message.processName != null && Object.hasOwnProperty.call(message, "processName"))
-                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.processName);
-                    if (message.callsites != null && message.callsites.length)
-                        for (var i = 0; i < message.callsites.length; ++i)
-                            $root.perfetto.protos.HeapProfileCallsites.Callsite.encode(message.callsites[i], writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
-                    if (message.profileDeltaBytes != null && Object.hasOwnProperty.call(message, "profileDeltaBytes"))
-                        writer.uint32(/* id 4, wireType 0 =*/32).int64(message.profileDeltaBytes);
-                    if (message.profileTotalBytes != null && Object.hasOwnProperty.call(message, "profileTotalBytes"))
-                        writer.uint32(/* id 5, wireType 0 =*/40).int64(message.profileTotalBytes);
-                    if (message.process != null && Object.hasOwnProperty.call(message, "process"))
-                        $root.perfetto.protos.AndroidProcessMetadata.encode(message.process, writer.uint32(/* id 6, wireType 2 =*/50).fork()).ldelim();
-                    if (message.maxAnonRssAndSwapBytes != null && Object.hasOwnProperty.call(message, "maxAnonRssAndSwapBytes"))
-                        writer.uint32(/* id 7, wireType 0 =*/56).int64(message.maxAnonRssAndSwapBytes);
-                    return writer;
-                };
-
-                /**
-                 * Encodes the specified InstanceStats message, length delimited. Does not implicitly {@link perfetto.protos.HeapProfileCallsites.InstanceStats.verify|verify} messages.
-                 * @function encodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.IInstanceStats} message InstanceStats message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                InstanceStats.encodeDelimited = function encodeDelimited(message, writer) {
-                    return this.encode(message, writer).ldelim();
-                };
-
-                /**
-                 * Decodes an InstanceStats message from the specified reader or buffer.
-                 * @function decode
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @param {number} [length] Message length if known beforehand
-                 * @returns {perfetto.protos.HeapProfileCallsites.InstanceStats} InstanceStats
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                InstanceStats.decode = function decode(reader, length) {
-                    if (!(reader instanceof $Reader))
-                        reader = $Reader.create(reader);
-                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.HeapProfileCallsites.InstanceStats();
-                    while (reader.pos < end) {
-                        var tag = reader.uint32();
-                        switch (tag >>> 3) {
-                        case 1:
-                            message.pid = reader.uint32();
-                            break;
-                        case 2:
-                            message.processName = reader.string();
-                            break;
-                        case 6:
-                            message.process = $root.perfetto.protos.AndroidProcessMetadata.decode(reader, reader.uint32());
-                            break;
-                        case 3:
-                            if (!(message.callsites && message.callsites.length))
-                                message.callsites = [];
-                            message.callsites.push($root.perfetto.protos.HeapProfileCallsites.Callsite.decode(reader, reader.uint32()));
-                            break;
-                        case 4:
-                            message.profileDeltaBytes = reader.int64();
-                            break;
-                        case 5:
-                            message.profileTotalBytes = reader.int64();
-                            break;
-                        case 7:
-                            message.maxAnonRssAndSwapBytes = reader.int64();
-                            break;
-                        default:
-                            reader.skipType(tag & 7);
-                            break;
-                        }
-                    }
-                    return message;
-                };
-
-                /**
-                 * Decodes an InstanceStats message from the specified reader or buffer, length delimited.
-                 * @function decodeDelimited
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @returns {perfetto.protos.HeapProfileCallsites.InstanceStats} InstanceStats
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                InstanceStats.decodeDelimited = function decodeDelimited(reader) {
-                    if (!(reader instanceof $Reader))
-                        reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
-                };
-
-                /**
-                 * Verifies an InstanceStats message.
-                 * @function verify
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {Object.<string,*>} message Plain object to verify
-                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
-                 */
-                InstanceStats.verify = function verify(message) {
-                    if (typeof message !== "object" || message === null)
-                        return "object expected";
-                    if (message.pid != null && message.hasOwnProperty("pid"))
-                        if (!$util.isInteger(message.pid))
-                            return "pid: integer expected";
-                    if (message.processName != null && message.hasOwnProperty("processName"))
-                        if (!$util.isString(message.processName))
-                            return "processName: string expected";
-                    if (message.process != null && message.hasOwnProperty("process")) {
-                        var error = $root.perfetto.protos.AndroidProcessMetadata.verify(message.process);
-                        if (error)
-                            return "process." + error;
-                    }
-                    if (message.callsites != null && message.hasOwnProperty("callsites")) {
-                        if (!Array.isArray(message.callsites))
-                            return "callsites: array expected";
-                        for (var i = 0; i < message.callsites.length; ++i) {
-                            var error = $root.perfetto.protos.HeapProfileCallsites.Callsite.verify(message.callsites[i]);
-                            if (error)
-                                return "callsites." + error;
-                        }
-                    }
-                    if (message.profileDeltaBytes != null && message.hasOwnProperty("profileDeltaBytes"))
-                        if (!$util.isInteger(message.profileDeltaBytes) && !(message.profileDeltaBytes && $util.isInteger(message.profileDeltaBytes.low) && $util.isInteger(message.profileDeltaBytes.high)))
-                            return "profileDeltaBytes: integer|Long expected";
-                    if (message.profileTotalBytes != null && message.hasOwnProperty("profileTotalBytes"))
-                        if (!$util.isInteger(message.profileTotalBytes) && !(message.profileTotalBytes && $util.isInteger(message.profileTotalBytes.low) && $util.isInteger(message.profileTotalBytes.high)))
-                            return "profileTotalBytes: integer|Long expected";
-                    if (message.maxAnonRssAndSwapBytes != null && message.hasOwnProperty("maxAnonRssAndSwapBytes"))
-                        if (!$util.isInteger(message.maxAnonRssAndSwapBytes) && !(message.maxAnonRssAndSwapBytes && $util.isInteger(message.maxAnonRssAndSwapBytes.low) && $util.isInteger(message.maxAnonRssAndSwapBytes.high)))
-                            return "maxAnonRssAndSwapBytes: integer|Long expected";
-                    return null;
-                };
-
-                /**
-                 * Creates an InstanceStats message from a plain object. Also converts values to their respective internal types.
-                 * @function fromObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {Object.<string,*>} object Plain object
-                 * @returns {perfetto.protos.HeapProfileCallsites.InstanceStats} InstanceStats
-                 */
-                InstanceStats.fromObject = function fromObject(object) {
-                    if (object instanceof $root.perfetto.protos.HeapProfileCallsites.InstanceStats)
-                        return object;
-                    var message = new $root.perfetto.protos.HeapProfileCallsites.InstanceStats();
-                    if (object.pid != null)
-                        message.pid = object.pid >>> 0;
-                    if (object.processName != null)
-                        message.processName = String(object.processName);
-                    if (object.process != null) {
-                        if (typeof object.process !== "object")
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.InstanceStats.process: object expected");
-                        message.process = $root.perfetto.protos.AndroidProcessMetadata.fromObject(object.process);
-                    }
-                    if (object.callsites) {
-                        if (!Array.isArray(object.callsites))
-                            throw TypeError(".perfetto.protos.HeapProfileCallsites.InstanceStats.callsites: array expected");
-                        message.callsites = [];
-                        for (var i = 0; i < object.callsites.length; ++i) {
-                            if (typeof object.callsites[i] !== "object")
-                                throw TypeError(".perfetto.protos.HeapProfileCallsites.InstanceStats.callsites: object expected");
-                            message.callsites[i] = $root.perfetto.protos.HeapProfileCallsites.Callsite.fromObject(object.callsites[i]);
-                        }
-                    }
-                    if (object.profileDeltaBytes != null)
-                        if ($util.Long)
-                            (message.profileDeltaBytes = $util.Long.fromValue(object.profileDeltaBytes)).unsigned = false;
-                        else if (typeof object.profileDeltaBytes === "string")
-                            message.profileDeltaBytes = parseInt(object.profileDeltaBytes, 10);
-                        else if (typeof object.profileDeltaBytes === "number")
-                            message.profileDeltaBytes = object.profileDeltaBytes;
-                        else if (typeof object.profileDeltaBytes === "object")
-                            message.profileDeltaBytes = new $util.LongBits(object.profileDeltaBytes.low >>> 0, object.profileDeltaBytes.high >>> 0).toNumber();
-                    if (object.profileTotalBytes != null)
-                        if ($util.Long)
-                            (message.profileTotalBytes = $util.Long.fromValue(object.profileTotalBytes)).unsigned = false;
-                        else if (typeof object.profileTotalBytes === "string")
-                            message.profileTotalBytes = parseInt(object.profileTotalBytes, 10);
-                        else if (typeof object.profileTotalBytes === "number")
-                            message.profileTotalBytes = object.profileTotalBytes;
-                        else if (typeof object.profileTotalBytes === "object")
-                            message.profileTotalBytes = new $util.LongBits(object.profileTotalBytes.low >>> 0, object.profileTotalBytes.high >>> 0).toNumber();
-                    if (object.maxAnonRssAndSwapBytes != null)
-                        if ($util.Long)
-                            (message.maxAnonRssAndSwapBytes = $util.Long.fromValue(object.maxAnonRssAndSwapBytes)).unsigned = false;
-                        else if (typeof object.maxAnonRssAndSwapBytes === "string")
-                            message.maxAnonRssAndSwapBytes = parseInt(object.maxAnonRssAndSwapBytes, 10);
-                        else if (typeof object.maxAnonRssAndSwapBytes === "number")
-                            message.maxAnonRssAndSwapBytes = object.maxAnonRssAndSwapBytes;
-                        else if (typeof object.maxAnonRssAndSwapBytes === "object")
-                            message.maxAnonRssAndSwapBytes = new $util.LongBits(object.maxAnonRssAndSwapBytes.low >>> 0, object.maxAnonRssAndSwapBytes.high >>> 0).toNumber();
-                    return message;
-                };
-
-                /**
-                 * Creates a plain object from an InstanceStats message. Also converts values to other types if specified.
-                 * @function toObject
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @static
-                 * @param {perfetto.protos.HeapProfileCallsites.InstanceStats} message InstanceStats
-                 * @param {$protobuf.IConversionOptions} [options] Conversion options
-                 * @returns {Object.<string,*>} Plain object
-                 */
-                InstanceStats.toObject = function toObject(message, options) {
-                    if (!options)
-                        options = {};
-                    var object = {};
-                    if (options.arrays || options.defaults)
-                        object.callsites = [];
-                    if (options.defaults) {
-                        object.pid = 0;
-                        object.processName = "";
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.profileDeltaBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.profileDeltaBytes = options.longs === String ? "0" : 0;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.profileTotalBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.profileTotalBytes = options.longs === String ? "0" : 0;
-                        object.process = null;
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.maxAnonRssAndSwapBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.maxAnonRssAndSwapBytes = options.longs === String ? "0" : 0;
-                    }
-                    if (message.pid != null && message.hasOwnProperty("pid"))
-                        object.pid = message.pid;
-                    if (message.processName != null && message.hasOwnProperty("processName"))
-                        object.processName = message.processName;
-                    if (message.callsites && message.callsites.length) {
-                        object.callsites = [];
-                        for (var j = 0; j < message.callsites.length; ++j)
-                            object.callsites[j] = $root.perfetto.protos.HeapProfileCallsites.Callsite.toObject(message.callsites[j], options);
-                    }
-                    if (message.profileDeltaBytes != null && message.hasOwnProperty("profileDeltaBytes"))
-                        if (typeof message.profileDeltaBytes === "number")
-                            object.profileDeltaBytes = options.longs === String ? String(message.profileDeltaBytes) : message.profileDeltaBytes;
-                        else
-                            object.profileDeltaBytes = options.longs === String ? $util.Long.prototype.toString.call(message.profileDeltaBytes) : options.longs === Number ? new $util.LongBits(message.profileDeltaBytes.low >>> 0, message.profileDeltaBytes.high >>> 0).toNumber() : message.profileDeltaBytes;
-                    if (message.profileTotalBytes != null && message.hasOwnProperty("profileTotalBytes"))
-                        if (typeof message.profileTotalBytes === "number")
-                            object.profileTotalBytes = options.longs === String ? String(message.profileTotalBytes) : message.profileTotalBytes;
-                        else
-                            object.profileTotalBytes = options.longs === String ? $util.Long.prototype.toString.call(message.profileTotalBytes) : options.longs === Number ? new $util.LongBits(message.profileTotalBytes.low >>> 0, message.profileTotalBytes.high >>> 0).toNumber() : message.profileTotalBytes;
-                    if (message.process != null && message.hasOwnProperty("process"))
-                        object.process = $root.perfetto.protos.AndroidProcessMetadata.toObject(message.process, options);
-                    if (message.maxAnonRssAndSwapBytes != null && message.hasOwnProperty("maxAnonRssAndSwapBytes"))
-                        if (typeof message.maxAnonRssAndSwapBytes === "number")
-                            object.maxAnonRssAndSwapBytes = options.longs === String ? String(message.maxAnonRssAndSwapBytes) : message.maxAnonRssAndSwapBytes;
-                        else
-                            object.maxAnonRssAndSwapBytes = options.longs === String ? $util.Long.prototype.toString.call(message.maxAnonRssAndSwapBytes) : options.longs === Number ? new $util.LongBits(message.maxAnonRssAndSwapBytes.low >>> 0, message.maxAnonRssAndSwapBytes.high >>> 0).toNumber() : message.maxAnonRssAndSwapBytes;
-                    return object;
-                };
-
-                /**
-                 * Converts this InstanceStats to JSON.
-                 * @function toJSON
-                 * @memberof perfetto.protos.HeapProfileCallsites.InstanceStats
-                 * @instance
-                 * @returns {Object.<string,*>} JSON object
-                 */
-                InstanceStats.prototype.toJSON = function toJSON() {
-                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-                };
-
-                return InstanceStats;
-            })();
-
-            return HeapProfileCallsites;
-        })();
-
-        protos.AndroidProcessMetadata = (function() {
-
-            /**
-             * Properties of an AndroidProcessMetadata.
-             * @memberof perfetto.protos
-             * @interface IAndroidProcessMetadata
-             * @property {string|null} [name] AndroidProcessMetadata name
-             * @property {number|null} [uid] AndroidProcessMetadata uid
-             * @property {perfetto.protos.AndroidProcessMetadata.IPackage|null} ["package"] AndroidProcessMetadata package
-             * @property {Array.<perfetto.protos.AndroidProcessMetadata.IPackage>|null} [packagesForUid] AndroidProcessMetadata packagesForUid
-             */
-
-            /**
-             * Constructs a new AndroidProcessMetadata.
-             * @memberof perfetto.protos
-             * @classdesc Represents an AndroidProcessMetadata.
-             * @implements IAndroidProcessMetadata
-             * @constructor
-             * @param {perfetto.protos.IAndroidProcessMetadata=} [properties] Properties to set
-             */
-            function AndroidProcessMetadata(properties) {
-                this.packagesForUid = [];
-                if (properties)
-                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                        if (properties[keys[i]] != null)
-                            this[keys[i]] = properties[keys[i]];
-            }
-
-            /**
-             * AndroidProcessMetadata name.
-             * @member {string} name
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @instance
-             */
-            AndroidProcessMetadata.prototype.name = "";
-
-            /**
-             * AndroidProcessMetadata uid.
-             * @member {number} uid
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @instance
-             */
-            AndroidProcessMetadata.prototype.uid = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-            /**
-             * AndroidProcessMetadata package.
-             * @member {perfetto.protos.AndroidProcessMetadata.IPackage|null|undefined} package
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @instance
-             */
-            AndroidProcessMetadata.prototype["package"] = null;
-
-            /**
-             * AndroidProcessMetadata packagesForUid.
-             * @member {Array.<perfetto.protos.AndroidProcessMetadata.IPackage>} packagesForUid
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @instance
-             */
-            AndroidProcessMetadata.prototype.packagesForUid = $util.emptyArray;
-
-            /**
-             * Creates a new AndroidProcessMetadata instance using the specified properties.
-             * @function create
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {perfetto.protos.IAndroidProcessMetadata=} [properties] Properties to set
-             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata instance
-             */
-            AndroidProcessMetadata.create = function create(properties) {
-                return new AndroidProcessMetadata(properties);
-            };
-
-            /**
-             * Encodes the specified AndroidProcessMetadata message. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.verify|verify} messages.
-             * @function encode
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {perfetto.protos.IAndroidProcessMetadata} message AndroidProcessMetadata message or plain object to encode
-             * @param {$protobuf.Writer} [writer] Writer to encode to
-             * @returns {$protobuf.Writer} Writer
-             */
-            AndroidProcessMetadata.encode = function encode(message, writer) {
-                if (!writer)
-                    writer = $Writer.create();
-                if (message.name != null && Object.hasOwnProperty.call(message, "name"))
-                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
-                if (message.uid != null && Object.hasOwnProperty.call(message, "uid"))
-                    writer.uint32(/* id 2, wireType 0 =*/16).int64(message.uid);
-                if (message["package"] != null && Object.hasOwnProperty.call(message, "package"))
-                    $root.perfetto.protos.AndroidProcessMetadata.Package.encode(message["package"], writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
-                if (message.packagesForUid != null && message.packagesForUid.length)
-                    for (var i = 0; i < message.packagesForUid.length; ++i)
-                        $root.perfetto.protos.AndroidProcessMetadata.Package.encode(message.packagesForUid[i], writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
-                return writer;
-            };
-
-            /**
-             * Encodes the specified AndroidProcessMetadata message, length delimited. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.verify|verify} messages.
-             * @function encodeDelimited
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {perfetto.protos.IAndroidProcessMetadata} message AndroidProcessMetadata message or plain object to encode
-             * @param {$protobuf.Writer} [writer] Writer to encode to
-             * @returns {$protobuf.Writer} Writer
-             */
-            AndroidProcessMetadata.encodeDelimited = function encodeDelimited(message, writer) {
-                return this.encode(message, writer).ldelim();
-            };
-
-            /**
-             * Decodes an AndroidProcessMetadata message from the specified reader or buffer.
-             * @function decode
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-             * @param {number} [length] Message length if known beforehand
-             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
-             * @throws {Error} If the payload is not a reader or valid buffer
-             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-             */
-            AndroidProcessMetadata.decode = function decode(reader, length) {
-                if (!(reader instanceof $Reader))
-                    reader = $Reader.create(reader);
-                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.AndroidProcessMetadata();
-                while (reader.pos < end) {
-                    var tag = reader.uint32();
-                    switch (tag >>> 3) {
-                    case 1:
-                        message.name = reader.string();
-                        break;
-                    case 2:
-                        message.uid = reader.int64();
-                        break;
-                    case 7:
-                        message["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.decode(reader, reader.uint32());
-                        break;
-                    case 8:
-                        if (!(message.packagesForUid && message.packagesForUid.length))
-                            message.packagesForUid = [];
-                        message.packagesForUid.push($root.perfetto.protos.AndroidProcessMetadata.Package.decode(reader, reader.uint32()));
-                        break;
-                    default:
-                        reader.skipType(tag & 7);
-                        break;
-                    }
-                }
-                return message;
-            };
-
-            /**
-             * Decodes an AndroidProcessMetadata message from the specified reader or buffer, length delimited.
-             * @function decodeDelimited
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
-             * @throws {Error} If the payload is not a reader or valid buffer
-             * @throws {$protobuf.util.ProtocolError} If required fields are missing
-             */
-            AndroidProcessMetadata.decodeDelimited = function decodeDelimited(reader) {
-                if (!(reader instanceof $Reader))
-                    reader = new $Reader(reader);
-                return this.decode(reader, reader.uint32());
-            };
-
-            /**
-             * Verifies an AndroidProcessMetadata message.
-             * @function verify
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {Object.<string,*>} message Plain object to verify
-             * @returns {string|null} `null` if valid, otherwise the reason why it is not
-             */
-            AndroidProcessMetadata.verify = function verify(message) {
-                if (typeof message !== "object" || message === null)
-                    return "object expected";
-                if (message.name != null && message.hasOwnProperty("name"))
-                    if (!$util.isString(message.name))
-                        return "name: string expected";
-                if (message.uid != null && message.hasOwnProperty("uid"))
-                    if (!$util.isInteger(message.uid) && !(message.uid && $util.isInteger(message.uid.low) && $util.isInteger(message.uid.high)))
-                        return "uid: integer|Long expected";
-                if (message["package"] != null && message.hasOwnProperty("package")) {
-                    var error = $root.perfetto.protos.AndroidProcessMetadata.Package.verify(message["package"]);
-                    if (error)
-                        return "package." + error;
-                }
-                if (message.packagesForUid != null && message.hasOwnProperty("packagesForUid")) {
-                    if (!Array.isArray(message.packagesForUid))
-                        return "packagesForUid: array expected";
-                    for (var i = 0; i < message.packagesForUid.length; ++i) {
-                        var error = $root.perfetto.protos.AndroidProcessMetadata.Package.verify(message.packagesForUid[i]);
-                        if (error)
-                            return "packagesForUid." + error;
-                    }
-                }
-                return null;
-            };
-
-            /**
-             * Creates an AndroidProcessMetadata message from a plain object. Also converts values to their respective internal types.
-             * @function fromObject
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {Object.<string,*>} object Plain object
-             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
-             */
-            AndroidProcessMetadata.fromObject = function fromObject(object) {
-                if (object instanceof $root.perfetto.protos.AndroidProcessMetadata)
-                    return object;
-                var message = new $root.perfetto.protos.AndroidProcessMetadata();
-                if (object.name != null)
-                    message.name = String(object.name);
-                if (object.uid != null)
-                    if ($util.Long)
-                        (message.uid = $util.Long.fromValue(object.uid)).unsigned = false;
-                    else if (typeof object.uid === "string")
-                        message.uid = parseInt(object.uid, 10);
-                    else if (typeof object.uid === "number")
-                        message.uid = object.uid;
-                    else if (typeof object.uid === "object")
-                        message.uid = new $util.LongBits(object.uid.low >>> 0, object.uid.high >>> 0).toNumber();
-                if (object["package"] != null) {
-                    if (typeof object["package"] !== "object")
-                        throw TypeError(".perfetto.protos.AndroidProcessMetadata.package: object expected");
-                    message["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.fromObject(object["package"]);
-                }
-                if (object.packagesForUid) {
-                    if (!Array.isArray(object.packagesForUid))
-                        throw TypeError(".perfetto.protos.AndroidProcessMetadata.packagesForUid: array expected");
-                    message.packagesForUid = [];
-                    for (var i = 0; i < object.packagesForUid.length; ++i) {
-                        if (typeof object.packagesForUid[i] !== "object")
-                            throw TypeError(".perfetto.protos.AndroidProcessMetadata.packagesForUid: object expected");
-                        message.packagesForUid[i] = $root.perfetto.protos.AndroidProcessMetadata.Package.fromObject(object.packagesForUid[i]);
-                    }
-                }
-                return message;
-            };
-
-            /**
-             * Creates a plain object from an AndroidProcessMetadata message. Also converts values to other types if specified.
-             * @function toObject
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @static
-             * @param {perfetto.protos.AndroidProcessMetadata} message AndroidProcessMetadata
-             * @param {$protobuf.IConversionOptions} [options] Conversion options
-             * @returns {Object.<string,*>} Plain object
-             */
-            AndroidProcessMetadata.toObject = function toObject(message, options) {
-                if (!options)
-                    options = {};
-                var object = {};
-                if (options.arrays || options.defaults)
-                    object.packagesForUid = [];
-                if (options.defaults) {
-                    object.name = "";
-                    if ($util.Long) {
-                        var long = new $util.Long(0, 0, false);
-                        object.uid = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                    } else
-                        object.uid = options.longs === String ? "0" : 0;
-                    object["package"] = null;
-                }
-                if (message.name != null && message.hasOwnProperty("name"))
-                    object.name = message.name;
-                if (message.uid != null && message.hasOwnProperty("uid"))
-                    if (typeof message.uid === "number")
-                        object.uid = options.longs === String ? String(message.uid) : message.uid;
-                    else
-                        object.uid = options.longs === String ? $util.Long.prototype.toString.call(message.uid) : options.longs === Number ? new $util.LongBits(message.uid.low >>> 0, message.uid.high >>> 0).toNumber() : message.uid;
-                if (message["package"] != null && message.hasOwnProperty("package"))
-                    object["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.toObject(message["package"], options);
-                if (message.packagesForUid && message.packagesForUid.length) {
-                    object.packagesForUid = [];
-                    for (var j = 0; j < message.packagesForUid.length; ++j)
-                        object.packagesForUid[j] = $root.perfetto.protos.AndroidProcessMetadata.Package.toObject(message.packagesForUid[j], options);
-                }
-                return object;
-            };
-
-            /**
-             * Converts this AndroidProcessMetadata to JSON.
-             * @function toJSON
-             * @memberof perfetto.protos.AndroidProcessMetadata
-             * @instance
-             * @returns {Object.<string,*>} JSON object
-             */
-            AndroidProcessMetadata.prototype.toJSON = function toJSON() {
-                return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-            };
-
-            AndroidProcessMetadata.Package = (function() {
-
-                /**
-                 * Properties of a Package.
-                 * @memberof perfetto.protos.AndroidProcessMetadata
-                 * @interface IPackage
-                 * @property {string|null} [packageName] Package packageName
-                 * @property {number|null} [apkVersionCode] Package apkVersionCode
-                 * @property {boolean|null} [debuggable] Package debuggable
-                 */
-
-                /**
-                 * Constructs a new Package.
-                 * @memberof perfetto.protos.AndroidProcessMetadata
-                 * @classdesc Represents a Package.
-                 * @implements IPackage
-                 * @constructor
-                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage=} [properties] Properties to set
-                 */
-                function Package(properties) {
-                    if (properties)
-                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                            if (properties[keys[i]] != null)
-                                this[keys[i]] = properties[keys[i]];
-                }
-
-                /**
-                 * Package packageName.
-                 * @member {string} packageName
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @instance
-                 */
-                Package.prototype.packageName = "";
-
-                /**
-                 * Package apkVersionCode.
-                 * @member {number} apkVersionCode
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @instance
-                 */
-                Package.prototype.apkVersionCode = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-                /**
-                 * Package debuggable.
-                 * @member {boolean} debuggable
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @instance
-                 */
-                Package.prototype.debuggable = false;
-
-                /**
-                 * Creates a new Package instance using the specified properties.
-                 * @function create
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage=} [properties] Properties to set
-                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package instance
-                 */
-                Package.create = function create(properties) {
-                    return new Package(properties);
-                };
-
-                /**
-                 * Encodes the specified Package message. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.Package.verify|verify} messages.
-                 * @function encode
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage} message Package message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Package.encode = function encode(message, writer) {
-                    if (!writer)
-                        writer = $Writer.create();
-                    if (message.packageName != null && Object.hasOwnProperty.call(message, "packageName"))
-                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.packageName);
-                    if (message.apkVersionCode != null && Object.hasOwnProperty.call(message, "apkVersionCode"))
-                        writer.uint32(/* id 2, wireType 0 =*/16).int64(message.apkVersionCode);
-                    if (message.debuggable != null && Object.hasOwnProperty.call(message, "debuggable"))
-                        writer.uint32(/* id 3, wireType 0 =*/24).bool(message.debuggable);
-                    return writer;
-                };
-
-                /**
-                 * Encodes the specified Package message, length delimited. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.Package.verify|verify} messages.
-                 * @function encodeDelimited
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage} message Package message or plain object to encode
-                 * @param {$protobuf.Writer} [writer] Writer to encode to
-                 * @returns {$protobuf.Writer} Writer
-                 */
-                Package.encodeDelimited = function encodeDelimited(message, writer) {
-                    return this.encode(message, writer).ldelim();
-                };
-
-                /**
-                 * Decodes a Package message from the specified reader or buffer.
-                 * @function decode
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @param {number} [length] Message length if known beforehand
-                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Package.decode = function decode(reader, length) {
-                    if (!(reader instanceof $Reader))
-                        reader = $Reader.create(reader);
-                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.AndroidProcessMetadata.Package();
-                    while (reader.pos < end) {
-                        var tag = reader.uint32();
-                        switch (tag >>> 3) {
-                        case 1:
-                            message.packageName = reader.string();
-                            break;
-                        case 2:
-                            message.apkVersionCode = reader.int64();
-                            break;
-                        case 3:
-                            message.debuggable = reader.bool();
-                            break;
-                        default:
-                            reader.skipType(tag & 7);
-                            break;
-                        }
-                    }
-                    return message;
-                };
-
-                /**
-                 * Decodes a Package message from the specified reader or buffer, length delimited.
-                 * @function decodeDelimited
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
-                 * @throws {Error} If the payload is not a reader or valid buffer
-                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
-                 */
-                Package.decodeDelimited = function decodeDelimited(reader) {
-                    if (!(reader instanceof $Reader))
-                        reader = new $Reader(reader);
-                    return this.decode(reader, reader.uint32());
-                };
-
-                /**
-                 * Verifies a Package message.
-                 * @function verify
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {Object.<string,*>} message Plain object to verify
-                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
-                 */
-                Package.verify = function verify(message) {
-                    if (typeof message !== "object" || message === null)
-                        return "object expected";
-                    if (message.packageName != null && message.hasOwnProperty("packageName"))
-                        if (!$util.isString(message.packageName))
-                            return "packageName: string expected";
-                    if (message.apkVersionCode != null && message.hasOwnProperty("apkVersionCode"))
-                        if (!$util.isInteger(message.apkVersionCode) && !(message.apkVersionCode && $util.isInteger(message.apkVersionCode.low) && $util.isInteger(message.apkVersionCode.high)))
-                            return "apkVersionCode: integer|Long expected";
-                    if (message.debuggable != null && message.hasOwnProperty("debuggable"))
-                        if (typeof message.debuggable !== "boolean")
-                            return "debuggable: boolean expected";
-                    return null;
-                };
-
-                /**
-                 * Creates a Package message from a plain object. Also converts values to their respective internal types.
-                 * @function fromObject
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {Object.<string,*>} object Plain object
-                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
-                 */
-                Package.fromObject = function fromObject(object) {
-                    if (object instanceof $root.perfetto.protos.AndroidProcessMetadata.Package)
-                        return object;
-                    var message = new $root.perfetto.protos.AndroidProcessMetadata.Package();
-                    if (object.packageName != null)
-                        message.packageName = String(object.packageName);
-                    if (object.apkVersionCode != null)
-                        if ($util.Long)
-                            (message.apkVersionCode = $util.Long.fromValue(object.apkVersionCode)).unsigned = false;
-                        else if (typeof object.apkVersionCode === "string")
-                            message.apkVersionCode = parseInt(object.apkVersionCode, 10);
-                        else if (typeof object.apkVersionCode === "number")
-                            message.apkVersionCode = object.apkVersionCode;
-                        else if (typeof object.apkVersionCode === "object")
-                            message.apkVersionCode = new $util.LongBits(object.apkVersionCode.low >>> 0, object.apkVersionCode.high >>> 0).toNumber();
-                    if (object.debuggable != null)
-                        message.debuggable = Boolean(object.debuggable);
-                    return message;
-                };
-
-                /**
-                 * Creates a plain object from a Package message. Also converts values to other types if specified.
-                 * @function toObject
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @static
-                 * @param {perfetto.protos.AndroidProcessMetadata.Package} message Package
-                 * @param {$protobuf.IConversionOptions} [options] Conversion options
-                 * @returns {Object.<string,*>} Plain object
-                 */
-                Package.toObject = function toObject(message, options) {
-                    if (!options)
-                        options = {};
-                    var object = {};
-                    if (options.defaults) {
-                        object.packageName = "";
-                        if ($util.Long) {
-                            var long = new $util.Long(0, 0, false);
-                            object.apkVersionCode = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
-                        } else
-                            object.apkVersionCode = options.longs === String ? "0" : 0;
-                        object.debuggable = false;
-                    }
-                    if (message.packageName != null && message.hasOwnProperty("packageName"))
-                        object.packageName = message.packageName;
-                    if (message.apkVersionCode != null && message.hasOwnProperty("apkVersionCode"))
-                        if (typeof message.apkVersionCode === "number")
-                            object.apkVersionCode = options.longs === String ? String(message.apkVersionCode) : message.apkVersionCode;
-                        else
-                            object.apkVersionCode = options.longs === String ? $util.Long.prototype.toString.call(message.apkVersionCode) : options.longs === Number ? new $util.LongBits(message.apkVersionCode.low >>> 0, message.apkVersionCode.high >>> 0).toNumber() : message.apkVersionCode;
-                    if (message.debuggable != null && message.hasOwnProperty("debuggable"))
-                        object.debuggable = message.debuggable;
-                    return object;
-                };
-
-                /**
-                 * Converts this Package to JSON.
-                 * @function toJSON
-                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
-                 * @instance
-                 * @returns {Object.<string,*>} JSON object
-                 */
-                Package.prototype.toJSON = function toJSON() {
-                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
-                };
-
-                return Package;
-            })();
-
-            return AndroidProcessMetadata;
-        })();
-
         protos.AndroidHwcomposerMetrics = (function() {
 
             /**
@@ -64331,6 +63008,547 @@ $root.perfetto = (function() {
             })();
 
             return JavaHeapHistogram;
+        })();
+
+        protos.AndroidProcessMetadata = (function() {
+
+            /**
+             * Properties of an AndroidProcessMetadata.
+             * @memberof perfetto.protos
+             * @interface IAndroidProcessMetadata
+             * @property {string|null} [name] AndroidProcessMetadata name
+             * @property {number|null} [uid] AndroidProcessMetadata uid
+             * @property {perfetto.protos.AndroidProcessMetadata.IPackage|null} ["package"] AndroidProcessMetadata package
+             * @property {Array.<perfetto.protos.AndroidProcessMetadata.IPackage>|null} [packagesForUid] AndroidProcessMetadata packagesForUid
+             */
+
+            /**
+             * Constructs a new AndroidProcessMetadata.
+             * @memberof perfetto.protos
+             * @classdesc Represents an AndroidProcessMetadata.
+             * @implements IAndroidProcessMetadata
+             * @constructor
+             * @param {perfetto.protos.IAndroidProcessMetadata=} [properties] Properties to set
+             */
+            function AndroidProcessMetadata(properties) {
+                this.packagesForUid = [];
+                if (properties)
+                    for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * AndroidProcessMetadata name.
+             * @member {string} name
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @instance
+             */
+            AndroidProcessMetadata.prototype.name = "";
+
+            /**
+             * AndroidProcessMetadata uid.
+             * @member {number} uid
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @instance
+             */
+            AndroidProcessMetadata.prototype.uid = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * AndroidProcessMetadata package.
+             * @member {perfetto.protos.AndroidProcessMetadata.IPackage|null|undefined} package
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @instance
+             */
+            AndroidProcessMetadata.prototype["package"] = null;
+
+            /**
+             * AndroidProcessMetadata packagesForUid.
+             * @member {Array.<perfetto.protos.AndroidProcessMetadata.IPackage>} packagesForUid
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @instance
+             */
+            AndroidProcessMetadata.prototype.packagesForUid = $util.emptyArray;
+
+            /**
+             * Creates a new AndroidProcessMetadata instance using the specified properties.
+             * @function create
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {perfetto.protos.IAndroidProcessMetadata=} [properties] Properties to set
+             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata instance
+             */
+            AndroidProcessMetadata.create = function create(properties) {
+                return new AndroidProcessMetadata(properties);
+            };
+
+            /**
+             * Encodes the specified AndroidProcessMetadata message. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.verify|verify} messages.
+             * @function encode
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {perfetto.protos.IAndroidProcessMetadata} message AndroidProcessMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            AndroidProcessMetadata.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+                if (message.uid != null && Object.hasOwnProperty.call(message, "uid"))
+                    writer.uint32(/* id 2, wireType 0 =*/16).int64(message.uid);
+                if (message["package"] != null && Object.hasOwnProperty.call(message, "package"))
+                    $root.perfetto.protos.AndroidProcessMetadata.Package.encode(message["package"], writer.uint32(/* id 7, wireType 2 =*/58).fork()).ldelim();
+                if (message.packagesForUid != null && message.packagesForUid.length)
+                    for (var i = 0; i < message.packagesForUid.length; ++i)
+                        $root.perfetto.protos.AndroidProcessMetadata.Package.encode(message.packagesForUid[i], writer.uint32(/* id 8, wireType 2 =*/66).fork()).ldelim();
+                return writer;
+            };
+
+            /**
+             * Encodes the specified AndroidProcessMetadata message, length delimited. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {perfetto.protos.IAndroidProcessMetadata} message AndroidProcessMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            AndroidProcessMetadata.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes an AndroidProcessMetadata message from the specified reader or buffer.
+             * @function decode
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            AndroidProcessMetadata.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.AndroidProcessMetadata();
+                while (reader.pos < end) {
+                    var tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1:
+                        message.name = reader.string();
+                        break;
+                    case 2:
+                        message.uid = reader.int64();
+                        break;
+                    case 7:
+                        message["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.decode(reader, reader.uint32());
+                        break;
+                    case 8:
+                        if (!(message.packagesForUid && message.packagesForUid.length))
+                            message.packagesForUid = [];
+                        message.packagesForUid.push($root.perfetto.protos.AndroidProcessMetadata.Package.decode(reader, reader.uint32()));
+                        break;
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes an AndroidProcessMetadata message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            AndroidProcessMetadata.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies an AndroidProcessMetadata message.
+             * @function verify
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            AndroidProcessMetadata.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.name != null && message.hasOwnProperty("name"))
+                    if (!$util.isString(message.name))
+                        return "name: string expected";
+                if (message.uid != null && message.hasOwnProperty("uid"))
+                    if (!$util.isInteger(message.uid) && !(message.uid && $util.isInteger(message.uid.low) && $util.isInteger(message.uid.high)))
+                        return "uid: integer|Long expected";
+                if (message["package"] != null && message.hasOwnProperty("package")) {
+                    var error = $root.perfetto.protos.AndroidProcessMetadata.Package.verify(message["package"]);
+                    if (error)
+                        return "package." + error;
+                }
+                if (message.packagesForUid != null && message.hasOwnProperty("packagesForUid")) {
+                    if (!Array.isArray(message.packagesForUid))
+                        return "packagesForUid: array expected";
+                    for (var i = 0; i < message.packagesForUid.length; ++i) {
+                        var error = $root.perfetto.protos.AndroidProcessMetadata.Package.verify(message.packagesForUid[i]);
+                        if (error)
+                            return "packagesForUid." + error;
+                    }
+                }
+                return null;
+            };
+
+            /**
+             * Creates an AndroidProcessMetadata message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {perfetto.protos.AndroidProcessMetadata} AndroidProcessMetadata
+             */
+            AndroidProcessMetadata.fromObject = function fromObject(object) {
+                if (object instanceof $root.perfetto.protos.AndroidProcessMetadata)
+                    return object;
+                var message = new $root.perfetto.protos.AndroidProcessMetadata();
+                if (object.name != null)
+                    message.name = String(object.name);
+                if (object.uid != null)
+                    if ($util.Long)
+                        (message.uid = $util.Long.fromValue(object.uid)).unsigned = false;
+                    else if (typeof object.uid === "string")
+                        message.uid = parseInt(object.uid, 10);
+                    else if (typeof object.uid === "number")
+                        message.uid = object.uid;
+                    else if (typeof object.uid === "object")
+                        message.uid = new $util.LongBits(object.uid.low >>> 0, object.uid.high >>> 0).toNumber();
+                if (object["package"] != null) {
+                    if (typeof object["package"] !== "object")
+                        throw TypeError(".perfetto.protos.AndroidProcessMetadata.package: object expected");
+                    message["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.fromObject(object["package"]);
+                }
+                if (object.packagesForUid) {
+                    if (!Array.isArray(object.packagesForUid))
+                        throw TypeError(".perfetto.protos.AndroidProcessMetadata.packagesForUid: array expected");
+                    message.packagesForUid = [];
+                    for (var i = 0; i < object.packagesForUid.length; ++i) {
+                        if (typeof object.packagesForUid[i] !== "object")
+                            throw TypeError(".perfetto.protos.AndroidProcessMetadata.packagesForUid: object expected");
+                        message.packagesForUid[i] = $root.perfetto.protos.AndroidProcessMetadata.Package.fromObject(object.packagesForUid[i]);
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Creates a plain object from an AndroidProcessMetadata message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @static
+             * @param {perfetto.protos.AndroidProcessMetadata} message AndroidProcessMetadata
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            AndroidProcessMetadata.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                var object = {};
+                if (options.arrays || options.defaults)
+                    object.packagesForUid = [];
+                if (options.defaults) {
+                    object.name = "";
+                    if ($util.Long) {
+                        var long = new $util.Long(0, 0, false);
+                        object.uid = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    } else
+                        object.uid = options.longs === String ? "0" : 0;
+                    object["package"] = null;
+                }
+                if (message.name != null && message.hasOwnProperty("name"))
+                    object.name = message.name;
+                if (message.uid != null && message.hasOwnProperty("uid"))
+                    if (typeof message.uid === "number")
+                        object.uid = options.longs === String ? String(message.uid) : message.uid;
+                    else
+                        object.uid = options.longs === String ? $util.Long.prototype.toString.call(message.uid) : options.longs === Number ? new $util.LongBits(message.uid.low >>> 0, message.uid.high >>> 0).toNumber() : message.uid;
+                if (message["package"] != null && message.hasOwnProperty("package"))
+                    object["package"] = $root.perfetto.protos.AndroidProcessMetadata.Package.toObject(message["package"], options);
+                if (message.packagesForUid && message.packagesForUid.length) {
+                    object.packagesForUid = [];
+                    for (var j = 0; j < message.packagesForUid.length; ++j)
+                        object.packagesForUid[j] = $root.perfetto.protos.AndroidProcessMetadata.Package.toObject(message.packagesForUid[j], options);
+                }
+                return object;
+            };
+
+            /**
+             * Converts this AndroidProcessMetadata to JSON.
+             * @function toJSON
+             * @memberof perfetto.protos.AndroidProcessMetadata
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            AndroidProcessMetadata.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
+            };
+
+            AndroidProcessMetadata.Package = (function() {
+
+                /**
+                 * Properties of a Package.
+                 * @memberof perfetto.protos.AndroidProcessMetadata
+                 * @interface IPackage
+                 * @property {string|null} [packageName] Package packageName
+                 * @property {number|null} [apkVersionCode] Package apkVersionCode
+                 * @property {boolean|null} [debuggable] Package debuggable
+                 */
+
+                /**
+                 * Constructs a new Package.
+                 * @memberof perfetto.protos.AndroidProcessMetadata
+                 * @classdesc Represents a Package.
+                 * @implements IPackage
+                 * @constructor
+                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage=} [properties] Properties to set
+                 */
+                function Package(properties) {
+                    if (properties)
+                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Package packageName.
+                 * @member {string} packageName
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @instance
+                 */
+                Package.prototype.packageName = "";
+
+                /**
+                 * Package apkVersionCode.
+                 * @member {number} apkVersionCode
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @instance
+                 */
+                Package.prototype.apkVersionCode = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+                /**
+                 * Package debuggable.
+                 * @member {boolean} debuggable
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @instance
+                 */
+                Package.prototype.debuggable = false;
+
+                /**
+                 * Creates a new Package instance using the specified properties.
+                 * @function create
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage=} [properties] Properties to set
+                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package instance
+                 */
+                Package.create = function create(properties) {
+                    return new Package(properties);
+                };
+
+                /**
+                 * Encodes the specified Package message. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.Package.verify|verify} messages.
+                 * @function encode
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage} message Package message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                Package.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.packageName != null && Object.hasOwnProperty.call(message, "packageName"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.packageName);
+                    if (message.apkVersionCode != null && Object.hasOwnProperty.call(message, "apkVersionCode"))
+                        writer.uint32(/* id 2, wireType 0 =*/16).int64(message.apkVersionCode);
+                    if (message.debuggable != null && Object.hasOwnProperty.call(message, "debuggable"))
+                        writer.uint32(/* id 3, wireType 0 =*/24).bool(message.debuggable);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified Package message, length delimited. Does not implicitly {@link perfetto.protos.AndroidProcessMetadata.Package.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {perfetto.protos.AndroidProcessMetadata.IPackage} message Package message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                Package.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a Package message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                Package.decode = function decode(reader, length) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.AndroidProcessMetadata.Package();
+                    while (reader.pos < end) {
+                        var tag = reader.uint32();
+                        switch (tag >>> 3) {
+                        case 1:
+                            message.packageName = reader.string();
+                            break;
+                        case 2:
+                            message.apkVersionCode = reader.int64();
+                            break;
+                        case 3:
+                            message.debuggable = reader.bool();
+                            break;
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a Package message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                Package.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a Package message.
+                 * @function verify
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                Package.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.packageName != null && message.hasOwnProperty("packageName"))
+                        if (!$util.isString(message.packageName))
+                            return "packageName: string expected";
+                    if (message.apkVersionCode != null && message.hasOwnProperty("apkVersionCode"))
+                        if (!$util.isInteger(message.apkVersionCode) && !(message.apkVersionCode && $util.isInteger(message.apkVersionCode.low) && $util.isInteger(message.apkVersionCode.high)))
+                            return "apkVersionCode: integer|Long expected";
+                    if (message.debuggable != null && message.hasOwnProperty("debuggable"))
+                        if (typeof message.debuggable !== "boolean")
+                            return "debuggable: boolean expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a Package message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {perfetto.protos.AndroidProcessMetadata.Package} Package
+                 */
+                Package.fromObject = function fromObject(object) {
+                    if (object instanceof $root.perfetto.protos.AndroidProcessMetadata.Package)
+                        return object;
+                    var message = new $root.perfetto.protos.AndroidProcessMetadata.Package();
+                    if (object.packageName != null)
+                        message.packageName = String(object.packageName);
+                    if (object.apkVersionCode != null)
+                        if ($util.Long)
+                            (message.apkVersionCode = $util.Long.fromValue(object.apkVersionCode)).unsigned = false;
+                        else if (typeof object.apkVersionCode === "string")
+                            message.apkVersionCode = parseInt(object.apkVersionCode, 10);
+                        else if (typeof object.apkVersionCode === "number")
+                            message.apkVersionCode = object.apkVersionCode;
+                        else if (typeof object.apkVersionCode === "object")
+                            message.apkVersionCode = new $util.LongBits(object.apkVersionCode.low >>> 0, object.apkVersionCode.high >>> 0).toNumber();
+                    if (object.debuggable != null)
+                        message.debuggable = Boolean(object.debuggable);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a Package message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @static
+                 * @param {perfetto.protos.AndroidProcessMetadata.Package} message Package
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                Package.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    var object = {};
+                    if (options.defaults) {
+                        object.packageName = "";
+                        if ($util.Long) {
+                            var long = new $util.Long(0, 0, false);
+                            object.apkVersionCode = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.apkVersionCode = options.longs === String ? "0" : 0;
+                        object.debuggable = false;
+                    }
+                    if (message.packageName != null && message.hasOwnProperty("packageName"))
+                        object.packageName = message.packageName;
+                    if (message.apkVersionCode != null && message.hasOwnProperty("apkVersionCode"))
+                        if (typeof message.apkVersionCode === "number")
+                            object.apkVersionCode = options.longs === String ? String(message.apkVersionCode) : message.apkVersionCode;
+                        else
+                            object.apkVersionCode = options.longs === String ? $util.Long.prototype.toString.call(message.apkVersionCode) : options.longs === Number ? new $util.LongBits(message.apkVersionCode.low >>> 0, message.apkVersionCode.high >>> 0).toNumber() : message.apkVersionCode;
+                    if (message.debuggable != null && message.hasOwnProperty("debuggable"))
+                        object.debuggable = message.debuggable;
+                    return object;
+                };
+
+                /**
+                 * Converts this Package to JSON.
+                 * @function toJSON
+                 * @memberof perfetto.protos.AndroidProcessMetadata.Package
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                Package.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
+                };
+
+                return Package;
+            })();
+
+            return AndroidProcessMetadata;
         })();
 
         protos.JavaHeapStats = (function() {
@@ -72545,6 +71763,221 @@ $root.perfetto = (function() {
                 return Activity;
             })();
 
+            AndroidStartupMetric.BinderTransaction = (function() {
+
+                /**
+                 * Properties of a BinderTransaction.
+                 * @memberof perfetto.protos.AndroidStartupMetric
+                 * @interface IBinderTransaction
+                 * @property {perfetto.protos.AndroidStartupMetric.ISlice|null} [duration] BinderTransaction duration
+                 * @property {string|null} [thread] BinderTransaction thread
+                 */
+
+                /**
+                 * Constructs a new BinderTransaction.
+                 * @memberof perfetto.protos.AndroidStartupMetric
+                 * @classdesc Represents a BinderTransaction.
+                 * @implements IBinderTransaction
+                 * @constructor
+                 * @param {perfetto.protos.AndroidStartupMetric.IBinderTransaction=} [properties] Properties to set
+                 */
+                function BinderTransaction(properties) {
+                    if (properties)
+                        for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * BinderTransaction duration.
+                 * @member {perfetto.protos.AndroidStartupMetric.ISlice|null|undefined} duration
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @instance
+                 */
+                BinderTransaction.prototype.duration = null;
+
+                /**
+                 * BinderTransaction thread.
+                 * @member {string} thread
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @instance
+                 */
+                BinderTransaction.prototype.thread = "";
+
+                /**
+                 * Creates a new BinderTransaction instance using the specified properties.
+                 * @function create
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {perfetto.protos.AndroidStartupMetric.IBinderTransaction=} [properties] Properties to set
+                 * @returns {perfetto.protos.AndroidStartupMetric.BinderTransaction} BinderTransaction instance
+                 */
+                BinderTransaction.create = function create(properties) {
+                    return new BinderTransaction(properties);
+                };
+
+                /**
+                 * Encodes the specified BinderTransaction message. Does not implicitly {@link perfetto.protos.AndroidStartupMetric.BinderTransaction.verify|verify} messages.
+                 * @function encode
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {perfetto.protos.AndroidStartupMetric.IBinderTransaction} message BinderTransaction message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                BinderTransaction.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.duration != null && Object.hasOwnProperty.call(message, "duration"))
+                        $root.perfetto.protos.AndroidStartupMetric.Slice.encode(message.duration, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                    if (message.thread != null && Object.hasOwnProperty.call(message, "thread"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.thread);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified BinderTransaction message, length delimited. Does not implicitly {@link perfetto.protos.AndroidStartupMetric.BinderTransaction.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {perfetto.protos.AndroidStartupMetric.IBinderTransaction} message BinderTransaction message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                BinderTransaction.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a BinderTransaction message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {perfetto.protos.AndroidStartupMetric.BinderTransaction} BinderTransaction
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                BinderTransaction.decode = function decode(reader, length) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    var end = length === undefined ? reader.len : reader.pos + length, message = new $root.perfetto.protos.AndroidStartupMetric.BinderTransaction();
+                    while (reader.pos < end) {
+                        var tag = reader.uint32();
+                        switch (tag >>> 3) {
+                        case 1:
+                            message.duration = $root.perfetto.protos.AndroidStartupMetric.Slice.decode(reader, reader.uint32());
+                            break;
+                        case 2:
+                            message.thread = reader.string();
+                            break;
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a BinderTransaction message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {perfetto.protos.AndroidStartupMetric.BinderTransaction} BinderTransaction
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                BinderTransaction.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a BinderTransaction message.
+                 * @function verify
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                BinderTransaction.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.duration != null && message.hasOwnProperty("duration")) {
+                        var error = $root.perfetto.protos.AndroidStartupMetric.Slice.verify(message.duration);
+                        if (error)
+                            return "duration." + error;
+                    }
+                    if (message.thread != null && message.hasOwnProperty("thread"))
+                        if (!$util.isString(message.thread))
+                            return "thread: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a BinderTransaction message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {perfetto.protos.AndroidStartupMetric.BinderTransaction} BinderTransaction
+                 */
+                BinderTransaction.fromObject = function fromObject(object) {
+                    if (object instanceof $root.perfetto.protos.AndroidStartupMetric.BinderTransaction)
+                        return object;
+                    var message = new $root.perfetto.protos.AndroidStartupMetric.BinderTransaction();
+                    if (object.duration != null) {
+                        if (typeof object.duration !== "object")
+                            throw TypeError(".perfetto.protos.AndroidStartupMetric.BinderTransaction.duration: object expected");
+                        message.duration = $root.perfetto.protos.AndroidStartupMetric.Slice.fromObject(object.duration);
+                    }
+                    if (object.thread != null)
+                        message.thread = String(object.thread);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a BinderTransaction message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @static
+                 * @param {perfetto.protos.AndroidStartupMetric.BinderTransaction} message BinderTransaction
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                BinderTransaction.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    var object = {};
+                    if (options.defaults) {
+                        object.duration = null;
+                        object.thread = "";
+                    }
+                    if (message.duration != null && message.hasOwnProperty("duration"))
+                        object.duration = $root.perfetto.protos.AndroidStartupMetric.Slice.toObject(message.duration, options);
+                    if (message.thread != null && message.hasOwnProperty("thread"))
+                        object.thread = message.thread;
+                    return object;
+                };
+
+                /**
+                 * Converts this BinderTransaction to JSON.
+                 * @function toJSON
+                 * @memberof perfetto.protos.AndroidStartupMetric.BinderTransaction
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                BinderTransaction.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, minimal$1.util.toJSONOptions);
+                };
+
+                return BinderTransaction;
+            })();
+
             AndroidStartupMetric.OptimizationStatus = (function() {
 
                 /**
@@ -73047,6 +72480,7 @@ $root.perfetto = (function() {
                  * @property {string|null} [packageName] Startup packageName
                  * @property {string|null} [processName] Startup processName
                  * @property {Array.<perfetto.protos.AndroidStartupMetric.IActivity>|null} [activities] Startup activities
+                 * @property {Array.<perfetto.protos.AndroidStartupMetric.IBinderTransaction>|null} [longBinderTransactions] Startup longBinderTransactions
                  * @property {boolean|null} [zygoteNewProcess] Startup zygoteNewProcess
                  * @property {number|null} [activityHostingProcessCount] Startup activityHostingProcessCount
                  * @property {perfetto.protos.AndroidStartupMetric.IEventTimestamps|null} [eventTimestamps] Startup eventTimestamps
@@ -73067,6 +72501,7 @@ $root.perfetto = (function() {
                  */
                 function Startup(properties) {
                     this.activities = [];
+                    this.longBinderTransactions = [];
                     this.optimizationStatus = [];
                     if (properties)
                         for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
@@ -73105,6 +72540,14 @@ $root.perfetto = (function() {
                  * @instance
                  */
                 Startup.prototype.activities = $util.emptyArray;
+
+                /**
+                 * Startup longBinderTransactions.
+                 * @member {Array.<perfetto.protos.AndroidStartupMetric.IBinderTransaction>} longBinderTransactions
+                 * @memberof perfetto.protos.AndroidStartupMetric.Startup
+                 * @instance
+                 */
+                Startup.prototype.longBinderTransactions = $util.emptyArray;
 
                 /**
                  * Startup zygoteNewProcess.
@@ -73220,6 +72663,9 @@ $root.perfetto = (function() {
                             $root.perfetto.protos.AndroidStartupMetric.OptimizationStatus.encode(message.optimizationStatus[i], writer.uint32(/* id 12, wireType 2 =*/98).fork()).ldelim();
                     if (message.eventTimestamps != null && Object.hasOwnProperty.call(message, "eventTimestamps"))
                         $root.perfetto.protos.AndroidStartupMetric.EventTimestamps.encode(message.eventTimestamps, writer.uint32(/* id 13, wireType 2 =*/106).fork()).ldelim();
+                    if (message.longBinderTransactions != null && message.longBinderTransactions.length)
+                        for (var i = 0; i < message.longBinderTransactions.length; ++i)
+                            $root.perfetto.protos.AndroidStartupMetric.BinderTransaction.encode(message.longBinderTransactions[i], writer.uint32(/* id 14, wireType 2 =*/114).fork()).ldelim();
                     return writer;
                 };
 
@@ -73267,6 +72713,11 @@ $root.perfetto = (function() {
                             if (!(message.activities && message.activities.length))
                                 message.activities = [];
                             message.activities.push($root.perfetto.protos.AndroidStartupMetric.Activity.decode(reader, reader.uint32()));
+                            break;
+                        case 14:
+                            if (!(message.longBinderTransactions && message.longBinderTransactions.length))
+                                message.longBinderTransactions = [];
+                            message.longBinderTransactions.push($root.perfetto.protos.AndroidStartupMetric.BinderTransaction.decode(reader, reader.uint32()));
                             break;
                         case 4:
                             message.zygoteNewProcess = reader.bool();
@@ -73347,6 +72798,15 @@ $root.perfetto = (function() {
                                 return "activities." + error;
                         }
                     }
+                    if (message.longBinderTransactions != null && message.hasOwnProperty("longBinderTransactions")) {
+                        if (!Array.isArray(message.longBinderTransactions))
+                            return "longBinderTransactions: array expected";
+                        for (var i = 0; i < message.longBinderTransactions.length; ++i) {
+                            var error = $root.perfetto.protos.AndroidStartupMetric.BinderTransaction.verify(message.longBinderTransactions[i]);
+                            if (error)
+                                return "longBinderTransactions." + error;
+                        }
+                    }
                     if (message.zygoteNewProcess != null && message.hasOwnProperty("zygoteNewProcess"))
                         if (typeof message.zygoteNewProcess !== "boolean")
                             return "zygoteNewProcess: boolean expected";
@@ -73418,6 +72878,16 @@ $root.perfetto = (function() {
                             message.activities[i] = $root.perfetto.protos.AndroidStartupMetric.Activity.fromObject(object.activities[i]);
                         }
                     }
+                    if (object.longBinderTransactions) {
+                        if (!Array.isArray(object.longBinderTransactions))
+                            throw TypeError(".perfetto.protos.AndroidStartupMetric.Startup.longBinderTransactions: array expected");
+                        message.longBinderTransactions = [];
+                        for (var i = 0; i < object.longBinderTransactions.length; ++i) {
+                            if (typeof object.longBinderTransactions[i] !== "object")
+                                throw TypeError(".perfetto.protos.AndroidStartupMetric.Startup.longBinderTransactions: object expected");
+                            message.longBinderTransactions[i] = $root.perfetto.protos.AndroidStartupMetric.BinderTransaction.fromObject(object.longBinderTransactions[i]);
+                        }
+                    }
                     if (object.zygoteNewProcess != null)
                         message.zygoteNewProcess = Boolean(object.zygoteNewProcess);
                     if (object.activityHostingProcessCount != null)
@@ -73476,6 +72946,7 @@ $root.perfetto = (function() {
                     if (options.arrays || options.defaults) {
                         object.activities = [];
                         object.optimizationStatus = [];
+                        object.longBinderTransactions = [];
                     }
                     if (options.defaults) {
                         object.startupId = 0;
@@ -73519,6 +72990,11 @@ $root.perfetto = (function() {
                     }
                     if (message.eventTimestamps != null && message.hasOwnProperty("eventTimestamps"))
                         object.eventTimestamps = $root.perfetto.protos.AndroidStartupMetric.EventTimestamps.toObject(message.eventTimestamps, options);
+                    if (message.longBinderTransactions && message.longBinderTransactions.length) {
+                        object.longBinderTransactions = [];
+                        for (var j = 0; j < message.longBinderTransactions.length; ++j)
+                            object.longBinderTransactions[j] = $root.perfetto.protos.AndroidStartupMetric.BinderTransaction.toObject(message.longBinderTransactions[j], options);
+                    }
                     return object;
                 };
 
@@ -75274,6 +74750,7 @@ $root.perfetto = (function() {
                  * Properties of a MetricsByCoreType.
                  * @memberof perfetto.protos.AndroidThreadTimeInStateMetric
                  * @interface IMetricsByCoreType
+                 * @property {number|null} [timeInStateCpu] MetricsByCoreType timeInStateCpu
                  * @property {string|null} [coreType] MetricsByCoreType coreType
                  * @property {number|null} [runtimeMs] MetricsByCoreType runtimeMs
                  * @property {number|null} [mcycles] MetricsByCoreType mcycles
@@ -75294,6 +74771,14 @@ $root.perfetto = (function() {
                             if (properties[keys[i]] != null)
                                 this[keys[i]] = properties[keys[i]];
                 }
+
+                /**
+                 * MetricsByCoreType timeInStateCpu.
+                 * @member {number} timeInStateCpu
+                 * @memberof perfetto.protos.AndroidThreadTimeInStateMetric.MetricsByCoreType
+                 * @instance
+                 */
+                MetricsByCoreType.prototype.timeInStateCpu = 0;
 
                 /**
                  * MetricsByCoreType coreType.
@@ -75359,6 +74844,8 @@ $root.perfetto = (function() {
                         writer.uint32(/* id 3, wireType 0 =*/24).int64(message.mcycles);
                     if (message.powerProfileMah != null && Object.hasOwnProperty.call(message, "powerProfileMah"))
                         writer.uint32(/* id 4, wireType 1 =*/33).double(message.powerProfileMah);
+                    if (message.timeInStateCpu != null && Object.hasOwnProperty.call(message, "timeInStateCpu"))
+                        writer.uint32(/* id 5, wireType 0 =*/40).int32(message.timeInStateCpu);
                     return writer;
                 };
 
@@ -75393,6 +74880,9 @@ $root.perfetto = (function() {
                     while (reader.pos < end) {
                         var tag = reader.uint32();
                         switch (tag >>> 3) {
+                        case 5:
+                            message.timeInStateCpu = reader.int32();
+                            break;
                         case 1:
                             message.coreType = reader.string();
                             break;
@@ -75440,6 +74930,9 @@ $root.perfetto = (function() {
                 MetricsByCoreType.verify = function verify(message) {
                     if (typeof message !== "object" || message === null)
                         return "object expected";
+                    if (message.timeInStateCpu != null && message.hasOwnProperty("timeInStateCpu"))
+                        if (!$util.isInteger(message.timeInStateCpu))
+                            return "timeInStateCpu: integer expected";
                     if (message.coreType != null && message.hasOwnProperty("coreType"))
                         if (!$util.isString(message.coreType))
                             return "coreType: string expected";
@@ -75467,6 +74960,8 @@ $root.perfetto = (function() {
                     if (object instanceof $root.perfetto.protos.AndroidThreadTimeInStateMetric.MetricsByCoreType)
                         return object;
                     var message = new $root.perfetto.protos.AndroidThreadTimeInStateMetric.MetricsByCoreType();
+                    if (object.timeInStateCpu != null)
+                        message.timeInStateCpu = object.timeInStateCpu | 0;
                     if (object.coreType != null)
                         message.coreType = String(object.coreType);
                     if (object.runtimeMs != null)
@@ -75518,6 +75013,7 @@ $root.perfetto = (function() {
                         } else
                             object.mcycles = options.longs === String ? "0" : 0;
                         object.powerProfileMah = 0;
+                        object.timeInStateCpu = 0;
                     }
                     if (message.coreType != null && message.hasOwnProperty("coreType"))
                         object.coreType = message.coreType;
@@ -75533,6 +75029,8 @@ $root.perfetto = (function() {
                             object.mcycles = options.longs === String ? $util.Long.prototype.toString.call(message.mcycles) : options.longs === Number ? new $util.LongBits(message.mcycles.low >>> 0, message.mcycles.high >>> 0).toNumber() : message.mcycles;
                     if (message.powerProfileMah != null && message.hasOwnProperty("powerProfileMah"))
                         object.powerProfileMah = options.json && !isFinite(message.powerProfileMah) ? String(message.powerProfileMah) : message.powerProfileMah;
+                    if (message.timeInStateCpu != null && message.hasOwnProperty("timeInStateCpu"))
+                        object.timeInStateCpu = message.timeInStateCpu;
                     return object;
                 };
 
@@ -79714,6 +79212,7 @@ class HttpRpcEngine extends engine.Engine {
     constructor(id, loadingTracker) {
         super(loadingTracker);
         this.nextReqId = 0;
+        this.sessionId = undefined;
         this.requestQueue = new Array();
         this.pendingRequest = undefined;
         this.errorHandler = () => { };
@@ -79788,6 +79287,31 @@ class HttpRpcEngine extends engine.Engine {
         if (resp.status !== 200) {
             req.resp.reject(`HTTP ${resp.status} - ${resp.statusText}`);
             return;
+        }
+        if (req.methodName === 'restore_initial_tables') {
+            // restore_initial_tables resets the trace processor session id
+            // so make sure to also reset on our end for future queries.
+            this.sessionId = undefined;
+        }
+        else {
+            const sessionId = resp.headers.get('X-TP-Session-ID') || undefined;
+            if (this.sessionId !== undefined && sessionId !== this.sessionId) {
+                req.resp.reject(`The trace processor HTTP session does not match the initally seen
+             ID.
+
+             This can happen when using a HTTP trace processor instance and
+             either accidentally sharing this between multiple tabs or
+             restarting the trace processor while still in use by UI.
+
+             Please refresh this tab and ensure that trace processor is used by
+             at most one tab at a time.
+
+             Technical details:
+             Expected session id: ${this.sessionId}
+             Actual session id: ${sessionId}`);
+                return;
+            }
+            this.sessionId = sessionId;
         }
         resp.arrayBuffer().then(arrBuf => {
             // Note: another request can sneak in via enqueueRequest() between the
@@ -82644,6 +82168,9 @@ exports.decideTracks = void 0;
 
 
 
+const MEM_DMA_COUNTER_NAME = 'mem.dma_heap';
+const MEM_DMA = 'mem.dma_buffer';
+const MEM_ION = 'mem.ion';
 function decideTracks(engineId, engine) {
     return tslib.__awaiter(this, void 0, void 0, function* () {
         return (new TrackDecider(engineId, engine)).decideTracks();
@@ -82773,7 +82300,6 @@ class TrackDecider {
     }
     addGlobalAsyncTracks() {
         return tslib.__awaiter(this, void 0, void 0, function* () {
-            // TODO(b/187546438): Re-enable mem.ion_buffer once we can collapse it
             const rawGlobalAsyncTracks = yield this.engine.query(`
     SELECT
       t.name,
@@ -82786,7 +82312,6 @@ class TrackDecider {
       GROUP BY name
     ) AS t CROSS JOIN experimental_slice_layout
     WHERE t.track_ids = experimental_slice_layout.filter_track_ids
-    AND t.name != 'mem.ion_buffer'
     GROUP BY t.track_ids;
   `);
             for (let i = 0; i < query_iterator.slowlyCountRows(rawGlobalAsyncTracks); i++) {
@@ -82873,6 +82398,48 @@ class TrackDecider {
                     }
                 });
             }
+        });
+    }
+    groupGlobalIonTracks() {
+        return tslib.__awaiter(this, void 0, void 0, function* () {
+            const ionTracks = [];
+            let hasSummary = false;
+            for (const track of this.tracksToAdd) {
+                const isIon = track.name.startsWith(MEM_ION);
+                const isIonCounter = track.name === MEM_ION;
+                const isDmaHeapCounter = track.name === MEM_DMA_COUNTER_NAME;
+                const isDmaBuffferSlices = track.name === MEM_DMA;
+                if (isIon || isIonCounter || isDmaHeapCounter || isDmaBuffferSlices) {
+                    ionTracks.push(track);
+                }
+                hasSummary = hasSummary || isIonCounter;
+                hasSummary = hasSummary || isDmaHeapCounter;
+            }
+            if (ionTracks.length === 0 || !hasSummary) {
+                return;
+            }
+            const id = v4_1();
+            const summaryTrackId = v4_1();
+            let foundSummary = false;
+            for (const track of ionTracks) {
+                if (!foundSummary &&
+                    [MEM_DMA_COUNTER_NAME, MEM_ION].includes(track.name)) {
+                    foundSummary = true;
+                    track.id = summaryTrackId;
+                    track.trackGroup = undefined;
+                }
+                else {
+                    track.trackGroup = id;
+                }
+            }
+            const addGroup = actions.Actions.addTrackGroup({
+                engineId: this.engineId,
+                summaryTrackId,
+                name: MEM_DMA_COUNTER_NAME,
+                id,
+                collapsed: true,
+            });
+            this.addTrackGroupActions.push(addGroup);
         });
     }
     addLogsTrack() {
@@ -83525,10 +83092,11 @@ class TrackDecider {
             yield this.addGlobalAsyncTracks();
             yield this.addGpuFreqTracks();
             yield this.addGlobalCounterTracks();
+            yield this.groupGlobalIonTracks();
             // Create the per-process track groups. Note that this won't necessarily
             // create a track per process. If a process has been completely idle and has
             // no sched events, no track group will be emitted.
-            // Will populate this.addTrackGroupActions().
+            // Will populate this.addTrackGroupActions
             yield this.addProcessTrackGroups();
             yield this.addProcessHeapProfileTracks();
             yield this.addProcessCounterTracks();
@@ -83822,6 +83390,12 @@ class TraceController extends controller.Controller {
             }
             yield this.listThreads();
             yield this.loadTimelineOverview(traceTime);
+            {
+                const query = 'select to_ftrace(id) from raw limit 1';
+                const result = yield logging.assertExists(this.engine).query(query);
+                const hasFtrace = !!query_iterator.slowlyCountRows(result);
+                globals.globals.publish('HasFtrace', hasFtrace);
+            }
             globals.globals.dispatch(actions.Actions.sortThreadTracks({}));
             yield this.selectFirstHeapProfile();
             return engineMode;

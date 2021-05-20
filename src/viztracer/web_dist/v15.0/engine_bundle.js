@@ -5459,6 +5459,8 @@ Module["dynCall_viij"] = createExportWrapper("dynCall_viij", asm);
 
 Module["dynCall_viji"] = createExportWrapper("dynCall_viji", asm);
 
+Module["dynCall_iiij"] = createExportWrapper("dynCall_iiij", asm);
+
 Module["dynCall_viijdi"] = createExportWrapper("dynCall_viijdi", asm);
 
 Module["dynCall_viijdii"] = createExportWrapper("dynCall_viijdii", asm);
@@ -6489,7 +6491,7 @@ var perfetto_version = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCM_REVISION = exports.VERSION = void 0;
 exports.VERSION = "v15.0";
-exports.SCM_REVISION = "688da1fb96a797e283c0c063cc807ac4f16e136e";
+exports.SCM_REVISION = "1a90ce17150c2b0c17b5e463a1cb7bab1c01d353";
 
 });
 
