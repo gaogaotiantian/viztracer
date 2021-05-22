@@ -49,10 +49,6 @@ viztracer my_script.py arg1 arg2
 A <code>result.json</code> file will be generated, which you can open with <code>vizviewer</code>
 </summary>
 
-```
-vizviewer result.json
-```
-
 vizviewer will host an HTTP server on ``http://localhost:9001``. You can also open your browser
 and use that address.
 
@@ -69,6 +65,10 @@ vizviewer --once result.json
 ```
 
 </details>
+
+```
+vizviewer result.json
+```
 
 <details>
 
@@ -107,6 +107,22 @@ Or add <code>--open</code> to open the reports right after tracing
 ```
 viztracer --open my_scripy.py arg1 arg2
 viztracer -o result.html --open my_script.py arg1 arg2
+```
+
+</details>
+
+<details>
+
+<summary>
+modules and console scripts(like <code>flask</code>) are supported as well
+</summary>
+
+```
+viztracer -m your_module
+```
+
+```
+viztracer flask run
 ```
 
 </details>
