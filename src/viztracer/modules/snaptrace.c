@@ -611,7 +611,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
     PyObject* ph_B = PyUnicode_FromString("B");
     PyObject* ph_E = PyUnicode_FromString("E");
-    PyObject* ph_I = PyUnicode_FromString("I");
+    PyObject* ph_I = PyUnicode_FromString("i");
     PyObject* ph_X = PyUnicode_FromString("X");
     PyObject* ph_C = PyUnicode_FromString("C");
     PyObject* ph_M = PyUnicode_FromString("M");
