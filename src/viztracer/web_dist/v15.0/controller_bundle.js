@@ -306,7 +306,7 @@ var perfetto_version = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCM_REVISION = exports.VERSION = void 0;
 exports.VERSION = "v15.0";
-exports.SCM_REVISION = "1a90ce17150c2b0c17b5e463a1cb7bab1c01d353";
+exports.SCM_REVISION = "368a33fe3bc88cb442759c24c653e5e0a668f734";
 
 });
 
@@ -11479,7 +11479,7 @@ class TrackController extends controller.Controller {
             this.data.resolution !==
                 globals.globals.state.frontendLocalState.visibleState.resolution;
     }
-    // Decides, based on the the length of the trace and the number of rows
+    // Decides, based on the length of the trace and the number of rows
     // provided whether a TrackController subclass should cache its quantized
     // data. Returns the bucket size (in ns) if caching should happen and
     // undefined otherwise.
@@ -12438,7 +12438,7 @@ class CpuSliceTrackController extends track_controller.TrackController {
                 `cached_tsq / ${bucketNs} * ${bucketNs}` :
                 `(ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs}`;
             const queryTable = isCached ? this.tableName('sched_cached') : this.tableName('sched');
-            const constainColumn = isCached ? 'cached_tsq' : 'ts';
+            const constraintColumn = isCached ? 'cached_tsq' : 'ts';
             const rawResult = yield this.query(`
       select
         ${queryTsq} as tsq,
@@ -12448,8 +12448,8 @@ class CpuSliceTrackController extends track_controller.TrackController {
         id
       from ${queryTable}
       where
-        ${constainColumn} >= ${startNs - this.maxDurNs} and
-        ${constainColumn} <= ${endNs}
+        ${constraintColumn} >= ${startNs - this.maxDurNs} and
+        ${constraintColumn} <= ${endNs}
       group by tsq
       order by tsq
     `);
@@ -12608,7 +12608,7 @@ class ProcessSchedulingTrackController extends track_controller.TrackController 
             `(ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs}`;
         const queryTable = isCached ? this.tableName('process_sched_cached') :
             this.tableName('process_sched');
-        const constainColumn = isCached ? 'cached_tsq' : 'ts';
+        const constraintColumn = isCached ? 'cached_tsq' : 'ts';
         return this.query(`
       select
         ${tsq} as tsq,
@@ -12618,8 +12618,8 @@ class ProcessSchedulingTrackController extends track_controller.TrackController 
         utid
       from ${queryTable}
       where
-        ${constainColumn} >= ${startNs - this.maxDurNs} and
-        ${constainColumn} <= ${endNs}
+        ${constraintColumn} >= ${startNs - this.maxDurNs} and
+        ${constraintColumn} <= ${endNs}
       group by tsq, cpu
       order by tsq, cpu
     `);
@@ -13210,25 +13210,26 @@ class ActualFramesSliceTrackController extends track_controller.TrackController 
             const bucketNs = Math.max(Math.round(resolution * 1e9 * pxSize / 2) * 2, 1);
             if (this.maxDurNs === 0) {
                 const maxDurResult = yield this.query(`
-        select max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
+        select
+          max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
+            as maxDur
         from experimental_slice_layout
         where filter_track_ids = '${this.config.trackIds.join(',')}'
       `);
-                if (query_iterator.slowlyCountRows(maxDurResult) === 1) {
-                    this.maxDurNs = maxDurResult.columns[0].longValues[0];
-                }
+                const row = query_iterator.singleRow({ maxDur: query_iterator.NUM }, maxDurResult);
+                this.maxDurNs = logging.assertExists(row).maxDur;
             }
             const rawResult = yield this.query(`
       SELECT
         (s.ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
-        s.ts,
+        s.ts as ts,
         max(iif(s.dur = -1, (SELECT end_ts FROM trace_bounds) - s.ts, s.dur))
             as dur,
-        s.layout_depth,
-        s.name,
-        s.id,
-        s.dur = 0 as is_instant,
-        s.dur = -1 as is_incomplete,
+        s.layout_depth as layoutDepth,
+        s.name as name,
+        s.id as id,
+        s.dur = 0 as isInstant,
+        s.dur = -1 as isIncomplete,
         CASE afs.jank_tag
           WHEN 'Self Jank' THEN '${RED_COLOR}'
           WHEN 'Other Jank' THEN '${YELLOW_COLOR}'
@@ -13273,23 +13274,33 @@ class ActualFramesSliceTrackController extends track_controller.TrackController 
                 stringIndexes.set(str, idx);
                 return idx;
             }
-            const cols = rawResult.columns;
-            for (let row = 0; row < numRows; row++) {
-                const startNsQ = +cols[0].longValues[row];
-                const startNs = +cols[1].longValues[row];
-                const durNs = +cols[2].longValues[row];
+            const it = query_iterator.iter({
+                'tsq': query_iterator.NUM,
+                'ts': query_iterator.NUM,
+                'dur': query_iterator.NUM,
+                'layoutDepth': query_iterator.NUM,
+                'id': query_iterator.NUM,
+                'name': query_iterator.STR,
+                'isInstant': query_iterator.NUM,
+                'isIncomplete': query_iterator.NUM,
+                'color': query_iterator.STR,
+            }, rawResult);
+            for (let i = 0; it.valid(); i++, it.next()) {
+                const startNsQ = it.row.tsq;
+                const startNs = it.row.ts;
+                const durNs = it.row.dur;
                 const endNs = startNs + durNs;
                 let endNsQ = Math.floor((endNs + bucketNs / 2 - 1) / bucketNs) * bucketNs;
                 endNsQ = Math.max(endNsQ, startNsQ + bucketNs);
                 logging.assertTrue(startNsQ !== endNsQ);
-                slices.starts[row] = time.fromNs(startNsQ);
-                slices.ends[row] = time.fromNs(endNsQ);
-                slices.depths[row] = +cols[3].longValues[row];
-                slices.titles[row] = internString(cols[4].stringValues[row]);
-                slices.colors[row] = internString(cols[8].stringValues[row]);
-                slices.sliceIds[row] = +cols[5].longValues[row];
-                slices.isInstant[row] = +cols[6].longValues[row];
-                slices.isIncomplete[row] = +cols[7].longValues[row];
+                slices.starts[i] = time.fromNs(startNsQ);
+                slices.ends[i] = time.fromNs(endNsQ);
+                slices.depths[i] = it.row.layoutDepth;
+                slices.titles[i] = internString(it.row.name);
+                slices.colors[i] = internString(it.row.color);
+                slices.sliceIds[i] = it.row.id;
+                slices.isInstant[i] = it.row.isInstant;
+                slices.isIncomplete[i] = it.row.isIncomplete;
             }
             return slices;
         });
@@ -13320,6 +13331,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 
 
 
+
 class ExpectedFramesSliceTrackController extends track_controller.TrackController {
     constructor() {
         super(...arguments);
@@ -13336,23 +13348,23 @@ class ExpectedFramesSliceTrackController extends track_controller.TrackControlle
             if (this.maxDurNs === 0) {
                 const maxDurResult = yield this.query(`
         select max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur))
+          as maxDur
         from experimental_slice_layout
         where filter_track_ids = '${this.config.trackIds.join(',')}'
       `);
-                if (query_iterator.slowlyCountRows(maxDurResult) === 1) {
-                    this.maxDurNs = maxDurResult.columns[0].longValues[0];
-                }
+                const row = query_iterator.singleRow({ maxDur: query_iterator.NUM }, maxDurResult);
+                this.maxDurNs = logging.assertExists(row).maxDur;
             }
             const rawResult = yield this.query(`
       SELECT
         (ts + ${bucketNs / 2}) / ${bucketNs} * ${bucketNs} as tsq,
         ts,
         max(iif(dur = -1, (SELECT end_ts FROM trace_bounds) - ts, dur)) as dur,
-        layout_depth,
+        layout_depth as layoutDepth,
         name,
         id,
-        dur = 0 as is_instant,
-        dur = -1 as is_incomplete
+        dur = 0 as isInstant,
+        dur = -1 as isIncomplete
       from experimental_slice_layout
       where
         filter_track_ids = '${this.config.trackIds.join(',')}' and
@@ -13388,25 +13400,34 @@ class ExpectedFramesSliceTrackController extends track_controller.TrackControlle
                 return idx;
             }
             const greenIndex = internString('#4CAF50');
-            const cols = rawResult.columns;
-            for (let row = 0; row < numRows; row++) {
-                const startNsQ = +cols[0].longValues[row];
-                const startNs = +cols[1].longValues[row];
-                const durNs = +cols[2].longValues[row];
+            const it = query_iterator.iter({
+                tsq: query_iterator.NUM,
+                ts: query_iterator.NUM,
+                dur: query_iterator.NUM,
+                layoutDepth: query_iterator.NUM,
+                id: query_iterator.NUM,
+                name: query_iterator.STR,
+                isInstant: query_iterator.NUM,
+                isIncomplete: query_iterator.NUM,
+            }, rawResult);
+            for (let i = 0; it.valid(); it.next(), ++i) {
+                const startNsQ = it.row.tsq;
+                const startNs = it.row.ts;
+                const durNs = it.row.dur;
                 const endNs = startNs + durNs;
                 let endNsQ = Math.floor((endNs + bucketNs / 2 - 1) / bucketNs) * bucketNs;
                 endNsQ = Math.max(endNsQ, startNsQ + bucketNs);
                 if (startNsQ === endNsQ) {
                     throw new Error('Should never happen');
                 }
-                slices.starts[row] = time.fromNs(startNsQ);
-                slices.ends[row] = time.fromNs(endNsQ);
-                slices.depths[row] = +cols[3].longValues[row];
-                slices.titles[row] = internString(cols[4].stringValues[row]);
-                slices.sliceIds[row] = +cols[5].longValues[row];
-                slices.isInstant[row] = +cols[6].longValues[row];
-                slices.isIncomplete[row] = +cols[7].longValues[row];
-                slices.colors[row] = greenIndex;
+                slices.starts[i] = time.fromNs(startNsQ);
+                slices.ends[i] = time.fromNs(endNsQ);
+                slices.depths[i] = it.row.layoutDepth;
+                slices.titles[i] = internString(it.row.name);
+                slices.sliceIds[i] = it.row.id;
+                slices.isInstant[i] = it.row.isInstant;
+                slices.isIncomplete[i] = it.row.isIncomplete;
+                slices.colors[i] = greenIndex;
             }
             return slices;
         });
@@ -27856,6 +27877,7 @@ $root.perfetto = (function() {
              * @property {Array.<perfetto.protos.TracingServiceState.IDataSource>|null} [dataSources] TracingServiceState dataSources
              * @property {number|null} [numSessions] TracingServiceState numSessions
              * @property {number|null} [numSessionsStarted] TracingServiceState numSessionsStarted
+             * @property {string|null} [tracingServiceVersion] TracingServiceState tracingServiceVersion
              */
 
             /**
@@ -27908,6 +27930,14 @@ $root.perfetto = (function() {
             TracingServiceState.prototype.numSessionsStarted = 0;
 
             /**
+             * TracingServiceState tracingServiceVersion.
+             * @member {string} tracingServiceVersion
+             * @memberof perfetto.protos.TracingServiceState
+             * @instance
+             */
+            TracingServiceState.prototype.tracingServiceVersion = "";
+
+            /**
              * Creates a new TracingServiceState instance using the specified properties.
              * @function create
              * @memberof perfetto.protos.TracingServiceState
@@ -27941,6 +27971,8 @@ $root.perfetto = (function() {
                     writer.uint32(/* id 3, wireType 0 =*/24).int32(message.numSessions);
                 if (message.numSessionsStarted != null && Object.hasOwnProperty.call(message, "numSessionsStarted"))
                     writer.uint32(/* id 4, wireType 0 =*/32).int32(message.numSessionsStarted);
+                if (message.tracingServiceVersion != null && Object.hasOwnProperty.call(message, "tracingServiceVersion"))
+                    writer.uint32(/* id 5, wireType 2 =*/42).string(message.tracingServiceVersion);
                 return writer;
             };
 
@@ -27990,6 +28022,9 @@ $root.perfetto = (function() {
                         break;
                     case 4:
                         message.numSessionsStarted = reader.int32();
+                        break;
+                    case 5:
+                        message.tracingServiceVersion = reader.string();
                         break;
                     default:
                         reader.skipType(tag & 7);
@@ -28050,6 +28085,9 @@ $root.perfetto = (function() {
                 if (message.numSessionsStarted != null && message.hasOwnProperty("numSessionsStarted"))
                     if (!$util.isInteger(message.numSessionsStarted))
                         return "numSessionsStarted: integer expected";
+                if (message.tracingServiceVersion != null && message.hasOwnProperty("tracingServiceVersion"))
+                    if (!$util.isString(message.tracingServiceVersion))
+                        return "tracingServiceVersion: string expected";
                 return null;
             };
 
@@ -28089,6 +28127,8 @@ $root.perfetto = (function() {
                     message.numSessions = object.numSessions | 0;
                 if (object.numSessionsStarted != null)
                     message.numSessionsStarted = object.numSessionsStarted | 0;
+                if (object.tracingServiceVersion != null)
+                    message.tracingServiceVersion = String(object.tracingServiceVersion);
                 return message;
             };
 
@@ -28112,6 +28152,7 @@ $root.perfetto = (function() {
                 if (options.defaults) {
                     object.numSessions = 0;
                     object.numSessionsStarted = 0;
+                    object.tracingServiceVersion = "";
                 }
                 if (message.producers && message.producers.length) {
                     object.producers = [];
@@ -28127,6 +28168,8 @@ $root.perfetto = (function() {
                     object.numSessions = message.numSessions;
                 if (message.numSessionsStarted != null && message.hasOwnProperty("numSessionsStarted"))
                     object.numSessionsStarted = message.numSessionsStarted;
+                if (message.tracingServiceVersion != null && message.hasOwnProperty("tracingServiceVersion"))
+                    object.tracingServiceVersion = message.tracingServiceVersion;
                 return object;
             };
 
@@ -28150,6 +28193,7 @@ $root.perfetto = (function() {
                  * @property {number|null} [id] Producer id
                  * @property {string|null} [name] Producer name
                  * @property {number|null} [uid] Producer uid
+                 * @property {string|null} [sdkVersion] Producer sdkVersion
                  */
 
                 /**
@@ -28192,6 +28236,14 @@ $root.perfetto = (function() {
                 Producer.prototype.uid = 0;
 
                 /**
+                 * Producer sdkVersion.
+                 * @member {string} sdkVersion
+                 * @memberof perfetto.protos.TracingServiceState.Producer
+                 * @instance
+                 */
+                Producer.prototype.sdkVersion = "";
+
+                /**
                  * Creates a new Producer instance using the specified properties.
                  * @function create
                  * @memberof perfetto.protos.TracingServiceState.Producer
@@ -28221,6 +28273,8 @@ $root.perfetto = (function() {
                         writer.uint32(/* id 2, wireType 2 =*/18).string(message.name);
                     if (message.uid != null && Object.hasOwnProperty.call(message, "uid"))
                         writer.uint32(/* id 3, wireType 0 =*/24).int32(message.uid);
+                    if (message.sdkVersion != null && Object.hasOwnProperty.call(message, "sdkVersion"))
+                        writer.uint32(/* id 4, wireType 2 =*/34).string(message.sdkVersion);
                     return writer;
                 };
 
@@ -28263,6 +28317,9 @@ $root.perfetto = (function() {
                             break;
                         case 3:
                             message.uid = reader.int32();
+                            break;
+                        case 4:
+                            message.sdkVersion = reader.string();
                             break;
                         default:
                             reader.skipType(tag & 7);
@@ -28308,6 +28365,9 @@ $root.perfetto = (function() {
                     if (message.uid != null && message.hasOwnProperty("uid"))
                         if (!$util.isInteger(message.uid))
                             return "uid: integer expected";
+                    if (message.sdkVersion != null && message.hasOwnProperty("sdkVersion"))
+                        if (!$util.isString(message.sdkVersion))
+                            return "sdkVersion: string expected";
                     return null;
                 };
 
@@ -28329,6 +28389,8 @@ $root.perfetto = (function() {
                         message.name = String(object.name);
                     if (object.uid != null)
                         message.uid = object.uid | 0;
+                    if (object.sdkVersion != null)
+                        message.sdkVersion = String(object.sdkVersion);
                     return message;
                 };
 
@@ -28349,6 +28411,7 @@ $root.perfetto = (function() {
                         object.id = 0;
                         object.name = "";
                         object.uid = 0;
+                        object.sdkVersion = "";
                     }
                     if (message.id != null && message.hasOwnProperty("id"))
                         object.id = message.id;
@@ -28356,6 +28419,8 @@ $root.perfetto = (function() {
                         object.name = message.name;
                     if (message.uid != null && message.hasOwnProperty("uid"))
                         object.uid = message.uid;
+                    if (message.sdkVersion != null && message.hasOwnProperty("sdkVersion"))
+                        object.sdkVersion = message.sdkVersion;
                     return object;
                 };
 
@@ -76725,6 +76790,7 @@ exports.PermalinkController = void 0;
 
 
 
+
 const state_2 = state;
 
 
@@ -76744,10 +76810,21 @@ class PermalinkController extends controller.Controller {
         // if the |hash| is not set, this is a request to create a permalink.
         if (globals.globals.state.permalink.hash === undefined) {
             const isRecordingConfig = logging.assertExists(globals.globals.state.permalink.isRecordingConfig);
+            const jobName = 'create_permalink';
+            globals.globals.publish('ConversionJobStatusUpdate', {
+                jobName,
+                jobStatus: conversion_jobs.ConversionJobStatus.InProgress,
+            });
             PermalinkController.createPermalink(isRecordingConfig)
-                .then(((hash) => {
+                .then(hash => {
                 globals.globals.dispatch(actions.Actions.setPermalink({ requestId, hash }));
-            }));
+            })
+                .finally(() => {
+                globals.globals.publish('ConversionJobStatusUpdate', {
+                    jobName,
+                    jobStatus: conversion_jobs.ConversionJobStatus.NotRunning,
+                });
+            });
             return;
         }
         // Otherwise, this is a request to load the permalink.
@@ -82660,7 +82737,9 @@ class TrackDecider {
           process.pid as pid
         from process_track
         left join process using(upid)
-        where process_track.name not like "% Timeline"
+        where
+            process_track.name is null or
+            process_track.name not like "% Timeline"
         group by
           process_track.upid,
           process_track.name

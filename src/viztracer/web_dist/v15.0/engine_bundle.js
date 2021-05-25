@@ -6491,7 +6491,7 @@ var perfetto_version = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCM_REVISION = exports.VERSION = void 0;
 exports.VERSION = "v15.0";
-exports.SCM_REVISION = "1a90ce17150c2b0c17b5e463a1cb7bab1c01d353";
+exports.SCM_REVISION = "368a33fe3bc88cb442759c24c653e5e0a668f734";
 
 });
 
