@@ -41,6 +41,7 @@ setuptools.setup(
             "viztracer.snaptrace",
             sources=[
                 "src/viztracer/modules/util.c",
+                "src/viztracer/modules/eventnode.c",
                 "src/viztracer/modules/snaptrace.c"
             ],
             extra_link_args=["-lpthread"]

@@ -1,10 +1,11 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import cProfile
+import io
+import os
 import random
 import time
-import cProfile
-import os
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
 
@@ -58,7 +59,8 @@ class TestPerformance(BaseTmpl):
             tracer.parse()
             instrumented_c_parse = t.get_time()
         with Timer() as t:
-            tracer.generate_json(allow_binary=True)
+            with io.StringIO() as s:
+                tracer.save(s)
             instrumented_c_json = t.get_time()
         tracer.clear()
 

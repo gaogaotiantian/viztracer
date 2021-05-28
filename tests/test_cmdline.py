@@ -222,6 +222,9 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"],
                       expected_output_file=["result.json", "result_flamegraph.html"])
 
+    def test_minimize_memory(self):
+        self.template(["python", "-m", "viztracer", "--minimize_memory", "cmdline_test.py"])
+
     def test_combine(self):
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
         self.template(["python", "-m", "viztracer", "--combine",

@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import io
 import os
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer
@@ -20,9 +21,9 @@ class TestTracer(BaseTmpl):
         fib(10)
         tracer.stop()
         tracer.parse()
-        result1 = tracer.generate_report()
+        result1 = tracer.save()
         tracer.parse()
-        result2 = tracer.generate_report()
+        result2 = tracer.save()
         self.assertEqual(result1, result2)
 
 
@@ -40,12 +41,16 @@ class TestCTracer(BaseTmpl):
         fib(5)
         tracer.stop()
         entries1 = tracer.parse()
-        report1 = tracer.generate_report()
+        with io.StringIO() as s:
+            tracer.save(s)
+            report1 = s.getvalue()
         tracer.start()
         fib(5)
         tracer.stop()
         entries2 = tracer.parse()
-        report2 = tracer.generate_report()
+        with io.StringIO() as s:
+            tracer.save(s)
+            report2 = s.getvalue()
         self.assertEqual(entries1, entries2)
         self.assertNotEqual(report1, report2)
 

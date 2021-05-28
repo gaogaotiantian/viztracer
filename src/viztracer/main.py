@@ -89,6 +89,8 @@ class VizUI:
                             help="log multiprocesses")
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
+        parser.add_argument("--minimize_memory", action="store_true", default=False,
+                            help="Use json.dump to dump chunks to file to save memory")
         parser.add_argument("--vdb", action="store_true", default=False,
                             help="Instrument for vdb, will increase the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
@@ -306,7 +308,7 @@ class VizUI:
 
     def run_combine(self, files=[], align=False):
         options = self.options
-        builder = ReportBuilder(files, align=align)
+        builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
         if options.output_file:
             ofile = options.output_file
         else:
@@ -360,15 +362,30 @@ class VizUI:
         if options.log_subprocess or options.log_multiprocess:
             tracer.pid_suffix = True
             if self.is_main_process:
-                tracer.save(output_file=os.path.join(self.multiprocess_output_dir, "result.json"), file_info=True)
-                builder = ReportBuilder([os.path.join(self.multiprocess_output_dir, f)
-                                         for f in os.listdir(self.multiprocess_output_dir)])
+                tracer.save(
+                    output_file=os.path.join(self.multiprocess_output_dir, "result.json"),
+                    file_info=True,
+                    minimize_memory=options.minimize_memory
+                )
+
+                builder = ReportBuilder(
+                    [os.path.join(self.multiprocess_output_dir, f)
+                        for f in os.listdir(self.multiprocess_output_dir)],
+                    minimize_memory=options.minimize_memory)
                 builder.save(output_file=ofile)
                 shutil.rmtree(self.multiprocess_output_dir)
             else:  # pragma: no cover
-                tracer.save(save_flamegraph=options.save_flamegraph, file_info=False)
+                tracer.save(
+                    save_flamegraph=options.save_flamegraph,
+                    file_info=False,
+                    minimize_memory=options.minimize_memory
+                )
         else:
-            tracer.save(output_file=ofile, save_flamegraph=options.save_flamegraph, file_info=True)
+            tracer.save(
+                output_file=ofile, save_flamegraph=options.save_flamegraph,
+                file_info=True,
+                minimize_memory=options.minimize_memory
+            )
 
     def exit_routine(self):
         atexit.unregister(self.exit_routine)
