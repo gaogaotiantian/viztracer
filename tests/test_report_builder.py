@@ -25,6 +25,10 @@ class TestReportBuilder(BaseTmpl):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)
 
+        with self.assertRaises(ValueError):
+            rb = ReportBuilder([])
+            rb.save()
+
     def test_too_many_entry(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:

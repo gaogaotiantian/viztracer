@@ -50,7 +50,7 @@ class ReportBuilder:
         if self.combined_json:
             return 0
         if not self.jsons:
-            raise Exception("Can't get report of nothing")
+            raise ValueError("Can't get report of nothing")
         if self.align:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
