@@ -1,13 +1,14 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
-import sys
-import subprocess
-import time
-import json
-import shutil
 import builtins
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer, ignore_function, trace_and_save, get_tracer
 from .base_tmpl import BaseTmpl
@@ -170,20 +171,18 @@ class TestDecorator(BaseTmpl):
             f()
 
     def test_trace_and_save(self):
-        @trace_and_save(output_dir="./tmp")
-        def my_function(n):
-            fib(n)
-        for _ in range(5):
-            my_function(10)
-        time.sleep(0.5)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            @trace_and_save(output_dir=tmp_dir)
+            def my_function(n):
+                fib(n)
+            for _ in range(5):
+                my_function(10)
+            time.sleep(1.5)
 
-        def t():
-            self.assertEqual(len(os.listdir("./tmp")), 5)
+            def t():
+                self.assertEqual(len(os.listdir(tmp_dir)), 5)
 
-        try:
             self.assertTrueTimeout(t, 10)
-        finally:
-            shutil.rmtree("./tmp")
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
