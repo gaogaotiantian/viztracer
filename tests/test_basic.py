@@ -228,12 +228,13 @@ class TestForkSave(BaseTmpl):
                 return 1
             return fib(n - 1) + fib(n - 2)
         t = VizTracer(verbose=0)
+        processes = {}
         for i in range(5, 10):
             t.start()
             fib(i)
             t.stop()
             t.parse()
-            t.fork_save(output_file=str(i) + ".json")
+            processes[i] = t.fork_save(output_file=str(i) + ".json")
 
         expected = {
             5: 15,
@@ -245,6 +246,7 @@ class TestForkSave(BaseTmpl):
         pid = None
         for i in range(5, 10):
             path = str(i) + ".json"
+            processes[i].join()
             self.assertFileExists(path, timeout=10)
             with open(path) as f:
                 data = json.load(f)

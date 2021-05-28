@@ -35,11 +35,12 @@ def get_json(data):
 
 
 class ReportBuilder:
-    def __init__(self, data, verbose=1, align=False):
+    def __init__(self, data, verbose=1, align=False, minimize_memory=False):
         self.verbose = verbose
         self.combined_json = None
         self.entry_number_threshold = 4000000
         self.align = align
+        self.minimize_memory = minimize_memory
         if type(data) is list:
             self.jsons = [get_json(j) for j in data]
         else:
@@ -71,7 +72,8 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def generate_json(self, allow_binary=False, file_info=True, display_time_unit="us"):
+    def prepare_json(self, file_info=True, display_time_unit="us"):
+        # This will prepare self.combined_json to be ready to output
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
@@ -99,28 +101,30 @@ class ReportBuilder:
                         except Exception:
                             pass
 
-        if json.__name__ == "orjson":
-            if allow_binary:
-                return json.dumps(self.combined_json)
-            else:
-                return json.dumps(self.combined_json).decode("utf-8")
-        else:
-            return json.dumps(self.combined_json)
-
-    def generate_report(self, file_info=True):
+    def generate_report(self, output_file, output_format, file_info=True):
         sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
-            tmpl = f.read()
-        with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
-            sub["trace_viewer_full"] = f.read()
-        sub["json_data"] = self.generate_json(file_info=file_info, display_time_unit="ns")
-        sub["json_data"] = sub["json_data"].replace("</script>", "<\\/script>")
-
-        return Template(tmpl).substitute(sub)
+        if output_format == "html":
+            self.prepare_json(file_info=file_info, display_time_unit="ns")
+            with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
+                tmpl = f.read()
+            with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
+                sub["trace_viewer_full"] = f.read()
+            if json.__name__ == "orjson":
+                sub["json_data"] = json.dumps(self.combined_json).decode("utf-8").replace("</script>", "<\\/script>")
+            else:
+                sub["json_data"] = json.dumps(self.combined_json).replace("</script>", "<\\/script>")
+            output_file.write(Template(tmpl).substitute(sub))
+        elif output_format == "json":
+            self.prepare_json(file_info=file_info, display_time_unit="us")
+            if json.__name__ == "orjson":
+                output_file.write(json.dumps(self.combined_json).decode("utf-8"))
+            else:
+                if self.minimize_memory:
+                    json.dump(self.combined_json, output_file)
+                else:
+                    output_file.write(json.dumps(self.combined_json))
 
     def save(self, output_file="result.html", file_info=True):
-        file_type = output_file.split(".")[-1]
-
         if self.verbose > 0:
             print("==================================================")
             print("== Starting from version 0.13.0, VizTracer will ==")
@@ -128,27 +132,24 @@ class ReportBuilder:
             print('== generate HTML report with "-o result.html"   ==')
             print("==================================================")
 
-        if file_type == "html":
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(self.generate_report(file_info=True))
-        elif file_type == "json":
-            data = self.generate_json(allow_binary=True, file_info=file_info)
-            if type(data) is bytes:
-                with open(output_file, "wb") as f:
-                    f.write(data)
-            else:
-                with open(output_file, "w", encoding="utf-8") as f:
-                    f.write(data)
-        elif file_type == "gz":
-            data = self.generate_json(allow_binary=True, file_info=file_info)
-            if type(data) is not bytes:
-                data = data.encode("utf-8")
-            with gzip.open(output_file, "wb") as f:
-                f.write(data)
+        if isinstance(output_file, io.TextIOBase):
+            self.generate_report(output_file, output_format="json", file_info=file_info)
         else:
-            raise Exception("Only html, json and gz are supported")
+            file_type = output_file.split(".")[-1]
 
-        if self.verbose > 0:
+            if file_type == "html":
+                with open(output_file, "w", encoding="utf-8") as f:
+                    self.generate_report(f, output_format="html", file_info=file_info)
+            elif file_type == "json":
+                with open(output_file, "w", encoding="utf-8") as f:
+                    self.generate_report(f, output_format="json", file_info=file_info)
+            elif file_type == "gz":
+                with gzip.open(output_file, "wt") as f:
+                    self.generate_report(f, output_format="json", file_info=file_info)
+            else:
+                raise Exception("Only html, json and gz are supported")
+
+        if self.verbose > 0 and isinstance(output_file, str):
             print("Saving report to {} ...".format(os.path.abspath(output_file)))
             print('Use', end=" ")
             color_print("OKGREEN", '"vizviewer <your_report>"', end=" ")

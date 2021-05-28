@@ -146,7 +146,7 @@ class VizTracer(_VizTracer):
         self.stop()
         self.save(output_file)
 
-    def save(self, output_file=None, save_flamegraph=False, file_info=None):
+    def save(self, output_file=None, save_flamegraph=False, file_info=None, minimize_memory=False):
         if file_info is None:
             file_info = self.file_info
         enabled = False
@@ -164,11 +164,12 @@ class VizTracer(_VizTracer):
 
         self._plugin_manager.event("pre-save")
 
-        output_file = os.path.abspath(output_file)
-        if not os.path.isdir(os.path.dirname(output_file)):
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        if isinstance(output_file, str):
+            output_file = os.path.abspath(output_file)
+            if not os.path.isdir(os.path.dirname(output_file)):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        rb = ReportBuilder(self.data, self.verbose)
+        rb = ReportBuilder(self.data, self.verbose, minimize_memory=minimize_memory)
         rb.save(output_file=output_file, file_info=file_info)
 
         if save_flamegraph:
@@ -176,14 +177,6 @@ class VizTracer(_VizTracer):
 
         if enabled:
             self.start()
-
-    def generate_json(self, allow_binary=False):
-        rb = ReportBuilder(self.data, self.verbose)
-        return rb.generate_json(allow_binary=allow_binary)
-
-    def generate_report(self):
-        rb = ReportBuilder(self.data, self.verbose)
-        return rb.generate_report()
 
     def fork_save(self, output_file=None, save_flamegraph=False):
         if multiprocessing.get_start_method() != "fork":
@@ -207,6 +200,8 @@ class VizTracer(_VizTracer):
         else:
             # Revert to the normal pid mode
             self._tracer.setpid(0)
+
+        return p
 
     def save_flamegraph(self, output_file=None):
         flamegraph = FlameGraph(self.data)

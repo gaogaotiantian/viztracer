@@ -17,6 +17,7 @@
 
 #include "snaptrace.h"
 #include "util.h"
+#include "eventnode.h"
 
 // Function declarations
 
@@ -67,73 +68,6 @@ static struct ThreadInfo* get_thread_info(TracerObject* self)
     return info;
 }
 
-static inline void clear_node(struct EventNode* node) {
-    switch (node->ntype) {
-    case FEE_NODE:
-        if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-            Py_DECREF(node->data.fee.co_filename);
-            Py_DECREF(node->data.fee.co_name);
-            node->data.fee.co_firstlineno = 0;
-            if (node->data.fee.args) {
-                Py_DECREF(node->data.fee.args);
-                node->data.fee.args = NULL;
-            }
-            if (node->data.fee.retval) {
-                Py_DECREF(node->data.fee.retval);
-                node->data.fee.retval = NULL;
-            }
-        } else {
-            node->data.fee.ml_name = NULL;
-            if (node->data.fee.m_module) {
-                // The function belongs to a module
-                Py_DECREF(node->data.fee.m_module);
-                node->data.fee.m_module = NULL;
-            } else {
-                // The function is a class method
-                if (node->data.fee.tp_name) {
-                    // It's not a static method, has __self__
-                    node->data.fee.tp_name = NULL;
-                }
-            }
-        }
-        if (node->data.fee.asyncio_task != NULL) {
-            Py_DECREF(node->data.fee.asyncio_task);
-            node->data.fee.asyncio_task = NULL;
-        }
-        break;
-    case INSTANT_NODE:
-        Py_DECREF(node->data.instant.name);
-        Py_DECREF(node->data.instant.args);
-        Py_DECREF(node->data.instant.scope);
-        node->data.instant.name = NULL;
-        node->data.instant.args = NULL;
-        node->data.instant.scope = NULL;
-        break;
-    case COUNTER_NODE:
-        Py_DECREF(node->data.counter.name);
-        Py_DECREF(node->data.counter.args);
-        node->data.counter.name = NULL;
-        node->data.counter.args = NULL;
-        break;
-    case OBJECT_NODE:
-        Py_DECREF(node->data.object.ph);
-        Py_DECREF(node->data.object.id);
-        Py_DECREF(node->data.object.name);
-        Py_DECREF(node->data.object.args);
-        node->data.object.ph = NULL;
-        node->data.object.id = NULL;
-        node->data.object.name = NULL;
-        node->data.object.args = NULL;
-        break;
-    case RAW_NODE:
-        Py_DECREF(node->data.raw);
-        node->data.raw = NULL;
-        break;
-    default:
-        printf("Unknown Node Type When Clearing!\n");
-        exit(1);
-    }
-}
 
 static inline struct EventNode* get_next_node(TracerObject* self)
 {
@@ -619,6 +553,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     unsigned long prev_counter = 0;
     struct MetadataNode* metadata_node = NULL;
     PyObject* task_dict = NULL;
+    PyObject* func_name_dict = PyDict_New();
 
     if (self->fix_pid > 0) {
         pid = PyLong_FromLong(self->fix_pid);
@@ -727,31 +662,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
 
         switch (node->ntype) {
         case FEE_NODE:
-            if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-                name = PyUnicode_FromFormat("%s (%s:%d)",
-                       PyUnicode_AsUTF8(node->data.fee.co_name),
-                       PyUnicode_AsUTF8(node->data.fee.co_filename),
-                       node->data.fee.co_firstlineno);
-            } else {
-                if (node->data.fee.m_module) {
-                    // The function belongs to a module
-                    name = PyUnicode_FromFormat("%s.%s",
-                           PyUnicode_AsUTF8(node->data.fee.m_module),
-                           node->data.fee.ml_name);
-                } else {
-                    // The function is a class method
-                    if (node->data.fee.tp_name) {
-                        // It's not a static method, has __self__
-                        name = PyUnicode_FromFormat("%s.%s",
-                               node->data.fee.tp_name,
-                               node->data.fee.ml_name);
-                    } else {
-                        // It's a static method, does not have __self__
-                        name = PyUnicode_FromFormat("%s",
-                               node->data.fee.ml_name);
-                    }
-                }
-            }
+            name = get_name_from_fee_node(node, func_name_dict);
 
             PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
             PyDict_SetItemString(dict, "dur", dur);
@@ -868,6 +779,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(ph_X);
     Py_DECREF(ph_C);
     Py_DECREF(ph_M);
+    Py_DECREF(func_name_dict);
     self->buffer_tail_idx = self->buffer_head_idx;
     return lst;
 }
