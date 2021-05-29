@@ -9,6 +9,8 @@ import os
 import socketserver
 import sys
 
+from .flamegraph import FlameGraph
+
 
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -22,14 +24,24 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class PerfettoHandler(HttpHandler):
-    def __init__(self, file_info, tracefile_path, *args, **kwargs):
+    def __init__(self, file_info, tracefile_path, flamegraph, *args, **kwargs):
         self.file_info = file_info
         self.tracefile_path = tracefile_path
+        self.flamegraph = flamegraph
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
         self.server.last_request = self.path
-        if self.path.endswith("file_info"):
+        if self.path.endswith("vizviewer_info"):
+            info = {
+                "is_flamegraph": self.flamegraph is not None
+            }
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(info).encode("utf-8"))
+            self.wfile.flush()
+        elif self.path.endswith("file_info"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -44,6 +56,13 @@ class PerfettoHandler(HttpHandler):
             self.path = f"/{filename}"
             self.server.trace_served = True
             return super().do_GET()
+        elif self.path.endswith("flamegraph"):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(self.flamegraph).encode("utf-8"))
+            self.wfile.flush()
+            self.server.trace_served = True
         else:
             self.directory = os.path.join(os.path.dirname(__file__), "web_dist")
             os.chdir(self.directory)
@@ -63,7 +82,7 @@ class HtmlHandler(HttpHandler):
         return super().do_GET()
 
 
-def view(path, server_only=False, once=False):
+def view(path, server_only=False, once=False, flamegraph=False):
     # For official perfetto, only localhost:9001 is allowed
     port = 9001
 
@@ -71,12 +90,22 @@ def view(path, server_only=False, once=False):
     os.chdir(os.path.dirname(path))
     filename = os.path.basename(path)
 
-    if filename.endswith("json"):
+    if flamegraph:
+        if filename.endswith("json"):
+            with open(filename) as f:
+                trace_data = json.load(f)
+            fg = FlameGraph(trace_data)
+            fg_data = fg.dump_to_perfetto()
+            Handler = functools.partial(PerfettoHandler, None, path, fg_data)
+        else:
+            print(f"Do not support flamegraph for file type {filename}")
+            return 1
+    elif filename.endswith("json"):
         trace_data = None
         with open(filename) as f:
             trace_data = json.load(f)
             file_info = trace_data.get("file_info", {})
-        Handler = functools.partial(PerfettoHandler, file_info, path)
+        Handler = functools.partial(PerfettoHandler, file_info, path, None)
     elif filename.endswith("html"):
         Handler = functools.partial(HtmlHandler, path)
     else:
@@ -112,6 +141,8 @@ def viewer_main():
                         help="Only start the server, do not open webpage")
     parser.add_argument("--once", default=False, action="store_true",
                         help="Only serve trace data once, then exit")
+    parser.add_argument("--flamegraph", default=False, action="store_true",
+                        help="Show flamegraph of data")
 
     options = parser.parse_args(sys.argv[1:])
     f = options.file[0]
@@ -122,7 +153,8 @@ def viewer_main():
             ret_code = view(
                 path,
                 server_only=options.server_only,
-                once=options.once
+                once=options.once,
+                flamegraph=options.flamegraph
             )
         finally:
             os.chdir(cwd)
