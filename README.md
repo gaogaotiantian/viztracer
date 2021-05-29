@@ -223,6 +223,16 @@ VizTracer supports ```asyncio``` natively, but could enhance the report by using
 
 Refer to [async docs](https://viztracer.readthedocs.io/en/stable/concurrency.html) for details
 
+### Flamegraph
+
+VizTracer can show flamegraph of traced data.
+
+```
+vizviewer --flamegraph result.json
+```
+
+[![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/flamegraph.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/flamegraph.png)
+
 ### Remote attach
 
 VizTracer supports remote attach to a process as long as you installed VizTracer on that process.

@@ -111,50 +111,55 @@ A ``Show VizTracer Report`` button will appear after the cell and you can click 
 Display Report
 --------------
 
-VizTracer will generate a ``result.html`` by default, which could be opened in Chrome directly. However, there are multiple ways
-to display VizTracer report.
-
-Currently, there are three front-end tools that could be used for VizTracer reports
-
-- Catapult Trace Viewer(Chrome Trace Viewer)
-- Perfetto
-- Modified Catapult Trace Viewer
-
-The Modified Catapult Trace Viewer can show source code of the program, while perfetto is actively maintained and uses
-latest technologies.
-
-The easiest way is to use ``vizviewer`` to load the report, which will open the webbrowser for you and load your report.
+VizTracer will generate a ``result.json`` by default, which could be opened with ``vizviewer``
 
 .. code-block::
 
-    # Use Modified Catapult Trace Viewer
-    vizviewer result.html
-
-    # Use Perfetto
     vizviewer result.json
-    vizviewer result.json.gz
+
+``vizviewer`` will bring up webbrowser and open the report by default. You can disable this feature and
+only host an HTTP server on ``localhost:9001``, which you can access through your browser
+
+.. code-block::
+
+    vizviewer --server_only result.json
+
+If you do not want to host the HTTP server forever, you can use ``--once`` so the server will shut down
+after serve the trace file
+
+.. code-block::
+
+    vizviewer --once result.json
+
+You can also show flamegraph of the result
+
+.. code-block::
+
+    vizviewer --flamegraph result.json
+
+``vizviewer`` can also show standalone html report - it just host a simple HTTP server for the file
+
+.. code-block::
+
+    vizviewer result.html
 
 Or, you can use ``--open`` for ``viztracer``, it will then open the report after it generates it
 
 .. code-block::
 
-    # Use Modified Catapult Trace Viewer
+    viztracer --open my_script.py
     viztracer -o result.html --open my_script.py
-
-    # Use Perfetto
-    viztracer -o result.json --open my_script.py
-    viztracer -o result.json.gz --open my_script.py
-
-If you generate an ``html`` report, you can also just open it in Chrome. If you generate ``json`` or ``gz`` report, you can
-load it in `Perfetto <https://ui.perfetto.dev/>`_ or chrome://tracing.
 
 Circular Buffer Size
 --------------------
 
 VizTracer used circular buffer to store the entries. When there are too many entries, it will only store the latest ones so you know what happened
-recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB memory. You can specify this when you instantiate ``VizTracer`` object
+recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB disk space. You can specify this when you instantiate ``VizTracer`` object
 
-Be aware that 150MiB is disk space, it requires more RAM to load it on Chrome.
+Notice it also takes significant amount of RAM when VizTracer is tracing the program.
+
+VizTracer will preallocate about ``tracer_entries * 100B`` RAM for circular buffer. It also requires about ``1-2MB`` per 10k entries to
+dump the json file.
 
 .. code-block:: python
 

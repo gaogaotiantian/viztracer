@@ -19,7 +19,7 @@ import webbrowser
 
 
 class Viewer(unittest.TestCase):
-    def __init__(self, file_path, once=False):
+    def __init__(self, file_path, once=False, flamegraph=False):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "-m", "--parallel-mode", "--pylib", "viztracer.viewer", "-s", file_path]
         else:
@@ -27,6 +27,9 @@ class Viewer(unittest.TestCase):
 
         if once:
             self.cmd.append("--once")
+
+        if flamegraph:
+            self.cmd.append("--flamegraph")
         self.process = None
         super().__init__()
 
@@ -140,7 +143,35 @@ class TestViewer(CmdlineTmpl):
                 v.stop()
                 raise
             finally:
-                v.process.wait(timeout=20)
+                try:
+                    v.process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    v.process.kill()
+        finally:
+            os.remove(f.name)
+
+    def test_flamegraph(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, once=True, flamegraph=True)
+            v.run()
+            try:
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/vizviewer_info")
+                self.assertTrue(resp.code == 200)
+                self.assertTrue(json.loads(resp.read().decode("utf-8"))["is_flamegraph"], True)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/flamegraph")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), [])
+            except Exception:
+                v.stop()
+                raise
+            finally:
+                try:
+                    v.process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    v.process.kill()
         finally:
             os.remove(f.name)
 
@@ -161,3 +192,4 @@ class TestViewer(CmdlineTmpl):
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
         self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)
+        self.template(["vizviewer", "--flamegraph", "README.md"], success=False, expected_output_file=None)

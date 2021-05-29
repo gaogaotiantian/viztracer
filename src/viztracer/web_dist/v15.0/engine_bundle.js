@@ -5403,8 +5403,6 @@ Module["_trace_processor_raw_query"] = createExportWrapper("trace_processor_raw_
 
 Module["_trace_processor_compute_metric"] = createExportWrapper("trace_processor_compute_metric", asm);
 
-Module["_trace_processor_get_metric_descriptors"] = createExportWrapper("trace_processor_get_metric_descriptors", asm);
-
 Module["_trace_processor_enable_metatrace"] = createExportWrapper("trace_processor_enable_metatrace", asm);
 
 Module["_trace_processor_disable_and_read_metatrace"] = createExportWrapper("trace_processor_disable_and_read_metatrace", asm);
@@ -6491,7 +6489,7 @@ var perfetto_version = createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCM_REVISION = exports.VERSION = void 0;
 exports.VERSION = "v15.0";
-exports.SCM_REVISION = "368a33fe3bc88cb442759c24c653e5e0a668f734";
+exports.SCM_REVISION = "e99d8868651540d5187224f00ee6407c837cf8a9";
 
 });
 
