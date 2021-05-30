@@ -23,6 +23,7 @@ class _VizTracer:
                  log_print=False,
                  log_gc=False,
                  log_async=False,
+                 trace_self=False,
                  vdb=False):
         self.buffer = []
         self.enable = False
@@ -43,6 +44,7 @@ class _VizTracer:
         self.log_gc = log_gc
         self.log_async = log_async
         self.vdb = vdb
+        self.trace_self = trace_self
         self.system_print = builtins.print
         self.total_entries = 0
         self.counters = {}
@@ -185,7 +187,8 @@ class _VizTracer:
             log_func_retval=self.log_func_retval,
             vdb=self.vdb,
             log_func_args=self.log_func_args,
-            log_async=self.log_async
+            log_async=self.log_async,
+            trace_self=self.trace_self
         )
         self._tracer.start()
 

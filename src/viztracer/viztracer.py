@@ -34,6 +34,7 @@ class VizTracer(_VizTracer):
                  pid_suffix=False,
                  file_info=True,
                  register_global=True,
+                 trace_self=False,
                  output_file="result.json",
                  plugins=[]):
         super().__init__(
@@ -48,7 +49,8 @@ class VizTracer(_VizTracer):
             log_gc=log_gc,
             vdb=vdb,
             log_func_args=log_func_args,
-            log_async=log_async
+            log_async=log_async,
+            trace_self=trace_self
         )
         self.verbose = verbose
         self.pid_suffix = pid_suffix

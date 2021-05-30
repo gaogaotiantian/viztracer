@@ -241,7 +241,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         }
 
         // Exclude Self
-        if (is_python && is_call) {
+        if (is_python && is_call && !CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
             PyObject* file_name = frame->f_code->co_filename;
             if (self->lib_file_path && startswith(PyUnicode_AsUTF8(file_name), self->lib_file_path)) {
                 info->ignore_stack_depth += 1;
@@ -858,7 +858,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
-            "log_func_retval", "vdb", "log_func_args", "log_async",
+            "log_func_retval", "vdb", "log_func_args", "log_async", "trace_self",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -871,7 +871,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_vdb = -1;
     int kw_log_func_args = -1;
     int kw_log_async = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppppp", kwlist,
+    int kw_trace_self = -1;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppp", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -882,7 +883,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_log_func_retval,
             &kw_vdb,
             &kw_log_func_args,
-            &kw_log_async)) {
+            &kw_log_async,
+            &kw_trace_self)) {
         return NULL;
     }
 
@@ -940,6 +942,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
     } else if (kw_log_async == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
+    }
+
+    if (kw_trace_self == 1) {
+        SET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
+    } else if (kw_log_async == 0) {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
     }
 
     if (kw_max_stack_depth >= 0) {

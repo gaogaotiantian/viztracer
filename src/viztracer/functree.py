@@ -49,10 +49,29 @@ class FuncTreeNode:
     def adopt(self, other):
         new_children = []
         if self.is_ancestor(other):
-            start_array = [n.start for n in self.children]
-            end_array = [n.end for n in self.children]
-            start_idx = bisect.bisect(start_array, other.start)
-            end_idx = bisect.bisect(end_array, other.end)
+            # Build a list is slow
+            # In almost all cases, end_idx should be the last, because that's
+            # how we record entries.
+            # In many cases, if two entries are siblings, start_idx is the
+            # last too.
+            # Try to skip building the list by checking these common situations
+            # first.
+            if not self.children:
+                # if it's empty, then both indexes are 0
+                start_idx = end_idx = 0
+            else:
+                if other.start > self.children[-1].start:
+                    start_idx = len(self.children)
+                elif other.start < self.children[0].start:
+                    start_idx = 0
+                else:
+                    start_array = [n.start for n in self.children]
+                    start_idx = bisect.bisect(start_array, other.start)
+                if other.end > self.children[-1].end:
+                    end_idx = len(self.children)
+                else:
+                    end_array = [n.end for n in self.children]
+                    end_idx = bisect.bisect(end_array, other.end)
             if (start_idx == end_idx + 1):
                 self.children[end_idx].adopt(other)
             elif (start_idx == end_idx):
