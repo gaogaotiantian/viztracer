@@ -247,9 +247,7 @@ class VizUI:
         else:
             tracer.start()
         exec(code, global_dict)
-        tracer.stop()
-
-        self.exit_routine()
+        atexit._run_exitfuncs()
 
     def run_module(self):
         import runpy
@@ -392,6 +390,7 @@ class VizUI:
             )
 
     def exit_routine(self):
+        self.tracer.stop()
         atexit.unregister(self.exit_routine)
         if not self._exiting:
             # The program may changed cwd, change it back

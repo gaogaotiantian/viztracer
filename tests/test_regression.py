@@ -225,3 +225,24 @@ class TestIssue119(CmdlineTmpl):
                     )
                 finally:
                     os.chdir(cwd)
+
+
+issue121_code = """
+import atexit
+
+def fib(n):
+    if n <= 2:
+        return 1
+    return fib(n - 1) + fib(n - 2)
+
+atexit.register(fib, 6)
+"""
+
+
+class TestIssue121(CmdlineTmpl):
+    def test_issue119(self):
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=issue121_code,
+            expected_entries=18
+        )
