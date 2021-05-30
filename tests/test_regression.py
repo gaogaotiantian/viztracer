@@ -209,6 +209,7 @@ with tempfile.TemporaryDirectory() as name:
     os.chdir(name)
 """
 
+
 class TestIssue119(CmdlineTmpl):
     def test_issue119(self):
         with tempfile.TemporaryDirectory() as name:
