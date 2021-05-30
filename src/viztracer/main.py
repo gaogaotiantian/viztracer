@@ -46,6 +46,8 @@ class VizUI:
                             help=argparse.SUPPRESS)
         parser.add_argument("--quiet", action="store_true", default=False,
                             help="stop VizTracer from printing anything")
+        parser.add_argument("--trace_self", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--plugins", nargs="*", default=[],
                             help="specify plugins for VizTracer")
         parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
@@ -180,7 +182,8 @@ class VizUI:
             "vdb": options.vdb,
             "pid_suffix": options.pid_suffix,
             "register_global": True,
-            "plugins": options.plugins
+            "plugins": options.plugins,
+            "trace_self": options.trace_self
         }
 
         return True, None

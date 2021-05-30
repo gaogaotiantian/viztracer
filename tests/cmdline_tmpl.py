@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from .base_tmpl import BaseTmpl
 
@@ -72,9 +73,13 @@ class CmdlineTmpl(BaseTmpl):
             time.sleep(2)
             p.terminate()
             p.wait()
-            return None
-
-        result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=30)
+            result = p
+            if sys.platform == "win32":
+                # If we are on win32, we can't get anything useful from
+                # terminating the process
+                return None
+        else:
+            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=30)
         if not (success ^ (result.returncode != 0)):
             print(success, result.returncode)
             print(result.stdout)
