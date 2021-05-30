@@ -30,6 +30,7 @@ class VizUI:
         self._exiting = False
         self.multiprocess_output_dir = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
         self.is_main_process = False
+        self.cwd = os.getcwd()
 
     def create_parser(self):
         parser = argparse.ArgumentParser(prog="python -m viztracer")
@@ -390,6 +391,8 @@ class VizUI:
     def exit_routine(self):
         atexit.unregister(self.exit_routine)
         if not self._exiting:
+            # The program may changed cwd, change it back
+            os.chdir(self.cwd)
             self._exiting = True
             self.save(self.tracer)
             self.tracer.terminate()

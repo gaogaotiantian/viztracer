@@ -1,13 +1,17 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import viztracer
-import subprocess
-import os
-import time
-import sys
+
 import multiprocessing
+import os
+import subprocess
+import sys
+import tempfile
+import time
+
+import viztracer
 from viztracer import VizTracer, ignore_function
+
 from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
 
@@ -196,3 +200,26 @@ class TestIssue83(CmdlineTmpl):
     def test_issue83(self):
         self.template(["viztracer", "--quiet", "-m", "tests.modules.issue83"],
                       expected_stdout="__main__")
+
+
+issue119_code = """
+import os
+import tempfile
+with tempfile.TemporaryDirectory() as name:
+    os.chdir(name)
+"""
+
+class TestIssue119(CmdlineTmpl):
+    def test_issue119(self):
+        with tempfile.TemporaryDirectory() as name:
+            filepath = os.path.join(name, "result.json")
+            cwd = os.getcwd()
+            os.chdir(name)
+            try:
+                self.template(
+                    ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                    script=issue119_code,
+                    expected_output_file=filepath
+                )
+            finally:
+                os.chdir(cwd)
