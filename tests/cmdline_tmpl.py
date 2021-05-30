@@ -72,9 +72,9 @@ class CmdlineTmpl(BaseTmpl):
             time.sleep(2)
             p.terminate()
             p.wait()
-            return None
-
-        result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=30)
+            result = p
+        else:
+            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=30)
         if not (success ^ (result.returncode != 0)):
             print(success, result.returncode)
             print(result.stdout)

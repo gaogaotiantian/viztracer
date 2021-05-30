@@ -244,6 +244,15 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["python", "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
         self.template(["python", "-m", "viztracer", "--tracer_entries", "50", "cmdline_test.py"])
 
+    def test_trace_self(self):
+        def check_func(data):
+            self.assertGreater(len(data["traceEvents"]), 10000)
+
+        example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
+        self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
+                       os.path.join(example_json_dir, "multithread.json")],
+                      send_term=True, expected_output_file="result.json", check_func=check_func)
+
     def test_pid_suffix(self):
         self.template(["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"],
                       expected_output_file="./suffix_tmp")
