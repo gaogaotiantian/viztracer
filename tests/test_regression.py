@@ -204,9 +204,9 @@ class TestIssue83(CmdlineTmpl):
 
 issue119_code = """
 import os
+import sys
 import tempfile
-with tempfile.TemporaryDirectory() as name:
-    os.chdir(name)
+os.chdir(sys.argv[1])
 """
 
 
@@ -216,11 +216,12 @@ class TestIssue119(CmdlineTmpl):
             filepath = os.path.join(name, "result.json")
             cwd = os.getcwd()
             os.chdir(name)
-            try:
-                self.template(
-                    ["viztracer", "-o", "result.json", "cmdline_test.py"],
-                    script=issue119_code,
-                    expected_output_file=filepath
-                )
-            finally:
-                os.chdir(cwd)
+            with tempfile.TemporaryDirectory() as script_dir:
+                try:
+                    self.template(
+                        ["viztracer", "-o", "result.json", "cmdline_test.py", script_dir],
+                        script=issue119_code,
+                        expected_output_file=filepath
+                    )
+                finally:
+                    os.chdir(cwd)
