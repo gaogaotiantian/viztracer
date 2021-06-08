@@ -9,7 +9,7 @@ from .base_tmpl import BaseTmpl
 class TestCodeMonkey(BaseTmpl):
     def test_pure_compile(self):
         code_string = "a = 1"
-        monkey = CodeMonkey(code_string, "test.py")
+        monkey = CodeMonkey("test.py")
         _compile = monkey.compile
         _compile(code_string, "test.py", "exec")
 
@@ -19,7 +19,7 @@ class TestAstTransformer(BaseTmpl):
         tf = AstTransformer("invalid", "invalid")
         self.assertEqual(tf.get_assign_targets("invalid"), [])
         with self.assertRaises(ValueError):
-            tf.get_instrument_node("invalid")
+            tf.get_instrument_node("Exception", "invalid")
 
         self.assertEqual(tf.get_assign_targets_with_attr("invalid"), [])
 

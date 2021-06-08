@@ -20,6 +20,7 @@ release:
 
 lint:
 	flake8 src/ tests/ example/ --count --ignore=W503 --max-line-length=127 --statistics
+	mypy src/
 
 test:
 	python -m unittest

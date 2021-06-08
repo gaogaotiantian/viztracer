@@ -11,6 +11,7 @@ import builtins
 import platform
 import signal
 import shutil
+from typing import Any, Dict, List, Optional, Tuple
 from . import VizTracer
 from . import FlameGraph
 from . import __version__
@@ -21,18 +22,18 @@ from .patch import patch_multiprocessing, patch_subprocess
 
 class VizUI:
     def __init__(self):
-        self.tracer = None
-        self.parser = self.create_parser()
-        self.verbose = 1
-        self.ofile = "result.json"
-        self.options = None
-        self.args = []
-        self._exiting = False
-        self.multiprocess_output_dir = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
-        self.is_main_process = False
-        self.cwd = os.getcwd()
+        self.tracer: Optional[VizTracer] = None
+        self.parser: argparse.ArgumentParser = self.create_parser()
+        self.verbose: int = 1
+        self.ofile: str = "result.json"
+        self.options: argparse.Namespace = argparse.Namespace()
+        self.args: List[str] = []
+        self._exiting: bool = False
+        self.multiprocess_output_dir: str = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
+        self.is_main_process: bool = False
+        self.cwd: str = os.getcwd()
 
-    def create_parser(self):
+    def create_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog="python -m viztracer")
         parser.add_argument("--version", action="store_true", default=False,
                             help="show version of viztracer")
@@ -120,17 +121,16 @@ class VizUI:
                             help="time you want to trace the process")
         return parser
 
-    def parse(self, argv):
+    def parse(self, argv: List[str]) -> Tuple[bool, Optional[str]]:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
         # We need to filter those out, they might conflict with our arguments
+        idx: Optional[int] = None
         if "--" in argv[1:]:
             idx = argv.index("--")
         elif "--run" in argv[1:]:
             idx = argv.index("--run")
-        else:
-            idx = None
 
-        if idx:
+        if idx is not None:
             if idx == len(sys.argv) - 1:
                 return False, "You need to specify commands after --/--run"
             else:
@@ -188,7 +188,7 @@ class VizUI:
 
         return True, None
 
-    def search_file(self, file_name):
+    def search_file(self, file_name: str) -> Optional[str]:
         if os.path.isfile(file_name):
             return file_name
 
@@ -208,7 +208,7 @@ class VizUI:
 
         return None
 
-    def run(self):
+    def run(self) -> Tuple[bool, Optional[str]]:
         if self.options.version:
             return self.show_version()
         elif self.options.attach > 0:
@@ -227,7 +227,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code, global_dict):
+    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         options = self.options
 
         tracer = VizTracer(**self.init_kwargs)
@@ -248,8 +248,9 @@ class VizUI:
             tracer.start()
         exec(code, global_dict)
         atexit._run_exitfuncs()
+        return True, None
 
-    def run_module(self):
+    def run_module(self) -> Tuple[bool, Optional[str]]:
         import runpy
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
@@ -260,7 +261,7 @@ class VizUI:
         sys.path.insert(0, os.getcwd())
         return self.run_code(code, global_dict)
 
-    def run_command(self):
+    def run_command(self) -> Tuple[bool, Optional[str]]:
         command = self.command
         options = self.options
         file_name = command[0]
@@ -271,7 +272,7 @@ class VizUI:
         code_string = open(file_name, "rb").read()
         if options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception or options.log_func_entry:
-            monkey = CodeMonkey(code_string, file_name)
+            monkey = CodeMonkey(file_name)
             if options.log_var:
                 monkey.add_instrument("log_var", {"varnames": options.log_var})
             if options.log_number:
@@ -284,11 +285,11 @@ class VizUI:
                 monkey.add_instrument("log_func_entry", {"funcnames": options.log_func_entry})
             if options.log_exception:
                 monkey.add_instrument("log_exception", {})
-            builtins.compile = monkey.compile
+            builtins.compile = monkey.compile  # type: ignore
 
         main_mod = types.ModuleType("__main__")
-        main_mod.__file__ = os.path.abspath(file_name)
-        main_mod.__builtins__ = globals()["__builtins__"]
+        setattr(main_mod, "__file__", os.path.abspath(file_name))
+        setattr(main_mod, "__builtins__", globals()["__builtins__"])
 
         sys.modules["__main__"] = main_mod
         code = compile(code_string, os.path.abspath(file_name), "exec")
@@ -296,7 +297,7 @@ class VizUI:
         sys.argv = command[:]
         return self.run_code(code, main_mod.__dict__)
 
-    def run_generate_flamegraph(self):
+    def run_generate_flamegraph(self) -> Tuple[bool, Optional[str]]:
         options = self.options
         flamegraph = FlameGraph()
         flamegraph.load(options.generate_flamegraph)
@@ -308,7 +309,7 @@ class VizUI:
 
         return True, None
 
-    def run_combine(self, files=[], align=False):
+    def run_combine(self, files: List[str], align: bool = False) -> Tuple[bool, Optional[str]]:
         options = self.options
         builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
         if options.output_file:
@@ -319,11 +320,11 @@ class VizUI:
 
         return True, None
 
-    def show_version(self):
+    def show_version(self) -> Tuple[bool, Optional[str]]:
         print(__version__)
         return True, None
 
-    def attach(self):
+    def attach(self) -> Tuple[bool, Optional[str]]:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
         pid = self.options.attach
@@ -348,7 +349,7 @@ class VizUI:
 
         return True, None
 
-    def save(self, tracer):
+    def save(self, tracer: VizTracer) -> None:
         options = self.options
         ofile = self.ofile
 
@@ -389,19 +390,20 @@ class VizUI:
                 minimize_memory=options.minimize_memory
             )
 
-    def exit_routine(self):
-        self.tracer.stop()
-        atexit.unregister(self.exit_routine)
-        if not self._exiting:
-            # The program may changed cwd, change it back
-            os.chdir(self.cwd)
-            self._exiting = True
-            self.save(self.tracer)
-            self.tracer.terminate()
-            if self.is_main_process and self.options.open:  # pragma: no cover
-                import subprocess
-                subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
-            exit(0)
+    def exit_routine(self) -> None:
+        if self.tracer is not None:
+            self.tracer.stop()
+            atexit.unregister(self.exit_routine)
+            if not self._exiting:
+                # The program may changed cwd, change it back
+                os.chdir(self.cwd)
+                self._exiting = True
+                self.save(self.tracer)
+                self.tracer.terminate()
+                if self.is_main_process and self.options.open:  # pragma: no cover
+                    import subprocess
+                    subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
+                exit(0)
 
 
 def main():

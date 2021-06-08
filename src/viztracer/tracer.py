@@ -5,33 +5,34 @@ import os
 import builtins
 import gc
 from io import StringIO
+from typing import Any, Dict, Optional, Sequence, Union
 from .util import color_print
 from . import __version__
-import viztracer.snaptrace as snaptrace
+import viztracer.snaptrace as snaptrace  # type: ignore
 
 
 class _VizTracer:
-    def __init__(self,
-                 tracer_entries=1000000,
-                 max_stack_depth=-1,
-                 include_files=None,
-                 exclude_files=None,
-                 ignore_c_function=False,
-                 ignore_frozen=False,
-                 log_func_retval=False,
-                 log_func_args=False,
-                 log_print=False,
-                 log_gc=False,
-                 log_async=False,
-                 trace_self=False,
-                 vdb=False):
-        self.buffer = []
+    def __init__(
+            self,
+            tracer_entries: int = 1000000,
+            max_stack_depth: int = -1,
+            include_files: Optional[Sequence[str]] = None,
+            exclude_files: Optional[Sequence[str]] = None,
+            ignore_c_function: bool = False,
+            ignore_frozen: bool = False,
+            log_func_retval: bool = False,
+            log_func_args: bool = False,
+            log_print: bool = False,
+            log_gc: bool = False,
+            log_async: bool = False,
+            trace_self: bool = False,
+            vdb: bool = False):
         self.enable = False
         self.parsed = False
         self._tracer = snaptrace.Tracer(tracer_entries)
         self.tracer_entries = tracer_entries
         self.verbose = 0
-        self.data = []
+        self.data: Dict[str, Any] = {}
         self.max_stack_depth = max_stack_depth
         self.curr_stack_depth = 0
         self.include_files = include_files
@@ -47,35 +48,34 @@ class _VizTracer:
         self.trace_self = trace_self
         self.system_print = builtins.print
         self.total_entries = 0
-        self.counters = {}
-        self.gc_start_args = {}
+        self.gc_start_args: Dict[str, int] = {}
 
     @property
-    def max_stack_depth(self):
+    def max_stack_depth(self) -> int:
         return self.__max_stack_depth
 
     @max_stack_depth.setter
-    def max_stack_depth(self, max_stack_depth):
-        if type(max_stack_depth) is str:
+    def max_stack_depth(self, max_stack_depth: Union[str, int]):
+        if isinstance(max_stack_depth, str):
             try:
                 self.__max_stack_depth = int(max_stack_depth)
             except ValueError:
                 raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
-        elif type(max_stack_depth) is int:
+        elif isinstance(max_stack_depth, int):
             self.__max_stack_depth = max_stack_depth
         else:
             raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
         self._tracer.config(max_stack_depth=self.__max_stack_depth)
 
     @property
-    def include_files(self):
+    def include_files(self) -> Optional[Sequence[str]]:
         return self.__include_files
 
     @include_files.setter
-    def include_files(self, include_files):
+    def include_files(self, include_files: Optional[Sequence[str]]):
         if include_files is None:
             self.__include_files = None
-        elif type(include_files) == list:
+        elif isinstance(include_files, list):
             if include_files:
                 self.__include_files = include_files[:] + [os.path.abspath(f) for f in include_files if not f.startswith("/")]
             else:
@@ -84,14 +84,14 @@ class _VizTracer:
             raise ValueError("include_files has to be a list")
 
     @property
-    def exclude_files(self):
+    def exclude_files(self) -> Optional[Sequence[str]]:
         return self.__exclude_files
 
     @exclude_files.setter
-    def exclude_files(self, exclude_files):
+    def exclude_files(self, exclude_files: Optional[Sequence[str]]):
         if exclude_files is None:
             self.__exclude_files = None
-        elif type(exclude_files) == list:
+        elif isinstance(exclude_files, list):
             if exclude_files:
                 self.__exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
             else:
@@ -100,56 +100,56 @@ class _VizTracer:
             raise ValueError("exclude_files has to be a list")
 
     @property
-    def ignore_c_function(self):
+    def ignore_c_function(self) -> bool:
         return self.__ignore_c_function
 
     @ignore_c_function.setter
-    def ignore_c_function(self, ignore_c_function):
-        if type(ignore_c_function) is bool:
+    def ignore_c_function(self, ignore_c_function: bool):
+        if isinstance(ignore_c_function, bool):
             self.__ignore_c_function = ignore_c_function
         else:
             raise ValueError("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
 
     @property
-    def log_func_retval(self):
+    def log_func_retval(self) -> bool:
         return self.__log_func_retval
 
     @log_func_retval.setter
-    def log_func_retval(self, log_func_retval):
-        if type(log_func_retval) is bool:
+    def log_func_retval(self, log_func_retval: bool):
+        if isinstance(log_func_retval, bool):
             self.__log_func_retval = log_func_retval
         else:
             raise ValueError("log_func_retval needs to be True or False, not {}".format(log_func_retval))
 
     @property
-    def log_print(self):
+    def log_print(self) -> bool:
         return self.__log_print
 
     @log_print.setter
-    def log_print(self, log_print):
-        if type(log_print) is bool:
+    def log_print(self, log_print: bool):
+        if isinstance(log_print, bool):
             self.__log_print = log_print
         else:
             raise ValueError("log_print needs to be True or False, not {}".format(log_print))
 
     @property
-    def log_func_args(self):
+    def log_func_args(self) -> bool:
         return self.__log_func_args
 
     @log_func_args.setter
-    def log_func_args(self, log_func_args):
-        if type(log_func_args) is bool:
+    def log_func_args(self, log_func_args: bool):
+        if isinstance(log_func_args, bool):
             self.__log_func_args = log_func_args
         else:
             raise ValueError("log_func_args needs to be True or False, not {}".format(log_func_args))
 
     @property
-    def log_gc(self):
+    def log_gc(self) -> bool:
         return self.__log_gc
 
     @log_gc.setter
-    def log_gc(self, log_gc):
-        if type(log_gc) is bool:
+    def log_gc(self, log_gc: bool):
+        if isinstance(log_gc, bool):
             self.__log_gc = log_gc
             if log_gc:
                 gc.callbacks.append(self.add_garbage_collection)
@@ -159,15 +159,31 @@ class _VizTracer:
             raise ValueError("log_gc needs to be True or False, not {}".format(log_gc))
 
     @property
-    def vdb(self):
+    def vdb(self) -> bool:
         return self.__vdb
 
     @vdb.setter
-    def vdb(self, vdb):
-        if type(vdb) is bool:
+    def vdb(self, vdb: bool):
+        if isinstance(vdb, bool):
             self.__vdb = vdb
         else:
             raise ValueError("vdb needs to be True or False, not {}".format(vdb))
+
+    @property
+    def verbose(self) -> int:
+        return self.__verbose
+
+    @verbose.setter
+    def verbose(self, verbose: Union[str, int]):
+        if isinstance(verbose, str):
+            try:
+                self.__verbose = int(verbose)
+            except ValueError:
+                raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
+        elif isinstance(verbose, int):
+            self.__verbose = verbose
+        else:
+            raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
 
     def start(self):
         self.enable = True
@@ -212,44 +228,44 @@ class _VizTracer:
     def cleanup(self):
         self._tracer.cleanup()
 
-    def getts(self):
+    def getts(self) -> float:
         return self._tracer.getts()
 
-    def add_instant(self, name, args, scope="g"):
+    def add_instant(self, name: str, args: Dict[str, Any], scope: str = "g"):
         if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
             self._tracer.addinstant(name, args, scope)
 
-    def add_variable(self, name, var, event="instant"):
+    def add_variable(self, name: str, var: Any, event: str = "instant"):
         if self.enable:
             if event == "instant":
                 self.add_instant(name, {"value": repr(var)}, scope="p")
             elif event == "counter":
-                if type(var) is int or type(var) is float:
+                if isinstance(var, int or type(var) is float):
                     self.add_counter(name, {name: var})
                 else:
                     raise ValueError("{}({}) is not a number".format(name, var))
             else:
                 raise ValueError("{} is not supported".format(event))
 
-    def add_counter(self, name, args):
+    def add_counter(self, name: str, args: Dict[str, Any]):
         if self.enable:
             self._tracer.addcounter(name, args)
 
-    def add_object(self, ph, obj_id, name, args=None):
+    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None):
         if self.enable:
             self._tracer.addobject(ph, obj_id, name, args)
 
-    def add_func_args(self, key, value):
+    def add_func_args(self, key: str, value: Any):
         if self.enable:
             self._tracer.addfunctionarg(key, value)
 
-    def add_raw(self, raw):
+    def add_raw(self, raw: Dict[str, Any]):
         self._tracer.addraw(raw)
 
-    def add_garbage_collection(self, phase, info):
+    def add_garbage_collection(self, phase: str, info: Dict[str, Any]):
         if self.enable:
             if phase == "start":
                 args = {
@@ -269,7 +285,7 @@ class _VizTracer:
                     "uncollectable": 0
                 })
 
-    def add_func_exec(self, name, val, lineno):
+    def add_func_exec(self, name: str, val: Any, lineno: int):
         exec_line = "({}) {} = {}".format(lineno, name, val)
         curr_args = self._tracer.getfunctionarg()
         if not curr_args:
@@ -280,10 +296,10 @@ class _VizTracer:
             else:
                 curr_args["exec_steps"] = [exec_line]
 
-    def _set_curr_stack_depth(self, stack_depth):
+    def _set_curr_stack_depth(self, stack_depth: int):
         self._tracer.setcurrstack(stack_depth)
 
-    def parse(self):
+    def parse(self) -> int:
         # parse() is also performance sensitive. We could have a lot of entries
         # in buffer, so try not to add any overhead when parsing
         # We parse the buffer into Chrome Trace Event Format

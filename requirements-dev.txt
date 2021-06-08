@@ -3,3 +3,4 @@ wheel
 twine
 coverage
 jupyter
+mypy

@@ -2,10 +2,11 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from .event_base import _EventBase
+from .viztracer import VizTracer
 
 
 class VizObject(_EventBase):
-    def __init__(self, tracer, name, **kwargs):
+    def __init__(self, tracer: VizTracer, name: str, **kwargs):
         super().__init__(tracer, name, **kwargs)
         self._viztracer_id = str(id(self))
         if self._viztracer_tracer:
@@ -15,7 +16,7 @@ class VizObject(_EventBase):
         if self._viztracer_tracer:
             self._viztracer_tracer.add_object("D", self._viztracer_id, self._viztracer_name)
 
-    def _viztracer_log(self, ph="O"):
+    def _viztracer_log(self, ph: str = "O"):
         if not self._viztracer_tracer:
             return
         d = {}

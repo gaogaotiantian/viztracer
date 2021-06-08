@@ -4,7 +4,7 @@
 try:
     import orjson as json
 except ImportError:
-    import json
+    import json  # type: ignore
 import bisect
 import os
 from .functree import FuncTree

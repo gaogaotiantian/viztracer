@@ -4,28 +4,28 @@
 import copy
 import bisect
 import re
+from typing import Any, Dict, Generator, List, Optional
 
 
 class FuncTreeNode:
     name_regex = r"(.*) \((.*?):([0-9]+)\)"
 
-    def __init__(self, event=None):
-        self.filename = None
-        self.lineno = None
-        self.caller_lineno = -1
-        self.is_python = False
-        self.funcname = None
+    def __init__(self, event: Optional[Dict[str, Any]] = None):
+        self.filename: Optional[str] = None
+        self.lineno: Optional[int] = None
+        self.caller_lineno: int = -1
+        self.is_python: Optional[bool] = False
+        self.funcname: Optional[str] = None
+        self.parent: Optional[FuncTreeNode] = None
+        self.children: List[FuncTreeNode] = []
+        self.start: float = - (2 ** 64)
+        self.end: float = 2 ** 64
+        self.event: Dict[str, Any] = {}
         if event is None:
             self.event = {"name": "__ROOT__"}
             self.fullname = "__ROOT__"
-            self.parent = None
-            self.children = []
-            self.start = - (2 ** 64)
-            self.end = 2 ** 64
         else:
             self.event = copy.copy(event)
-            self.parent = None
-            self.children = []
             self.start = self.event["ts"]
             self.end = self.event["ts"] + self.event["dur"]
             self.fullname = self.event["name"]
@@ -38,15 +38,15 @@ class FuncTreeNode:
             if "caller_lineno" in self.event:
                 self.caller_lineno = self.event["caller_lineno"]
 
-    def is_ancestor(self, other):
+    def is_ancestor(self, other: "FuncTreeNode") -> bool:
         return self.start < other.start and self.end > other.end
 
-    def is_same(self, other):
+    def is_same(self, other: "FuncTreeNode") -> bool:
         return (self.fullname == other.fullname
                 and len(self.children) == len(other.children)
                 and all([t[0].is_same(t[1]) for t in zip(self.children, other.children)]))
 
-    def adopt(self, other):
+    def adopt(self, other: "FuncTreeNode") -> None:
         new_children = []
         if self.is_ancestor(other):
             # Build a list is slow
@@ -88,33 +88,35 @@ class FuncTreeNode:
                 self.children = self.children[:start_idx] + [other] + self.children[end_idx:]
             else:  # pragma: no cover
                 raise Exception("This should not be possible")
-        else:
+        elif self.parent is not None:
             self.parent.adopt(other)
+        else:  # pragma: no cover
+            raise Exception("This should not be possible")
 
 
 class FuncTree:
-    def __init__(self, pid=0, tid=0):
-        self.root = FuncTreeNode()
-        self.curr = self.root
-        self.pid = pid
-        self.tid = tid
+    def __init__(self, pid: int = 0, tid: int = 0):
+        self.root: FuncTreeNode = FuncTreeNode()
+        self.curr: FuncTreeNode = self.root
+        self.pid: int = pid
+        self.tid: int = tid
 
-    def is_same(self, other):
+    def is_same(self, other: "FuncTree") -> bool:
         return self.root.is_same(other.root)
 
-    def add_event(self, event):
+    def add_event(self, event: Dict[str, Any]) -> None:
         node = FuncTreeNode(event)
 
         self.curr.adopt(node)
         self.curr = node
 
-    def first_ts(self):
+    def first_ts(self) -> float:
         return self.root.children[0].event["ts"]
 
-    def first_node(self):
+    def first_node(self) -> FuncTreeNode:
         return self.root.children[0]
 
-    def node_by_timestamp(self, ts):
+    def node_by_timestamp(self, ts: float) -> FuncTreeNode:
         starts = [node.start for node in self.root.children]
         idx = bisect.bisect(starts, ts)
         if idx == 0:
@@ -122,12 +124,12 @@ class FuncTree:
         else:
             return self.root.children[idx - 1]
 
-    def normalize(self, first_ts):
+    def normalize(self, first_ts: float) -> None:
         for node in self.inorder_traverse():
             node.start -= first_ts
             node.end -= first_ts
 
-    def inorder_traverse(self):
+    def inorder_traverse(self) -> Generator[FuncTreeNode, None, None]:
         lst = [self.root]
         while lst:
             ret = lst.pop()

@@ -3,52 +3,59 @@
 
 from string import Template
 import os
-import io
 import re
 import gzip
+import sys
+from typing import Any, Dict, List, Sequence, Union, TextIO
 try:
-    import orjson as json
+    import orjson
 except ImportError:
     import json
 from .util import color_print
 
 
-def get_json(data):
+def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
     # This function will return a json object if data is already json object
     # or a opened file or a file path
-    if type(data) is dict:
+    if isinstance(data, dict):
         # This is an object already
         return data
-    elif isinstance(data, io.IOBase):
-        json_str = data.read()
-    elif type(data) is str:
+    elif isinstance(data, str):
         with open(data, encoding="utf-8") as f:
             json_str = f.read()
     else:
         raise TypeError("Unexpected Type{}!", type(data))
 
     try:
-        return json.loads(json_str)
+        if "orjson" in sys.modules:
+            return orjson.loads(json_str)
+        else:
+            return json.loads(json_str)
     except Exception as e:
         print("Unable to decode {}".format(data))
         raise e
 
 
 class ReportBuilder:
-    def __init__(self, data, verbose=1, align=False, minimize_memory=False):
+    def __init__(
+            self,
+            data: Union[Sequence[str], Dict],
+            verbose: int = 1,
+            align: bool = False,
+            minimize_memory: bool = False):
         self.verbose = verbose
-        self.combined_json = None
+        self.combined_json: Dict = {}
         self.entry_number_threshold = 4000000
         self.align = align
         self.minimize_memory = minimize_memory
-        if type(data) is list:
-            self.jsons = [get_json(j) for j in data]
-        else:
+        if isinstance(data, dict):
             self.jsons = [get_json(data)]
+        else:
+            self.jsons = [get_json(j) for j in data]
 
-    def combine_json(self):
+    def combine_json(self) -> None:
         if self.combined_json:
-            return 0
+            return
         if not self.jsons:
             raise ValueError("Can't get report of nothing")
         if self.align:
@@ -59,7 +66,7 @@ class ReportBuilder:
             if "traceEvents" in one:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
 
-    def align_events(self, original_events):
+    def align_events(self, original_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Apply an offset to all the trace events, making the start timestamp 0
         This is useful when comparing multiple runs of the same script
@@ -72,7 +79,7 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def prepare_json(self, file_info=True, display_time_unit="us"):
+    def prepare_json(self, file_info: bool = True, display_time_unit: str = "us") -> None:
         # This will prepare self.combined_json to be ready to output
         self.combine_json()
         if self.verbose > 0:
@@ -91,17 +98,22 @@ class ReportBuilder:
                     if event["name"] not in func_dict:
                         try:
                             m = pattern.match(event["name"])
-                            file_name = m.group(1)
-                            lineno = int(m.group(2))
-                            if file_name not in file_dict:
-                                with open(file_name, "r", encoding="utf-8") as f:
-                                    content = f.read()
-                                    file_dict[file_name] = [content, content.count("\n")]
-                            func_dict[event["name"]] = [file_name, lineno]
+                            if m is not None:
+                                file_name = m.group(1)
+                                lineno = int(m.group(2))
+                                if file_name not in file_dict:
+                                    with open(file_name, "r", encoding="utf-8") as f:
+                                        content = f.read()
+                                        file_dict[file_name] = [content, content.count("\n")]
+                                func_dict[event["name"]] = [file_name, lineno]
                         except Exception:
                             pass
 
-    def generate_report(self, output_file, output_format, file_info=True):
+    def generate_report(
+            self,
+            output_file: TextIO,
+            output_format: str,
+            file_info: bool = True) -> None:
         sub = {}
         if output_format == "html":
             self.prepare_json(file_info=file_info, display_time_unit="ns")
@@ -109,22 +121,25 @@ class ReportBuilder:
                 tmpl = f.read()
             with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
                 sub["trace_viewer_full"] = f.read()
-            if json.__name__ == "orjson":
-                sub["json_data"] = json.dumps(self.combined_json).decode("utf-8").replace("</script>", "<\\/script>")
+            if "orjson" in sys.modules:
+                sub["json_data"] = orjson.dumps(self.combined_json) \
+                                         .decode("utf-8") \
+                                         .replace("</script>", "<\\/script>")
             else:
-                sub["json_data"] = json.dumps(self.combined_json).replace("</script>", "<\\/script>")
+                sub["json_data"] = json.dumps(self.combined_json) \
+                                       .replace("</script>", "<\\/script>")
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
             self.prepare_json(file_info=file_info, display_time_unit="us")
-            if json.__name__ == "orjson":
-                output_file.write(json.dumps(self.combined_json).decode("utf-8"))
+            if "orjson" in sys.modules:
+                output_file.write(orjson.dumps(self.combined_json).decode("utf-8"))
             else:
                 if self.minimize_memory:
-                    json.dump(self.combined_json, output_file)
+                    json.dump(self.combined_json, output_file)  # type: ignore
                 else:
                     output_file.write(json.dumps(self.combined_json))
 
-    def save(self, output_file="result.html", file_info=True):
+    def save(self, output_file: Union[str, TextIO] = "result.html", file_info: bool = True) -> None:
         if self.verbose > 0:
             print("==================================================")
             print("== Starting from version 0.13.0, VizTracer will ==")
@@ -132,9 +147,7 @@ class ReportBuilder:
             print('== generate HTML report with "-o result.html"   ==')
             print("==================================================")
 
-        if isinstance(output_file, io.TextIOBase):
-            self.generate_report(output_file, output_format="json", file_info=file_info)
-        else:
+        if isinstance(output_file, str):
             file_type = output_file.split(".")[-1]
 
             if file_type == "html":
@@ -148,6 +161,8 @@ class ReportBuilder:
                     self.generate_report(f, output_format="json", file_info=file_info)
             else:
                 raise Exception("Only html, json and gz are supported")
+        else:
+            self.generate_report(output_file, output_format="json", file_info=file_info)
 
         if self.verbose > 0 and isinstance(output_file, str):
             print("Saving report to {} ...".format(os.path.abspath(output_file)))

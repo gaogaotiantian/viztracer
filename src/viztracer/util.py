@@ -2,7 +2,10 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-def size_fmt(num, suffix='B'):
+from typing import Union
+
+
+def size_fmt(num: Union[int, float], suffix: str = 'B'):
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
@@ -24,11 +27,11 @@ class _bcolors:
 bcolors = _bcolors()
 
 
-def color_print(color, s, **kwargs):
+def color_print(color, s: str, **kwargs):
     print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
 
 
-def compare_version(ver1, ver2):
+def compare_version(ver1: str, ver2: str) -> int:
     # assuming ver1, ver2 are both str and in a pattern of
     # major.minor.micro with only numbers
     # return 1 if ver1 > ver2

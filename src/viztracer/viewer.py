@@ -8,6 +8,7 @@ import json
 import os
 import socketserver
 import sys
+from typing import Any, Callable, Dict, List, Optional
 
 from .flamegraph import FlameGraph
 
@@ -24,7 +25,12 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class PerfettoHandler(HttpHandler):
-    def __init__(self, file_info, tracefile_path, flamegraph, *args, **kwargs):
+    def __init__(
+            self,
+            file_info: Optional[Dict[str, Any]],
+            tracefile_path: str,
+            flamegraph: List[Dict[str, Any]],
+            *args, **kwargs):
         self.file_info = file_info
         self.tracefile_path = tracefile_path
         self.flamegraph = flamegraph
@@ -70,7 +76,7 @@ class PerfettoHandler(HttpHandler):
 
 
 class HtmlHandler(HttpHandler):
-    def __init__(self, tracefile_path, *args, **kwargs):
+    def __init__(self, tracefile_path: str, *args, **kwargs):
         self.tracefile_path = tracefile_path
         super().__init__(*args, **kwargs)
 
@@ -82,7 +88,7 @@ class HtmlHandler(HttpHandler):
         return super().do_GET()
 
 
-def view(path, server_only=False, once=False, flamegraph=False):
+def view(path: str, server_only: bool = False, once: bool = False, flamegraph: bool = False) -> int:
     # For official perfetto, only localhost:9001 is allowed
     port = 9001
 
@@ -90,6 +96,7 @@ def view(path, server_only=False, once=False, flamegraph=False):
     os.chdir(os.path.dirname(path))
     filename = os.path.basename(path)
 
+    Handler: Callable[..., HttpHandler]
     if flamegraph:
         if filename.endswith("json"):
             with open(filename) as f:

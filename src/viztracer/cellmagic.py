@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 try:
-    from IPython.core.magic import cell_magic, magics_class, Magics, needs_local_scope
+    from IPython.core.magic import cell_magic, magics_class, Magics, needs_local_scope  # type: ignore
 
     @magics_class
     class VizTracerMagics(Magics):
@@ -11,8 +11,8 @@ try:
         def viztracer(self, line, cell, local_ns):
             from .viztracer import VizTracer
             from .viewer import view
-            from IPython.display import display
-            from ipywidgets import Button
+            from IPython.display import display  # type: ignore
+            from ipywidgets import Button  # type: ignore
             code = self.shell.transform_cell(cell)
             file_path = "./viztracer_report.json"
             with VizTracer(verbose=0, output_file=file_path):
