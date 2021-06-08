@@ -15,8 +15,8 @@ from .prog_snapshot import ProgSnapshot
 class Simulator:
     def __init__(self, json_string, no_clear=False, extra_newline=False):
         try:
-            from rich.console import Console
-            from rich.syntax import Syntax
+            from rich.console import Console  # type: ignore
+            from rich.syntax import Syntax  # type: ignore
             self.console = Console()
 
             def p(s):
