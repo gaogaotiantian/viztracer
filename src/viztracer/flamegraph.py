@@ -6,21 +6,22 @@ import queue
 try:
     import orjson as json
 except ImportError:
-    import json
+    import json  # type: ignore
 from string import Template
+from typing import Any, Dict, List, Optional, Tuple
 
-from .functree import FuncTree
+from .functree import FuncTree, FuncTreeNode
 
 
 class _FlameNode:
-    def __init__(self, parent, name):
-        self.name = name
-        self.value = 0
-        self.count = 0
-        self.parent = parent
-        self.children = {}
+    def __init__(self, parent: Optional["_FlameNode"], name: str):
+        self.name: str = name
+        self.value: float = 0
+        self.count: int = 0
+        self.parent: Optional["_FlameNode"] = parent
+        self.children: Dict[str, "_FlameNode"] = {}
 
-    def get_child(self, child):
+    def get_child(self, child: FuncTreeNode) -> None:
         if child.fullname not in self.children:
             self.children[child.fullname] = _FlameNode(self, child.fullname)
         self.children[child.fullname].value += child.end - child.start
@@ -28,7 +29,7 @@ class _FlameNode:
         for grandchild in child.children:
             self.children[child.fullname].get_child(grandchild)
 
-    def json(self):
+    def json(self) -> Dict[str, Any]:
         return {
             "name": self.name,
             "value": self.value,
@@ -37,27 +38,27 @@ class _FlameNode:
 
 
 class _FlameTree:
-    def __init__(self, func_tree):
-        self.root = _FlameNode(None, "__root__")
+    def __init__(self, func_tree: FuncTree):
+        self.root: _FlameNode = _FlameNode(None, "__root__")
         self.parse(func_tree)
 
-    def parse(self, func_tree):
+    def parse(self, func_tree: FuncTree):
         self.root = _FlameNode(None, "__root__")
         for child in func_tree.root.children:
             self.root.get_child(child)
 
-    def json(self):
+    def json(self) -> Dict[str, Any]:
         return self.root.json()
 
 
 class FlameGraph:
-    def __init__(self, trace_data=None):
-        self.trees = {}
+    def __init__(self, trace_data: Optional[Dict[str, Any]] = None):
+        self.trees: Dict[str, _FlameTree] = {}
         if trace_data:
             self.parse(trace_data)
 
-    def parse(self, trace_data):
-        func_trees = {}
+    def parse(self, trace_data: Dict[str, Any]) -> None:
+        func_trees: Dict[str, FuncTree] = {}
         for data in trace_data["traceEvents"]:
             key = "p{}_t{}".format(data["pid"], data["tid"])
             if key in func_trees:
@@ -72,17 +73,17 @@ class FlameGraph:
         for key, tree in func_trees.items():
             self.trees[key] = _FlameTree(tree)
 
-    def dump_to_json(self):
+    def dump_to_json(self) -> Dict[str, Any]:
         ret = {}
         for key in self.trees:
             ret[key] = self.trees[key].json()
         return ret
 
-    def load(self, input_file):
+    def load(self, input_file: str) -> None:
         with open(input_file, encoding="utf-8") as f:
             self.parse(json.loads(f.read()))
 
-    def save(self, output_file="result_flamegraph.html"):
+    def save(self, output_file: str = "result_flamegraph.html") -> None:
         sub = {}
         with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html"), encoding="utf-8") as f:
             tmpl = f.read()
@@ -91,7 +92,7 @@ class FlameGraph:
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(Template(tmpl).substitute(sub))
 
-    def dump_to_perfetto(self):
+    def dump_to_perfetto(self) -> List[Dict[str, Any]]:
         """
         reformat data to what perfetto likes
         private _functionProfileDetails?: FunctionProfileDetails[]
@@ -115,7 +116,7 @@ class FlameGraph:
         """
         ret = []
         for name, tree in self.trees.items():
-            q = queue.Queue()
+            q: queue.Queue[Tuple[_FlameNode, int, int]] = queue.Queue()
             for child in tree.root.children.values():
                 q.put((child, -1, 0))
 

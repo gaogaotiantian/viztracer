@@ -1,8 +1,14 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+
+from typing import Dict, Optional, Sequence, Union, TYPE_CHECKING
 from .util import compare_version, color_print
 from . import __version__
+
+
+if TYPE_CHECKING:
+    from .viztracer import VizTracer
 
 
 class VizPluginError(Exception):
@@ -25,7 +31,7 @@ class VizPluginBase:
         #     return "0.10.5"
         raise NotImplementedError("Plugin of viztracer has to implement support_version method")
 
-    def message(self, m_type: str, payload: dict):
+    def message(self, m_type: str, payload: Dict) -> Dict:
         """
         This is the only logical interface with VizTracer. To make it simple and flexible,
         we use m_type for message type, and the payload could be any json compatible
@@ -44,7 +50,7 @@ class VizPluginBase:
 
 
 class VizPluginManager:
-    def __init__(self, tracer, plugins):
+    def __init__(self, tracer: "VizTracer", plugins: Sequence[Union[VizPluginBase, str]]):
         self._tracer = tracer
         self._plugins = []
         for plugin in plugins:
@@ -57,7 +63,7 @@ class VizPluginManager:
             self._plugins.append(plugin_instance)
             self._send_message(plugin_instance, "event", {"when": "initialize"})
 
-    def _get_plugin_from_string(self, plugin):
+    def _get_plugin_from_string(self, plugin: str) -> VizPluginBase:
         args = plugin.split()
         module = args[0]
         try:
@@ -89,7 +95,7 @@ class VizPluginManager:
             print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
             exit(1)
 
-    def _send_message(self, plugin, m_type, payload):
+    def _send_message(self, plugin: VizPluginBase, m_type: str, payload: Dict):
         # this is the only interface to communicate with vizplugin
         # in the future we may need to do version compatibility
         # here
@@ -104,11 +110,11 @@ class VizPluginManager:
         else:
             self.resolve(support_version, ret)
 
-    def event(self, when):
+    def event(self, when: str):
         for plugin in self._plugins:
             self._send_message(plugin, "event", {"when": when})
 
-    def command(self, cmd):
+    def command(self, cmd: Dict):
         for plugin in self._plugins:
             self._send_message(plugin, "command", cmd)
 
@@ -118,11 +124,11 @@ class VizPluginManager:
             del plugin
         self._plugins = []
 
-    def assert_success(self, plugin, cmd, ret):
+    def assert_success(self, plugin: VizPluginBase, cmd: Dict, ret: Optional[Dict]):
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 
-    def resolve(self, version, ret):
+    def resolve(self, version: str, ret: Dict):
         if not ret or "action" not in ret:
             return
         if ret["action"] == "handle_data":

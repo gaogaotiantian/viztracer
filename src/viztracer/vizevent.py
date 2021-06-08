@@ -1,8 +1,16 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from .viztracer import VizTracer
+
+
 class VizEvent:
-    def __init__(self, tracer, event_name, file_name, lineno):
+    def __init__(self, tracer: "VizTracer", event_name: str, file_name: str, lineno: int):
         self._tracer = tracer
         self.event_name = event_name
         self.file_name = file_name

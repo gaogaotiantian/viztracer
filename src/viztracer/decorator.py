@@ -2,17 +2,18 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
+from typing import Any, Callable, Optional
 from viztracer import VizTracer, get_tracer
 import os
 import time
 
 
-def ignore_function(method=None, tracer=None):
+def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTracer] = None) -> Callable:
 
-    def inner(func):
+    def inner(func: Callable) -> Callable:
 
         @functools.wraps(func)
-        def ignore_wrapper(*args, **kwargs):
+        def ignore_wrapper(*args, **kwargs) -> Any:
             # We need this to keep trace a local variable
             t = tracer
             if not t:
@@ -31,12 +32,12 @@ def ignore_function(method=None, tracer=None):
     return inner
 
 
-def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
+def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **viztracer_kwargs):
 
-    def inner(func):
+    def inner(func: Callable) -> Callable:
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> Any:
             tracer = VizTracer(**viztracer_kwargs)
             tracer.start()
             ret = func(*args, **kwargs)
@@ -55,13 +56,13 @@ def trace_and_save(method=None, output_dir="./", **viztracer_kwargs):
     return inner
 
 
-def log_sparse(func):
+def log_sparse(func: Callable) -> Callable:
     tracer = get_tracer()
     if not tracer or not tracer.log_sparse:
         return func
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Any:
         tracer = get_tracer()
         if tracer:
             # This should always be true

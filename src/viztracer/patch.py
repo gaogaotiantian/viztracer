@@ -2,15 +2,17 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+from .viztracer import VizTracer
 import os
 import platform
 import sys
 import textwrap
+from typing import Any, Callable, Dict, List, Sequence, Union
 
 
-def patch_subprocess(ui):
+def patch_subprocess(ui) -> None:
 
-    def subprocess_init(self, args, **kwargs):
+    def subprocess_init(self, args: Union[str, Sequence], **kwargs) -> None:
         if int(platform.python_version_tuple()[1]) >= 7:
             from collections.abc import Sequence
         else:
@@ -24,19 +26,19 @@ def patch_subprocess(ui):
         self.__originit__(args, **kwargs)
 
     import subprocess
-    subprocess.Popen.__originit__ = subprocess.Popen.__init__
-    subprocess.Popen.__init__ = subprocess_init
+    setattr(subprocess.Popen, "__originit__", subprocess.Popen.__init__)
+    setattr(subprocess.Popen, "__init__", subprocess_init)
 
 
-def patch_multiprocessing(ui, tracer):
+def patch_multiprocessing(ui, tracer: VizTracer) -> None:
 
     # For fork process
-    def func_after_fork(tracer):
+    def func_after_fork(tracer: VizTracer):
 
         def exit_routine():
             ui.exit_routine()
 
-        from multiprocessing.util import Finalize
+        from multiprocessing.util import Finalize  # type: ignore
         import signal
         Finalize(tracer, exit_routine, exitpriority=32)
 
@@ -57,7 +59,7 @@ def patch_multiprocessing(ui, tracer):
     register_after_fork(tracer, func_after_fork)
 
     # For spawn process
-    def get_command_line(**kwds):
+    def get_command_line(**kwds) -> List[str]:
         '''
         Returns prefix of command line used for spawning a child process
         '''
@@ -73,14 +75,20 @@ def patch_multiprocessing(ui, tracer):
                     """)
             prog %= ', '.join('%s=%r' % item for item in kwds.items())
             opts = multiprocessing.util._args_from_interpreter_flags()
-            return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']
+            return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
 
     import multiprocessing.spawn
     multiprocessing.spawn.get_command_line = get_command_line
 
 
 class SpawnProcess:
-    def __init__(self, viztracer_kwargs, multiprocess_output_dir, target, args, kwargs):
+    def __init__(
+            self,
+            viztracer_kwargs: Dict[str, Any],
+            multiprocess_output_dir: str,
+            target: Callable,
+            args: List[Any],
+            kwargs: Dict[str, Any]):
         self._viztracer_kwargs = viztracer_kwargs
         self._multiprocess_output_dir = multiprocess_output_dir
         self._target = target
@@ -94,15 +102,16 @@ class SpawnProcess:
         import signal
         import atexit
 
-        def exit_routine():
-            atexit.unregister(exit_routine)
-            if not self._exiting:
-                self._exiting = True
-                tracer = viztracer.get_tracer()
+        def exit_routine() -> None:
+            tracer = viztracer.get_tracer()
+            if tracer is not None:
                 tracer.stop()
-                tracer.save()
-                tracer.terminate()
-                exit(0)
+                atexit.unregister(exit_routine)
+                if not self._exiting:
+                    self._exiting = True
+                    tracer.save()
+                    tracer.terminate()
+                    exit(0)
 
         def term_handler(signalnum, frame):
             exit_routine()
@@ -115,10 +124,11 @@ class SpawnProcess:
         tracer.pid_suffix = True
         tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")
         self._run()
+        atexit._run_exitfuncs()
 
 
-def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
-    from multiprocessing import reduction, process
+def patch_spawned_process(viztracer_kwargs: Dict[str, Any], multiprocess_output_dir: str):
+    from multiprocessing import reduction, process  # type: ignore
     from multiprocessing.spawn import prepare
     import multiprocessing.spawn
 
@@ -151,6 +161,6 @@ def patch_spawned_process(viztracer_kwargs, multiprocess_output_dir):
         return self._bootstrap()
 
     if int(platform.python_version_tuple()[1]) >= 8:
-        multiprocessing.spawn._main = _main_3839
+        multiprocessing.spawn._main = _main_3839  # type: ignore
     else:
-        multiprocessing.spawn._main = _main_3637
+        multiprocessing.spawn._main = _main_3637  # type: ignore

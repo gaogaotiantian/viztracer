@@ -6,10 +6,11 @@ import multiprocessing
 import builtins
 import signal
 import sys
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 from .tracer import _VizTracer
 from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
-from .vizplugin import VizPluginManager
+from .vizplugin import VizPluginBase, VizPluginManager
 from .vizevent import VizEvent
 
 
@@ -17,26 +18,26 @@ from .vizevent import VizEvent
 # class for the functions
 class VizTracer(_VizTracer):
     def __init__(self,
-                 tracer_entries=1000000,
-                 verbose=1,
-                 max_stack_depth=-1,
-                 include_files=None,
-                 exclude_files=None,
-                 ignore_c_function=False,
-                 ignore_frozen=False,
-                 log_func_retval=False,
-                 log_func_args=False,
-                 log_print=False,
-                 log_gc=False,
-                 log_sparse=False,
-                 log_async=False,
-                 vdb=False,
-                 pid_suffix=False,
-                 file_info=True,
-                 register_global=True,
-                 trace_self=False,
-                 output_file="result.json",
-                 plugins=[]):
+                 tracer_entries: int = 1000000,
+                 verbose: int = 1,
+                 max_stack_depth: int = -1,
+                 include_files: Optional[Sequence[str]] = None,
+                 exclude_files: Optional[Sequence[str]] = None,
+                 ignore_c_function: bool = False,
+                 ignore_frozen: bool = False,
+                 log_func_retval: bool = False,
+                 log_func_args: bool = False,
+                 log_print: bool = False,
+                 log_gc: bool = False,
+                 log_sparse: bool = False,
+                 log_async: bool = False,
+                 vdb: bool = False,
+                 pid_suffix: bool = False,
+                 file_info: bool = True,
+                 register_global: bool = True,
+                 trace_self: bool = False,
+                 output_file: str = "result.json",
+                 plugins: Sequence[Union[VizPluginBase, str]] = []):
         super().__init__(
             tracer_entries=tracer_entries,
             max_stack_depth=max_stack_depth,
@@ -52,6 +53,7 @@ class VizTracer(_VizTracer):
             log_async=log_async,
             trace_self=trace_self
         )
+        self._tracer: Any
         self.verbose = verbose
         self.pid_suffix = pid_suffix
         self.file_info = file_info
@@ -61,35 +63,19 @@ class VizTracer(_VizTracer):
         if register_global:
             self.register_global()
 
-        self._afterfork_cb = None
-        self._afterfork_args = None
-        self._afterfork_kwargs = None
+        self._afterfork_cb: Optional[Callable] = None
+        self._afterfork_args: Tuple = tuple()
+        self._afterfork_kwargs: Dict = {}
 
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
 
     @property
-    def verbose(self):
-        return self.__verbose
-
-    @verbose.setter
-    def verbose(self, verbose):
-        if type(verbose) is str:
-            try:
-                self.__verbose = int(verbose)
-            except ValueError:
-                raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
-        elif type(verbose) is int:
-            self.__verbose = verbose
-        else:
-            raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
-
-    @property
-    def pid_suffix(self):
+    def pid_suffix(self) -> bool:
         return self.__pid_suffix
 
     @pid_suffix.setter
-    def pid_suffix(self, pid_suffix):
+    def pid_suffix(self, pid_suffix: bool):
         if type(pid_suffix) is bool:
             self.__pid_suffix = pid_suffix
         else:
@@ -123,11 +109,11 @@ class VizTracer(_VizTracer):
         signal.signal(signal.SIGUSR1, signal_start)
         signal.signal(signal.SIGUSR2, signal_stop)
 
-    def log_event(self, event_name):
+    def log_event(self, event_name: str) -> VizEvent:
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
-    def set_afterfork(self, callback, *args, **kwargs):
+    def set_afterfork(self, callback: Callable, *args, **kwargs):
         self._afterfork_cb = callback
         self._afterfork_args = args
         self._afterfork_kwargs = kwargs
@@ -142,13 +128,18 @@ class VizTracer(_VizTracer):
             _VizTracer.stop(self)
             self._plugin_manager.event("post-stop")
 
-    def run(self, command, output_file=None):
+    def run(self, command: str, output_file: Optional[str] = None):
         self.start()
         exec(command)
         self.stop()
         self.save(output_file)
 
-    def save(self, output_file=None, save_flamegraph=False, file_info=None, minimize_memory=False):
+    def save(
+            self,
+            output_file: Optional[str] = None,
+            save_flamegraph: bool = False,
+            file_info: Optional[bool] = None,
+            minimize_memory: bool = False):
         if file_info is None:
             file_info = self.file_info
         enabled = False
@@ -180,7 +171,7 @@ class VizTracer(_VizTracer):
         if enabled:
             self.start()
 
-    def fork_save(self, output_file=None, save_flamegraph=False):
+    def fork_save(self, output_file: Optional[str] = None, save_flamegraph: bool = False):
         if multiprocessing.get_start_method() != "fork":
             # You have to parse first if you are not forking, address space is not copied
             # Since it's not forking, we can't pickle tracer, just set it to None when
@@ -194,7 +185,7 @@ class VizTracer(_VizTracer):
             self._tracer.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
-                                    kwargs={"output_file": os.path.abspath(output_file), "save_flamegraph": save_flamegraph})
+                                    kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
         p.start()
 
         if multiprocessing.get_start_method() != "fork":
@@ -205,7 +196,7 @@ class VizTracer(_VizTracer):
 
         return p
 
-    def save_flamegraph(self, output_file=None):
+    def save_flamegraph(self, output_file: Optional[str] = None):
         flamegraph = FlameGraph(self.data)
         if output_file is None:
             name_list = self.output_file.split(".")

@@ -3,6 +3,7 @@
 
 
 import io
+import json
 import os
 from viztracer.report_builder import ReportBuilder
 from .base_tmpl import BaseTmpl
@@ -12,7 +13,7 @@ class TestReportBuilder(BaseTmpl):
     def test_file(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:
-            rb = ReportBuilder(f, verbose=0)
+            rb = ReportBuilder(json.loads(f.read()), verbose=0)
         with io.StringIO() as s:
             rb.save(s)
             result1 = s.getvalue()
@@ -32,7 +33,7 @@ class TestReportBuilder(BaseTmpl):
     def test_too_many_entry(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:
-            rb = ReportBuilder(f, verbose=1)
+            rb = ReportBuilder(json.loads(f.read()), verbose=1)
         rb.entry_number_threshold = 20
         # Coverage only
         with io.StringIO() as s:
