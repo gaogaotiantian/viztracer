@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import ast
+import textwrap
 from viztracer.code_monkey import CodeMonkey, AstTransformer
 from .base_tmpl import BaseTmpl
 
@@ -10,6 +11,20 @@ class TestCodeMonkey(BaseTmpl):
     def test_pure_compile(self):
         code_string = "a = 1"
         monkey = CodeMonkey("test.py")
+        _compile = monkey.compile
+        _compile(code_string, "test.py", "exec")
+
+    def test_compile_empty_exception(self):
+        code_string = textwrap.dedent(
+            """
+            try:
+                a = 3 / 0
+            except Exception as e:
+                raise
+            """
+        )
+        monkey = CodeMonkey("test.py")
+        monkey.add_instrument("log_exception", {})
         _compile = monkey.compile
         _compile(code_string, "test.py", "exec")
 

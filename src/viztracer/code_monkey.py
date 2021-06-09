@@ -178,9 +178,10 @@ class AstTransformer(ast.NodeTransformer):
             raise ValueError("{} is not supported".format(name))
 
     def get_instrument_node_by_node(self, trigger: str, node: Optional[ast.expr]) -> ast.Expr:
+        var_node: ast.expr
         if node is None:
             name = f"{trigger}"
-            var_node = None
+            var_node = ast.Constant(value=None)
         else:
             name = f"{trigger} - {self.get_string_of_expr(node)}"
             var_node = self.copy_node_with_load(node)

@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 try:
-    import orjson as json
+    import orjson as json  # type: ignore
 except ImportError:
     import json  # type: ignore
 import bisect

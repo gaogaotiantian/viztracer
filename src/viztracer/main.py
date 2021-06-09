@@ -11,7 +11,7 @@ import builtins
 import platform
 import signal
 import shutil
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 from . import VizTracer
 from . import FlameGraph
 from . import __version__
@@ -227,7 +227,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> NoReturn:
         options = self.options
 
         tracer = VizTracer(**self.init_kwargs)
@@ -248,9 +248,9 @@ class VizUI:
             tracer.start()
         exec(code, global_dict)
         atexit._run_exitfuncs()
-        return True, None
+        raise Exception("Unexpected VizTracer termination")  # pragma: no cover
 
-    def run_module(self) -> Tuple[bool, Optional[str]]:
+    def run_module(self) -> NoReturn:
         import runpy
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
@@ -259,9 +259,9 @@ class VizUI:
         }
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
-        return self.run_code(code, global_dict)
+        self.run_code(code, global_dict)
 
-    def run_command(self) -> Tuple[bool, Optional[str]]:
+    def run_command(self) -> Union[NoReturn, Tuple[bool, Optional[str]]]:
         command = self.command
         options = self.options
         file_name = command[0]
@@ -295,7 +295,7 @@ class VizUI:
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        return self.run_code(code, main_mod.__dict__)
+        self.run_code(code, main_mod.__dict__)
 
     def run_generate_flamegraph(self) -> Tuple[bool, Optional[str]]:
         options = self.options

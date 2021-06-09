@@ -26,6 +26,9 @@ class TestReportBuilder(BaseTmpl):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)
 
+        with self.assertRaises(TypeError):
+            _ = ReportBuilder([123])
+
         with self.assertRaises(ValueError):
             rb = ReportBuilder([])
             rb.save()
@@ -41,6 +44,5 @@ class TestReportBuilder(BaseTmpl):
 
     def test_invalid_json(self):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
-        with open(invalid_json_path) as f:
-            with self.assertRaises(Exception):
-                ReportBuilder(f, verbose=1)
+        with self.assertRaises(Exception):
+            ReportBuilder([invalid_json_path], verbose=1)

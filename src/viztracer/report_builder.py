@@ -8,7 +8,7 @@ import gzip
 import sys
 from typing import Any, Dict, List, Sequence, Union, TextIO
 try:
-    import orjson
+    import orjson  # type: ignore
 except ImportError:
     import json
 from .util import color_print
@@ -50,8 +50,10 @@ class ReportBuilder:
         self.minimize_memory = minimize_memory
         if isinstance(data, dict):
             self.jsons = [get_json(data)]
-        else:
+        elif isinstance(data, (list, tuple)):
             self.jsons = [get_json(j) for j in data]
+        else:
+            raise TypeError("Invalid data type for ReportBuilder")
 
     def combine_json(self) -> None:
         if self.combined_json:

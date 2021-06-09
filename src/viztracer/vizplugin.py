@@ -8,7 +8,7 @@ from . import __version__
 
 
 if TYPE_CHECKING:
-    from .viztracer import VizTracer
+    from .viztracer import VizTracer  # pragma: no cover
 
 
 class VizPluginError(Exception):
