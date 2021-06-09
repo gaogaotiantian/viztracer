@@ -8,7 +8,7 @@ import gzip
 import sys
 from typing import Any, Dict, List, Sequence, Union, TextIO
 try:
-    import orjson
+    import orjson  # type: ignore
 except ImportError:
     import json
 from .util import color_print

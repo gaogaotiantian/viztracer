@@ -4,7 +4,7 @@
 import os
 import queue
 try:
-    import orjson as json
+    import orjson as json  # type: ignore
 except ImportError:
     import json  # type: ignore
 from string import Template
