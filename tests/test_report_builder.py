@@ -45,4 +45,4 @@ class TestReportBuilder(BaseTmpl):
     def test_invalid_json(self):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
         with self.assertRaises(Exception):
-            ReportBuilder(invalid_json_path, verbose=1)
+            ReportBuilder([invalid_json_path], verbose=1)
