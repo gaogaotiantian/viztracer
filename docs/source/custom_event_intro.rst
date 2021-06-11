@@ -13,13 +13,13 @@ VizTracer supports four kinds of custom events:
 Instant Event
 -------------
 
-Instant Event is a log at a specific timestamp, showing as a vertical line. It's useful
-to log a transient event. You need to give it an event name and pass in an arbitrary
-argument that is **JSONIFIABLE**. The argument will be displayed in the report.
+Instant Event is a log at a specific timestamp, showing as an arrow. It's useful
+to log a transient event. You need to give it a name which is a string and that's
+all the information you can get in the report 
 
 .. code-block:: python
 
-    tracer.add_instant("Event1", {"a": 1})
+    tracer.add_instant(f"Event1 - {my_data}")
 
 Counter Event
 -------------
