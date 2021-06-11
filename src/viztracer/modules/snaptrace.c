@@ -699,7 +699,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "ph", ph_I);
             PyDict_SetItemString(dict, "cat", cat_instant);
             PyDict_SetItemString(dict, "name", node->data.instant.name);
-            PyDict_SetItemString(dict, "args", node->data.instant.args);
             PyDict_SetItemString(dict, "s", node->data.instant.scope);
             break;
         case COUNTER_NODE:
@@ -986,11 +985,10 @@ static PyObject*
 snaptrace_addinstant(TracerObject* self, PyObject* args)
 {
     PyObject* name = NULL;
-    PyObject* instant_args = NULL;
     PyObject* scope = NULL;
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
-    if (!PyArg_ParseTuple(args, "OOO", &name, &instant_args, &scope)) {
+    if (!PyArg_ParseTuple(args, "OO", &name, &scope)) {
         printf("Error when parsing arguments!\n");
         exit(1);
     }
@@ -1000,7 +998,6 @@ snaptrace_addinstant(TracerObject* self, PyObject* args)
     node->tid = info->tid;
     node->ts = get_ts();
     node->data.instant.name = name;
-    node->data.instant.args = instant_args;
     node->data.instant.scope = scope;
     Py_INCREF(name);
     Py_INCREF(args);

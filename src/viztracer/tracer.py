@@ -231,17 +231,17 @@ class _VizTracer:
     def getts(self) -> float:
         return self._tracer.getts()
 
-    def add_instant(self, name: str, args: Dict[str, Any], scope: str = "g"):
+    def add_instant(self, name: str, scope: str = "g"):
         if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
-            self._tracer.addinstant(name, args, scope)
+            self._tracer.addinstant(name, scope)
 
     def add_variable(self, name: str, var: Any, event: str = "instant"):
         if self.enable:
             if event == "instant":
-                self.add_instant(name, {"value": repr(var)}, scope="p")
+                self.add_instant(f"{name} = {repr(var)}", scope="p")
             elif event == "counter":
                 if isinstance(var, int or type(var) is float):
                     self.add_counter(name, {name: var})
@@ -339,7 +339,7 @@ class _VizTracer:
             io = StringIO()
             kwargs["file"] = io
             self.system_print(*args, **kwargs)
-            self.add_instant("print", {"string": io.getvalue()})
+            self.add_instant(f"print - {io.getvalue()}")
             self.resume()
         builtins.print = new_print
 
