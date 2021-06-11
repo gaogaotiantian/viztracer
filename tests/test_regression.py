@@ -50,7 +50,7 @@ class TestStackOptimization(BaseTmpl):
         tracer.start()
         # This is a library function which will be ignored, but
         # this could trick the system into a ignoring status
-        tracer.add_instant("name", {"a": 1})
+        tracer.add_instant('name = {"a": 1}')
         s()
         s()
         s()

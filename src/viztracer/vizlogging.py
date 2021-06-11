@@ -13,7 +13,7 @@ class VizLoggingHandler(Handler):
     def emit(self, record: LogRecord):
         if not self._tracer:
             return
-        self._tracer.add_instant("logging", {"data": self.format(record)}, scope="p")
+        self._tracer.add_instant(f"logging - {self.format(record)}", scope="p")
 
     def setTracer(self, tracer: VizTracer):
         self._tracer = tracer
