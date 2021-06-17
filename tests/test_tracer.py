@@ -3,6 +3,7 @@
 
 import io
 import os
+import time
 from viztracer.tracer import _VizTracer
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
@@ -233,6 +234,17 @@ class TestTracerFeature(BaseTmpl):
         tracer.log_gc = False
         tracer.start()
         gc.collect()
+        tracer.stop()
+        tracer.parse()
+        self.assertEventNumber(tracer.data, 1)
+
+    def test_min_duration(self):
+        tracer = _VizTracer(min_duration=10)
+        tracer.start()
+        a = []
+        for _ in range(3):
+            a.append(1)
+        time.sleep(0.001)
         tracer.stop()
         tracer.parse()
         self.assertEventNumber(tracer.data, 1)

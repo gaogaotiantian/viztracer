@@ -18,3 +18,13 @@ class TestUtil(BaseTmpl):
         self.assertEqual(compare_version("0.10.0", "0.10.0"), 0)
         self.assertEqual(compare_version("0.7.3", "0.8.1"), -1)
         self.assertEqual(compare_version("0.20.3", "0.31.0"), -1)
+
+    def test_time_str_to_us(self):
+        time_str_to_us = viztracer.util.time_str_to_us
+        self.assertAlmostEqual(time_str_to_us("1.5"), 1.5)
+        self.assertAlmostEqual(time_str_to_us("0.2us"), 0.2)
+        self.assertAlmostEqual(time_str_to_us(".03ms"), 30)
+        self.assertAlmostEqual(time_str_to_us("3s"), 3000000)
+        self.assertAlmostEqual(time_str_to_us("600ns"), 0.6)
+        self.assertRaises(ValueError, time_str_to_us, "0.0.0")
+        self.assertRaises(ValueError, time_str_to_us, "invalid")

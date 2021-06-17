@@ -63,6 +63,7 @@ typedef struct {
     int max_stack_depth;
     PyObject* include_files;
     PyObject* exclude_files;
+    double min_duration;
     struct EventNode* buffer;
     long buffer_size;
     long buffer_head_idx;

@@ -12,12 +12,11 @@ import platform
 import signal
 import shutil
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
-from . import VizTracer
-from . import FlameGraph
-from . import __version__
-from .report_builder import ReportBuilder
+from . import VizTracer, FlameGraph, __version__
 from .code_monkey import CodeMonkey
+from .report_builder import ReportBuilder
 from .patch import patch_multiprocessing, patch_subprocess
+from .util import time_str_to_us
 
 
 class VizUI:
@@ -53,6 +52,8 @@ class VizUI:
                             help="specify plugins for VizTracer")
         parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
                             help="maximum stack depth you want to trace.")
+        parser.add_argument("--min_duration", nargs="?", default="0",
+                            help="minimum duration of function to log")
         parser.add_argument("--exclude_files", nargs="*", default=None,
                             help=("specify the files(directories) you want to exclude from tracing. "
                                   "Can't be used with --include_files"))
@@ -163,6 +164,11 @@ class VizUI:
             if int(platform.python_version_tuple()[1]) < 7:
                 return False, "log_async only supports python 3.7+"
 
+        try:
+            min_duration = time_str_to_us(options.min_duration)
+        except ValueError:
+            return False, f"Can't convert {options.min_duration} to time. Format should be 0.3ms or 13us"
+
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
@@ -183,7 +189,8 @@ class VizUI:
             "pid_suffix": options.pid_suffix,
             "register_global": True,
             "plugins": options.plugins,
-            "trace_self": options.trace_self
+            "trace_self": options.trace_self,
+            "min_duration": min_duration
         }
 
         return True, None

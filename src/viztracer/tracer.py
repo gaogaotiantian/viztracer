@@ -26,6 +26,7 @@ class _VizTracer:
             log_gc: bool = False,
             log_async: bool = False,
             trace_self: bool = False,
+            min_duration: float = 0,
             vdb: bool = False):
         self.enable = False
         self.parsed = False
@@ -46,6 +47,7 @@ class _VizTracer:
         self.log_async = log_async
         self.vdb = vdb
         self.trace_self = trace_self
+        self.min_duration = min_duration
         self.system_print = builtins.print
         self.total_entries = 0
         self.gc_start_args: Dict[str, int] = {}
@@ -185,6 +187,17 @@ class _VizTracer:
         else:
             raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
 
+    @property
+    def min_duration(self) -> float:
+        return self.__min_duration
+
+    @min_duration.setter
+    def min_duration(self, min_duration: float):
+        if isinstance(min_duration, int) or isinstance(min_duration, float):
+            self.__min_duration = float(min_duration)
+        else:
+            raise ValueError("Verbose needs to be a float, not {}".format(min_duration))
+
     def start(self):
         self.enable = True
         self.parsed = False
@@ -204,7 +217,8 @@ class _VizTracer:
             vdb=self.vdb,
             log_func_args=self.log_func_args,
             log_async=self.log_async,
-            trace_self=self.trace_self
+            trace_self=self.trace_self,
+            min_duration=self.min_duration
         )
         self._tracer.start()
 

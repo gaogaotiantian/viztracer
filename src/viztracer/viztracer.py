@@ -36,6 +36,7 @@ class VizTracer(_VizTracer):
                  file_info: bool = True,
                  register_global: bool = True,
                  trace_self: bool = False,
+                 min_duration: float = 0,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []):
         super().__init__(
@@ -51,7 +52,8 @@ class VizTracer(_VizTracer):
             vdb=vdb,
             log_func_args=log_func_args,
             log_async=log_async,
-            trace_self=trace_self
+            trace_self=trace_self,
+            min_duration=min_duration
         )
         self._tracer: Any
         self.verbose = verbose
