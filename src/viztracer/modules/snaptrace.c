@@ -352,62 +352,77 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             struct FunctionNode* stack_top = info->stack_top;
             if (stack_top->prev) {
                 // if stack_top has prev, it's not the fake node so it's at least root
+                double dur = get_ts() - info->stack_top->ts;
+                int log_this_entry = dur >= self->min_duration;
 
-                node = get_next_node(self);
-                node->ntype = FEE_NODE;
-                node->ts = info->stack_top->ts;
-                node->data.fee.dur = get_ts() - info->stack_top->ts;
-                info->stack_top = info->stack_top->prev;
-                node->tid = info->tid;
-                node->data.fee.type = what;
-                if (is_python) {
-                    node->data.fee.co_name = frame->f_code->co_name;
-                    node->data.fee.co_filename = frame->f_code->co_filename;
-                    node->data.fee.co_firstlineno = frame->f_code->co_firstlineno;
-                    Py_INCREF(node->data.fee.co_name);
-                    Py_INCREF(node->data.fee.co_filename);
-                    if (stack_top->args) {
-                        // steal the reference when return
-                        node->data.fee.args = stack_top->args;
-                        stack_top->args = NULL;
-                    }
-                    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
-                        node->data.fee.retval = PyObject_Repr(arg);
-                    }
-                    if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && frame->f_back) {
-                        node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame->f_back);
-                    } else {
-                        node->data.fee.caller_lineno = -1;
-                    }
-                } else if (is_c) {
-                    PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
-                    node->data.fee.ml_name = cfunc->m_ml->ml_name;
-                    if (cfunc->m_module) {
-                        // The function belongs to a module
-                        node->data.fee.m_module = cfunc->m_module;
-                        Py_INCREF(cfunc->m_module);
-                    } else {
-                        // The function is a class method
-                        node->data.fee.m_module = NULL;
-                        if (cfunc->m_self) {
-                            // It's not a static method, has __self__
-                            node->data.fee.tp_name = cfunc->m_self->ob_type->tp_name;
+                if (log_this_entry) {
+                    node = get_next_node(self);
+                    node->ntype = FEE_NODE;
+                    node->ts = info->stack_top->ts;
+                    node->data.fee.dur = get_ts() - info->stack_top->ts;
+                    node->tid = info->tid;
+                    node->data.fee.type = what;
+                    if (is_python) {
+                        node->data.fee.co_name = frame->f_code->co_name;
+                        node->data.fee.co_filename = frame->f_code->co_filename;
+                        node->data.fee.co_firstlineno = frame->f_code->co_firstlineno;
+                        Py_INCREF(node->data.fee.co_name);
+                        Py_INCREF(node->data.fee.co_filename);
+                        if (stack_top->args) {
+                            // steal the reference when return
+                            node->data.fee.args = stack_top->args;
+                            Py_INCREF(stack_top->args);
+                        }
+                        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
+                            node->data.fee.retval = PyObject_Repr(arg);
+                        }
+                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && frame->f_back) {
+                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame->f_back);
                         } else {
-                            // It's a static method, does not have __self__
-                            node->data.fee.tp_name = NULL;
+                            node->data.fee.caller_lineno = -1;
+                        }
+                    } else if (is_c) {
+                        PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
+                        node->data.fee.ml_name = cfunc->m_ml->ml_name;
+                        if (cfunc->m_module) {
+                            // The function belongs to a module
+                            node->data.fee.m_module = cfunc->m_module;
+                            Py_INCREF(cfunc->m_module);
+                        } else {
+                            // The function is a class method
+                            node->data.fee.m_module = NULL;
+                            if (cfunc->m_self) {
+                                // It's not a static method, has __self__
+                                node->data.fee.tp_name = cfunc->m_self->ob_type->tp_name;
+                            } else {
+                                // It's a static method, does not have __self__
+                                node->data.fee.tp_name = NULL;
+                            }
+                        }
+                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB)) {
+                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
+                        } else {
+                            node->data.fee.caller_lineno = -1;
+                        }
+                    } 
+
+                    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+                        if (info->curr_task) {
+                            node->data.fee.asyncio_task = info->curr_task;
+                            Py_INCREF(info->curr_task);
                         }
                     }
-                    if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB)) {
-                        node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
-                    } else {
-                        node->data.fee.caller_lineno = -1;
-                    }
-                } 
+                }
+                // Finish return whether to log the data
+                info->stack_top = info->stack_top->prev;
+
+                if (stack_top->args) {
+                    Py_DECREF(stack_top->args);
+                    stack_top->args = NULL;
+                }
 
                 if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
                     if (info->curr_task) {
-                        node->data.fee.asyncio_task = info->curr_task;
-                        Py_INCREF(info->curr_task);
                         if (is_python && frame == info->curr_task_frame) {
                             Py_DECREF(info->curr_task);
                             info->curr_task = NULL;
@@ -858,6 +873,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
             "log_func_retval", "vdb", "log_func_args", "log_async", "trace_self",
+            "min_duration",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
@@ -871,7 +887,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_log_func_args = -1;
     int kw_log_async = -1;
     int kw_trace_self = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppp", kwlist,
+    double kw_min_duration = 0;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppppppd", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -883,7 +900,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_vdb,
             &kw_log_func_args,
             &kw_log_async,
-            &kw_trace_self)) {
+            &kw_trace_self,
+            &kw_min_duration)) {
         return NULL;
     }
 
@@ -947,6 +965,14 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         SET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
     } else if (kw_log_async == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
+    }
+
+    if (kw_min_duration > 0) {
+        // In Python code the default unit is us
+        // Convert to ns which is what c Code uses
+        self->min_duration = kw_min_duration * 1000;
+    } else {
+        self->min_duration = 0;
     }
 
     if (kw_max_stack_depth >= 0) {
@@ -1255,6 +1281,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->max_stack_depth = 0;
         self->include_files = NULL;
         self->exclude_files = NULL;
+        self->min_duration = 0;
         self->buffer = (struct EventNode*) PyMem_Calloc(self->buffer_size, sizeof(struct EventNode));
         if (!self->buffer) {
             printf("Out of memory!\n");

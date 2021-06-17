@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import re
 from typing import Union
 
 
@@ -46,6 +47,30 @@ def compare_version(ver1: str, ver2: str) -> int:
         return 0
     else:
         return -1
+
+
+def time_str_to_us(t_s: str) -> float:
+    # t_s is a string representing a time
+    # Should be [0-9\.]+([mun]?s)?
+    #   ex. 300ns 23.5 .2ms
+    # (This is not a perfect match, but enough for us to duck parse)
+    # We need to convert it to us
+    m = re.match(r"([0-9\.]+)([mun]?s)?", t_s)
+    if m:
+        try:
+            val = float(m.group(1))
+        except ValueError:
+            raise ValueError(f"Can't convert {t_s} to time")
+        unit = m.group(2)
+        if unit == "s":
+            val *= 1e6
+        elif unit == "ms":
+            val *= 1e3
+        elif unit == "ns":
+            val *= 1e-3
+        return val
+    else:
+        raise ValueError(f"Can't convert {t_s} to time")
 
 
 def get_tracer():

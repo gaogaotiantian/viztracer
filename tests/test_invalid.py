@@ -19,13 +19,13 @@ class TestInvalidArgs(BaseTmpl):
             "log_func_retval": ["hello", 1, "True"],
             "log_gc": ["hello", 1, "True"],
             "log_func_args": ["hello", 1, "True"],
-            "vdb": ["hello", 1, "True"]
+            "vdb": ["hello", 1, "True"],
+            "min_duration": ["0.1.0", "12", "3us"]
         }
         tracer = VizTracer()
         for args, vals in invalid_args.items():
             for val in vals:
-                with self.assertRaises(ValueError):
-                    tracer.__setattr__(args, val)
+                self.assertRaises(ValueError, tracer.__setattr__, args, val)
 
 
 class TestInvalidOperation(BaseTmpl):

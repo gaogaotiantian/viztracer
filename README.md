@@ -170,6 +170,7 @@ A ``VizTracer Report`` button will appear after the cell and you can click it to
 
 VizTracer can filter out the data you don't want to reduce overhead and keep info of a longer time period before you dump the log.
 
+* [Min Duration](https://viztracer.readthedocs.io/en/stable/filter.html#min-duration)
 * [Max Stack Depth](https://viztracer.readthedocs.io/en/stable/filter.html#max-stack-depth)
 * [Include Files](https://viztracer.readthedocs.io/en/stable/filter.html#include-files)
 * [Exclude Files](https://viztracer.readthedocs.io/en/stable/filter.html#exclude-files)

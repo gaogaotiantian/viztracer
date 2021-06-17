@@ -253,6 +253,10 @@ class TestCommandLineBasic(CmdlineTmpl):
                        os.path.join(example_json_dir, "multithread.json")],
                       send_term=True, expected_output_file="result.json", check_func=check_func)
 
+    def test_min_duration(self):
+        self.template(["python", "-m", "viztracer", "--min_duration", "1s", "cmdline_test.py"], expected_entries=0)
+        self.template(["python", "-m", "viztracer", "--min_duration", "0.0.3s", "cmdline_test.py"], success=False)
+
     def test_pid_suffix(self):
         self.template(["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"],
                       expected_output_file="./suffix_tmp")

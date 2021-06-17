@@ -16,6 +16,7 @@ VizTracer
                  vdb=False,\
                  pid_suffix=False,\
                  register_global=True,\
+                 min_duration=0,\
                  output_file="result.html")
 
     .. py:attribute:: tracer_entries
@@ -203,6 +204,12 @@ VizTracer
         .. code-block:: python
 
             tracer = VizTracer(register_global=False)
+
+    .. py.attribute:: min_duration
+        :type: float
+        :value: 0
+
+        Minimum duration of a function to be logged. The value is in unit of ``us``.
 
     .. py:attribute:: output_file
         :type: string
