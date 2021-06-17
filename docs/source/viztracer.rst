@@ -16,7 +16,7 @@ VizTracer
                  vdb=False,\
                  pid_suffix=False,\
                  register_global=True,\
-                 min_duration=0,
+                 min_duration=0,\
                  output_file="result.html")
 
     .. py:attribute:: tracer_entries
