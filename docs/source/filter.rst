@@ -4,6 +4,29 @@ Filter
 Sometimes, you will have too many data entries and you want to filter some of them out to either improve the performance or make the report clearer. 
 VizTracer provides multiple filters to your need.
 
+Min Duration
+------------
+
+You can ask VizTracer to only record entries that last longer than a period of time
+
+.. code-block::
+
+    viztracer --min_duration 0.2ms my_script.py
+
+OR
+
+.. code-block:: python
+
+    tracer = VizTracer(min_duration=200)
+
+Notice that with command line interface, ``viztracer`` expects a string representing a period of time,
+which should be in format of ``<val><unit>``. ex. ``0.2ms``, ``300ns``, ``5.5us``. You can also omit
+the unit and it would be parsed as ``us``, ex. ``0.5`` is the same as ``0.5us``.
+
+But as an argument to ``VizTracer``, it should be a number of ``us``.
+
+The default value of ``min_duration`` is ``0``, meaning every function entry is recorded.
+
 Max Stack depth
 ---------------
 

@@ -196,7 +196,7 @@ class _VizTracer:
         if isinstance(min_duration, int) or isinstance(min_duration, float):
             self.__min_duration = float(min_duration)
         else:
-            raise ValueError("Verbose needs to be a float, not {}".format(min_duration))
+            raise ValueError("duration needs to be a float, not {}".format(min_duration))
 
     def start(self):
         self.enable = True
