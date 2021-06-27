@@ -11,7 +11,7 @@ The easiest way to use VizTracer is through command line. Assume you have a pyth
     python3 my_script.py
 
 
-You can simply use VizTracer as 
+You can simply use VizTracer by
 
 .. code-block::
     
@@ -21,7 +21,11 @@ You can simply use VizTracer as
     # OR
     python3 -m viztracer my_script.py
 
-which will generate a ``result.html`` file in the directory you run this command. Open it in browser and there's your result.
+which will generate a ``result.json`` file in the directory you run this command. You can open it with ``vizviewer``
+
+.. code-block::
+
+    vizviewer result.json
 
 If your script needs arguments like 
 
@@ -48,7 +52,7 @@ You can also run a module with VizTracer
 
     viztracer -m your_module
 
-You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.html``. 
+You can specify the output file using ``-o`` or ``--output_file`` argument. The default output file is ``result.json``. 
 Three types of files are supported, html, json and gz(gzip of json file).
 
 .. code-block::
@@ -62,6 +66,12 @@ By default, VizTracer only generates trace file, either in HTML format or json. 
 .. code-block::
     
     viztracer --save_flamegraph my_script.py
+
+You can also directly show flamegraph from ``result.json`` file
+
+.. code-block::
+
+    vizviewer --flamegraph result.json
 
 Inline
 ------
@@ -78,7 +88,7 @@ You can trace code with ``with`` statement
 
 .. code-block:: python
     
-    with VizTracer(output_file="optional.html") as tracer:
+    with VizTracer(output_file="optional.json") as tracer:
         # Something happens here
 
 Or you can create a ``VizTracer`` object and manually enable/disable the profile using ``start()`` and ``stop()`` function.
@@ -181,7 +191,7 @@ combine with VizTracer reports, like VizPlugins does.
 
 .. code-block::
 
-    viztracer --combine process1.json process2.json -o full_report.html
+    viztracer --combine process1.json process2.json -o full_report.json
 
 Another usage of combining reports would be to compare between different runs of the same program. Unlike combining from multiple
 sources, this requires a pre-alignment of all the trace data. VizTracer also provides a way to align the start of all reports for
@@ -189,7 +199,7 @@ this usage.
 
 .. code-block::
 
-    viztracer --align_combine run1.json run2.json -o compare_report.html
+    viztracer --align_combine run1.json run2.json -o compare_report.json
 
 Debug Your Saved Report
 -----------------------
