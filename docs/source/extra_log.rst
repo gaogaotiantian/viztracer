@@ -171,4 +171,4 @@ data as Instant Events.
     handler = VizLoggingHandler()
     handler.setTracer(tracer)
     # A handler is added to logging so logging will dump data to VizTracer
-    logging.basicConfig(handlers = [handler]
+    logging.basicConfig(handlers = [handler])
