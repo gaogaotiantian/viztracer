@@ -13,11 +13,12 @@ VizTracer
                  log_func_args=False,\
                  log_print=False,\
                  log_gc=False,\
+                 log_async=False,\
                  vdb=False,\
                  pid_suffix=False,\
                  register_global=True,\
                  min_duration=0,\
-                 output_file="result.html")
+                 output_file="result.json")
 
     .. py:attribute:: tracer_entries
         :type: integer
@@ -176,6 +177,18 @@ VizTracer
         .. code-block::
 
             viztracer --log_gc
+
+    .. py:attribute:: log_async
+        :type: boolean
+        :value: False
+
+        Whether log async tasks as separate "thread" in vizviewer
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            viztracer --log_async
     
     .. py:attribute:: vdb
         :type: boolean
@@ -213,7 +226,7 @@ VizTracer
 
     .. py:attribute:: output_file
         :type: string
-        :value: "result.html"
+        :value: "result.json"
 
         Default file path to write report
 

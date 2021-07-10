@@ -14,7 +14,7 @@ Then you need to pass the plugin to ``viztracer`` using ``--plugins``
 
 .. code-block::
 
-    viztracer --plugins vizplugins -- my_sciprt.py
+    viztracer --plugins vizplugins -- my_script.py
 
 There could be multiple plugins to use in a package, which is differentiate by modules.
 You can specify the module that plugin lives(you should refer to the plugin's doc for
@@ -22,14 +22,14 @@ detailed usage)
 
 .. code-block::
 
-    viztracer --plugins vizplugins.cpu_time -- my_sciprt.py
+    viztracer --plugins vizplugins.cpu_time -- my_script.py
 
 You can even pass arguments to the plugin, but you need double quotes to pack them
 together.
 
 .. code-block::
 
-    viztracer --plugins "vizplugins.cpu_time -f 100" -- my_sciprt.py
+    viztracer --plugins "vizplugins.cpu_time -f 100" -- my_script.py
 
 You can also do it inline, just pass the string or the plugin object itself in a list to VizTracer
 
