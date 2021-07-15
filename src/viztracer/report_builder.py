@@ -6,7 +6,7 @@ import os
 import re
 import gzip
 import sys
-from typing import Any, Dict, List, Sequence, Union, TextIO
+from typing import Any, Dict, List, Optional, Sequence, Union, TextIO
 try:
     import orjson  # type: ignore
 except ImportError:
@@ -81,14 +81,15 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def prepare_json(self, file_info: bool = True, display_time_unit: str = "us") -> None:
+    def prepare_json(self, file_info: bool = True, display_time_unit: Optional[str] = None) -> None:
         # This will prepare self.combined_json to be ready to output
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
             print(f"Dumping trace data, total entries: {entries}")
 
-        self.combined_json["displayTimeUnit"] = display_time_unit
+        if display_time_unit is not None:
+            self.combined_json["displayTimeUnit"] = display_time_unit
 
         if file_info:
             self.combined_json["file_info"] = {"files": {}, "functions": {}}
@@ -132,7 +133,7 @@ class ReportBuilder:
                                        .replace("</script>", "<\\/script>")
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
-            self.prepare_json(file_info=file_info, display_time_unit="us")
+            self.prepare_json(file_info=file_info)
             if "orjson" in sys.modules:
                 output_file.write(orjson.dumps(self.combined_json).decode("utf-8"))
             else:
