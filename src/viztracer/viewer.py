@@ -94,7 +94,7 @@ class VizViewerTCPServer(socketserver.TCPServer):
         return super().handle_timeout()
 
 
-def view(path: str, server_only: bool = False, once: bool = False, flamegraph: bool = False) -> int:
+def view(path: str, server_only: bool = False, once: bool = False, flamegraph: bool = False, timeout: float = 10) -> int:
     # For official perfetto, only localhost:9001 is allowed
     port = 9001
 
@@ -137,7 +137,7 @@ def view(path: str, server_only: bool = False, once: bool = False, flamegraph: b
             webbrowser.open_new_tab(f'http://127.0.0.1:{port}')
         try:
             if once:
-                httpd.timeout = 10
+                httpd.timeout = timeout
                 while not httpd.__dict__.get("trace_served", False):
                     httpd.handle_request()
             else:
@@ -154,7 +154,9 @@ def viewer_main():
     parser.add_argument("--server_only", "-s", default=False, action="store_true",
                         help="Only start the server, do not open webpage")
     parser.add_argument("--once", default=False, action="store_true",
-                        help="Only serve trace data once, then exit. Also will timeout in 10s.")
+                        help="Only serve trace data once, then exit.")
+    parser.add_argument("--timeout", nargs="?", type=int, default=10,
+                        help="Timeout in seconds to stop the server without trace data requests, only works with --once")
     parser.add_argument("--flamegraph", default=False, action="store_true",
                         help="Show flamegraph of data")
 
@@ -168,7 +170,8 @@ def viewer_main():
                 path,
                 server_only=options.server_only,
                 once=options.once,
-                flamegraph=options.flamegraph
+                flamegraph=options.flamegraph,
+                timeout=options.timeout
             )
         finally:
             os.chdir(cwd)

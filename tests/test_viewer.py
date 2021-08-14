@@ -19,7 +19,7 @@ import webbrowser
 
 
 class Viewer(unittest.TestCase):
-    def __init__(self, file_path, once=False, flamegraph=False):
+    def __init__(self, file_path, once=False, flamegraph=False, timeout=None):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "-m", "--parallel-mode", "--pylib", "viztracer.viewer", "-s", file_path]
         else:
@@ -30,6 +30,11 @@ class Viewer(unittest.TestCase):
 
         if flamegraph:
             self.cmd.append("--flamegraph")
+
+        if timeout is not None:
+            self.cmd.append("--timeout")
+            self.cmd.append(f"{timeout}")
+
         self.process = None
         super().__init__()
 
@@ -146,6 +151,28 @@ class TestViewer(CmdlineTmpl):
                 try:
                     v.process.wait(timeout=20)
                 except subprocess.TimeoutExpired:
+                    v.stop()
+                    v.process.kill()
+        finally:
+            os.remove(f.name)
+
+    def test_once_timeout(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, once=True, timeout=1)
+            v.run()
+            try:
+                v.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                v.stop()
+                self.fail("--once did not timeout correctly")
+            finally:
+                try:
+                    v.process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    v.stop()
                     v.process.kill()
         finally:
             os.remove(f.name)
