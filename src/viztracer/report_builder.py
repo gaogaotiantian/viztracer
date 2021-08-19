@@ -168,7 +168,6 @@ class ReportBuilder:
             self.generate_report(output_file, output_format="json", file_info=file_info)
 
         if self.verbose > 0 and isinstance(output_file, str):
-            print("Saving report to {} ...".format(os.path.abspath(output_file)))
-            print('Use', end=" ")
-            color_print("OKGREEN", '"vizviewer <your_report>"', end=" ")
-            print('to open the report')
+            report_abspath = os.path.abspath(output_file)
+            print("Use the following command to open the report:")
+            color_print("OKGREEN", "vizviewer {}".format(report_abspath))
