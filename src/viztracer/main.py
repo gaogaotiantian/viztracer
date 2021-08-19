@@ -11,6 +11,7 @@ import builtins
 import platform
 import signal
 import shutil
+import threading
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 from . import VizTracer, FlameGraph, __version__
 from .code_monkey import CodeMonkey
@@ -254,6 +255,17 @@ class VizUI:
         else:
             tracer.start()
         exec(code, global_dict)
+        # issue141 - concurrent.future requires a proper release by executing
+        # threading._threading_atexits or it will deadlock if not explicitly
+        # release the resource in the code
+        # Python 3.9+ has this issue
+        try:
+            if threading._threading_atexits:  # type: ignore
+                for atexit_call in threading._threading_atexits:  # type: ignore
+                    atexit_call()
+                threading._threading_atexits = []  # type: ignore
+        except AttributeError:
+            pass
         atexit._run_exitfuncs()
         raise Exception("Unexpected VizTracer termination")  # pragma: no cover
 

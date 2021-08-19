@@ -246,3 +246,27 @@ class TestIssue121(CmdlineTmpl):
             script=issue121_code,
             expected_entries=18
         )
+
+
+issue141_code = """
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+import time
+
+
+def my_function(*args):
+   time.sleep(0.5)
+
+
+if __name__ == '__main__':
+    e = ProcessPoolExecutor(max_workers=3)
+    e.map(my_function, range(1))
+"""
+
+
+class TestIssue141(CmdlineTmpl):
+    def test_issue141(self):
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=issue141_code,
+        )
