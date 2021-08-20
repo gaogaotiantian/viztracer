@@ -248,3 +248,8 @@ class TestTracerFeature(BaseTmpl):
         tracer.stop()
         tracer.parse()
         self.assertEventNumber(tracer.data, 1)
+
+    def test_invalid_config(self):
+        tracer = _VizTracer()
+        with self.assertRaises(ValueError):
+            tracer.config(invalid=True)
