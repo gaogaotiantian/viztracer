@@ -232,11 +232,11 @@ class _VizTracer:
             raise ValueError("duration needs to be a float, not {}".format(min_duration))
         self.config()
 
-    def config(self, **kwargs):
+    def config(self):
         if not self.initialized:
             return
 
-        default_cfg = {
+        cfg = {
             "verbose": self.verbose,
             "lib_file_path": os.path.dirname(os.path.realpath(__file__)),
             "max_stack_depth": self.max_stack_depth,
@@ -251,13 +251,8 @@ class _VizTracer:
             "trace_self": self.trace_self,
             "min_duration": self.min_duration
         }
-        for key, val in kwargs.items():
-            if key in default_cfg:
-                default_cfg[key] = val
-            else:
-                raise ValueError(f"Invalid config option {key}")
 
-        self._tracer.config(**default_cfg)
+        self._tracer.config(**cfg)
 
     def start(self):
         self.enable = True
