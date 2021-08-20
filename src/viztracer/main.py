@@ -387,13 +387,15 @@ class VizUI:
                 tracer.save(
                     output_file=os.path.join(self.multiprocess_output_dir, "result.json"),
                     file_info=True,
-                    minimize_memory=options.minimize_memory
+                    minimize_memory=options.minimize_memory,
+                    verbose=0
                 )
 
                 builder = ReportBuilder(
                     [os.path.join(self.multiprocess_output_dir, f)
                         for f in os.listdir(self.multiprocess_output_dir)],
-                    minimize_memory=options.minimize_memory)
+                    minimize_memory=options.minimize_memory,
+                    verbose=self.verbose)
                 builder.save(output_file=ofile)
                 shutil.rmtree(self.multiprocess_output_dir)
             else:  # pragma: no cover

@@ -22,7 +22,7 @@ def patch_subprocess(ui) -> None:
         if isinstance(args, Sequence):
             args = list(args)
             if "python" in os.path.basename(args[0]):
-                args = ["viztracer"] + ui.args + ["--"] + args[1:]
+                args = ["viztracer", "--quiet"] + ui.args + ["--"] + args[1:]
         self.__originit__(args, **kwargs)
 
     import subprocess
@@ -48,6 +48,7 @@ def patch_multiprocessing(ui, tracer: VizTracer) -> None:
 
         tracer.clear()
         tracer._set_curr_stack_depth(1)
+        tracer.verbose = 0
 
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
@@ -120,6 +121,7 @@ class SpawnProcess:
         signal.signal(signal.SIGTERM, term_handler)
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
+        tracer.verbose = 0
         tracer.start()
         tracer.pid_suffix = True
         tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")

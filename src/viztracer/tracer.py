@@ -28,12 +28,13 @@ class _VizTracer:
             trace_self: bool = False,
             min_duration: float = 0,
             vdb: bool = False):
+        self.initialized = False
         self.enable = False
         self.parsed = False
         self._tracer = snaptrace.Tracer(tracer_entries)
         self.tracer_entries = tracer_entries
-        self.verbose = 0
         self.data: Dict[str, Any] = {}
+        self.verbose = 0
         self.max_stack_depth = max_stack_depth
         self.curr_stack_depth = 0
         self.include_files = include_files
@@ -42,15 +43,16 @@ class _VizTracer:
         self.ignore_frozen = ignore_frozen
         self.log_func_retval = log_func_retval
         self.log_func_args = log_func_args
+        self.log_async = log_async
+        self.min_duration = min_duration
+        self.vdb = vdb
         self.log_print = log_print
         self.log_gc = log_gc
-        self.log_async = log_async
-        self.vdb = vdb
         self.trace_self = trace_self
-        self.min_duration = min_duration
         self.system_print = builtins.print
         self.total_entries = 0
         self.gc_start_args: Dict[str, int] = {}
+        self.initialized = True
 
     @property
     def max_stack_depth(self) -> int:
@@ -67,7 +69,7 @@ class _VizTracer:
             self.__max_stack_depth = max_stack_depth
         else:
             raise ValueError("Error when trying to convert max_stack_depth {} to integer.".format(max_stack_depth))
-        self._tracer.config(max_stack_depth=self.__max_stack_depth)
+        self.config()
 
     @property
     def include_files(self) -> Optional[Sequence[str]]:
@@ -84,6 +86,7 @@ class _VizTracer:
                 self.__include_files = None
         else:
             raise ValueError("include_files has to be a list")
+        self.config()
 
     @property
     def exclude_files(self) -> Optional[Sequence[str]]:
@@ -100,6 +103,7 @@ class _VizTracer:
                 self.__exclude_files = None
         else:
             raise ValueError("exclude_files has to be a list")
+        self.config()
 
     @property
     def ignore_c_function(self) -> bool:
@@ -111,6 +115,19 @@ class _VizTracer:
             self.__ignore_c_function = ignore_c_function
         else:
             raise ValueError("ignore_c_function needs to be True or False, not {}".format(ignore_c_function))
+        self.config()
+
+    @property
+    def ignore_frozen(self) -> bool:
+        return self.__ignore_frozen
+
+    @ignore_frozen.setter
+    def ignore_frozen(self, ignore_frozen: bool):
+        if isinstance(ignore_frozen, bool):
+            self.__ignore_frozen = ignore_frozen
+        else:
+            raise ValueError("ignore_frozen needs to be True or False, not {}".format(ignore_frozen))
+        self.config()
 
     @property
     def log_func_retval(self) -> bool:
@@ -122,6 +139,19 @@ class _VizTracer:
             self.__log_func_retval = log_func_retval
         else:
             raise ValueError("log_func_retval needs to be True or False, not {}".format(log_func_retval))
+        self.config()
+
+    @property
+    def log_async(self) -> bool:
+        return self.__log_async
+
+    @log_async.setter
+    def log_async(self, log_async: bool):
+        if isinstance(log_async, bool):
+            self.__log_async = log_async
+        else:
+            raise ValueError("log_async needs to be True or False, not {}".format(log_async))
+        self.config()
 
     @property
     def log_print(self) -> bool:
@@ -144,6 +174,7 @@ class _VizTracer:
             self.__log_func_args = log_func_args
         else:
             raise ValueError("log_func_args needs to be True or False, not {}".format(log_func_args))
+        self.config()
 
     @property
     def log_gc(self) -> bool:
@@ -170,6 +201,7 @@ class _VizTracer:
             self.__vdb = vdb
         else:
             raise ValueError("vdb needs to be True or False, not {}".format(vdb))
+        self.config()
 
     @property
     def verbose(self) -> int:
@@ -186,6 +218,7 @@ class _VizTracer:
             self.__verbose = verbose
         else:
             raise ValueError("Verbose needs to be an integer, not {}".format(verbose))
+        self.config()
 
     @property
     def min_duration(self) -> float:
@@ -197,6 +230,29 @@ class _VizTracer:
             self.__min_duration = float(min_duration)
         else:
             raise ValueError("duration needs to be a float, not {}".format(min_duration))
+        self.config()
+
+    def config(self):
+        if not self.initialized:
+            return
+
+        cfg = {
+            "verbose": self.verbose,
+            "lib_file_path": os.path.dirname(os.path.realpath(__file__)),
+            "max_stack_depth": self.max_stack_depth,
+            "include_files": self.include_files,
+            "exclude_files": self.exclude_files,
+            "ignore_c_function": self.ignore_c_function,
+            "ignore_frozen": self.ignore_frozen,
+            "log_func_retval": self.log_func_retval,
+            "vdb": self.vdb,
+            "log_func_args": self.log_func_args,
+            "log_async": self.log_async,
+            "trace_self": self.trace_self,
+            "min_duration": self.min_duration
+        }
+
+        self._tracer.config(**cfg)
 
     def start(self):
         self.enable = True
@@ -205,21 +261,7 @@ class _VizTracer:
             self.overload_print()
         if self.include_files is not None and self.exclude_files is not None:
             raise Exception("include_files and exclude_files can't be both specified!")
-        self._tracer.config(
-            verbose=self.verbose,
-            lib_file_path=os.path.dirname(os.path.realpath(__file__)),
-            max_stack_depth=self.max_stack_depth,
-            include_files=self.include_files,
-            exclude_files=self.exclude_files,
-            ignore_c_function=self.ignore_c_function,
-            ignore_frozen=self.ignore_frozen,
-            log_func_retval=self.log_func_retval,
-            vdb=self.vdb,
-            log_func_args=self.log_func_args,
-            log_async=self.log_async,
-            trace_self=self.trace_self,
-            min_duration=self.min_duration
-        )
+        self.config()
         self._tracer.start()
 
     def stop(self):

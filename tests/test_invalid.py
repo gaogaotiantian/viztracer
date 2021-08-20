@@ -20,7 +20,9 @@ class TestInvalidArgs(BaseTmpl):
             "log_gc": ["hello", 1, "True"],
             "log_func_args": ["hello", 1, "True"],
             "vdb": ["hello", 1, "True"],
-            "min_duration": ["0.1.0", "12", "3us"]
+            "min_duration": ["0.1.0", "12", "3us"],
+            "ignore_frozen": ["hello", 1, "True"],
+            "log_async": ["hello", 1, "True"]
         }
         tracer = VizTracer()
         for args, vals in invalid_args.items():

@@ -141,7 +141,8 @@ class VizTracer(_VizTracer):
             output_file: Optional[str] = None,
             save_flamegraph: bool = False,
             file_info: Optional[bool] = None,
-            minimize_memory: bool = False):
+            minimize_memory: bool = False,
+            verbose: Optional[int] = None):
         if file_info is None:
             file_info = self.file_info
         enabled = False
@@ -152,6 +153,8 @@ class VizTracer(_VizTracer):
             self.parse()
         if output_file is None:
             output_file = self.output_file
+        if verbose is None:
+            verbose = self.verbose
         if self.pid_suffix:
             output_file_parts = output_file.split(".")
             output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
@@ -164,7 +167,7 @@ class VizTracer(_VizTracer):
             if not os.path.isdir(os.path.dirname(output_file)):
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        rb = ReportBuilder(self.data, self.verbose, minimize_memory=minimize_memory)
+        rb = ReportBuilder(self.data, verbose, minimize_memory=minimize_memory)
         rb.save(output_file=output_file, file_info=file_info)
 
         if save_flamegraph:
