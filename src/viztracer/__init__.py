@@ -5,7 +5,6 @@ __version__ = "0.13.4"
 
 
 from .viztracer import VizTracer
-from .flamegraph import FlameGraph
 from .util import get_tracer
 from .decorator import ignore_function, trace_and_save, log_sparse
 from .vizcounter import VizCounter
@@ -23,7 +22,6 @@ __all__ = [
     "sim_main",
     "viewer_main",
     "VizTracer",
-    "FlameGraph",
     "ignore_function",
     "trace_and_save",
     "log_sparse",

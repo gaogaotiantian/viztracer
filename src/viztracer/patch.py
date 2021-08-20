@@ -10,7 +10,7 @@ import textwrap
 from typing import Any, Callable, Dict, List, Sequence, Union
 
 
-def patch_subprocess(ui) -> None:
+def patch_subprocess(viz_args) -> None:
 
     def subprocess_init(self, args: Union[str, Sequence], **kwargs) -> None:
         if int(platform.python_version_tuple()[1]) >= 7:
@@ -22,7 +22,7 @@ def patch_subprocess(ui) -> None:
         if isinstance(args, Sequence):
             args = list(args)
             if "python" in os.path.basename(args[0]):
-                args = ["viztracer", "--quiet"] + ui.args + ["--"] + args[1:]
+                args = ["viztracer", "--quiet"] + viz_args + ["--"] + args[1:]
         self.__originit__(args, **kwargs)
 
     import subprocess
@@ -30,33 +30,27 @@ def patch_subprocess(ui) -> None:
     setattr(subprocess.Popen, "__init__", subprocess_init)
 
 
-def patch_multiprocessing(ui, tracer: VizTracer) -> None:
+def patch_multiprocessing(tracer: VizTracer) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
 
         def exit_routine():
-            ui.exit_routine()
+            tracer.exit_routine()
 
         from multiprocessing.util import Finalize  # type: ignore
-        import signal
         Finalize(tracer, exit_routine, exitpriority=32)
 
-        def term_handler(signalnum, frame):
-            ui.exit_routine()
-        signal.signal(signal.SIGTERM, term_handler)
+        tracer.register_exit()
 
         tracer.clear()
         tracer._set_curr_stack_depth(1)
-        tracer.verbose = 0
 
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
     from multiprocessing.util import register_after_fork
 
-    tracer.pid_suffix = True
-    tracer.output_file = os.path.join(ui.multiprocess_output_dir, "result.json")
     register_after_fork(tracer, func_after_fork)
 
     # For spawn process
@@ -71,7 +65,7 @@ def patch_multiprocessing(ui, tracer: VizTracer) -> None:
             prog = textwrap.dedent(f"""
                     from multiprocessing.spawn import spawn_main;
                     from viztracer.patch import patch_spawned_process;
-                    patch_spawned_process({ui.init_kwargs}, '{ui.multiprocess_output_dir}');
+                    patch_spawned_process({tracer.init_kwargs});
                     spawn_main(%s)
                     """)
             prog %= ', '.join('%s=%r' % item for item in kwds.items())
@@ -86,50 +80,27 @@ class SpawnProcess:
     def __init__(
             self,
             viztracer_kwargs: Dict[str, Any],
-            multiprocess_output_dir: str,
             target: Callable,
             args: List[Any],
             kwargs: Dict[str, Any]):
         self._viztracer_kwargs = viztracer_kwargs
-        self._multiprocess_output_dir = multiprocess_output_dir
         self._target = target
         self._args = args
         self._kwargs = kwargs
         self._exiting = False
 
     def run(self):
-        import os
         import viztracer
-        import signal
         import atexit
 
-        def exit_routine() -> None:
-            tracer = viztracer.get_tracer()
-            if tracer is not None:
-                tracer.stop()
-                atexit.unregister(exit_routine)
-                if not self._exiting:
-                    self._exiting = True
-                    tracer.save()
-                    tracer.terminate()
-                    exit(0)
-
-        def term_handler(signalnum, frame):
-            exit_routine()
-
-        atexit.register(exit_routine)
-        signal.signal(signal.SIGTERM, term_handler)
-
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
-        tracer.verbose = 0
+        tracer.register_exit()
         tracer.start()
-        tracer.pid_suffix = True
-        tracer.output_file = os.path.join(self._multiprocess_output_dir, "result.json")
         self._run()
         atexit._run_exitfuncs()
 
 
-def patch_spawned_process(viztracer_kwargs: Dict[str, Any], multiprocess_output_dir: str):
+def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
     from multiprocessing import reduction, process  # type: ignore
     from multiprocessing.spawn import prepare
     import multiprocessing.spawn
@@ -141,7 +112,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], multiprocess_output_
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwargs)
                 sp._run = self.run
                 self.run = sp.run
             finally:
@@ -155,7 +126,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], multiprocess_output_
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, multiprocess_output_dir, self._target, self._args, self._kwargs)
+                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwarg)
                 sp._run = self.run
                 self.run = sp.run
             finally:

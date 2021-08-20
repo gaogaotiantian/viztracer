@@ -1,13 +1,11 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
 import queue
 try:
     import orjson as json  # type: ignore
 except ImportError:
     import json  # type: ignore
-from string import Template
 from typing import Any, Dict, List, Optional, Tuple
 
 from .functree import FuncTree, FuncTreeNode
@@ -73,24 +71,9 @@ class FlameGraph:
         for key, tree in func_trees.items():
             self.trees[key] = _FlameTree(tree)
 
-    def dump_to_json(self) -> Dict[str, Any]:
-        ret = {}
-        for key in self.trees:
-            ret[key] = self.trees[key].json()
-        return ret
-
     def load(self, input_file: str) -> None:
         with open(input_file, encoding="utf-8") as f:
             self.parse(json.loads(f.read()))
-
-    def save(self, output_file: str = "result_flamegraph.html") -> None:
-        sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html"), encoding="utf-8") as f:
-            tmpl = f.read()
-        sub["data"] = self.dump_to_json()
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(Template(tmpl).substitute(sub))
 
     def dump_to_perfetto(self) -> List[Dict[str, Any]]:
         """

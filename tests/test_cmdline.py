@@ -5,7 +5,6 @@ import os
 import sys
 import platform
 import re
-from .util import get_json_file_path
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -218,10 +217,6 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_log_func_args(self):
         self.template(["python", "-m", "viztracer", "--log_func_args", "cmdline_test.py"])
 
-    def test_flamegraph(self):
-        self.template(["python", "-m", "viztracer", "--save_flamegraph", "cmdline_test.py"],
-                      expected_output_file=["result.json", "result_flamegraph.html"])
-
     def test_minimize_memory(self):
         self.template(["python", "-m", "viztracer", "--minimize_memory", "cmdline_test.py"])
 
@@ -265,13 +260,6 @@ class TestCommandLineBasic(CmdlineTmpl):
         if sys.platform in ["linux", "linux2", "darwin"]:
             # path finding only works on Unix
             self.template(["viztracer", "vdb"], success=False)
-
-    def test_generate_flamegraph(self):
-        self.template(["viztracer", "--generate_flamegraph", get_json_file_path("multithread.json")],
-                      expected_output_file="./result_flamegraph.html")
-        self.template(["viztracer", "-o", "result_flamegraph.html", "--generate_flamegraph",
-                       get_json_file_path("multithread.json")],
-                      expected_output_file="./result_flamegraph.html")
 
     def test_module(self):
         self.template(["viztracer", "-m", "numbers"])
