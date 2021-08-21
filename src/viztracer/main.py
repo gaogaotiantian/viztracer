@@ -168,7 +168,7 @@ class VizUI:
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
-            "verbose": self.verbose,
+            "verbose": 0,
             "output_file": output_file,
             "max_stack_depth": options.max_stack_depth,
             "exclude_files": options.exclude_files,
@@ -379,7 +379,7 @@ class VizUI:
             atexit.unregister(self.exit_routine)
             if not self._exiting:
                 self._exiting = True
-                self.tracer.exit_routine()
+                self.tracer.exit_routine(exit_after=False)
                 self.save()
                 if self.is_main_process and self.options.open:  # pragma: no cover
                     import subprocess

@@ -126,7 +126,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
                 self = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwarg)
+                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwargs)
                 sp._run = self.run
                 self.run = sp.run
             finally:
