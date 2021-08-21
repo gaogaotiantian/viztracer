@@ -240,9 +240,9 @@ VizTracer
 
         run ``command`` and save report to ``output_file``
     
-    .. py:method:: save(output_file=None, save_flamegraph=False)
+    .. py:method:: save(output_file=None)
 
-        parse data and save report to ``output_file``. If ``output_file`` is ``None``, save to default path. If ``save_flamegraph`` is ``True``, save the flamegraph report as well
+        parse data and save report to ``output_file``. If ``output_file`` is ``None``, save to default path.
     
     .. py:method:: start()
 
