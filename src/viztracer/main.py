@@ -30,7 +30,6 @@ class VizUI:
         self.args: List[str] = []
         self._exiting: bool = False
         self.multiprocess_output_dir: str = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
-        self.is_main_process: bool = False
         self.cwd: str = os.getcwd()
 
     def create_parser(self) -> argparse.ArgumentParser:
@@ -87,11 +86,11 @@ class VizUI:
                             help="log entry of the function with specified names")
         parser.add_argument("--log_exception", action="store_true", default=False,
                             help="log all exception when it's raised")
-        parser.add_argument("--log_subprocess", action="store_true", default=False,
+        parser.add_argument("--log_subprocess", action="store_true", default=True,
                             help="log subprocesses")
         parser.add_argument("--subprocess_child", action="store_true", default=False,
                             help=argparse.SUPPRESS)
-        parser.add_argument("--log_multiprocess", action="store_true", default=False,
+        parser.add_argument("--log_multiprocess", action="store_true", default=True,
                             help="log multiprocesses")
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
@@ -118,6 +117,15 @@ class VizUI:
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
         return parser
+
+    @property
+    def is_main_process(self) -> bool:
+        options = self.options
+        if options.subprocess_child:
+            return False
+        if self.parent_pid != os.getpid():
+            return False
+        return True
 
     def parse(self, argv: List[str]) -> Tuple[bool, Optional[str]]:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
@@ -362,21 +370,13 @@ class VizUI:
         options = self.options
         ofile = self.ofile
 
-        if options.log_multiprocess:
-            self.is_main_process = os.getpid() == self.parent_pid
-        elif options.log_subprocess:
-            self.is_main_process = not options.subprocess_child
-        else:
-            self.is_main_process = True
-
-        if self.is_main_process:
-            builder = ReportBuilder(
-                [os.path.join(self.multiprocess_output_dir, f)
-                    for f in os.listdir(self.multiprocess_output_dir)],
-                minimize_memory=options.minimize_memory,
-                verbose=self.verbose)
-            builder.save(output_file=ofile)
-            shutil.rmtree(self.multiprocess_output_dir)
+        builder = ReportBuilder(
+            [os.path.join(self.multiprocess_output_dir, f)
+                for f in os.listdir(self.multiprocess_output_dir)],
+            minimize_memory=options.minimize_memory,
+            verbose=self.verbose)
+        builder.save(output_file=ofile)
+        shutil.rmtree(self.multiprocess_output_dir)
 
     def exit_routine(self) -> None:
         if self.tracer is not None:
@@ -384,8 +384,9 @@ class VizUI:
             if not self._exiting:
                 self._exiting = True
                 self.tracer.exit_routine(exit_after=False)
-                self.save()
-                if self.is_main_process and self.options.open:  # pragma: no cover
+                if self.is_main_process:
+                    self.save()
+                if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
                 exit(0)
