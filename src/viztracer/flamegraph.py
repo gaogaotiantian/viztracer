@@ -2,10 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import queue
-try:
-    import orjson as json  # type: ignore
-except ImportError:
-    import json  # type: ignore
 from typing import Any, Dict, List, Optional, Tuple
 
 from .functree import FuncTree, FuncTreeNode
