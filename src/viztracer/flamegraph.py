@@ -27,13 +27,6 @@ class _FlameNode:
         for grandchild in child.children:
             self.children[child.fullname].get_child(grandchild)
 
-    def json(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "value": self.value,
-            "children": [child.json() for child in self.children.values()]
-        }
-
 
 class _FlameTree:
     def __init__(self, func_tree: FuncTree):
@@ -44,9 +37,6 @@ class _FlameTree:
         self.root = _FlameNode(None, "__root__")
         for child in func_tree.root.children:
             self.root.get_child(child)
-
-    def json(self) -> Dict[str, Any]:
-        return self.root.json()
 
 
 class FlameGraph:
@@ -70,10 +60,6 @@ class FlameGraph:
 
         for key, tree in func_trees.items():
             self.trees[key] = _FlameTree(tree)
-
-    def load(self, input_file: str) -> None:
-        with open(input_file, encoding="utf-8") as f:
-            self.parse(json.loads(f.read()))
 
     def dump_to_perfetto(self) -> List[Dict[str, Any]]:
         """

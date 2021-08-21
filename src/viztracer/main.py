@@ -152,7 +152,11 @@ class VizUI:
             self.ofile = os.path.join(options.output_dir, self.ofile)
 
         if options.subprocess_child:
-            output_file = self.ofile
+            # If it's a subprocess, we need to store the FEE data to the
+            # directory from the parent process.
+            # It's not practical to cover this line as it requires coverage
+            # instrumentation on subprocess.
+            output_file = self.ofile  # pragma: no cover
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
 
