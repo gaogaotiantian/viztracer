@@ -122,7 +122,7 @@ class VizUI:
     def is_main_process(self) -> bool:
         options = self.options
         if options.subprocess_child:
-            return False
+            return False  # pragma: no cover
         if self.parent_pid != os.getpid():
             return False
         return True
