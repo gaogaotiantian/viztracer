@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import sys
 from typing import Dict, Optional, Sequence, Union, TYPE_CHECKING
 from .util import compare_version, color_print
 from . import __version__
@@ -70,7 +71,7 @@ class VizPluginManager:
             package = __import__(module)
         except (ImportError, ModuleNotFoundError):
             print(f"There's no module named {module}, maybe you need to install it")
-            exit(1)
+            sys.exit(1)
 
         m = package
         if "." in module:
@@ -87,13 +88,13 @@ class VizPluginManager:
             m = m.__getattribute__("get_vizplugin")
         except AttributeError:
             print(f"Unable to find get_vizplugin in {module}. Incorrect plugin.")
-            exit(1)
+            sys.exit(1)
 
         if callable(m):
             return m(plugin)
         else:
             print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
-            exit(1)
+            sys.exit(1)
 
     def _send_message(self, plugin: VizPluginBase, m_type: str, payload: Dict):
         # this is the only interface to communicate with vizplugin

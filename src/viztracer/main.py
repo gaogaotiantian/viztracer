@@ -389,7 +389,7 @@ class VizUI:
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
-                exit(0)
+                sys.exit(0)
 
 
 def main():
@@ -397,8 +397,8 @@ def main():
     success, err_msg = ui.parse(sys.argv)
     if not success:
         print(err_msg)
-        exit(1)
+        sys.exit(1)
     success, err_msg = ui.run()
     if not success:
         print(err_msg)
-        exit(1)
+        sys.exit(1)

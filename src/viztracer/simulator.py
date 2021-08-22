@@ -28,7 +28,7 @@ class Simulator:
             self.print = print
         self.snapshot = ProgSnapshot(json_string, self.print)
         if not self.snapshot.valid:
-            exit(1)
+            sys.exit(1)
         self.no_clear = no_clear
         self.extra_newline = extra_newline
 
@@ -42,7 +42,7 @@ class Simulator:
                     print("")
                 self.parse_cmd(cmd)
             except EOFError:
-                exit(0)
+                sys.exit(0)
 
     def clear(self):
         if not self.no_clear:
@@ -116,7 +116,7 @@ class Simulator:
             success, err_msg = self.snapshot.print_object()
             return
         elif args[0] in ["quit", "exit", "q"]:
-            exit(0)
+            sys.exit(0)
         else:
             print("Invalid command: {}".format(cmd))
             return

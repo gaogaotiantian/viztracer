@@ -127,7 +127,7 @@ class VizTracer(_VizTracer):
     def install(self):
         if sys.platform == "win32":
             print("remote install is not supported on Windows!")
-            exit(1)
+            sys.exit(1)
 
         def signal_start(signum, frame):
             self.start()
@@ -246,4 +246,4 @@ class VizTracer(_VizTracer):
             self.save()
             self.terminate()
             if exit_after:
-                exit(0)
+                sys.exit(0)
