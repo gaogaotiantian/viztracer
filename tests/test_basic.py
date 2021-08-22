@@ -97,16 +97,6 @@ class TestVizTracerBasic(BaseTmpl):
 
         shutil.rmtree("./tmp")
 
-    def test_save_flamegraph(self):
-        tracer = VizTracer(tracer_entries=10)
-        tracer.start()
-        fib(5)
-        tracer.stop()
-        tracer.parse()
-        tracer.save_flamegraph()
-        self.assertTrue(os.path.exists("result_flamegraph.html"))
-        os.remove("result_flamegraph.html")
-
 
 class TestInstant(BaseTmpl):
     def test_addinstant(self):

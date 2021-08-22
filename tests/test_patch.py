@@ -30,7 +30,7 @@ reduction.dump(process, fp)
 set_spawning_popen(None)
 child_r, parent_w = os.pipe()
 
-patch_spawned_process({}, "./test_spawn")
+patch_spawned_process({'output_file': "./test_spawn/result.json", 'pid_suffix': True})
 pid = os.getpid()
 
 argv = sys.argv

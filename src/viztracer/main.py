@@ -13,7 +13,7 @@ import signal
 import shutil
 import threading
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
-from . import VizTracer, FlameGraph, __version__
+from . import VizTracer, __version__
 from .code_monkey import CodeMonkey
 from .report_builder import ReportBuilder
 from .patch import patch_multiprocessing, patch_subprocess
@@ -30,7 +30,6 @@ class VizUI:
         self.args: List[str] = []
         self._exiting: bool = False
         self.multiprocess_output_dir: str = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
-        self.is_main_process: bool = False
         self.cwd: str = os.getcwd()
 
     def create_parser(self) -> argparse.ArgumentParser:
@@ -87,11 +86,11 @@ class VizUI:
                             help="log entry of the function with specified names")
         parser.add_argument("--log_exception", action="store_true", default=False,
                             help="log all exception when it's raised")
-        parser.add_argument("--log_subprocess", action="store_true", default=False,
+        parser.add_argument("--log_subprocess", action="store_true", default=True,
                             help="log subprocesses")
         parser.add_argument("--subprocess_child", action="store_true", default=False,
                             help=argparse.SUPPRESS)
-        parser.add_argument("--log_multiprocess", action="store_true", default=False,
+        parser.add_argument("--log_multiprocess", action="store_true", default=True,
                             help="log multiprocesses")
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
@@ -103,10 +102,6 @@ class VizUI:
                             help=("append pid to file name. "
                                   "This should be used when you try to trace multi process programs. "
                                   "Will by default generate json files"))
-        parser.add_argument("--save_flamegraph", action="store_true", default=False,
-                            help="save flamegraph after generating the VizTracer report")
-        parser.add_argument("--generate_flamegraph", nargs="?", default=None,
-                            help="generate a flamegraph from json VizTracer report. Specify the json file to use")
         parser.add_argument("--module", "-m", nargs="?", default=None,
                             help="run module with VizTracer")
         parser.add_argument("--combine", nargs="*", default=[],
@@ -122,6 +117,15 @@ class VizUI:
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
         return parser
+
+    @property
+    def is_main_process(self) -> bool:
+        options = self.options
+        if options.subprocess_child:
+            return False  # pragma: no cover
+        if self.parent_pid != os.getpid():
+            return False
+        return True
 
     def parse(self, argv: List[str]) -> Tuple[bool, Optional[str]]:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
@@ -155,11 +159,14 @@ class VizUI:
                 os.mkdir(options.output_dir)
             self.ofile = os.path.join(options.output_dir, self.ofile)
 
-        if options.log_subprocess:
-            if not options.subprocess_child:
-                self.args += ["--subprocess_child", "--output_dir", self.multiprocess_output_dir,
-                              "-o", "result.json", "--pid_suffix"]
-            patch_subprocess(self)
+        if options.subprocess_child:
+            # If it's a subprocess, we need to store the FEE data to the
+            # directory from the parent process.
+            # It's not practical to cover this line as it requires coverage
+            # instrumentation on subprocess.
+            output_file = self.ofile  # pragma: no cover
+        else:
+            output_file = os.path.join(self.multiprocess_output_dir, "result.json")
 
         if options.log_async:
             if int(platform.python_version_tuple()[1]) < 7:
@@ -173,8 +180,8 @@ class VizUI:
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
-            "verbose": self.verbose,
-            "output_file": self.ofile,
+            "verbose": 0,
+            "output_file": output_file,
             "max_stack_depth": options.max_stack_depth,
             "exclude_files": options.exclude_files,
             "include_files": options.include_files,
@@ -187,11 +194,12 @@ class VizUI:
             "log_sparse": options.log_sparse,
             "log_async": options.log_async,
             "vdb": options.vdb,
-            "pid_suffix": options.pid_suffix,
+            "pid_suffix": True,
             "register_global": True,
             "plugins": options.plugins,
             "trace_self": options.trace_self,
-            "min_duration": min_duration
+            "min_duration": min_duration,
+            "minimize_memory": options.minimize_memory
         }
 
         return True, None
@@ -225,8 +233,6 @@ class VizUI:
             return self.run_module()
         elif self.command:
             return self.run_command()
-        elif self.options.generate_flamegraph:
-            return self.run_generate_flamegraph()
         elif self.options.combine:
             return self.run_combine(files=self.options.combine)
         elif self.options.align_combine:
@@ -243,13 +249,17 @@ class VizUI:
 
         self.parent_pid = os.getpid()
         if options.log_multiprocess:
-            patch_multiprocessing(self, tracer)
+            patch_multiprocessing(tracer)
+
+        if options.log_subprocess:
+            if not options.subprocess_child:
+                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
         def term_handler(signalnum, frame):
             self.exit_routine()
         signal.signal(signal.SIGTERM, term_handler)
-
         atexit.register(self.exit_routine)
+
         if options.log_sparse:
             tracer.enable = True
         else:
@@ -316,18 +326,6 @@ class VizUI:
         sys.argv = command[:]
         self.run_code(code, main_mod.__dict__)
 
-    def run_generate_flamegraph(self) -> Tuple[bool, Optional[str]]:
-        options = self.options
-        flamegraph = FlameGraph()
-        flamegraph.load(options.generate_flamegraph)
-        if options.output_file:
-            ofile = options.output_file
-        else:
-            ofile = "result_flamegraph.html"
-        flamegraph.save(ofile)
-
-        return True, None
-
     def run_combine(self, files: List[str], align: bool = False) -> Tuple[bool, Optional[str]]:
         options = self.options
         builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
@@ -368,63 +366,30 @@ class VizUI:
 
         return True, None
 
-    def save(self, tracer: VizTracer) -> None:
+    def save(self) -> None:
         options = self.options
         ofile = self.ofile
 
-        tracer.stop()
-
-        if options.log_multiprocess:
-            self.is_main_process = os.getpid() == self.parent_pid
-        elif options.log_subprocess:
-            self.is_main_process = not options.subprocess_child
-        else:
-            self.is_main_process = True
-
-        if options.log_subprocess or options.log_multiprocess:
-            tracer.pid_suffix = True
-            if self.is_main_process:
-                tracer.save(
-                    output_file=os.path.join(self.multiprocess_output_dir, "result.json"),
-                    file_info=True,
-                    minimize_memory=options.minimize_memory,
-                    verbose=0
-                )
-
-                builder = ReportBuilder(
-                    [os.path.join(self.multiprocess_output_dir, f)
-                        for f in os.listdir(self.multiprocess_output_dir)],
-                    minimize_memory=options.minimize_memory,
-                    verbose=self.verbose)
-                builder.save(output_file=ofile)
-                shutil.rmtree(self.multiprocess_output_dir)
-            else:  # pragma: no cover
-                tracer.save(
-                    save_flamegraph=options.save_flamegraph,
-                    file_info=False,
-                    minimize_memory=options.minimize_memory
-                )
-        else:
-            tracer.save(
-                output_file=ofile, save_flamegraph=options.save_flamegraph,
-                file_info=True,
-                minimize_memory=options.minimize_memory
-            )
+        builder = ReportBuilder(
+            [os.path.join(self.multiprocess_output_dir, f)
+                for f in os.listdir(self.multiprocess_output_dir)],
+            minimize_memory=options.minimize_memory,
+            verbose=self.verbose)
+        builder.save(output_file=ofile)
+        shutil.rmtree(self.multiprocess_output_dir)
 
     def exit_routine(self) -> None:
         if self.tracer is not None:
-            self.tracer.stop()
             atexit.unregister(self.exit_routine)
             if not self._exiting:
-                # The program may changed cwd, change it back
-                os.chdir(self.cwd)
                 self._exiting = True
-                self.save(self.tracer)
-                self.tracer.terminate()
-                if self.is_main_process and self.options.open:  # pragma: no cover
+                self.tracer.exit_routine(exit_after=False)
+                if self.is_main_process:
+                    self.save()
+                if self.options.open:  # pragma: no cover
                     import subprocess
-                    subprocess.run(["vizviewer", os.path.abspath(self.ofile)])
-                exit(0)
+                    subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
+                sys.exit(0)
 
 
 def main():
@@ -432,8 +397,8 @@ def main():
     success, err_msg = ui.parse(sys.argv)
     if not success:
         print(err_msg)
-        exit(1)
+        sys.exit(1)
     success, err_msg = ui.run()
     if not success:
         print(err_msg)
-        exit(1)
+        sys.exit(1)

@@ -1,17 +1,17 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
-import multiprocessing
+import atexit
 import builtins
+import multiprocessing
+import os
 import signal
 import sys
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
-from .tracer import _VizTracer
-from .flamegraph import FlameGraph
 from .report_builder import ReportBuilder
-from .vizplugin import VizPluginBase, VizPluginManager
+from .tracer import _VizTracer
 from .vizevent import VizEvent
+from .vizplugin import VizPluginBase, VizPluginManager
 
 
 # This is the interface of the package. Almost all user should use this
@@ -37,6 +37,7 @@ class VizTracer(_VizTracer):
                  register_global: bool = True,
                  trace_self: bool = False,
                  min_duration: float = 0,
+                 minimize_memory: bool = False,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []):
         super().__init__(
@@ -62,8 +63,12 @@ class VizTracer(_VizTracer):
         self.output_file = output_file
         self.system_print = None
         self.log_sparse = log_sparse
+        self.minimize_memory = minimize_memory
+        self._exiting = False
         if register_global:
             self.register_global()
+
+        self.cwd = os.getcwd()
 
         self._afterfork_cb: Optional[Callable] = None
         self._afterfork_args: Tuple = tuple()
@@ -83,6 +88,29 @@ class VizTracer(_VizTracer):
         else:
             raise ValueError("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
 
+    @property
+    def init_kwargs(self) -> Dict:
+        return {
+            "tracer_entries": self.tracer_entries,
+            "verbose": self.verbose,
+            "output_file": self.output_file,
+            "max_stack_depth": self.max_stack_depth,
+            "exclude_files": self.exclude_files,
+            "include_files": self.include_files,
+            "ignore_c_function": self.ignore_c_function,
+            "ignore_frozen": self.ignore_frozen,
+            "log_func_retval": self.log_func_retval,
+            "log_func_args": self.log_func_args,
+            "log_print": self.log_print,
+            "log_gc": self.log_gc,
+            "log_sparse": self.log_sparse,
+            "log_async": self.log_async,
+            "vdb": self.vdb,
+            "pid_suffix": self.pid_suffix,
+            "min_duration": self.min_duration,
+            "minimize_memory": self.minimize_memory
+        }
+
     def __enter__(self):
         self.start()
         return self
@@ -99,7 +127,7 @@ class VizTracer(_VizTracer):
     def install(self):
         if sys.platform == "win32":
             print("remote install is not supported on Windows!")
-            exit(1)
+            sys.exit(1)
 
         def signal_start(signum, frame):
             self.start()
@@ -139,9 +167,7 @@ class VizTracer(_VizTracer):
     def save(
             self,
             output_file: Optional[str] = None,
-            save_flamegraph: bool = False,
             file_info: Optional[bool] = None,
-            minimize_memory: bool = False,
             verbose: Optional[int] = None):
         if file_info is None:
             file_info = self.file_info
@@ -167,16 +193,13 @@ class VizTracer(_VizTracer):
             if not os.path.isdir(os.path.dirname(output_file)):
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        rb = ReportBuilder(self.data, verbose, minimize_memory=minimize_memory)
+        rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
         rb.save(output_file=output_file, file_info=file_info)
-
-        if save_flamegraph:
-            self.save_flamegraph(".".join(output_file.split(".")[:-1]) + "_flamegraph.html")
 
         if enabled:
             self.start()
 
-    def fork_save(self, output_file: Optional[str] = None, save_flamegraph: bool = False):
+    def fork_save(self, output_file: Optional[str] = None):
         if multiprocessing.get_start_method() != "fork":
             # You have to parse first if you are not forking, address space is not copied
             # Since it's not forking, we can't pickle tracer, just set it to None when
@@ -190,7 +213,7 @@ class VizTracer(_VizTracer):
             self._tracer.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
-                                    kwargs={"output_file": output_file, "save_flamegraph": save_flamegraph})
+                                    kwargs={"output_file": output_file})
         p.start()
 
         if multiprocessing.get_start_method() != "fork":
@@ -201,12 +224,26 @@ class VizTracer(_VizTracer):
 
         return p
 
-    def save_flamegraph(self, output_file: Optional[str] = None):
-        flamegraph = FlameGraph(self.data)
-        if output_file is None:
-            name_list = self.output_file.split(".")
-            output_file = ".".join(name_list[:-1]) + "_flamegraph.html"
-        flamegraph.save(output_file)
-
     def terminate(self):
         self._plugin_manager.terminate()
+
+    def register_exit(self, term=True):
+        self.cwd = os.getcwd()
+
+        def term_handler(sig, frame):
+            self.exit_routine()
+
+        if term:
+            signal.signal(signal.SIGTERM, term_handler)
+        atexit.register(self.exit_routine)
+
+    def exit_routine(self, exit_after=True):
+        self.stop()
+        atexit.unregister(self.exit_routine)
+        if not self._exiting:
+            self._exiting = True
+            os.chdir(self.cwd)
+            self.save()
+            self.terminate()
+            if exit_after:
+                sys.exit(0)

@@ -61,13 +61,7 @@ Three types of files are supported, html, json and gz(gzip of json file).
     viztracer -o other_name.json my_script.py
     viztracer -o other_name.json.gz my_script.py
 
-By default, VizTracer only generates trace file, either in HTML format or json. You can have VizTracer to generate a flamegraph as well by 
-
-.. code-block::
-    
-    viztracer --save_flamegraph my_script.py
-
-You can also directly show flamegraph from ``result.json`` file
+You can also show flamegraph from ``result.json`` file
 
 .. code-block::
 

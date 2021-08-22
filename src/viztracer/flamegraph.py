@@ -1,13 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
 import queue
-try:
-    import orjson as json  # type: ignore
-except ImportError:
-    import json  # type: ignore
-from string import Template
 from typing import Any, Dict, List, Optional, Tuple
 
 from .functree import FuncTree, FuncTreeNode
@@ -29,13 +23,6 @@ class _FlameNode:
         for grandchild in child.children:
             self.children[child.fullname].get_child(grandchild)
 
-    def json(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "value": self.value,
-            "children": [child.json() for child in self.children.values()]
-        }
-
 
 class _FlameTree:
     def __init__(self, func_tree: FuncTree):
@@ -46,9 +33,6 @@ class _FlameTree:
         self.root = _FlameNode(None, "__root__")
         for child in func_tree.root.children:
             self.root.get_child(child)
-
-    def json(self) -> Dict[str, Any]:
-        return self.root.json()
 
 
 class FlameGraph:
@@ -72,25 +56,6 @@ class FlameGraph:
 
         for key, tree in func_trees.items():
             self.trees[key] = _FlameTree(tree)
-
-    def dump_to_json(self) -> Dict[str, Any]:
-        ret = {}
-        for key in self.trees:
-            ret[key] = self.trees[key].json()
-        return ret
-
-    def load(self, input_file: str) -> None:
-        with open(input_file, encoding="utf-8") as f:
-            self.parse(json.loads(f.read()))
-
-    def save(self, output_file: str = "result_flamegraph.html") -> None:
-        sub = {}
-        with open(os.path.join(os.path.dirname(__file__), "html/flamegraph.html"), encoding="utf-8") as f:
-            tmpl = f.read()
-        sub["data"] = self.dump_to_json()
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(Template(tmpl).substitute(sub))
 
     def dump_to_perfetto(self) -> List[Dict[str, Any]]:
         """
