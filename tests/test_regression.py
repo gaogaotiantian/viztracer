@@ -192,7 +192,7 @@ class TestIssue47(CmdlineTmpl):
 class TestIssue58(CmdlineTmpl):
     def test_issue58(self):
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "--log_multiprocess", "-m", "tests.modules.issue58"],
+            self.template(["viztracer", "-m", "tests.modules.issue58"],
                           expected_output_file="result.json")
 
 

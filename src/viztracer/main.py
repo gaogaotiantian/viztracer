@@ -1,23 +1,23 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import atexit
-import sys
 import argparse
-import os
-import types
-import time
+import atexit
 import builtins
 import platform
-import signal
+import os
 import shutil
+import signal
+import sys
 import threading
+import time
+import types
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 from . import VizTracer, __version__
 from .code_monkey import CodeMonkey
-from .report_builder import ReportBuilder
 from .patch import patch_multiprocessing, patch_subprocess
-from .util import time_str_to_us
+from .report_builder import ReportBuilder
+from .util import time_str_to_us, color_print
 
 
 class VizUI:
@@ -86,12 +86,12 @@ class VizUI:
                             help="log entry of the function with specified names")
         parser.add_argument("--log_exception", action="store_true", default=False,
                             help="log all exception when it's raised")
-        parser.add_argument("--log_subprocess", action="store_true", default=True,
-                            help="log subprocesses")
+        parser.add_argument("--log_subprocess", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--subprocess_child", action="store_true", default=False,
                             help=argparse.SUPPRESS)
-        parser.add_argument("--log_multiprocess", action="store_true", default=True,
-                            help="log multiprocesses")
+        parser.add_argument("--log_multiprocess", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
         parser.add_argument("--minimize_memory", action="store_true", default=False,
@@ -172,6 +172,11 @@ class VizUI:
             if int(platform.python_version_tuple()[1]) < 7:
                 return False, "log_async only supports python 3.7+"
 
+        if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
+            color_print(
+                "WARNING",
+                "--log_multiprocess and --log_subprocess is no longer needed to trace multi-process program")
+
         try:
             min_duration = time_str_to_us(options.min_duration)
         except ValueError:
@@ -248,12 +253,9 @@ class VizUI:
         self.tracer = tracer
 
         self.parent_pid = os.getpid()
-        if options.log_multiprocess:
-            patch_multiprocessing(tracer)
-
-        if options.log_subprocess:
-            if not options.subprocess_child:
-                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+        patch_multiprocessing(tracer)
+        if not options.subprocess_child:
+            patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
         def term_handler(signalnum, frame):
             self.exit_routine()
