@@ -2,10 +2,11 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import ast
-import re
-from typing import Callable, Dict, List, Optional, Union
 import copy
 from functools import reduce
+import re
+import sys
+from typing import Callable, Dict, List, Optional, Union
 from .util import color_print
 
 
@@ -38,7 +39,7 @@ class AstTransformer(ast.NodeTransformer):
         elif self.inst_type in ("log_var", "log_number"):
             instrumented_nodes: List[ast.stmt] = []
             args = node.args
-            if "posonlyargs" in args._fields:
+            if sys.version_info >= (3, 7):
                 func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
             else:
                 # python 3.6 does not have posonlyargs
@@ -265,7 +266,7 @@ class AstTransformer(ast.NodeTransformer):
             return "({})".format(",".join([self.get_string_of_expr(elt) for elt in node.elts]))
         elif isinstance(node, ast.List):
             return "[{}]".format(",".join([self.get_string_of_expr(elt) for elt in node.elts]))
-        elif isinstance(node, ast.Index):
+        elif sys.version_info < (3, 9) and isinstance(node, ast.Index):
             return self.get_string_of_expr(node.value)
         elif isinstance(node, ast.Slice):
             lower = self.get_string_of_expr(node.lower) if "lower" in node._fields and node.lower else ""
@@ -277,7 +278,7 @@ class AstTransformer(ast.NodeTransformer):
                 return "{}:{}".format(lower, upper)
             else:
                 return "{}:".format(lower)
-        elif isinstance(node, ast.ExtSlice):
+        elif sys.version_info < (3, 9) and isinstance(node, ast.ExtSlice):
             return ",".join([self.get_string_of_expr(dim) for dim in node.dims])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
