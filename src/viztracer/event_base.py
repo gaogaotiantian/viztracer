@@ -3,6 +3,7 @@
 
 import functools
 from typing import Any, Callable, Dict, List, Optional
+
 from .viztracer import VizTracer
 
 

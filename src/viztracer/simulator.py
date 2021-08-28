@@ -1,13 +1,13 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import sys
-import os
-import argparse
 try:
     import readline  # noqa: F401
 except ImportError:
     pass
+import argparse
+import os
+import sys
 
 from .prog_snapshot import ProgSnapshot
 

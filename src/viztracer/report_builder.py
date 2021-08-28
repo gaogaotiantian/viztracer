@@ -1,16 +1,17 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-from string import Template
-import os
-import re
-import gzip
-import sys
-from typing import Any, Dict, List, Optional, Sequence, Union, TextIO
 try:
     import orjson  # type: ignore
 except ImportError:
     import json
+import gzip
+import os
+import re
+from string import Template
+import sys
+from typing import Any, Dict, List, Optional, Sequence, Union, TextIO
+
 from .util import color_print
 
 
@@ -143,13 +144,6 @@ class ReportBuilder:
                     output_file.write(json.dumps(self.combined_json))
 
     def save(self, output_file: Union[str, TextIO] = "result.html", file_info: bool = True) -> None:
-        if self.verbose > 0:
-            print("==================================================")
-            print("== Starting from version 0.13.0, VizTracer will ==")
-            print("== use json as the default report file. You can ==")
-            print('== generate HTML report with "-o result.html"   ==')
-            print("==================================================")
-
         if isinstance(output_file, str):
             file_type = output_file.split(".")[-1]
 

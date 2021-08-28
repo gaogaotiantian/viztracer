@@ -7,6 +7,7 @@ from functools import reduce
 import re
 import sys
 from typing import Callable, Dict, List, Optional, Union
+
 from .util import color_print
 
 

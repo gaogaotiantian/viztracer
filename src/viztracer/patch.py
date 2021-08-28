@@ -2,12 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from .viztracer import VizTracer
 import os
 import platform
 import sys
 import textwrap
 from typing import Any, Callable, Dict, List, Sequence, Union
+
+from .viztracer import VizTracer
 
 
 def patch_subprocess(viz_args) -> None:

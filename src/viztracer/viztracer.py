@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+
 from .report_builder import ReportBuilder
 from .tracer import _VizTracer
 from .vizevent import VizEvent
