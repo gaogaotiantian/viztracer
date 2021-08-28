@@ -9,6 +9,7 @@ import os
 import shutil
 import signal
 import sys
+import tempfile
 import threading
 import time
 import types
@@ -29,7 +30,7 @@ class VizUI:
         self.options: argparse.Namespace = argparse.Namespace()
         self.args: List[str] = []
         self._exiting: bool = False
-        self.multiprocess_output_dir: str = f"./viztracer_multiprocess_tmp_{os.getpid()}_{int(time.time())}"
+        self.multiprocess_output_dir: str = tempfile.mkdtemp()
         self.cwd: str = os.getcwd()
 
     def create_parser(self) -> argparse.ArgumentParser:
@@ -94,6 +95,8 @@ class VizUI:
                             help=argparse.SUPPRESS)
         parser.add_argument("--log_async", action="store_true", default=False,
                             help="log as async format")
+        parser.add_argument("--ignore_multiprocess", action="store_true", default=False,
+                            help="Do not log any process other than the main process")
         parser.add_argument("--minimize_memory", action="store_true", default=False,
                             help="Use json.dump to dump chunks to file to save memory")
         parser.add_argument("--vdb", action="store_true", default=False,
@@ -253,9 +256,11 @@ class VizUI:
         self.tracer = tracer
 
         self.parent_pid = os.getpid()
-        patch_multiprocessing(tracer)
-        if not options.subprocess_child:
-            patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+
+        if not options.ignore_multiprocess:
+            patch_multiprocessing(tracer)
+            if not options.subprocess_child:
+                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
         def term_handler(signalnum, frame):
             self.exit_routine()

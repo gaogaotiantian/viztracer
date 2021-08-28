@@ -178,6 +178,19 @@ class TestMultiprocessing(CmdlineTmpl):
                       check_func=check_func,
                       concurrency="multiprocessing")
 
+    def test_ignore_multiprosessing(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 1)
+
+        self.template(["viztracer", "-o", "result.json", "--ignore_multiproces", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_multiprocessing,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
     def test_multiprocessing_overload(self):
         def check_func(data):
             fib_count = 0
