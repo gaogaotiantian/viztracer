@@ -15,11 +15,12 @@ import time
 import types
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
 
-from . import VizTracer, __version__
+from . import __version__
 from .code_monkey import CodeMonkey
 from .patch import patch_multiprocessing, patch_subprocess
 from .report_builder import ReportBuilder
 from .util import time_str_to_us, color_print
+from .viztracer import VizTracer
 
 
 class VizUI:

@@ -6,7 +6,8 @@ import os
 import time
 from typing import Any, Callable, Optional
 
-from . import VizTracer, get_tracer
+from .util import get_tracer
+from .viztracer import VizTracer
 
 
 def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTracer] = None) -> Callable:
