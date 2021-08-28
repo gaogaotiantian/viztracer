@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from logging import Handler, LogRecord
+
 from .viztracer import VizTracer
 
 

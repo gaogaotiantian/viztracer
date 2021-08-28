@@ -7,9 +7,10 @@ except ImportError:
     import json  # type: ignore
 import bisect
 import os
+
+from . import __version__
 from .functree import FuncTree
 from .util import color_print
-from . import __version__
 
 
 class Frame:

@@ -4,8 +4,9 @@
 
 import sys
 from typing import Dict, Optional, Sequence, Union, TYPE_CHECKING
-from .util import compare_version, color_print
+
 from . import __version__
+from .util import compare_version, color_print
 
 
 if TYPE_CHECKING:

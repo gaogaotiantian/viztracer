@@ -1,14 +1,15 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
 import builtins
 import gc
 from io import StringIO
+import os
 from typing import Any, Dict, Optional, Sequence, Union
-from .util import color_print
-from . import __version__
 import viztracer.snaptrace as snaptrace  # type: ignore
+
+from . import __version__
+from .util import color_print
 
 
 class _VizTracer:

@@ -14,11 +14,13 @@ import threading
 import time
 import types
 from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
-from . import VizTracer, __version__
+
+from . import __version__
 from .code_monkey import CodeMonkey
 from .patch import patch_multiprocessing, patch_subprocess
 from .report_builder import ReportBuilder
 from .util import time_str_to_us, color_print
+from .viztracer import VizTracer
 
 
 class VizUI:
@@ -390,6 +392,8 @@ class VizUI:
             atexit.unregister(self.exit_routine)
             if not self._exiting:
                 self._exiting = True
+                if self.verbose > 0:
+                    print("Collecting trace data, this could take a while")
                 self.tracer.exit_routine(exit_after=False)
                 if self.is_main_process:
                     self.save()
