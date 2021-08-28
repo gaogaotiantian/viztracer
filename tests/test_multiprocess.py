@@ -150,7 +150,7 @@ class TestSubprocess(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 4)
-        self.template(["viztracer", "--log_subprocess", "-o", "result.json", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", script=file_parent, check_func=check_func)
 
 
@@ -162,7 +162,7 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
         if sys.platform in ["linux", "linux2"]:
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork, check_func=check_func)
 
     def test_multiprosessing(self):
@@ -172,7 +172,20 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_multiprocessing,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
+    def test_ignore_multiprosessing(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 1)
+
+        self.template(["viztracer", "-o", "result.json", "--ignore_multiproces", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=file_multiprocessing,
                       check_func=check_func,
@@ -188,7 +201,7 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
             self.assertEqual(fib_count, 15)
 
-        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=file_multiprocessing_overload_run,
                       check_func=check_func,
@@ -205,7 +218,7 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=file_pool,
                       check_func=check_func,
@@ -216,7 +229,7 @@ class TestMultiprocessing(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 self.assertNotIn("fib", entry["name"].split())
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "--log_multiprocess", "-o", "result.json", "cmdline_test.py"],
+            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json",
                           script=file_multiprocessing_stack_limit,
                           check_func=check_func,
