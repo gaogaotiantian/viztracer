@@ -94,9 +94,13 @@ class VizViewerTCPServer(socketserver.TCPServer):
         return super().handle_timeout()
 
 
-def view(path: str, server_only: bool = False, once: bool = False, flamegraph: bool = False, timeout: float = 10) -> int:
-    # For official perfetto, only localhost:9001 is allowed
-    port = 9001
+def view(
+        path: str,
+        server_only: bool = False,
+        port: int = 9001,
+        once: bool = False,
+        flamegraph: bool = False,
+        timeout: float = 10) -> int:
 
     # Get file data
     os.chdir(os.path.dirname(path))
@@ -126,10 +130,10 @@ def view(path: str, server_only: bool = False, once: bool = False, flamegraph: b
         return 1
 
     socketserver.TCPServer.allow_reuse_address = True
-    with VizViewerTCPServer(('127.0.0.1', port), Handler) as httpd:
+    with VizViewerTCPServer(('0.0.0.0', port), Handler) as httpd:
         if not once:
             print("Running vizviewer")
-            print("You can also view your trace on http://localhost:9001")
+            print(f"You can also view your trace on http://localhost:{port}")
             print("Press Ctrl+C to quit")
         if not server_only:
             # import webbrowser only if necessary
@@ -153,6 +157,8 @@ def viewer_main():
     parser.add_argument("file", nargs=1, help="html/json/gz file to open")
     parser.add_argument("--server_only", "-s", default=False, action="store_true",
                         help="Only start the server, do not open webpage")
+    parser.add_argument("--port", "-p", nargs="?", type=int, default=9001,
+                        help="Specify the port vizviewer will use")
     parser.add_argument("--once", default=False, action="store_true",
                         help="Only serve trace data once, then exit.")
     parser.add_argument("--timeout", nargs="?", type=int, default=10,
@@ -169,6 +175,7 @@ def viewer_main():
             ret_code = view(
                 path,
                 server_only=options.server_only,
+                port=options.port,
                 once=options.once,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout
