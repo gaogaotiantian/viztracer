@@ -346,11 +346,11 @@ const INSTALL_TIMEOUT_MS = 30000;
 //    will get the newer version regardless, unless we hit INDEX_TIMEOUT_MS).
 // The latter happens because:
 // - / (index.html) is always served from the network (% timeout) and it pulls
-//   /v1.2.3/frontend_bundle.js.
-// - /v1.2.3/frontend_bundle.js will register /service_worker.js?v=v1.2.3 .
+//   /v1.2-sha/frontend_bundle.js.
+// - /v1.2-sha/frontend_bundle.js will register /service_worker.js?v=v1.2-sha.
 // The service_worker.js script itself never changes, but the browser
 // re-installs it because the version in the V? query-string argument changes.
-// The reinstallation will cache the new files from the v.1.2.3/manifest.json.
+// The reinstallation will cache the new files from the v.1.2-sha/manifest.json.
 self.addEventListener('install', event => {
     const doInstall = () => tslib.__awaiter(void 0, void 0, void 0, function* () {
         if (yield caches.has('BYPASS_SERVICE_WORKER')) {
@@ -363,18 +363,18 @@ self.addEventListener('install', event => {
                 yield caches.delete(key);
             }
         }
-        // The UI should register this as service_worker.js?v=v1.2.3. Extract the
+        // The UI should register this as service_worker.js?v=v1.2-sha. Extract the
         // version number and pre-fetch all the contents for the version.
-        const match = /\bv=([\w.]*)/.exec(location.search);
+        const match = /\bv=([\w.-]*)/.exec(location.search);
         if (!match) {
             throw new Error('Failed to install. Was epecting a query string like ' +
-                `?v=v1.2.3 query string, got "${location.search}" instead`);
+                `?v=v1.2-sha query string, got "${location.search}" instead`);
         }
         yield installAppVersionIntoCache(match[1]);
         // skipWaiting() still waits for the install to be complete. Without this
         // call, the new version would be activated only when all tabs are closed.
         // Instead, we ask to activate it immediately. This is safe because the
-        // subresources are versioned (e.g. /v1.2.3/frontend_bundle.js). Even if
+        // subresources are versioned (e.g. /v1.2-sha/frontend_bundle.js). Even if
         // there is an old UI tab opened while we activate() a newer version, the
         // activate() would just cause cache-misses, hence fetch from the network,
         // for the old tab.
