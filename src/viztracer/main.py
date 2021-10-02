@@ -180,7 +180,7 @@ class VizUI:
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
                 "WARNING",
-                "--log_multiprocess and --log_subprocess is no longer needed to trace multi-process program")
+                "--log_multiprocess and --log_subprocess are no longer needed to trace multi-process program")
 
         try:
             min_duration = time_str_to_us(options.min_duration)
