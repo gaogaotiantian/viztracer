@@ -2,5 +2,5 @@ setuptools
 wheel
 twine
 coverage
-jupyter
+ipython
 mypy
