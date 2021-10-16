@@ -238,19 +238,20 @@ class VizTracer(_VizTracer):
     def terminate(self):
         self._plugin_manager.terminate()
 
-    def register_exit(self, term=True):
+    def register_exit(self):
         self.cwd = os.getcwd()
 
         def term_handler(sig, frame):
             sys.exit(0)
 
-        if term:
-            signal.signal(signal.SIGTERM, term_handler)
+        signal.signal(signal.SIGTERM, term_handler)
         atexit.register(self.exit_routine)
 
     def exit_routine(self):
-        self.stop()
         atexit.unregister(self.exit_routine)
+        # We need to avoid SIGTERM terminate our process when we dump data
+        signal.signal(signal.SIGTERM, lambda sig, frame: 0)
+        self.stop()
         if not self._exiting:
             self._exiting = True
             os.chdir(self.cwd)

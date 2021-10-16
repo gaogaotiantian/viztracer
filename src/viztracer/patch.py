@@ -54,12 +54,8 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
-
-        def exit_routine():
-            tracer.exit_routine()
-
         from multiprocessing.util import Finalize  # type: ignore
-        Finalize(tracer, exit_routine, exitpriority=32)
+        Finalize(tracer, tracer.exit_routine, exitpriority=32)
 
         tracer.register_exit()
 

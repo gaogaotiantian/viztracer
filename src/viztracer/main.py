@@ -268,9 +268,10 @@ class VizUI:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
         def term_handler(signalnum, frame):
+            self.exit_routine()
             sys.exit(0)
         signal.signal(signal.SIGTERM, term_handler)
-        atexit.register(self.exit_routine)
+        atexit.register(self.exit_routine, in_atexit=True)
 
         if options.log_sparse:
             tracer.enable = True
@@ -404,7 +405,7 @@ class VizUI:
         builder.save(output_file=ofile)
         shutil.rmtree(self.multiprocess_output_dir)
 
-    def exit_routine(self, in_atexit=True) -> None:
+    def exit_routine(self, in_atexit=False) -> None:
         if self.tracer is not None:
             atexit.unregister(self.exit_routine)
             if not self._exiting:
