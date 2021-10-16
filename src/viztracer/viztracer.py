@@ -242,13 +242,13 @@ class VizTracer(_VizTracer):
         self.cwd = os.getcwd()
 
         def term_handler(sig, frame):
-            self.exit_routine()
+            sys.exit(0)
 
         if term:
             signal.signal(signal.SIGTERM, term_handler)
         atexit.register(self.exit_routine)
 
-    def exit_routine(self, exit_after=True):
+    def exit_routine(self):
         self.stop()
         atexit.unregister(self.exit_routine)
         if not self._exiting:
@@ -256,5 +256,3 @@ class VizTracer(_VizTracer):
             os.chdir(self.cwd)
             self.save()
             self.terminate()
-            if exit_after:
-                sys.exit(0)

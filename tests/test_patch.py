@@ -7,6 +7,7 @@ import os
 import shutil
 import re
 import sys
+import tempfile
 import unittest
 from string import Template
 
@@ -30,7 +31,7 @@ reduction.dump(process, fp)
 set_spawning_popen(None)
 child_r, parent_w = os.pipe()
 
-patch_spawned_process({'output_file': "./test_spawn/result.json", 'pid_suffix': True})
+patch_spawned_process({'output_file': "$tmpdir/result.json", 'pid_suffix': True})
 pid = os.getpid()
 
 argv = sys.argv
@@ -60,23 +61,25 @@ def foo():
 class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
+        tmpdir = tempfile.mkdtemp()
         self.template(["python", "cmdline_test.py"],
                       expected_output_file=None,
-                      script=file_spawn_tmpl.substitute(foo=foo_normal))
+                      script=file_spawn_tmpl.substitute(foo=foo_normal, tmpdir=tmpdir))
 
-        files = os.listdir("./test_spawn")
+        files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)
         self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
-        shutil.rmtree("./test_spawn")
+        shutil.rmtree(tmpdir)
 
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
+        tmpdir = tempfile.mkdtemp()
         self.template(["python", "cmdline_test.py"],
                       expected_output_file=None,
-                      script=file_spawn_tmpl.substitute(foo=foo_infinite),
+                      script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
                       send_term=True)
 
-        files = os.listdir("./test_spawn")
+        files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)
         self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
-        shutil.rmtree("./test_spawn")
+        shutil.rmtree(tmpdir)
