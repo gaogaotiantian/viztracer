@@ -4,7 +4,6 @@
 import os
 import sys
 import multiprocessing
-import platform
 import unittest
 from .cmdline_tmpl import CmdlineTmpl
 
