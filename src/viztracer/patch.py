@@ -3,7 +3,6 @@
 
 
 import os
-import platform
 import sys
 import textwrap
 from typing import Any, Callable, Dict, List, Sequence, Union
@@ -14,7 +13,7 @@ from .viztracer import VizTracer
 def patch_subprocess(viz_args) -> None:
 
     def subprocess_init(self, args: Union[str, Sequence], **kwargs) -> None:
-        if int(platform.python_version_tuple()[1]) >= 7:
+        if sys.version_info >= (3, 7):
             from collections.abc import Sequence
         else:
             from collections import Sequence
@@ -154,7 +153,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
                 del process.current_process()._inheriting
         return self._bootstrap()
 
-    if int(platform.python_version_tuple()[1]) >= 8:
+    if sys.version_info >= (3, 8):
         multiprocessing.spawn._main = _main_3839  # type: ignore
     else:
         multiprocessing.spawn._main = _main_3637  # type: ignore
