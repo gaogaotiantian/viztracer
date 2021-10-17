@@ -23,8 +23,23 @@ def patch_subprocess(viz_args) -> None:
         if isinstance(args, Sequence):
             args = list(args)
             if "python" in os.path.basename(args[0]):
+                for py_arg in "bBdEhiIOqsSuvVx":
+                    if f"-{py_arg}" in args:
+                        args.remove(f"-{py_arg}")
+                if "-c" in args:
+                    # If python use -c mode, we move this to viztracer command
+                    idx = args.index("-c")
+                    viz_args.append(args.pop(idx))
+                    viz_args.append(args.pop(idx))
                 args = ["viztracer", "--quiet"] + viz_args + ["--"] + args[1:]
         self.__originit__(args, **kwargs)
+
+    # We need to filter the arguments as there are something we may not want
+    if "-m" in viz_args:
+        # If it's a module run, we don't want to use that module for subprocess
+        idx = viz_args.index("-m")
+        viz_args.pop(idx)
+        viz_args.pop(idx)
 
     import subprocess
     setattr(subprocess.Popen, "__originit__", subprocess.Popen.__init__)

@@ -159,6 +159,9 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"])
         self.template(["viztracer", "cmdline_test.py"])
 
+    def test_cmd_string(self):
+        self.template(["viztracer", "-c", "lst=[]; lst.append(1)"], expected_entries=3)
+
     def test_outputfile(self):
         self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"],
                       expected_output_file="result.html")
