@@ -39,6 +39,8 @@ class VizUI:
         parser = argparse.ArgumentParser(prog="python -m viztracer")
         parser.add_argument("--version", action="store_true", default=False,
                             help="show version of viztracer")
+        parser.add_argument("-c", "--cmd_string", nargs="?", default=None,
+                            help="program passed in as string")
         parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
                             help="size of circular buffer. How many entries can it store")
         parser.add_argument("--output_file", "-o", nargs="?", default=None,
@@ -142,11 +144,8 @@ class VizUI:
             idx = argv.index("--run")
 
         if idx is not None:
-            if idx == len(sys.argv) - 1:
-                return False, "You need to specify commands after --/--run"
-            else:
-                options, command = self.parser.parse_args(argv[1:idx]), argv[idx + 1:]
-                self.args = argv[1:idx]
+            options, command = self.parser.parse_args(argv[1:idx]), argv[idx + 1:]
+            self.args = argv[1:idx]
         else:
             options, command = self.parser.parse_known_args(argv[1:])
             self.args = [elem for elem in argv[1:] if elem not in command]
@@ -239,6 +238,8 @@ class VizUI:
             return self.show_version()
         elif self.options.attach > 0:
             return self.attach()
+        elif self.options.cmd_string is not None:
+            return self.run_string()
         elif self.options.module:
             return self.run_module()
         elif self.command:
@@ -298,6 +299,17 @@ class VizUI:
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
         self.run_code(code, global_dict)
+
+    def run_string(self) -> NoReturn:
+        cmd_string = self.options.cmd_string
+        main_mod = types.ModuleType("__main__")
+        setattr(main_mod, "__file__", "<string>")
+        setattr(main_mod, "__builtins__", globals()["__builtins__"])
+
+        sys.modules["__main__"] = main_mod
+        code = compile(cmd_string, "<string>", "exec")
+        sys.argv = ["-c"] + self.command[:]
+        self.run_code(code, main_mod.__dict__)
 
     def run_command(self) -> Union[NoReturn, Tuple[bool, Optional[str]]]:
         command = self.command

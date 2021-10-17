@@ -118,8 +118,6 @@ class TestIssue21(CmdlineTmpl):
         self.template(["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
         self.template(["viztracer", "--", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
-        self.template(["viztracer", "--run"], script=issue21_code, success=False, expected_output_file=None)
-        self.template(["viztracer", "--"], script=issue21_code, success=False, expected_output_file=None)
 
 
 term_code = """
@@ -270,3 +268,16 @@ class TestIssue141(CmdlineTmpl):
             ["viztracer", "cmdline_test.py"],
             script=issue141_code,
         )
+
+
+class TestIssue160(CmdlineTmpl):
+    def test_issue160(self):
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template(["viztracer", "-m", "tests.modules.issue160"],
+                      expected_output_file="result.json", check_func=check_func)
