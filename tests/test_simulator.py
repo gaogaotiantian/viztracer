@@ -250,7 +250,7 @@ class TestSimulator(BaseTmpl):
             if os.getenv("COVERAGE_RUN"):
                 commands = f"coverage run --source viztracer --parallel-mode -m viztracer.simulator {vdb_basic} < /dev/null"
             else:
-                commands = "vdb {vdb_basic} < /dev/null"
+                commands = f"vdb {vdb_basic} < /dev/null"
 
             sim_process = subprocess.Popen([commands],
                                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, shell=True)
