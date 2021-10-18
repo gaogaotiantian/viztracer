@@ -48,9 +48,9 @@ jobs:
         python -m unittest
     - name: Generate coverage report
       run: |
-        coverage run --parallel-mode --pylib -m unittest
+        coverage run --source viztracer --parallel-mode -m unittest
         coverage combine
-        coverage xml -i --include=*viztracer* --omit=*tests*
+        coverage xml -i
       env:
         COVERAGE_RUN: True
     - name: Upload report to Codecov
