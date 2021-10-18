@@ -1181,6 +1181,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
 
     Py_DECREF(current_thread_method);
+    Py_DECREF(current_thread);
 
     // Check for existing node for the same tid first
     struct MetadataNode* node = self->metadata_head;
@@ -1302,6 +1303,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
                 perror("Failed to call threading.setprofile() properly");
                 exit(-1);
             }
+            Py_DECREF(setprofile);
             Py_DECREF(callback);
         }
         PyEval_SetProfile(snaptrace_tracefuncdisabled, (PyObject*)self);
@@ -1347,6 +1349,7 @@ Tracer_dealloc(TracerObject* self)
         }
         Py_DECREF(tuple);
     }
+    Py_DECREF(setprofile);
 
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
