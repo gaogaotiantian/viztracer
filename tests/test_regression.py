@@ -308,7 +308,7 @@ print(os.popen("echo test_issue162").read())
 class TestIssue162(CmdlineTmpl):
     def test_issue162(self):
         self.template(["viztracer", "cmdline_test.py"], expected_output_file="result.json",
-                      script=issue162_code, expected_stdout=r"90\nCollect.*")
+                      script=issue162_code, expected_stdout=r"90\sCollect.*")
 
     @unittest.skipIf(sys.platform == "win32", "Windows does not have echo")
     def test_issue162_os_popen(self):
