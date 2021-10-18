@@ -23,8 +23,8 @@ def patch_subprocess(viz_args) -> None:
         if isinstance(new_args, str):
             new_args = new_args.split()
         if isinstance(new_args, Sequence):
+            new_args = list(new_args)
             if "python" in os.path.basename(new_args[0]):
-                new_args = list(new_args)
                 for py_arg in "bBdEhiIOqsSuvVx":
                     if f"-{py_arg}" in new_args:
                         new_args.remove(f"-{py_arg}")
