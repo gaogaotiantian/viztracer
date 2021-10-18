@@ -22,7 +22,7 @@ class SimInterface:
     def __init__(self, json_path, vdb_cmd=["vdb", "--no_clear", "--extra_newline"], expect_fail=False):
         commands = vdb_cmd + [json_path]
         if os.getenv("COVERAGE_RUN"):
-            commands = ["coverage", "run", "--parallel-mode", "--pylib", "-m", "viztracer.simulator"] + commands[1:]
+            commands = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m", "viztracer.simulator"] + commands[1:]
         self.sim_process = subprocess.Popen(commands,
                                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
         if expect_fail:
@@ -247,7 +247,7 @@ class TestSimulator(BaseTmpl):
     def test_close(self):
         if sys.platform in ["linux", "linux2", "darwin"]:
             if os.getenv("COVERAGE_RUN"):
-                commands = "coverage run --parallel-mode --pylib -m viztracer.simulator {} < /dev/null".format(vdb_basic)
+                commands = "coverage run --source viztracer --parallel-mode -m viztracer.simulator {} < /dev/null".format(vdb_basic)
             else:
                 commands = "vdb {} < /dev/null".format(vdb_basic)
 

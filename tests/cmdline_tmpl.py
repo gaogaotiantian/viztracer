@@ -56,15 +56,15 @@ class CmdlineTmpl(BaseTmpl):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")
                 if not concurrency:
-                    cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd_list[idx:]
+                    cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + cmd_list[idx:]
                 elif concurrency == "multiprocessing":
-                    cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
+                    cmd_list = ["coverage", "run", "--source", "viztracer", "--concurrency=multiprocessing", "-m"] + cmd_list[idx:]
             elif "vizviewer" in cmd_list:
                 idx = cmd_list.index("vizviewer")
-                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + ["viztracer.viewer"] + cmd_list[idx + 1:]
+                cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + ["viztracer.viewer"] + cmd_list[idx + 1:]
             elif "python" in cmd_list:
                 idx = cmd_list.index("python")
-                cmd_list = ["coverage", "run", "--parallel-mode", "--pylib"] + cmd_list[idx + 1:]
+                cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode"] + cmd_list[idx + 1:]
 
         if script:
             self.build_script(script, script_name)

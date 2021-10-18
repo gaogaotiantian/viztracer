@@ -38,7 +38,7 @@ class TestRemote(CmdlineTmpl):
             f.write(file_attach)
 
         if os.getenv("COVERAGE_RUN"):
-            script_cmd = ["coverage", "run", "--parallel-mode", "attached_script.py"]
+            script_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "attached_script.py"]
         else:
             script_cmd = ["python", "attached_script.py"]
         p_script = subprocess.Popen(script_cmd)
@@ -48,7 +48,7 @@ class TestRemote(CmdlineTmpl):
 
         # Test with -t
         if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
+            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
                           "viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
         else:
             attach_cmd = ["viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
@@ -60,7 +60,7 @@ class TestRemote(CmdlineTmpl):
         os.remove("remote.json")
 
         if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
+            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
                           "viztracer", "attach", "--attach", str(p_script.pid)]
         else:
             attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
@@ -77,7 +77,7 @@ class TestRemote(CmdlineTmpl):
         os.remove("remote.json")
 
         if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--parallel-mode", "-m",
+            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
                           "viztracer", "attach", "--attach", str(p_script.pid)]
         else:
             attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]

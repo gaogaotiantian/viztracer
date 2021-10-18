@@ -137,7 +137,7 @@ class TestTermCaught(CmdlineTmpl):
         self.build_script(term_code)
         cmd = ["viztracer", "-o", "term.json", "cmdline_test.py"]
         if os.getenv("COVERAGE_RUN"):
-            cmd = ["coverage", "run", "--parallel-mode", "--pylib", "-m"] + cmd
+            cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + cmd
         p = subprocess.Popen(cmd)
         time.sleep(1.5)
         p.terminate()
