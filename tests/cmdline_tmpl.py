@@ -59,7 +59,8 @@ class CmdlineTmpl(BaseTmpl):
                     cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] \
                         + cmd_list[idx:]
                 elif concurrency == "multiprocessing":
-                    cmd_list = ["coverage", "run", "--source", "viztracer", "--concurrency=multiprocessing", "-m"] \
+                    # Specification needs to be in config file
+                    cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] \
                         + cmd_list[idx:]
             elif "vizviewer" in cmd_list:
                 idx = cmd_list.index("vizviewer")

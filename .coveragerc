@@ -1,2 +1,3 @@
 [run]
 cover_pylib = True
+source = viztracer
