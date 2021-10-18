@@ -21,7 +21,8 @@ import webbrowser
 class Viewer(unittest.TestCase):
     def __init__(self, file_path, once=False, flamegraph=False, timeout=None):
         if os.getenv("COVERAGE_RUN"):
-            self.cmd = ["coverage", "run", "-m", "--parallel-mode", "--pylib", "viztracer.viewer", "-s", file_path]
+            self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
+                        "-m", "viztracer.viewer", "-s", file_path]
         else:
             self.cmd = ["vizviewer", "-s", file_path]
 
