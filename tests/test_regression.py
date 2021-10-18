@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unittest
 
 import viztracer
 from viztracer import VizTracer, ignore_function
@@ -281,3 +282,35 @@ class TestIssue160(CmdlineTmpl):
 
         self.template(["viztracer", "-m", "tests.modules.issue160"],
                       expected_output_file="result.json", check_func=check_func)
+
+
+issue162_code = """
+from concurrent.futures import ProcessPoolExecutor
+def work(d):
+    return d * 2
+
+if __name__ == "__main__":
+    output = 0
+    data = range(10)
+    with ProcessPoolExecutor(2) as executor:
+        for _, data_collected in zip(data, executor.map(work, data)):
+            output += data_collected
+    print(output)
+"""
+
+
+issue162_code_os_popen = """
+import os
+print(os.popen("echo test_issue162").read())
+"""
+
+
+class TestIssue162(CmdlineTmpl):
+    def test_issue162(self):
+        self.template(["viztracer", "cmdline_test.py"], expected_output_file="result.json",
+                      script=issue162_code, expected_stdout=r"90\s*Collect.*")
+
+    @unittest.skipIf(sys.platform == "win32", "Windows does not have echo")
+    def test_issue162_os_popen(self):
+        self.template(["viztracer", "cmdline_test.py"], expected_output_file="result.json",
+                      script=issue162_code_os_popen, expected_stdout=r".*test_issue162.*")
