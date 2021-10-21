@@ -4,6 +4,7 @@
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
 
+
 class TestFastLog(BaseTmpl):
     def test_log_var(self):
         tracer = VizTracer()
