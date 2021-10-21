@@ -288,12 +288,12 @@ class _VizTracer:
     def getts(self) -> float:
         return self._tracer.getts()
 
-    def add_instant(self, name: str, scope: str = "g"):
+    def add_instant(self, name: str, args: Any = None, scope: str = "g"):
         if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
-            self._tracer.addinstant(name, scope)
+            self._tracer.addinstant(name, args, scope)
 
     def add_variable(self, name: str, var: Any, event: str = "instant"):
         if self.enable:

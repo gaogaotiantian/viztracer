@@ -40,8 +40,10 @@ void clear_node(struct EventNode* node) {
         break;
     case INSTANT_NODE:
         Py_DECREF(node->data.instant.name);
+        Py_DECREF(node->data.instant.args);
         Py_DECREF(node->data.instant.scope);
         node->data.instant.name = NULL;
+        node->data.instant.args = NULL;
         node->data.instant.scope = NULL;
         break;
     case COUNTER_NODE:

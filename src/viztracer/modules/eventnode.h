@@ -38,6 +38,7 @@ struct FEEData {
 
 struct InstantData {
     PyObject* name;
+    PyObject* args;
     PyObject* scope;
 };
 
