@@ -15,7 +15,7 @@ class TestFastLog(BaseTmpl):
         tracer.parse()
         self.assertEventNumber(tracer.data, 2)
         self.assertEqual(tracer.data["traceEvents"][-2]["ph"], "C")
-        self.assertEqual(tracer.data["traceEvents"][-2]["args"], {"test": 3})
+        self.assertEqual(tracer.data["traceEvents"][-2]["args"], {"value": 3})
         self.assertEqual(tracer.data["traceEvents"][-1]["ph"], "i")
         self.assertIn("object", tracer.data["traceEvents"][-1]["args"])
 
