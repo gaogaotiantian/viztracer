@@ -15,6 +15,9 @@ jobs:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9, '3.10']
         os: [ubuntu-latest, macos-latest, windows-latest]
+        exclude:  # pywinpty won't build on windows for 3.10, skip this for now
+          - python-version: '3.10'
+          - os: 'windows-latest' 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -29,14 +32,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install rich orjson
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-    - name: Install latest Rust stable
-      if: matrix.os == 'windows-latest'
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: x86_64-pc-windows-msvc
-        override: true
-        components: rustfmt, clippy
     - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
       run: |
