@@ -5,6 +5,7 @@ import ast
 import textwrap
 from viztracer.code_monkey import CodeMonkey, AstTransformer
 from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class TestCodeMonkey(BaseTmpl):
@@ -56,3 +57,29 @@ class TestAstTransformer(BaseTmpl):
         for test_case, node_number in test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
             self.assertEqual(len(tf.get_assign_log_nodes(tree.body[0].targets[0])), node_number)
+
+
+file_magic_comment = """
+# !viztracer: log_instant("test")
+a = 3
+# !viztracer: log_var("a", a)
+"""
+
+
+class TestMagicComment(CmdlineTmpl):
+    def test_log_var(self):
+        def check_func(data):
+            found_instant = False
+            found_var = False
+            for event in data["traceEvents"]:
+                if event["ph"] == "i":
+                    self.assertEqual(event["name"], "test")
+                    found_instant = True
+                elif event["ph"] == "C":
+                    self.assertEqual(event["name"], "a")
+                    self.assertEqual(event["args"], {"a": 3})
+                    found_var = True
+            self.assertTrue(found_instant)
+            self.assertTrue(found_var)
+
+        self.template(["viztracer", "--magic_comment", "cmdline_test.py"], script=file_magic_comment, check_func=check_func)

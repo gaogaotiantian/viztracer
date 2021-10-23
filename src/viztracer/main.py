@@ -99,6 +99,8 @@ class VizUI:
                             help="log as async format")
         parser.add_argument("--ignore_multiprocess", action="store_true", default=False,
                             help="Do not log any process other than the main process")
+        parser.add_argument("--magic_comment", action="store_true", default=False,
+                            help="Process VizTracer specific comments")
         parser.add_argument("--minimize_memory", action="store_true", default=False,
                             help="Use json.dump to dump chunks to file to save memory")
         parser.add_argument("--vdb", action="store_true", default=False,
@@ -308,7 +310,7 @@ class VizUI:
             return False, "No such file as {}".format(file_name)
         file_name = search_result
         code_string = open(file_name, "rb").read()
-        if options.log_var or options.log_number or options.log_attr or \
+        if options.magic_comment or options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception or options.log_func_entry:
             monkey = CodeMonkey(file_name)
             if options.log_var:

@@ -6,7 +6,7 @@ import copy
 from functools import reduce
 import re
 import sys
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from .util import color_print
 
@@ -286,16 +286,46 @@ class AstTransformer(ast.NodeTransformer):
         return ""
 
 
+class SourceProcessor:
+    """
+    Pre-process comments like #!viztracer: log_instant("event")
+    """
+    def __init__(self):
+        self.line_re = re.compile(r"(\s*)#\s*!viztracer:\s*(.*?)$")
+
+    def process(self, source: Any):
+        if isinstance(source, bytes):
+            source = source.decode("utf-8")
+        elif not isinstance(source, str):
+            return source
+
+        new_lines = []
+
+        for line in source.splitlines():
+            m = self.line_re.match(line)
+            if m:
+                new_lines.append(self.transform(m))
+            else:
+                new_lines.append(line)
+
+        return "\n".join(new_lines)
+
+    def transform(self, re_match: re.Match):
+        return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
+
+
 class CodeMonkey:
     def __init__(self, file_name: str) -> None:
         self.file_name: str = file_name
         self._compile: Callable = compile
+        self.source_processor = SourceProcessor()
         self.ast_transformers: List[AstTransformer] = []
 
     def add_instrument(self, inst_type: str, inst_args: Dict[str, Dict]) -> None:
         self.ast_transformers.append(AstTransformer(inst_type, inst_args))
 
     def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1):
+        source = self.source_processor.process(source)
         if self.ast_transformers:
             tree = self._compile(source, filename, mode, flags | ast.PyCF_ONLY_AST, dont_inherit, optimize)
             for trans in self.ast_transformers:
