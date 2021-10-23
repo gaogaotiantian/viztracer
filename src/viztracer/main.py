@@ -271,7 +271,7 @@ class VizUI:
             self.exit_routine()
             sys.exit(0)
         signal.signal(signal.SIGTERM, term_handler)
-        atexit.register(self.exit_routine, in_atexit=True)
+        atexit.register(self.exit_routine)
 
         if options.log_sparse:
             tracer.enable = True
@@ -405,7 +405,7 @@ class VizUI:
         builder.save(output_file=ofile)
         shutil.rmtree(self.multiprocess_output_dir)
 
-    def exit_routine(self, in_atexit=False) -> None:
+    def exit_routine(self) -> None:
         if self.tracer is not None:
             atexit.unregister(self.exit_routine)
             if not self._exiting:
@@ -418,8 +418,6 @@ class VizUI:
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
-                if not in_atexit:
-                    sys.exit(0)
 
 
 def main():
