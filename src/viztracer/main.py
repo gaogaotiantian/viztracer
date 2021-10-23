@@ -290,7 +290,7 @@ class VizUI:
         except AttributeError:
             pass
         atexit._run_exitfuncs()
-        sys.exit(0)
+        sys.exit(0)  # pragma: no cover
 
     def run_module(self) -> NoReturn:
         import runpy
