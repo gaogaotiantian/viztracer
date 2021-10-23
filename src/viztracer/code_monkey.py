@@ -310,7 +310,7 @@ class SourceProcessor:
 
         return "\n".join(new_lines)
 
-    def transform(self, re_match: re.Match):
+    def transform(self, re_match):
         return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
 
 
