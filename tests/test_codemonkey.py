@@ -29,6 +29,20 @@ class TestCodeMonkey(BaseTmpl):
         _compile = monkey.compile
         _compile(code_string, "test.py", "exec")
 
+    def test_source_processor(self):
+        monkey = CodeMonkey("test.py")
+        monkey.add_source_processor()
+        tree = compile("a = 0", "test.py", "exec", ast.PyCF_ONLY_AST)
+        _compile = monkey.compile
+        # make sure AST can compile
+        _compile(tree, "test.py", "exec")
+
+        # some unittest
+        self.assertIs(monkey.source_processor.process(tree), tree)
+        self.assertEqual(monkey.source_processor.process(
+            "# !viztracer: log_instant('test')"),
+            "__viz_tracer__.log_instant('test')")
+
 
 class TestAstTransformer(BaseTmpl):
     def test_invalid(self):

@@ -318,14 +318,18 @@ class CodeMonkey:
     def __init__(self, file_name: str) -> None:
         self.file_name: str = file_name
         self._compile: Callable = compile
-        self.source_processor = SourceProcessor()
+        self.source_processor: Optional[SourceProcessor] = None
         self.ast_transformers: List[AstTransformer] = []
 
     def add_instrument(self, inst_type: str, inst_args: Dict[str, Dict]) -> None:
         self.ast_transformers.append(AstTransformer(inst_type, inst_args))
 
+    def add_source_processor(self):
+        self.source_processor = SourceProcessor()
+
     def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1):
-        source = self.source_processor.process(source)
+        if self.source_processor is not None:
+            source = self.source_processor.process(source)
         if self.ast_transformers:
             tree = self._compile(source, filename, mode, flags | ast.PyCF_ONLY_AST, dont_inherit, optimize)
             for trans in self.ast_transformers:

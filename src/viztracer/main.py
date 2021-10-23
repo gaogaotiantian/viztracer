@@ -313,6 +313,8 @@ class VizUI:
         if options.magic_comment or options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception or options.log_func_entry:
             monkey = CodeMonkey(file_name)
+            if options.magic_comment:
+                monkey.add_source_processor()
             if options.log_var:
                 monkey.add_instrument("log_var", {"varnames": options.log_var})
             if options.log_number:
