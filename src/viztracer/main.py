@@ -269,6 +269,7 @@ class VizUI:
 
         def term_handler(signalnum, frame):
             self.exit_routine()
+            sys.exit(0)
         signal.signal(signal.SIGTERM, term_handler)
         atexit.register(self.exit_routine)
 
@@ -289,7 +290,7 @@ class VizUI:
         except AttributeError:
             pass
         atexit._run_exitfuncs()
-        raise Exception("Unexpected VizTracer termination")  # pragma: no cover
+        sys.exit(0)  # pragma: no cover
 
     def run_module(self) -> NoReturn:
         import runpy
@@ -321,7 +322,8 @@ class VizUI:
         if not search_result:
             return False, "No such file as {}".format(file_name)
         file_name = search_result
-        code_string = open(file_name, "rb").read()
+        with open(file_name, "rb") as f:
+            code_string = f.read()
         if options.magic_comment or options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception or options.log_func_entry:
             monkey = CodeMonkey(file_name)
@@ -410,13 +412,12 @@ class VizUI:
                 self._exiting = True
                 if self.verbose > 0:
                     print("Collecting trace data, this could take a while")
-                self.tracer.exit_routine(exit_after=False)
+                self.tracer.exit_routine()
                 if self.is_main_process:
                     self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
-                sys.exit(0)
 
 
 def main():
