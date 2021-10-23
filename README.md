@@ -193,9 +193,8 @@ VizTracer can log extra information without changing your source code
 
 VizTracer supports inserting custom events while the program is running. This works like a print debug, but you can know when this print happens while looking at trace data.
 
-* [Instant Event](https://viztracer.readthedocs.io/en/stable/viztracer.html#VizTracer.add_instant)
-* [Counter Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizCounter)
-* [Object Event](https://viztracer.readthedocs.io/en/stable/custom_event.html#VizObject)
+* [Instant Event](https://viztracer.readthedocs.io/en/stable/custom_event_intro.html#instant-event)
+* [Variable Event](https://viztracer.readthedocs.io/en/stable/custom_event_intro.html#variable-event)
 * [Duration Event](https://viztracer.readthedocs.io/en/stable/custom_event_intro.html#duration-event)
 
 ## Misc

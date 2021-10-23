@@ -3,59 +3,61 @@ Custom Events
 
 You may want to insert custom events to the report while you are tracing the program. 
 
-VizTracer supports four kinds of custom events:
+VizTracer supports three kinds of custom events:
 
 * Instant Event
-* Counter Event
-* Object Event
+* Variable Event
 * Duration Event
 
 Instant Event
 -------------
 
 Instant Event is a log at a specific timestamp, showing as an arrow. It's useful
-to log a transient event. You need to give it a name which is a string and that's
-all the information you can get in the report 
+to log a transient event. You need to give it a ``name`` which is a string and an
+argument ``args``. They will be displayed in the report
+
+``args`` has to be a jsonifiable object, normally a string, or a combination
+of dict, list, string and number.
+
+``scope`` can be set to ``t``(default), ``p`` or ``g``, for thread, process and
+global.
 
 .. code-block:: python
 
-    tracer.add_instant(f"Event1 - {my_data}")
+    tracer.log_instant(f"Event1", args=args, scope="p")
 
-Counter Event
+Variable Event
+--------------
+
+Variable Event is a way to log a specific variable in your program and display it in the report.
+
+If the variable you log is a number, VizTracer will use a counter event to display it, otherwise
+instant event will be used.
+
+A ``name`` should be given for the variable, then the variable itself
+
+.. code-block:: python
+
+    trace.log_var("name for the var", var)
+
+
+Magic Comment
 -------------
 
-Counter Event is used to log a numerical value over time. You need to instantiate a 
-``VizCounter`` object or inherit your class from ``VizCounter``. 
+You can use magic comment to log instant events and variable events.
+
+In this way, you'll have 0 overhead and side effect when you run your program normally, and log the events when you use
+viztracer to trace it
 
 .. code-block:: python
 
-    counter = VizCounter(tracer, "counter name")
-    counter.a = 10
-    # Something
-    counter.a = 20
+    # !viztracer: log_instant("start logging")
+    a = 3
+    # !viztracer: log_var("a", 3)
 
-Every write to the ``VizCounter`` object will trigger a log entry and it will be displayed
-on the report as a separate signal
+.. code-block::
 
-You can refer to :doc:`custom_event` for more details about the usage
-
-Object Event
-------------
-
-Counter Event is used to log an object over time. You need to instantiate a 
-``VizObject`` object or inherit your class from ``VizObject``. 
-
-.. code-block:: python
-
-    obj = VizObject(tracer, "object name")
-    counter.s = "I can log string"
-    # Something
-    counter.t = "All attributes will be displayed"
-
-Every write to the ``VizObject`` object will trigger a log entry and it will be displayed
-on the report as a separate signal
-
-You can refer to :doc:`custom_event` for more details about the usage
+    viztracer --magic_comment your_program.py
 
 .. _duration_event_label:
 
