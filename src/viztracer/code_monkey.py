@@ -291,7 +291,10 @@ class SourceProcessor:
     Pre-process comments like #!viztracer: log_instant("event")
     """
     def __init__(self):
-        self.line_re = re.compile(r"(\s*)#\s*!viztracer:\s*(.*?)$")
+        self.re_patterns = [
+            (re.compile(r"(\s*)#\s*!viztracer:\s*(.*?)$"), self.line_transform),
+            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log$"), self.inline_transform)
+        ]
 
     def process(self, source: Any):
         if isinstance(source, bytes):
@@ -302,16 +305,25 @@ class SourceProcessor:
         new_lines = []
 
         for line in source.splitlines():
-            m = self.line_re.match(line)
-            if m:
-                new_lines.append(self.transform(m))
+            for pattern, transform in self.re_patterns:
+                m = pattern.match(line)
+                if m:
+                    new_lines.append(transform(m))
+                    break
             else:
                 new_lines.append(line)
 
         return "\n".join(new_lines)
 
-    def transform(self, re_match):
+    def line_transform(self, re_match):
         return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
+
+    def inline_transform(self, re_match):
+        stmt = re_match.group(1)
+        if "=" in stmt:
+            val_assigned = stmt[:stmt.index("=")].strip()
+            return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}))"
+        return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}')"
 
 
 class CodeMonkey:

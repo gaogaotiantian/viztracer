@@ -42,6 +42,12 @@ class TestCodeMonkey(BaseTmpl):
         self.assertEqual(monkey.source_processor.process(
             "# !viztracer: log_instant('test')"),
             "__viz_tracer__.log_instant('test')")
+        self.assertEqual(monkey.source_processor.process(
+            "a = 3  # !viztracer: log"),
+            "a = 3  ; __viz_tracer__.log_var('a', (a))")
+        self.assertEqual(monkey.source_processor.process(
+            "f()  # !viztracer: log"),
+            "f()  ; __viz_tracer__.log_instant('f()')")
 
 
 class TestAstTransformer(BaseTmpl):
@@ -75,7 +81,7 @@ class TestAstTransformer(BaseTmpl):
 
 file_magic_comment = """
 # !viztracer: log_instant("test")
-a = 3
+a = 3  # !viztracer: log
 # !viztracer: log_var("a", a)
 """
 
@@ -91,7 +97,7 @@ class TestMagicComment(CmdlineTmpl):
                     found_instant = True
                 elif event["ph"] == "C":
                     self.assertEqual(event["name"], "a")
-                    self.assertEqual(event["args"], {"a": 3})
+                    self.assertEqual(event["args"], {"value": 3})
                     found_var = True
             self.assertTrue(found_instant)
             self.assertTrue(found_var)

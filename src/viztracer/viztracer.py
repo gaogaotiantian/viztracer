@@ -146,7 +146,7 @@ class VizTracer(_VizTracer):
 
     def log_var(self, name, var) -> None:
         if isinstance(var, (float, int)):
-            self.add_counter(name, {name: var})
+            self.add_counter(name, {"value": var})
         else:
             self.add_instant(name, args={"object": objprint.objstr(var, color=False)}, scope="t")
 

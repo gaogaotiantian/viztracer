@@ -55,6 +55,17 @@ viztracer to trace it
     a = 3
     # !viztracer: log_var("a", 3)
 
+Or you can use inline magic comment ``# !viztracer: log``, which will log the assigned value if the statement is an assign
+or it will log an instant event indicating this line is executed
+
+.. code-block:: python
+
+    # This will log an instant event with name "f()"
+    f()  # !viztracer: log
+
+    # This will log the variable a
+    a = 3  # !viztracer: log
+
 .. code-block::
 
     viztracer --magic_comment your_program.py
