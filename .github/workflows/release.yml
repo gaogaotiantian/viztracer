@@ -25,8 +25,8 @@ jobs:
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310'
         pre-build-command: 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/'
-    - name: Build manylinux Python wheels with manylinux2010
-      uses: RalfG/python-wheels-manylinux-build@v0.3.4-manylinux2010_x86_64
+    - name: Build manylinux Python wheels with manylinux_2_24
+      uses: RalfG/python-wheels-manylinux-build@v0.3.4-manylinux_2_24_x86_64
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310'
         pre-build-command: 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/'
