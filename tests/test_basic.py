@@ -163,26 +163,32 @@ class TestDecorator(BaseTmpl):
 
     def test_trace_and_save(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_dir1 = os.path.join(tmp_dir, "tmp1")
-            tmp_dir2 = os.path.join(tmp_dir, "tmp2")
 
-            @trace_and_save(output_dir=tmp_dir1)
+            @trace_and_save(output_dir=tmp_dir)
             def my_function(n):
                 fib(n)
-
-            @trace_and_save(output_dir=tmp_dir2)
-            def cover_mkdir():
-                return
 
             for _ in range(5):
                 my_function(10)
 
-            cover_mkdir()
-            time.sleep(1.5)
+            time.sleep(1)
 
             def t():
-                self.assertEqual(len(os.listdir(tmp_dir1)), 5)
-                self.assertEqual(len(os.listdir(tmp_dir2)), 1)
+                self.assertEqual(len(os.listdir(tmp_dir)), 5)
+
+            self.assertTrueTimeout(t, 10)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+
+            @trace_and_save(output_dir=os.path.join(tmp_dir, "new_dir"))
+            def cover_mkdir():
+                return
+
+            cover_mkdir()
+            time.sleep(1)
+
+            def t():
+                self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
 
             self.assertTrueTimeout(t, 10)
 

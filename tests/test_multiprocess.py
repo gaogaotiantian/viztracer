@@ -117,7 +117,7 @@ def f(x):
     return x*x
 
 if __name__ == "__main__":
-    process_num = 5
+    process_num = 2
     with Pool(processes=process_num) as pool:
         print(pool.map(f, range(10)))
 
