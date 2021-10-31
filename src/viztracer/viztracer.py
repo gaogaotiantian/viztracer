@@ -248,9 +248,9 @@ class VizTracer(_VizTracer):
         atexit.register(self.exit_routine)
 
     def exit_routine(self):
-        atexit.unregister(self.exit_routine)
         # We need to avoid SIGTERM terminate our process when we dump data
         signal.signal(signal.SIGTERM, lambda sig, frame: 0)
+        atexit.unregister(self.exit_routine)
         self.stop()
         if not self._exiting:
             self._exiting = True
