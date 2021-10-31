@@ -29,7 +29,7 @@ jobs:
         run: python -m pip install cibuildwheel -U
 
       - name: Build wheels
-        run: python -m cibuildwheel --output_dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux-image }}
