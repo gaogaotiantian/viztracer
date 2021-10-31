@@ -16,8 +16,10 @@ class BaseTmpl(TestCase):
         gc.collect()
 
     def assertEventNumber(self, data, expected_entries):
-        entries = len([1 for entry in data["traceEvents"] if entry["ph"] != "M"])
-        self.assertEqual(entries, expected_entries)
+        entries = [1 for entry in data["traceEvents"] if entry["ph"] != "M"]
+        entries_count = len(entries)
+        self.assertEqual(entries_count, expected_entries,
+                         f"Event number incorrect, {entries_count}(expected {expected_entries}) - {entries}")
 
     def assertFileExists(self, path, timeout=None):
         if timeout is None:
