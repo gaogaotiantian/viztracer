@@ -242,6 +242,13 @@ class VizTracer(_VizTracer):
         self.cwd = os.getcwd()
 
         def term_handler(sig, frame):
+            while frame is not None:
+                if frame.f_code.co_name == "_run_finalizers":
+                    # If we are already in _run_finalizers, we are exiting now
+                    # To avoid messing up with the exit function, do nothing
+                    # here.
+                    return  # pragma: no cover
+                frame = frame.f_back
             sys.exit(0)
 
         signal.signal(signal.SIGTERM, term_handler)
