@@ -165,6 +165,7 @@ class TestDecorator(BaseTmpl):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir1 = os.path.join(tmp_dir, "tmp1")
             tmp_dir2 = os.path.join(tmp_dir, "tmp2")
+
             @trace_and_save(output_dir=tmp_dir1)
             def my_function(n):
                 fib(n)
