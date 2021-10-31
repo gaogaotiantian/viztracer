@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import cProfile
+import gc
 import io
 import os
 import random
@@ -27,11 +28,14 @@ class Timer:
 
 class TestPerformance(BaseTmpl):
     def do_one_function(self, func):
+        gc.collect()
+        gc.disable()
         # the original speed
         with Timer() as t:
             func()
             origin = t.get_time()
 
+        gc.collect()
         # With viztracer + c tracer + vdb
         tracer = VizTracer(verbose=0, vdb=True)
         tracer.start()
@@ -48,6 +52,7 @@ class TestPerformance(BaseTmpl):
         os.remove("tmp.json")
         tracer.clear()
 
+        gc.collect()
         # With viztracer + c tracer
         tracer = VizTracer(verbose=0)
         tracer.start()
@@ -64,6 +69,7 @@ class TestPerformance(BaseTmpl):
             instrumented_c_json = t.get_time()
         tracer.clear()
 
+        gc.collect()
         # With cProfiler
         pr = cProfile.Profile()
         pr.enable()
@@ -71,6 +77,8 @@ class TestPerformance(BaseTmpl):
             func()
             cprofile = t.get_time()
         pr.disable()
+
+        gc.enable()
 
         def time_str(name, origin, instrumented):
             return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
@@ -90,7 +98,7 @@ class TestPerformance(BaseTmpl):
                 if n <= 1:
                     return 1
                 return _fib(n - 1) + _fib(n - 2)
-            return _fib(17)
+            return _fib(23)
         self.do_one_function(fib)
 
     def test_slow_fib(self):
@@ -100,7 +108,7 @@ class TestPerformance(BaseTmpl):
                     return 1
                 time.sleep(0.00001)
                 return _fib(n - 1) + _fib(n - 2)
-            return _fib(13)
+            return _fib(15)
         self.do_one_function(slow_fib)
 
     def test_qsort(self):
@@ -122,7 +130,7 @@ class TestPerformance(BaseTmpl):
                         high.append(item)
 
                 return quicksort(low) + same + quicksort(high)
-            arr = [random.randrange(100000) for _ in range(1000)]
+            arr = [random.randrange(100000) for _ in range(5000)]
             quicksort(arr)
         self.do_one_function(qsort)
 
@@ -133,7 +141,7 @@ class TestPerformance(BaseTmpl):
                     return
                 TowerOfHanoi(n - 1, source, auxiliary, destination)
                 TowerOfHanoi(n - 1, auxiliary, destination, source)
-            TowerOfHanoi(12, "A", "B", "C")
+            TowerOfHanoi(16, "A", "B", "C")
         self.do_one_function(hanoi)
 
     def test_list(self):
@@ -146,7 +154,7 @@ class TestPerformance(BaseTmpl):
                 for i in range(n):
                     ret.append(i)
                 return ret
-            ListOperation(20)
+            ListOperation(205)
         self.do_one_function(list_operation)
 
 

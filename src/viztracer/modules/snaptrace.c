@@ -359,7 +359,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     node = get_next_node(self);
                     node->ntype = FEE_NODE;
                     node->ts = info->stack_top->ts;
-                    node->data.fee.dur = get_ts() - info->stack_top->ts;
+                    node->data.fee.dur = dur;
                     node->tid = info->tid;
                     node->data.fee.type = what;
                     if (is_python) {
