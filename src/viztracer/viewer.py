@@ -122,7 +122,6 @@ def view(
         with open(filename, encoding="utf-8", errors="ignore") as f:
             trace_data = json.load(f)
             file_info = trace_data.get("file_info", {})
-            print(file_info)
         Handler = functools.partial(PerfettoHandler, file_info, path, None)
     elif filename.endswith("html"):
         Handler = functools.partial(HtmlHandler, path)
