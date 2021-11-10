@@ -109,7 +109,7 @@ def view(
     Handler: Callable[..., HttpHandler]
     if flamegraph:
         if filename.endswith("json"):
-            with open(filename) as f:
+            with open(filename, encoding="utf-8", errors="ignore") as f:
                 trace_data = json.load(f)
             fg = FlameGraph(trace_data)
             fg_data = fg.dump_to_perfetto()
@@ -119,7 +119,7 @@ def view(
             return 1
     elif filename.endswith("json"):
         trace_data = None
-        with open(filename) as f:
+        with open(filename, encoding="utf-8", errors="ignore") as f:
             trace_data = json.load(f)
             file_info = trace_data.get("file_info", {})
         Handler = functools.partial(PerfettoHandler, file_info, path, None)
