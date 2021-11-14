@@ -84,7 +84,11 @@ class CmdlineTmpl(BaseTmpl):
                 # terminating the process
                 return None
         else:
-            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=30)
+            if os.getenv("COVERAGE_RUN"):
+                timeout = 90
+            else:
+                timeout = 60
+            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=timeout)
         if not (success ^ (result.returncode != 0)):
             print(success, result.returncode)
             print(result.stdout)
