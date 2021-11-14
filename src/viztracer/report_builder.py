@@ -25,17 +25,11 @@ def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
     elif isinstance(data, str):
         with open(data, encoding="utf-8") as f:
             json_str = f.read()
-    else:
-        raise TypeError("Unexpected Type{}!", type(data))
 
-    try:
-        if "orjson" in sys.modules:
-            return orjson.loads(json_str)
-        else:
-            return json.loads(json_str)
-    except Exception as e:
-        print("Unable to decode {}".format(data))
-        raise e
+    if "orjson" in sys.modules:
+        return orjson.loads(json_str)
+    else:
+        return json.loads(json_str)
 
 
 class ReportBuilder:
