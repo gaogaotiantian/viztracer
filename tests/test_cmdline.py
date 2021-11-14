@@ -180,9 +180,9 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_verbose(self):
         result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
-        self.assertTrue("Dumping trace data" in result.stdout.decode("utf8"))
+        self.assertTrue("Use the following command" in result.stdout.decode("utf8"))
         result = self.template(["python", "-m", "viztracer", "--quiet", "cmdline_test.py"])
-        self.assertFalse("Dumping trace data" in result.stdout.decode("utf8"))
+        self.assertFalse("Use the following command" in result.stdout.decode("utf8"))
 
     def test_max_stack_depth(self):
         self.template(["python", "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])

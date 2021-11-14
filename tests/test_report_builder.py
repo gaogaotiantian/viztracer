@@ -30,6 +30,9 @@ class TestReportBuilder(BaseTmpl):
             _ = ReportBuilder([123])
 
         with self.assertRaises(ValueError):
+            _ = ReportBuilder(["/nosuchfile"])
+
+        with self.assertRaises(ValueError):
             rb = ReportBuilder([])
             rb.save()
 
