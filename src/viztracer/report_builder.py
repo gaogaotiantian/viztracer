@@ -8,6 +8,7 @@ except ImportError:
 import gzip
 import os
 import re
+import shutil
 from string import Template
 import sys
 from typing import Any, Dict, List, Optional, Sequence, Union, TextIO
@@ -24,17 +25,11 @@ def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
     elif isinstance(data, str):
         with open(data, encoding="utf-8") as f:
             json_str = f.read()
-    else:
-        raise TypeError("Unexpected Type{}!", type(data))
 
-    try:
-        if "orjson" in sys.modules:
-            return orjson.loads(json_str)
-        else:
-            return json.loads(json_str)
-    except Exception as e:
-        print("Unable to decode {}".format(data))
-        raise e
+    if "orjson" in sys.modules:
+        return orjson.loads(json_str)
+    else:
+        return json.loads(json_str)
 
 
 class ReportBuilder:
@@ -44,17 +39,32 @@ class ReportBuilder:
             verbose: int = 1,
             align: bool = False,
             minimize_memory: bool = False):
+        self.data = data
         self.verbose = verbose
         self.combined_json: Dict = {}
         self.entry_number_threshold = 4000000
         self.align = align
         self.minimize_memory = minimize_memory
-        if isinstance(data, dict):
-            self.jsons = [get_json(data)]
-        elif isinstance(data, (list, tuple)):
-            self.jsons = [get_json(j) for j in data]
-        else:
+        self.jsons: List[Dict] = []
+        self.json_loaded = False
+        if not isinstance(data, (dict, list, tuple)):
             raise TypeError("Invalid data type for ReportBuilder")
+        if isinstance(data, (list, tuple)):
+            for path in data:
+                if not isinstance(path, str):
+                    raise TypeError("Path should be a string")
+                if not os.path.exists(path):
+                    raise ValueError(f"{path} does not exist")
+                if not path.endswith(".json"):
+                    raise ValueError(f"{path} is not a json file")
+
+    def load_jsons(self) -> None:
+        if not self.json_loaded:
+            self.json_loaded = True
+            if isinstance(self.data, dict):
+                self.jsons = [get_json(self.data)]
+            elif isinstance(self.data, (list, tuple)):
+                self.jsons = [get_json(j) for j in self.data]
 
     def combine_json(self) -> None:
         if self.combined_json:
@@ -84,6 +94,7 @@ class ReportBuilder:
 
     def prepare_json(self, file_info: bool = True, display_time_unit: Optional[str] = None) -> None:
         # This will prepare self.combined_json to be ready to output
+        self.load_jsons()
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
@@ -151,8 +162,12 @@ class ReportBuilder:
                 with open(output_file, "w", encoding="utf-8") as f:
                     self.generate_report(f, output_format="html", file_info=file_info)
             elif file_type == "json":
-                with open(output_file, "w", encoding="utf-8") as f:
-                    self.generate_report(f, output_format="json", file_info=file_info)
+                if isinstance(self.data, (list, tuple)) and len(self.data) == 1:
+                    # We only have one file, just copy it over
+                    shutil.move(self.data[0], output_file)
+                else:
+                    with open(output_file, "w", encoding="utf-8") as f:
+                        self.generate_report(f, output_format="json", file_info=file_info)
             elif file_type == "gz":
                 with gzip.open(output_file, "wt") as f:
                     self.generate_report(f, output_format="json", file_info=file_info)

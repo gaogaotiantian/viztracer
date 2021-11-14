@@ -28,6 +28,11 @@ class TestReportBuilder(BaseTmpl):
 
         with self.assertRaises(TypeError):
             _ = ReportBuilder([123])
+            _ = ReportBuilder([123, 223])
+
+        with self.assertRaises(ValueError):
+            _ = ReportBuilder(["/nosuchfile"])
+            _ = ReportBuilder(["/nosuchfile1", "nosuchfile2"])
 
         with self.assertRaises(ValueError):
             rb = ReportBuilder([])
