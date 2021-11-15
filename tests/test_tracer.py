@@ -239,12 +239,12 @@ class TestTracerFeature(BaseTmpl):
         self.assertEventNumber(tracer.data, 1)
 
     def test_min_duration(self):
-        tracer = _VizTracer(min_duration=10)
+        tracer = _VizTracer(min_duration=100)
         tracer.start()
         a = []
         for _ in range(3):
             a.append(1)
-        time.sleep(0.001)
+        time.sleep(0.002)
         tracer.stop()
         tracer.parse()
         self.assertEventNumber(tracer.data, 1)
