@@ -119,8 +119,7 @@ class VizTracer(_VizTracer):
 
     def __exit__(self, type, value, trace):
         self.stop()
-        if type is None:
-            self.save()
+        self.save()
         self.terminate()
 
     def register_global(self):
