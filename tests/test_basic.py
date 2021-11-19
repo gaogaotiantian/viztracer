@@ -73,6 +73,16 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertTrue(os.path.exists("test_with.json"))
         os.remove("test_with.json")
 
+        had_exception = False
+        try:
+            with VizTracer(output_file="test_with.json"):
+                _ = 1 / 0
+        except ZeroDivisionError:
+            had_exception = True
+        self.assertTrue(os.path.exists("test_with.json"))
+        os.remove("test_with.json")
+        self.assertTrue(had_exception)
+
     def test_tracer_entries(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()
