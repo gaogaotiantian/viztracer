@@ -373,8 +373,8 @@ class TestCommandLineBasic(CmdlineTmpl):
         with option_to_file({"max_stack_depth": "0"}):
             self.template(["viztracer", "cmdline_test.py"], expected_entries=0)
 
-        with option_to_file({"max_stack_depth": "0"}, filename="anotherrc"):
-            self.template(["viztracer", "cmdline_test.py"], success=False)
+        with option_to_file({"max_stack_depth": "0"}):
+            self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], success=False)
 
         with option_to_file({"max_stack_depth": "0"}, filename="anotherrc"):
             self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], expected_entries=0)
