@@ -4,6 +4,7 @@
 import argparse
 import atexit
 import builtins
+import configparser
 import platform
 import os
 import shutil
@@ -41,6 +42,8 @@ class VizUI:
                             help="show version of viztracer")
         parser.add_argument("-c", "--cmd_string", nargs="?", default=None,
                             help="program passed in as string")
+        parser.add_argument("--rcfile", nargs="?", default=None,
+                            help="specify rcfile for viztracer")
         parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
                             help="size of circular buffer. How many entries can it store")
         parser.add_argument("--output_file", "-o", nargs="?", default=None,
@@ -136,6 +139,35 @@ class VizUI:
             return False
         return True
 
+    def load_config_file(self, filename=".viztracerrc"):
+        ret = argparse.Namespace()
+        if os.path.exists(filename):
+            cfg_parser = configparser.ConfigParser()
+            cfg_parser.read(filename)
+            if "default" not in cfg_parser:
+                raise ValueError("Config file does not contain [default] section")
+            for action in self.parser._actions:
+                if hasattr(action, "dest") and action.dest in cfg_parser["default"]:
+                    if action.nargs == 0:
+                        setattr(ret, action.dest, action.const)
+                    elif action.nargs is None or action.nargs == "?":
+                        if action.type == bool:  # pragma: no cover
+                            # VizTracer does not have any option that belongs to this case
+                            # store_true/store_false has nargs == 0, this only happens
+                            # when it's a store, but with type == bool
+                            setattr(ret, action.dest, cfg_parser["default"].getboolean(action.dest))
+                        else:
+                            convert = action.type if action.type is not None else str
+                            setattr(ret, action.dest, convert(cfg_parser["default"][action.dest]))
+                    else:
+                        convert = action.type if action.type is not None else str
+                        setattr(ret, action.dest, [convert(val) for val in cfg_parser["default"][action.dest].strip().split()])
+        else:
+            if filename != ".viztracerc":
+                # User specified name, raise error
+                raise FileNotFoundError(f"{filename} does not exist")
+        return ret
+
     def parse(self, argv: List[str]) -> Tuple[bool, Optional[str]]:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
         # We need to filter those out, they might conflict with our arguments
@@ -145,11 +177,16 @@ class VizUI:
         elif "--run" in argv[1:]:
             idx = argv.index("--run")
 
+        rcfile_parser = argparse.ArgumentParser()
+        rcfile_parser.add_argument("--rcfile", nargs="?", default=".viztracerrc")
+        rc_options, _ = rcfile_parser.parse_known_args(argv[1:])
+        default_namespace = self.load_config_file(rc_options.rcfile)
+
         if idx is not None:
-            options, command = self.parser.parse_args(argv[1:idx]), argv[idx + 1:]
+            options, command = self.parser.parse_args(argv[1:idx], namespace=default_namespace), argv[idx + 1:]
             self.args = argv[1:idx]
         else:
-            options, command = self.parser.parse_known_args(argv[1:])
+            options, command = self.parser.parse_known_args(argv[1:], namespace=default_namespace)
             self.args = [elem for elem in argv[1:] if elem not in command]
 
         if options.quiet:
