@@ -4,7 +4,6 @@
 import configparser
 from contextlib import contextmanager
 import os
-import shutil
 import sys
 import platform
 import re
