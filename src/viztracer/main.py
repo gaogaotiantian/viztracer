@@ -163,7 +163,7 @@ class VizUI:
                         convert = action.type if action.type is not None else str
                         setattr(ret, action.dest, [convert(val) for val in cfg_parser["default"][action.dest].strip().split()])
         else:
-            if filename != ".viztracerc":
+            if filename != ".viztracerrc":
                 # User specified name, raise error
                 raise FileNotFoundError(f"{filename} does not exist")
         return ret
