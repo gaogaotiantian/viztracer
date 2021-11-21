@@ -1,6 +1,8 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import configparser
+from contextlib import contextmanager
 import os
 import sys
 import platform
@@ -352,6 +354,43 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
+
+    def test_rcfile(self):
+
+        @contextmanager
+        def option_to_file(options, filename=".viztracerrc", section="default"):
+            parser = configparser.ConfigParser()
+            parser[section] = {}
+            for key, val in options.items():
+                parser[section][key] = val
+            with open(filename, "w") as f:
+                parser.write(f)
+            try:
+                yield
+            finally:
+                os.remove(filename)
+
+        with option_to_file({"max_stack_depth": "0"}):
+            self.template(["viztracer", "cmdline_test.py"], expected_entries=0)
+
+        with option_to_file({"max_stack_depth": "0"}):
+            self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], success=False)
+
+        with option_to_file({"max_stack_depth": "0"}, filename="anotherrc"):
+            self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], expected_entries=0)
+
+        with option_to_file({"max_stack_depth": "0"}, section="invalid"):
+            self.template(["viztracer", "cmdline_test.py"], success=False)
+
+        with option_to_file({"quiet": "True"}):
+            result = self.template(["viztracer", "cmdline_test.py"])
+            self.assertEqual(result.stdout.decode(), "")
+
+        with option_to_file({"log_var": "a.* d"}):
+            self.template(["viztracer", "cmdline_test.py"],
+                          script=file_log_var,
+                          expected_output_file="result.json",
+                          expected_entries=27)
 
 
 class TestPossibleFailures(CmdlineTmpl):

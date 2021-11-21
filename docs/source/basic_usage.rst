@@ -175,6 +175,29 @@ OR
 
     tracer = VizTracer(tracer_entries=500000)
 
+Configuration file
+------------------
+
+You can use a configuration file to set the default options for ``viztracer``, which could help you avoid typing the same arguments for multiple runs.
+
+The default filename for ``viztracer`` configuration file is ``.viztracerrc``. `viztracer` will try to find ``.viztracerrc`` in current working directory.
+You can also specify your own configuration file with
+``viztracer --rcfile <your_config_file>``. The format of the configuration file is very similar to ``ini`` file, which could be parsed by
+built in ``configparser``.
+
+.. code-block::
+
+    [default]
+    log_var = a.* latest
+    ignore_c_function = True
+    output_file = vizreport.json
+    max_stack_depth = 10
+
+``[default]`` can't be omitted and all the arguments should be in a key-value pair format, where key is the argument name(without ``--``) and val is the
+value you need to pass in. Please notice that there are some arguments in ``viztracer`` that do not take parameters(like `--ignore_c_function``), you
+need to pass ``True`` in the config file to make the config parser happy. If you need to pass multiple parameters to an argument(like ``log_var``), just
+use space to separate the parameters like you do in cmdline interface.
+
 Combine Reports
 ---------------
 

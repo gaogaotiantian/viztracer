@@ -88,10 +88,11 @@ class CmdlineTmpl(BaseTmpl):
                 timeout = 90
             else:
                 timeout = 60
-            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, timeout=timeout)
+            result = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
         if not (success ^ (result.returncode != 0)):
             print(success, result.returncode)
             print(result.stdout)
+            print(result.stderr)
         self.assertTrue(success ^ (result.returncode != 0))
         if success:
             if expected_output_file:
