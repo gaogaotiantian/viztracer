@@ -54,9 +54,6 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
-        from multiprocessing.util import Finalize  # type: ignore
-        Finalize(tracer, tracer.exit_routine, exitpriority=32)
-
         tracer.register_exit()
 
         tracer.clear()
@@ -65,7 +62,7 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
-    from multiprocessing.util import register_after_fork
+    from multiprocessing.util import register_after_fork  # type: ignore
 
     register_after_fork(tracer, func_after_fork)
 
@@ -107,13 +104,11 @@ class SpawnProcess:
 
     def run(self):
         import viztracer
-        import atexit
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
         tracer.register_exit()
         tracer.start()
         self._run()
-        atexit._run_exitfuncs()
 
 
 def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):

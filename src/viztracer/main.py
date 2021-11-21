@@ -2,9 +2,9 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import argparse
-import atexit
 import builtins
 import configparser
+import multiprocessing.util  # type: ignore
 import platform
 import os
 import shutil
@@ -72,6 +72,8 @@ class VizUI:
                             help="ignore all c functions including most builtin functions and libraries")
         parser.add_argument("--ignore_frozen", action="store_true", default=False,
                             help="ignore all functions that are frozen(like import)")
+        parser.add_argument("--log_exit", action="store_true", default=False,
+                            help="log functions in exit functions like atexit")
         parser.add_argument("--log_func_retval", action="store_true", default=False,
                             help="log return value of the function in the report")
         parser.add_argument("--log_print", action="store_true", default=False,
@@ -308,13 +310,21 @@ class VizUI:
             self.exit_routine()
             sys.exit(0)
         signal.signal(signal.SIGTERM, term_handler)
-        atexit.register(self.exit_routine)
+        multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
         if options.log_sparse:
             tracer.enable = True
         else:
             tracer.start()
         exec(code, global_dict)
+        if not options.log_exit:
+            tracer.stop()
+
+        # The user code may forked, check it because Finalize won't execute
+        # if the pid is not the same
+        if os.getpid() != self.parent_pid:
+            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
         # release the resource in the code
@@ -326,7 +336,6 @@ class VizUI:
                 threading._threading_atexits = []  # type: ignore
         except AttributeError:
             pass
-        atexit._run_exitfuncs()
         sys.exit(0)  # pragma: no cover
 
     def run_module(self) -> NoReturn:
@@ -444,7 +453,6 @@ class VizUI:
 
     def exit_routine(self) -> None:
         if self.tracer is not None:
-            atexit.unregister(self.exit_routine)
             if not self._exiting:
                 self._exiting = True
                 if self.verbose > 0:

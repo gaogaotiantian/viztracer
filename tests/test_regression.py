@@ -239,11 +239,16 @@ atexit.register(fib, 6)
 
 
 class TestIssue121(CmdlineTmpl):
-    def test_issue119(self):
+    def test_issue121(self):
+
+        def check_func(data):
+            fib_count = sum(["fib" in event["name"] for event in data["traceEvents"]])
+            self.assertEqual(fib_count, 15)
+
         self.template(
-            ["viztracer", "cmdline_test.py"],
+            ["viztracer", "cmdline_test.py", "--log_exit"],
             script=issue121_code,
-            expected_entries=18
+            check_func=check_func
         )
 
 

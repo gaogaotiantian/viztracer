@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import atexit
 import builtins
 import multiprocessing
 import objprint  # type: ignore
@@ -251,12 +250,13 @@ class VizTracer(_VizTracer):
             sys.exit(0)
 
         signal.signal(signal.SIGTERM, term_handler)
-        atexit.register(self.exit_routine)
+
+        from multiprocessing.util import Finalize  # type: ignore
+        Finalize(self, self.exit_routine, exitpriority=-1)
 
     def exit_routine(self):
         # We need to avoid SIGTERM terminate our process when we dump data
         signal.signal(signal.SIGTERM, lambda sig, frame: 0)
-        atexit.unregister(self.exit_routine)
         self.stop()
         if not self._exiting:
             self._exiting = True
