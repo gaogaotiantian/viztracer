@@ -306,11 +306,20 @@ class VizUI:
             if not options.subprocess_child:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
-        def term_handler(signalnum, frame):
+        def term_handler_main(signalnum, frame):
             self.exit_routine()
             sys.exit(0)
-        signal.signal(signal.SIGTERM, term_handler)
-        multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+
+        def term_handler_sub(signalnum, frame):
+            self.tracer.exit_routine()
+            sys.exit(0)
+
+        if self.is_main_process:
+            signal.signal(signal.SIGTERM, term_handler_main)
+            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+        else:
+            signal.signal(signal.SIGTERM, term_handler_sub)
+            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
 
         if options.log_sparse:
             tracer.enable = True
@@ -323,7 +332,7 @@ class VizUI:
         # The user code may forked, check it because Finalize won't execute
         # if the pid is not the same
         if os.getpid() != self.parent_pid:
-            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
 
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
@@ -458,8 +467,7 @@ class VizUI:
                 if self.verbose > 0:
                     print("Collecting trace data, this could take a while")
                 self.tracer.exit_routine()
-                if self.is_main_process:
-                    self.save()
+                self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])

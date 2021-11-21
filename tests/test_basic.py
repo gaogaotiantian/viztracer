@@ -4,7 +4,6 @@
 import builtins
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -97,15 +96,21 @@ class TestVizTracerBasic(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        tracer.save("./tmp/result.html")
-        self.assertTrue(os.path.exists("./tmp/result.html"))
-        tracer.start()
-        fib(5)
-        tracer.save("./tmp/result2.json")
-        self.assertTrue(os.path.exists("./tmp/result2.json"))
-        self.assertTrue(tracer.enable)
-
-        shutil.rmtree("./tmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "result.html")
+            tracer.save(path)
+            self.assertTrue(os.path.exists(path))
+            path = os.path.join(tmpdir, "result2.json")
+            tracer.start()
+            fib(5)
+            tracer.save(path)
+            self.assertTrue(os.path.exists(path))
+            self.assertTrue(tracer.enable)
+            path = os.path.join(tmpdir, "result3.gz")
+            tracer.start()
+            fib(5)
+            tracer.save(path)
+            self.assertTrue(os.path.exists(path))
 
 
 class TestInstant(BaseTmpl):
