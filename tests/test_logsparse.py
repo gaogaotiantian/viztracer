@@ -75,7 +75,7 @@ class TestLogSparse(CmdlineTmpl):
                               expected_output_file="result.json",
                               expected_entries=21,
                               concurrency="multiprocessing")
-            except AssertionError as e:
+            except Exception as e:
                 # coveragepy has some issue with multiprocess pool
                 if not os.getenv("COVERAGE_RUN"):
                     raise e

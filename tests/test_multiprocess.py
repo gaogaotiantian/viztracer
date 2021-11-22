@@ -266,7 +266,7 @@ class TestMultiprocessing(CmdlineTmpl):
                           script=file_pool,
                           check_func=check_func,
                           concurrency="multiprocessing")
-        except AssertionError as e:
+        except Exception as e:
             # coveragepy has some issue with multiprocess pool
             if not os.getenv("COVERAGE_RUN"):
                 raise e
