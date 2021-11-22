@@ -306,7 +306,8 @@ class VizUI:
             if not options.subprocess_child:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
             if hasattr(os, "register_at_fork"):
-                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())
+                # This will only work after 3.7
+                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 
         def term_handler_main(signalnum, frame):
             self.exit_routine()

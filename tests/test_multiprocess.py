@@ -178,7 +178,7 @@ class TestMultiprocessing(CmdlineTmpl):
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork, check_func=check_func)
 
-        if sys.platform in ["linux", "linux2"]:
+        if sys.platform in ["linux", "linux2"] and sys.version_info >= (3, 7):
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
 
