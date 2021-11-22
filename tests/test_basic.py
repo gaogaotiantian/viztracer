@@ -183,13 +183,14 @@ class TestDecorator(BaseTmpl):
             def my_function(n):
                 fib(n)
 
-            for _ in range(5):
+            for _ in range(3):
+                time.sleep(0.0001)
                 my_function(10)
 
             time.sleep(1)
 
             def t():
-                self.assertEqual(len(os.listdir(tmp_dir)), 5)
+                self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
             self.assertTrueTimeout(t, 20)
 
