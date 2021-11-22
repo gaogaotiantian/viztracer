@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import argparse
+import atexit
 import builtins
 import configparser
 import multiprocessing.util  # type: ignore
@@ -14,7 +15,7 @@ import tempfile
 import threading
 import time
 import types
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 from .code_monkey import CodeMonkey
@@ -137,9 +138,7 @@ class VizUI:
         options = self.options
         if options.subprocess_child:
             return False  # pragma: no cover
-        if self.parent_pid != os.getpid():
-            return False
-        return True
+        return self.parent_pid == os.getpid()
 
     def load_config_file(self, filename=".viztracerrc"):
         ret = argparse.Namespace()
@@ -293,7 +292,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> NoReturn:
+    def run_code(self, code: Any, global_dict: Dict[str, Any]):
         options = self.options
 
         tracer = VizTracer(**self.init_kwargs)
@@ -309,19 +308,14 @@ class VizUI:
                 # This will only work after 3.7
                 os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 
-        def term_handler_main(signalnum, frame):
-            self.exit_routine()
-            sys.exit(0)
-
-        def term_handler_sub(signalnum, frame):
-            self.tracer.exit_routine()
+        def term_handler(signalnum, frame):
             sys.exit(0)
 
         if self.is_main_process:
-            signal.signal(signal.SIGTERM, term_handler_main)
+            signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
         else:
-            signal.signal(signal.SIGTERM, term_handler_sub)
+            signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
 
         if options.log_sparse:
@@ -350,9 +344,10 @@ class VizUI:
                 threading._threading_atexits = []  # type: ignore
         except AttributeError:
             pass
-        sys.exit(0)  # pragma: no cover
 
-    def run_module(self) -> NoReturn:
+        return True, None
+
+    def run_module(self):
         import runpy
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
@@ -361,9 +356,9 @@ class VizUI:
         }
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
-        self.run_code(code, global_dict)
+        return self.run_code(code, global_dict)
 
-    def run_string(self) -> NoReturn:
+    def run_string(self):
         cmd_string = self.options.cmd_string
         main_mod = types.ModuleType("__main__")
         setattr(main_mod, "__file__", "<string>")
@@ -372,9 +367,9 @@ class VizUI:
         sys.modules["__main__"] = main_mod
         code = compile(cmd_string, "<string>", "exec")
         sys.argv = ["-c"] + self.command[:]
-        self.run_code(code, main_mod.__dict__)
+        return self.run_code(code, main_mod.__dict__)
 
-    def run_command(self) -> Union[NoReturn, Tuple[bool, Optional[str]]]:
+    def run_command(self) -> Tuple[bool, Optional[str]]:
         command = self.command
         options = self.options
         file_name = command[0]
@@ -411,7 +406,7 @@ class VizUI:
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        self.run_code(code, main_mod.__dict__)
+        return self.run_code(code, main_mod.__dict__)
 
     def run_combine(self, files: List[str], align: bool = False) -> Tuple[bool, Optional[str]]:
         options = self.options
@@ -495,7 +490,10 @@ def main():
     if not success:
         print(err_msg)
         sys.exit(1)
-    success, err_msg = ui.run()
-    if not success:
-        print(err_msg)
-        sys.exit(1)
+    try:
+        success, err_msg = ui.run()
+        if not success:
+            print(err_msg)
+            sys.exit(1)
+    finally:
+        atexit._run_exitfuncs()

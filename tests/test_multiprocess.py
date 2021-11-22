@@ -180,11 +180,10 @@ class TestSubprocess(CmdlineTmpl):
                           expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
 
-    @unittest.skipIf(sys.platform == "win32", "Can't send SIGINT on Windows")
     def test_term(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
-                          script=file_subprocess_term, expected_output_file=None, send_sig=signal.SIGINT)
+            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "cmdline_test.py"],
+                          script=file_subprocess_term, expected_output_file=None, send_sig=signal.SIGTERM)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
 
 
