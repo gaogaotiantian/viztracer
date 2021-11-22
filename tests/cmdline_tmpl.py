@@ -51,7 +51,7 @@ class CmdlineTmpl(BaseTmpl):
                  cleanup=True,
                  check_func=None,
                  concurrency=None,
-                 send_term=False):
+                 send_sig=None):
         if os.getenv("COVERAGE_RUN"):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")
@@ -73,10 +73,10 @@ class CmdlineTmpl(BaseTmpl):
 
         if script:
             self.build_script(script, script_name)
-        if send_term:
+        if send_sig is not None:
             p = subprocess.Popen(cmd_list)
             time.sleep(2)
-            p.terminate()
+            p.send_signal(send_sig)
             p.wait()
             result = p
             if sys.platform == "win32":

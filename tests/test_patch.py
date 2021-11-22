@@ -4,8 +4,9 @@
 
 from .cmdline_tmpl import CmdlineTmpl
 import os
-import shutil
 import re
+import shutil
+import signal
 import sys
 import tempfile
 import unittest
@@ -77,7 +78,7 @@ class TestPatchSpawn(CmdlineTmpl):
         self.template(["python", "cmdline_test.py"],
                       expected_output_file=None,
                       script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
-                      send_term=True)
+                      send_sig=signal.SIGTERM)
 
         files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)

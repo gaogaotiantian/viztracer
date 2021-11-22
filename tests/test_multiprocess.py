@@ -4,6 +4,7 @@
 import os
 import sys
 import multiprocessing
+import signal
 import tempfile
 import unittest
 from .cmdline_tmpl import CmdlineTmpl
@@ -181,7 +182,7 @@ class TestSubprocess(CmdlineTmpl):
     def test_term(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
-                          expected_output_file=None, send_term=True)
+                          expected_output_file=None, send_sig=signal.SIGINT)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
 
 
