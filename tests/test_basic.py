@@ -97,20 +97,12 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.stop()
         tracer.parse()
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "result.html")
-            tracer.save(path)
-            self.assertTrue(os.path.exists(path))
-            path = os.path.join(tmpdir, "result2.json")
-            tracer.start()
-            fib(5)
-            tracer.save(path)
-            self.assertTrue(os.path.exists(path))
-            self.assertTrue(tracer.enable)
-            path = os.path.join(tmpdir, "result3.gz")
-            tracer.start()
-            fib(5)
-            tracer.save(path)
-            self.assertTrue(os.path.exists(path))
+            for file_path in [["result.html"], ["result2.json"], ["new_dir", "result2.json"], ["result3.gz"]]:
+                path = os.path.join(tmpdir, *file_path)
+                tracer.start()
+                fib(5)
+                tracer.save(path)
+                self.assertTrue(os.path.exists(path))
 
 
 class TestInstant(BaseTmpl):
