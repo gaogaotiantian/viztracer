@@ -52,6 +52,7 @@ import time
 pid = os.fork()
 
 if pid > 0:
+    time.sleep(0.5)
     print("parent")
 else:
     time.sleep(1)
