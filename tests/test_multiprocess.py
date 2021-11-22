@@ -52,10 +52,10 @@ import time
 pid = os.fork()
 
 if pid > 0:
-    time.sleep(0.5)
+    time.sleep(0.1)
     print("parent")
 else:
-    time.sleep(1)
+    time.sleep(2.5)
     print("child")
 """
 
@@ -202,15 +202,22 @@ class TestMultiprocessing(CmdlineTmpl):
 
     @unittest.skipIf(sys.version_info < (3, 7) or sys.platform not in ["linux", "linux2"], "Only works on Linux + py3.7+")
     def test_os_fork_term(self):
-        def check_func(data):
-            pids = set()
-            for entry in data["traceEvents"]:
-                pids.add(entry["pid"])
-            self.assertGreater(len(pids), 1)
+        def check_func_wrapper(process_num):
+            def check_func(data):
+                pids = set()
+                for entry in data["traceEvents"]:
+                    pids.add(entry["pid"])
+                self.assertEqual(len(pids), process_num)
+            return check_func
 
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                               expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
+                               expected_output_file="result.json", script=file_fork_wait,
+                               check_func=check_func_wrapper(2))
         self.assertIn("wait for child process", result.stdout.decode())
+
+        result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                               send_sig=signal.SIGINT, expected_output_file="result.json", script=file_fork_wait,
+                               check_func=check_func_wrapper(1))
 
     def test_multiprosessing(self):
         def check_func(data):

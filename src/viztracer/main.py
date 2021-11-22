@@ -469,7 +469,7 @@ class VizUI:
                 while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                     time.sleep(0.5)
         except KeyboardInterrupt:
-            pass  # pragma: no cover
+            pass
 
     def exit_routine(self) -> None:
         if self.tracer is not None:
