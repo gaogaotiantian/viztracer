@@ -197,9 +197,16 @@ class TestMultiprocessing(CmdlineTmpl):
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork, check_func=check_func)
 
-        if sys.platform in ["linux", "linux2"] and sys.version_info >= (3, 7):
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
+    @unittest.skipIf(sys.version_info < (3, 7) or sys.platform not in ["linux", "linux2"])
+    def test_os_fork_term(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertGreater(len(pids), 1)
+
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
 
     def test_multiprosessing(self):
         def check_func(data):
