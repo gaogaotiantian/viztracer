@@ -4,6 +4,7 @@
 import os
 import sys
 import multiprocessing
+import tempfile
 import unittest
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -22,6 +23,12 @@ def fib(n):
         return 1
     return fib(n-1) + fib(n-2)
 fib(5)
+"""
+
+file_subprocess_term = """
+import time
+while True:
+    time.sleep(0.5)
 """
 
 file_fork = """
@@ -46,7 +53,7 @@ pid = os.fork()
 if pid > 0:
     print("parent")
 else:
-    time.sleep(0.2)
+    time.sleep(1)
     print("child")
 """
 
@@ -164,6 +171,18 @@ class TestSubprocess(CmdlineTmpl):
             self.assertEqual(len(pids), 4)
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", script=file_parent, check_func=check_func)
+
+    def test_child_process(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
+                          expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+
+    def test_term(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
+                          expected_output_file=None, send_term=True)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
 
 
 class TestMultiprocessing(CmdlineTmpl):
