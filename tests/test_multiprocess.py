@@ -183,7 +183,7 @@ class TestSubprocess(CmdlineTmpl):
     def test_term(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
-                          expected_output_file=None, send_sig=signal.SIGINT)
+                          script=file_subprocess_term, expected_output_file=None, send_sig=signal.SIGINT)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
 
 
@@ -207,8 +207,9 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
+        result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                               expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
+        self.assertIn("wait for child process", result.stdout.decode())
 
     def test_multiprosessing(self):
         def check_func(data):
