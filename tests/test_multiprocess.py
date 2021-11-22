@@ -37,6 +37,19 @@ else:
     print("child")
 """
 
+file_fork_wait = """
+import os
+import time
+
+pid = os.fork()
+
+if pid > 0:
+    print("parent")
+else:
+    time.sleep(0.2)
+    print("child")
+"""
+
 file_multiprocessing = """
 import multiprocessing
 from multiprocessing import Process
@@ -160,9 +173,14 @@ class TestMultiprocessing(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
+
         if sys.platform in ["linux", "linux2"]:
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork, check_func=check_func)
+
+        if sys.platform in ["linux", "linux2"]:
+            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                          expected_output_file="result.json", script=file_fork_wait, check_func=check_func)
 
     def test_multiprosessing(self):
         def check_func(data):

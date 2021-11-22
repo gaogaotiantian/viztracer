@@ -305,6 +305,8 @@ class VizUI:
             patch_multiprocessing(tracer)
             if not options.subprocess_child:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+            if hasattr(os, "register_at_fork"):
+                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())
 
         def term_handler_main(signalnum, frame):
             self.exit_routine()
@@ -325,7 +327,9 @@ class VizUI:
             tracer.enable = True
         else:
             tracer.start()
+
         exec(code, global_dict)
+
         if not options.log_exit:
             tracer.stop()
 
@@ -449,16 +453,27 @@ class VizUI:
         return True, None
 
     def save(self) -> None:
+        # This function will only be called from main process
         options = self.options
         ofile = self.ofile
 
+        self.wait_children_finish()
         builder = ReportBuilder(
             [os.path.join(self.multiprocess_output_dir, f)
-                for f in os.listdir(self.multiprocess_output_dir)],
+                for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".json")],
             minimize_memory=options.minimize_memory,
             verbose=self.verbose)
         builder.save(output_file=ofile)
         shutil.rmtree(self.multiprocess_output_dir)
+
+    def wait_children_finish(self) -> None:
+        try:
+            if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                print("wait for child processes to finish, Ctrl+C to skip")
+                while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                    time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass  # pragma: no cover
 
     def exit_routine(self) -> None:
         if self.tracer is not None:

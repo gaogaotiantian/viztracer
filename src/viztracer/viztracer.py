@@ -71,6 +71,8 @@ class VizTracer(_VizTracer):
 
         self.cwd = os.getcwd()
 
+        self.viztmp = None
+
         self._afterfork_cb: Optional[Callable] = None
         self._afterfork_args: Tuple = tuple()
         self._afterfork_kwargs: Dict = {}
@@ -205,6 +207,9 @@ class VizTracer(_VizTracer):
         rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
         rb.save(output_file=output_file, file_info=file_info)
 
+        if self.viztmp is not None and os.path.exists(self.viztmp):
+            os.remove(self.viztmp)
+
         if enabled:
             self.start()
 
@@ -233,6 +238,18 @@ class VizTracer(_VizTracer):
 
         return p
 
+    def label_file_to_write(self):
+        output_file = self.output_file
+        if self.pid_suffix:
+            output_file_parts = output_file.split(".")
+            output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
+            output_file = ".".join(output_file_parts) + ".viztmp"
+
+        with open(output_file, "w") as _:
+            # create an empty file
+            pass
+        self.viztmp = output_file
+
     def terminate(self):
         self._plugin_manager.terminate()
 
@@ -248,6 +265,7 @@ class VizTracer(_VizTracer):
                     return  # pragma: no cover
                 frame = frame.f_back
             sys.exit(0)
+        self.label_file_to_write()
 
         signal.signal(signal.SIGTERM, term_handler)
 
