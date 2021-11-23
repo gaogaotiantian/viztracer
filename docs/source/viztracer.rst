@@ -218,7 +218,7 @@ VizTracer
 
             tracer = VizTracer(register_global=False)
 
-    .. py.attribute:: min_duration
+    .. py:attribute:: min_duration
         :type: float
         :value: 0
 
