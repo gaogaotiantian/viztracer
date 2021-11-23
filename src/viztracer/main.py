@@ -5,6 +5,7 @@ import argparse
 import atexit
 import builtins
 import configparser
+import multiprocessing.util  # type: ignore
 import platform
 import os
 import shutil
@@ -14,7 +15,7 @@ import tempfile
 import threading
 import time
 import types
-from typing import Any, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 from .code_monkey import CodeMonkey
@@ -72,6 +73,8 @@ class VizUI:
                             help="ignore all c functions including most builtin functions and libraries")
         parser.add_argument("--ignore_frozen", action="store_true", default=False,
                             help="ignore all functions that are frozen(like import)")
+        parser.add_argument("--log_exit", action="store_true", default=False,
+                            help="log functions in exit functions like atexit")
         parser.add_argument("--log_func_retval", action="store_true", default=False,
                             help="log return value of the function in the report")
         parser.add_argument("--log_print", action="store_true", default=False,
@@ -135,9 +138,7 @@ class VizUI:
         options = self.options
         if options.subprocess_child:
             return False  # pragma: no cover
-        if self.parent_pid != os.getpid():
-            return False
-        return True
+        return self.parent_pid == os.getpid()
 
     def load_config_file(self, filename=".viztracerrc"):
         ret = argparse.Namespace()
@@ -272,6 +273,37 @@ class VizUI:
 
         return None
 
+    def install_all_hooks(self, tracer: VizTracer) -> None:
+        options = self.options
+
+        # multiprocess hook
+        if not options.ignore_multiprocess:
+            patch_multiprocessing(tracer)
+            if not options.subprocess_child:
+                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+
+            # If we want to hook fork correctly with file waiter, we need to
+            # use os.register_at_fork to write the file, and make sure
+            # os.exec won't clear viztracer so that the file lives forever.
+            # This is basically equivalent to py3.8 + Linux
+            if hasattr(os, "register_at_fork") and hasattr(sys, "addaudithook"):
+                def audit_hook(event, args):  # pragma: no cover
+                    if event == "os.exec":
+                        tracer.exit_routine()
+                sys.addaudithook(audit_hook)  # type: ignore
+                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
+
+        # SIGTERM hook
+        def term_handler(signalnum, frame):
+            sys.exit(0)
+
+        if self.is_main_process:
+            signal.signal(signal.SIGTERM, term_handler)
+            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+        else:
+            signal.signal(signal.SIGTERM, term_handler)
+            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
+
     def run(self) -> Tuple[bool, Optional[str]]:
         if self.options.version:
             return self.show_version()
@@ -291,30 +323,30 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> NoReturn:
+    def run_code(self, code: Any, global_dict: Dict[str, Any]):
         options = self.options
+        self.parent_pid = os.getpid()
 
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
-        self.parent_pid = os.getpid()
-
-        if not options.ignore_multiprocess:
-            patch_multiprocessing(tracer)
-            if not options.subprocess_child:
-                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
-
-        def term_handler(signalnum, frame):
-            self.exit_routine()
-            sys.exit(0)
-        signal.signal(signal.SIGTERM, term_handler)
-        atexit.register(self.exit_routine)
+        self.install_all_hooks(tracer)
 
         if options.log_sparse:
             tracer.enable = True
         else:
             tracer.start()
+
         exec(code, global_dict)
+
+        if not options.log_exit:
+            tracer.stop()
+
+        # The user code may forked, check it because Finalize won't execute
+        # if the pid is not the same
+        if os.getpid() != self.parent_pid and not options.ignore_multiprocess:
+            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
+
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
         # release the resource in the code
@@ -326,10 +358,10 @@ class VizUI:
                 threading._threading_atexits = []  # type: ignore
         except AttributeError:
             pass
-        atexit._run_exitfuncs()
-        sys.exit(0)  # pragma: no cover
 
-    def run_module(self) -> NoReturn:
+        return True, None
+
+    def run_module(self):
         import runpy
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
@@ -338,9 +370,9 @@ class VizUI:
         }
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
-        self.run_code(code, global_dict)
+        return self.run_code(code, global_dict)
 
-    def run_string(self) -> NoReturn:
+    def run_string(self):
         cmd_string = self.options.cmd_string
         main_mod = types.ModuleType("__main__")
         setattr(main_mod, "__file__", "<string>")
@@ -349,9 +381,9 @@ class VizUI:
         sys.modules["__main__"] = main_mod
         code = compile(cmd_string, "<string>", "exec")
         sys.argv = ["-c"] + self.command[:]
-        self.run_code(code, main_mod.__dict__)
+        return self.run_code(code, main_mod.__dict__)
 
-    def run_command(self) -> Union[NoReturn, Tuple[bool, Optional[str]]]:
+    def run_command(self) -> Tuple[bool, Optional[str]]:
         command = self.command
         options = self.options
         file_name = command[0]
@@ -388,7 +420,7 @@ class VizUI:
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
-        self.run_code(code, main_mod.__dict__)
+        return self.run_code(code, main_mod.__dict__)
 
     def run_combine(self, files: List[str], align: bool = False) -> Tuple[bool, Optional[str]]:
         options = self.options
@@ -431,27 +463,36 @@ class VizUI:
         return True, None
 
     def save(self) -> None:
+        # This function will only be called from main process
         options = self.options
         ofile = self.ofile
 
+        self.wait_children_finish()
         builder = ReportBuilder(
             [os.path.join(self.multiprocess_output_dir, f)
-                for f in os.listdir(self.multiprocess_output_dir)],
+                for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".json")],
             minimize_memory=options.minimize_memory,
             verbose=self.verbose)
         builder.save(output_file=ofile)
         shutil.rmtree(self.multiprocess_output_dir)
 
+    def wait_children_finish(self) -> None:
+        try:
+            if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                print("wait for child processes to finish, Ctrl+C to skip")
+                while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                    time.sleep(0.5)
+        except KeyboardInterrupt:
+            pass
+
     def exit_routine(self) -> None:
         if self.tracer is not None:
-            atexit.unregister(self.exit_routine)
             if not self._exiting:
                 self._exiting = True
                 if self.verbose > 0:
                     print("Collecting trace data, this could take a while")
                 self.tracer.exit_routine()
-                if self.is_main_process:
-                    self.save()
+                self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
@@ -463,7 +504,10 @@ def main():
     if not success:
         print(err_msg)
         sys.exit(1)
-    success, err_msg = ui.run()
-    if not success:
-        print(err_msg)
-        sys.exit(1)
+    try:
+        success, err_msg = ui.run()
+        if not success:
+            print(err_msg)
+            sys.exit(1)
+    finally:
+        atexit._run_exitfuncs()

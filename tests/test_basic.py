@@ -4,7 +4,6 @@
 import builtins
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -97,15 +96,13 @@ class TestVizTracerBasic(BaseTmpl):
         fib(5)
         tracer.stop()
         tracer.parse()
-        tracer.save("./tmp/result.html")
-        self.assertTrue(os.path.exists("./tmp/result.html"))
-        tracer.start()
-        fib(5)
-        tracer.save("./tmp/result2.json")
-        self.assertTrue(os.path.exists("./tmp/result2.json"))
-        self.assertTrue(tracer.enable)
-
-        shutil.rmtree("./tmp")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for file_path in [["result.html"], ["result2.json"], ["new_dir", "result2.json"], ["result3.gz"]]:
+                path = os.path.join(tmpdir, *file_path)
+                tracer.start()
+                fib(5)
+                tracer.save(path)
+                self.assertTrue(os.path.exists(path))
 
 
 class TestInstant(BaseTmpl):
@@ -178,13 +175,14 @@ class TestDecorator(BaseTmpl):
             def my_function(n):
                 fib(n)
 
-            for _ in range(5):
+            for _ in range(3):
+                time.sleep(0.0001)
                 my_function(10)
 
             time.sleep(1)
 
             def t():
-                self.assertEqual(len(os.listdir(tmp_dir)), 5)
+                self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
             self.assertTrueTimeout(t, 20)
 

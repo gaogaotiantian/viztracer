@@ -38,25 +38,43 @@ when the args passed to ``subprocess.Popen`` is a list(``subprocess.Popen(["pyth
 ``python``. This covers most of the cases, but if you do have a situation that can't be solved, you can raise an issue and we can talk
 about solutions.
 
-multiprocessing or os.fork()
-----------------------------
+multiprocessing and concurrent.futures
+--------------------------------------
 
-VizTracer supports ``multiprocessing`` and pure ``os.fork()``.
-You need to make sure the main process exits after the other processes finish. Presumably using
-``p.join()`` function.
+VizTracer supports ``multiprocessing`` and ``concurrent.futures``, and it will make the main process wait for all the other processes to finish
+so the report can include all processes. You can skip the waiting using Ctrl+C.
 
 .. code-block::
 
     viztracer my_script_using_multiprocess.py
 
-This will generate an HTML file for all processes.
-
 This feature is available on all platforms and for both ``fork`` and ``spawn`` type ``Process``.
 
-However, on Windows, ``Pool`` won't work with VizTracer because there's no way to gracefully catch the exit of the process
+However, on Windows, ``multiprocessing.Pool`` won't work with VizTracer because there's no way to gracefully catch the exit of the process
 
-more generic multi process support
-----------------------------------
+os.fork()
+---------
+
+VizTracer supports ``os.fork``, with some caveats. 
+
+On Python3.8+, it works well, the main process will wait for
+forked processes to finish. You can even use ``os.exec()`` and its other forms after you fork the process. Of course
+VizTracer only records what happens before ``os.exec()``, you need :ref:`generic multi process support <generic_multi_process>` to record
+what happens after.
+
+On Python3.6/3.7, VizTracer is not able to wait for the forked process to finish. It would be user's responsibility
+to wait for the forked process to finish if they want to see both processes in the report.
+
+loky
+----
+
+VizTracer supports ``loky>=3.0.0`` as ``loky`` implemented the ``viztracer`` initializer. You can log ``loky`` processes
+just as easy as builtin ``multiprocessing``
+
+.. _generic_multi_process:
+
+generic multi process support
+-----------------------------
 
 VizTracer has a simple instrumentation for all the third party libraries to integrate VizTracer to their multi process code.
 

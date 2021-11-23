@@ -208,7 +208,7 @@ VizTracer supports python native ```threading``` module without the need to do a
 
 ### Multi Process Support
 
-VizTracer supports ```subprocess```, ```multiprocessing``` and ```os.fork()``` out of the box.
+VizTracer supports ```subprocess```, ```multiprocessing```, ```os.fork()```, ```concurrent.futures```, and ```loky``` out of the box.
 
 For more general multi-process cases, VizTracer can support with some extra steps.
 

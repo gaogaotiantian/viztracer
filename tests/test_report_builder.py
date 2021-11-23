@@ -22,6 +22,20 @@ class TestReportBuilder(BaseTmpl):
             result2 = s.getvalue()
         self.assertEqual(result1, result2)
 
+    def test_minimize_memory(self):
+        json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
+        with open(json_path) as f:
+            rb = ReportBuilder(json.loads(f.read()), verbose=0, minimize_memory=True)
+        with io.StringIO() as s:
+            rb.save(s)
+            result1 = s.getvalue()
+        with open(json_path) as f:
+            rb = ReportBuilder(json.loads(f.read()), verbose=0, minimize_memory=False)
+        with io.StringIO() as s:
+            rb.save(s)
+            result2 = s.getvalue()
+        self.assertEqual(result1, result2)
+
     def test_invalid(self):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)

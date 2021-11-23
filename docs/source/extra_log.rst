@@ -157,6 +157,16 @@ OR
 
     tracer = VizTracer(log_gc=True)
 
+Log Exit data
+-------------
+
+Normally VizTracer only logs the executed code in "execution phase", or "within exec() function". You can, however, log functions
+in ``atexit`` or other on-exit hooks.
+
+.. code-block::
+
+    viztracer --log_exit my_script.py
+
 Work with ``logging`` module
 ----------------------------
 
