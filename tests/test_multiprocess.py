@@ -156,6 +156,21 @@ if __name__ == "__main__":
         print([res.get(timeout=1) for res in multiple_results])
 """
 
+file_loky = """
+from loky import get_reusable_executor
+import time
+import random
+
+
+def my_function(*args):
+   duration = random.uniform(0.1, 0.3)
+   time.sleep(duration)
+
+
+e = get_reusable_executor(max_workers=4)
+e.map(my_function, range(5))
+"""
+
 
 class TestSubprocess(CmdlineTmpl):
     def setUp(self):
@@ -292,3 +307,15 @@ class TestMultiprocessing(CmdlineTmpl):
                           script=file_multiprocessing_stack_limit,
                           check_func=check_func,
                           concurrency="multiprocessing")
+
+
+class TestLoky(CmdlineTmpl):
+    def test_loky_basic(self):
+        def check_func(data):
+            pids = set()
+            for event in data["traceEvents"]:
+                pids.add(event["pid"])
+            # main, 4 workers and main's fork
+            self.assertEqual(len(pids), 6)
+        self.template(["viztracer", "cmdline_test.py"], script=file_loky,
+                       check_func=check_func, concurrency="multiprocessing")

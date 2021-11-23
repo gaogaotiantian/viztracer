@@ -257,14 +257,16 @@ class VizTracer(_VizTracer):
         self.cwd = os.getcwd()
 
         def term_handler(sig, frame):
-            while frame is not None:
-                if frame.f_code.co_name == "_run_finalizers":
-                    # If we are already in _run_finalizers, we are exiting now
-                    # To avoid messing up with the exit function, do nothing
-                    # here.
-                    return  # pragma: no cover
-                frame = frame.f_back
+            # For multiprocessing.pool, it's possible we receive SIGTERM
+            # in util._exit_function(), but before tracer.exit_routine()
+            # executes. In this case, sys.exit() or util._exit_function()
+            # won't trigger trace collection. We have to explicitly run
+            # exit_routine()
+            # Notice that exit_rountine() won't be executed multiple times
+            # as it was protected my self._exiting
+            self.exit_routine()
             sys.exit(0)
+
         self.label_file_to_write()
 
         signal.signal(signal.SIGTERM, term_handler)

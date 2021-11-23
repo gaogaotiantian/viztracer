@@ -273,6 +273,35 @@ class VizUI:
 
         return None
 
+    def install_all_hooks(self, tracer: VizTracer) -> None:
+        options = self.options
+
+        # multiprocess hook
+        if not options.ignore_multiprocess:
+            patch_multiprocessing(tracer)
+            if not options.subprocess_child:
+                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+            if hasattr(os, "register_at_fork"):
+                # This will only work after 3.7
+                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
+
+        # SIGTERM hook
+        def term_handler(signalnum, frame):
+            sys.exit(0)
+
+        if self.is_main_process:
+            signal.signal(signal.SIGTERM, term_handler)
+            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+        else:
+            signal.signal(signal.SIGTERM, term_handler)
+            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
+
+        # os.exec hook
+        def audit_hook(event, args):
+            if event == "os.exec":
+                tracer.exit_routine()
+        sys.addaudithook(audit_hook)
+
     def run(self) -> Tuple[bool, Optional[str]]:
         if self.options.version:
             return self.show_version()
@@ -294,29 +323,12 @@ class VizUI:
 
     def run_code(self, code: Any, global_dict: Dict[str, Any]):
         options = self.options
+        self.parent_pid = os.getpid()
 
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
-        self.parent_pid = os.getpid()
-
-        if not options.ignore_multiprocess:
-            patch_multiprocessing(tracer)
-            if not options.subprocess_child:
-                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
-            if hasattr(os, "register_at_fork"):
-                # This will only work after 3.7
-                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
-
-        def term_handler(signalnum, frame):
-            sys.exit(0)
-
-        if self.is_main_process:
-            signal.signal(signal.SIGTERM, term_handler)
-            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
-        else:
-            signal.signal(signal.SIGTERM, term_handler)
-            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
+        self.install_all_hooks(tracer)
 
         if options.log_sparse:
             tracer.enable = True
