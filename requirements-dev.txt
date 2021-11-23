@@ -4,3 +4,4 @@ twine
 coverage
 ipywidgets
 mypy
+loky>=3.0.0

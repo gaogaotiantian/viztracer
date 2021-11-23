@@ -297,10 +297,11 @@ class VizUI:
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
 
         # os.exec hook
-        def audit_hook(event, args):
-            if event == "os.exec":
-                tracer.exit_routine()
-        sys.addaudithook(audit_hook)
+        if sys.version_info >= (3, 8):
+            def audit_hook(event, args):
+                if event == "os.exec":
+                    tracer.exit_routine()
+            sys.addaudithook(audit_hook)
 
     def run(self) -> Tuple[bool, Optional[str]]:
         if self.options.version:
