@@ -290,7 +290,7 @@ class VizUI:
                 def audit_hook(event, args):  # pragma: no cover
                     if event == "os.exec":
                         tracer.exit_routine()
-                sys.addaudithook(audit_hook)
+                sys.addaudithook(audit_hook)  # type: ignore
                 os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 
         # SIGTERM hook
