@@ -318,4 +318,4 @@ class TestLoky(CmdlineTmpl):
             # main, 4 workers and main's fork
             self.assertEqual(len(pids), 6)
         self.template(["viztracer", "cmdline_test.py"], script=file_loky,
-                       check_func=check_func, concurrency="multiprocessing")
+                      check_func=check_func, concurrency="multiprocessing")
