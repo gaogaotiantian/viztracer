@@ -317,7 +317,7 @@ class TestLoky(CmdlineTmpl):
             pids = set()
             for event in data["traceEvents"]:
                 pids.add(event["pid"])
-            # main, 4 workers, and a forked main
-            self.assertEqual(len(pids), 6)
+            # main, 4 workers, and a forked main on Linux
+            self.assertGreaterEqual(len(pids), 5)
         self.template(["viztracer", "cmdline_test.py"], script=file_loky,
                       check_func=check_func, concurrency="multiprocessing")
