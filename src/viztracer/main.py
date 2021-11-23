@@ -281,8 +281,17 @@ class VizUI:
             patch_multiprocessing(tracer)
             if not options.subprocess_child:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
-            if hasattr(os, "register_at_fork"):
-                # This will only work after 3.7
+
+            # os.fork and os.exec hook
+            # We can only hook os.exec after py3.8, so we only do
+            # the file wait system on py3.8+. Otherwise the file
+            # won't be deleted if os.exec is used after fork
+            if sys.version_info >= (3, 8):
+                def audit_hook(event, args):  # pragma: no cover
+                    if event == "os.exec":
+                        tracer.exit_routine()
+                sys.addaudithook(audit_hook)
+                # os.register_at_fork exists after py3.7
                 os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 
         # SIGTERM hook
@@ -295,13 +304,6 @@ class VizUI:
         else:
             signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
-
-        # os.exec hook
-        if sys.version_info >= (3, 8):
-            def audit_hook(event, args):
-                if event == "os.exec":
-                    tracer.exit_routine()
-            sys.addaudithook(audit_hook)
 
     def run(self) -> Tuple[bool, Optional[str]]:
         if self.options.version:
@@ -343,7 +345,7 @@ class VizUI:
 
         # The user code may forked, check it because Finalize won't execute
         # if the pid is not the same
-        if os.getpid() != self.parent_pid:
+        if os.getpid() != self.parent_pid and not options.ignore_multiprocess:
             multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
 
         # issue141 - concurrent.future requires a proper release by executing
