@@ -216,7 +216,7 @@ class TestMultiprocessing(CmdlineTmpl):
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                           expected_output_file="result.json", script=file_fork, check_func=check_func)
 
-    @unittest.skipIf(sys.version_info < (3, 7) or sys.platform not in ["linux", "linux2"], "Only works on Linux + py3.7+")
+    @unittest.skipIf(sys.version_info < (3, 8) or sys.platform not in ["linux", "linux2"], "Only works on Linux + py3.8+")
     def test_os_fork_term(self):
         def check_func_wrapper(process_num):
             def check_func(data):
