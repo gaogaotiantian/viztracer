@@ -7,6 +7,7 @@ import multiprocessing
 import signal
 import tempfile
 import unittest
+from unittest.case import skipIf
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -310,12 +311,13 @@ class TestMultiprocessing(CmdlineTmpl):
 
 
 class TestLoky(CmdlineTmpl):
+    @skipIf(sys.version_info < (3, 8), "fork + exec will make viztracer + loky deadlock")
     def test_loky_basic(self):
         def check_func(data):
             pids = set()
             for event in data["traceEvents"]:
                 pids.add(event["pid"])
-            # main, 4 workers, in py3.8+ a forked main
-            self.assertGreaterEqual(len(pids), 5)
+            # main, 4 workers, and a forked main
+            self.assertEqual(len(pids), 6)
         self.template(["viztracer", "cmdline_test.py"], script=file_loky,
                       check_func=check_func, concurrency="multiprocessing")
