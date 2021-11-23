@@ -282,16 +282,15 @@ class VizUI:
             if not options.subprocess_child:
                 patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
 
-            # os.fork and os.exec hook
-            # We can only hook os.exec after py3.8, so we only do
-            # the file wait system on py3.8+. Otherwise the file
-            # won't be deleted if os.exec is used after fork
-            if sys.version_info >= (3, 8):
+            # If we want to hook fork correctly with file waiter, we need to
+            # use os.register_at_fork to write the file, and make sure
+            # os.exec won't clear viztracer so that the file lives forever.
+            # This is basically equivalent to py3.8 + Linux
+            if hasattr(os, "register_at_fork") and hasattr(sys, "addaudithook"):
                 def audit_hook(event, args):  # pragma: no cover
                     if event == "os.exec":
                         tracer.exit_routine()
                 sys.addaudithook(audit_hook)
-                # os.register_at_fork exists after py3.7
                 os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 
         # SIGTERM hook
