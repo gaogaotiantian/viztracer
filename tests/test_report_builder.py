@@ -5,6 +5,8 @@
 import io
 import json
 import os
+import tempfile
+import viztracer
 from viztracer.report_builder import ReportBuilder
 from .base_tmpl import BaseTmpl
 
@@ -65,3 +67,23 @@ class TestReportBuilder(BaseTmpl):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
+
+    def test_combine(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path1 = os.path.join(tmpdir, "result1.json")
+            file_path2 = os.path.join(tmpdir, "result2.json")
+            with viztracer.VizTracer(output_file=file_path1, verbose=0):
+                a = []
+                for _ in range(10):
+                    a.append(1)
+
+            with viztracer.VizTracer(tracer_entries=5, output_file=file_path2, verbose=0):
+                a = []
+                for _ in range(10):
+                    a.append(1)
+
+            rb = ReportBuilder([file_path1, file_path2], verbose=0)
+            with io.StringIO() as s:
+                rb.save(output_file=s)
+                data = json.loads(s.getvalue())
+                self.assertTrue(data["viztracer_metadata"]["overflow"])
