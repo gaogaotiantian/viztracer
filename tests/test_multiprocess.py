@@ -250,10 +250,10 @@ class TestMultiprocessing(CmdlineTmpl):
 
     def test_multiprocessing_entry_limit(self):
         result = self.template(["viztracer", "-o", "result.json", "--tracer_entries", "10", "cmdline_test.py"],
-                                expected_output_file="result.json",
-                                script=file_multiprocessing,
-                                expected_entries=20,
-                                concurrency="multiprocessing")
+                               expected_output_file="result.json",
+                               script=file_multiprocessing,
+                               expected_entries=20,
+                               concurrency="multiprocessing")
         self.assertIn("buffer is full", result.stdout.decode())
 
     def test_ignore_multiprosessing(self):
