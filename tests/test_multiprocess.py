@@ -229,7 +229,7 @@ class TestMultiprocessing(CmdlineTmpl):
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                expected_output_file="result.json", script=file_fork_wait,
                                check_func=check_func_wrapper(2))
-        self.assertIn("wait for child process", result.stdout.decode())
+        self.assertIn("Wait for child process", result.stdout.decode())
 
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                send_sig=signal.SIGINT, expected_output_file="result.json", script=file_fork_wait,
@@ -247,6 +247,14 @@ class TestMultiprocessing(CmdlineTmpl):
                       script=file_multiprocessing,
                       check_func=check_func,
                       concurrency="multiprocessing")
+
+    def test_multiprocessing_entry_limit(self):
+        result = self.template(["viztracer", "-o", "result.json", "--tracer_entries", "10", "cmdline_test.py"],
+                               expected_output_file="result.json",
+                               script=file_multiprocessing,
+                               expected_entries=20,
+                               concurrency="multiprocessing")
+        self.assertIn("buffer is full", result.stdout.decode())
 
     def test_ignore_multiprosessing(self):
         def check_func(data):

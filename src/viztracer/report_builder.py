@@ -8,12 +8,11 @@ except ImportError:
 import gzip
 import os
 import re
-import shutil
 from string import Template
 import sys
-from typing import Any, Dict, List, Optional, Sequence, Union, TextIO
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, TextIO
 
-from .util import color_print
+from .util import color_print, same_line_print
 
 
 def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
@@ -47,6 +46,7 @@ class ReportBuilder:
         self.minimize_memory = minimize_memory
         self.jsons: List[Dict] = []
         self.json_loaded = False
+        self.final_messages: List[Tuple[str, Dict]] = []
         if not isinstance(data, (dict, list, tuple)):
             raise TypeError("Invalid data type for ReportBuilder")
         if isinstance(data, (list, tuple)):
@@ -64,9 +64,15 @@ class ReportBuilder:
             if isinstance(self.data, dict):
                 self.jsons = [get_json(self.data)]
             elif isinstance(self.data, (list, tuple)):
-                self.jsons = [get_json(j) for j in self.data]
+                self.jsons = []
+                for idx, j in enumerate(self.data):
+                    if self.verbose > 0:
+                        same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
+                    self.jsons.append(get_json(j))
 
     def combine_json(self) -> None:
+        if self.verbose > 0:
+            same_line_print("Combining trace data")
         if self.combined_json:
             return
         if not self.jsons:
@@ -78,6 +84,8 @@ class ReportBuilder:
         for one in self.jsons[1:]:
             if "traceEvents" in one:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
+            if one["viztracer_metadata"].get("overflow", False):
+                self.combined_json["viztracer_metadata"]["overflow"] = True
 
     def align_events(self, original_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -98,7 +106,10 @@ class ReportBuilder:
         self.combine_json()
         if self.verbose > 0:
             entries = len(self.combined_json["traceEvents"])
-            print(f"Dumping trace data, total entries: {entries}")
+            same_line_print(f"Dumping trace data, total entries: {entries}")
+            self.final_messages.append(("total_entries", {"total_entries": entries}))
+            if self.combined_json["viztracer_metadata"].get("overflow", False):
+                self.final_messages.append(("overflow", {}))
 
         if display_time_unit is not None:
             self.combined_json["displayTimeUnit"] = display_time_unit
@@ -162,12 +173,8 @@ class ReportBuilder:
                 with open(output_file, "w", encoding="utf-8") as f:
                     self.generate_report(f, output_format="html", file_info=file_info)
             elif file_type == "json":
-                if isinstance(self.data, (list, tuple)) and len(self.data) == 1:
-                    # We only have one file, just copy it over
-                    shutil.move(self.data[0], output_file)
-                else:
-                    with open(output_file, "w", encoding="utf-8") as f:
-                        self.generate_report(f, output_format="json", file_info=file_info)
+                with open(output_file, "w", encoding="utf-8") as f:
+                    self.generate_report(f, output_format="json", file_info=file_info)
             elif file_type == "gz":
                 with gzip.open(output_file, "wt") as f:
                     self.generate_report(f, output_format="json", file_info=file_info)
@@ -176,7 +183,26 @@ class ReportBuilder:
         else:
             self.generate_report(output_file, output_format="json", file_info=file_info)
 
-        if self.verbose > 0 and isinstance(output_file, str):
-            report_abspath = os.path.abspath(output_file)
-            print("Use the following command to open the report:")
-            color_print("OKGREEN", "vizviewer {}".format(report_abspath))
+        if isinstance(output_file, str):
+            self.final_messages.append(("view_command", {"output_file": os.path.abspath(output_file)}))
+
+        self.print_messages()
+
+    def print_messages(self):
+        if self.verbose > 0:
+            same_line_print("")
+            for msg_type, msg_args in self.final_messages:
+                if msg_type == "overflow":
+                    print("")
+                    color_print("WARNING", ("Circular buffer is full, you lost some early data, "
+                                            "but you still have the most recent data."))
+                    color_print("WARNING", ("    If you need more buffer, use \"viztracer --tracer_entries <entry_number>\""))
+                    color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
+                    color_print("WARNING", "    use --quiet to shut me up")
+                    print("")
+                elif msg_type == "total_entries":
+                    print(f"Total Entries: {msg_args['total_entries']}")
+                elif msg_type == "view_command":
+                    report_abspath = os.path.abspath(msg_args["output_file"])
+                    print("Use the following command to open the report:")
+                    color_print("OKGREEN", "vizviewer {}".format(report_abspath))
