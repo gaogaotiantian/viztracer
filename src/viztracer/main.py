@@ -209,10 +209,8 @@ class VizUI:
             # It's not practical to cover this line as it requires coverage
             # instrumentation on subprocess.
             output_file = self.ofile  # pragma: no cover
-            file_info = False
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
-            file_info = options.file_info
 
         if options.log_async:
             if int(platform.python_version_tuple()[1]) < 7:
@@ -246,7 +244,7 @@ class VizUI:
             "log_async": options.log_async,
             "vdb": options.vdb,
             "pid_suffix": True,
-            "file_info": file_info,
+            "file_info": False,
             "register_global": True,
             "plugins": options.plugins,
             "trace_self": options.trace_self,
