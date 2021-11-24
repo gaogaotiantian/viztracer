@@ -21,7 +21,7 @@ from . import __version__
 from .code_monkey import CodeMonkey
 from .patch import patch_multiprocessing, patch_subprocess
 from .report_builder import ReportBuilder
-from .util import time_str_to_us, color_print
+from .util import time_str_to_us, color_print, same_line_print
 from .viztracer import VizTracer
 
 
@@ -209,8 +209,10 @@ class VizUI:
             # It's not practical to cover this line as it requires coverage
             # instrumentation on subprocess.
             output_file = self.ofile  # pragma: no cover
+            file_info = False
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
+            file_info = options.file_info
 
         if options.log_async:
             if int(platform.python_version_tuple()[1]) < 7:
@@ -244,6 +246,7 @@ class VizUI:
             "log_async": options.log_async,
             "vdb": options.vdb,
             "pid_suffix": True,
+            "file_info": file_info,
             "register_global": True,
             "plugins": options.plugins,
             "trace_self": options.trace_self,
@@ -479,7 +482,7 @@ class VizUI:
     def wait_children_finish(self) -> None:
         try:
             if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
-                print("wait for child processes to finish, Ctrl+C to skip")
+                same_line_print("Wait for child processes to finish, Ctrl+C to skip")
                 while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                     time.sleep(0.5)
         except KeyboardInterrupt:
@@ -490,7 +493,7 @@ class VizUI:
             if not self._exiting:
                 self._exiting = True
                 if self.verbose > 0:
-                    print("Collecting trace data, this could take a while")
+                    same_line_print("Saving trace data, this could take a while")
                 self.tracer.exit_routine()
                 self.save()
                 if self.options.open:  # pragma: no cover

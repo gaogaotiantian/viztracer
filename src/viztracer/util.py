@@ -32,6 +32,11 @@ def color_print(color, s: str, **kwargs):
     print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
 
 
+def same_line_print(s: str, width=80, **kwargs):
+    print(f"\r{'':<{width}}", end="")  # clear the line
+    print(f"\r{s}", end="", **kwargs)
+
+
 def compare_version(ver1: str, ver2: str) -> int:
     # assuming ver1, ver2 are both str and in a pattern of
     # major.minor.micro with only numbers

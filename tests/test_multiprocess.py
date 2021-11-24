@@ -229,7 +229,7 @@ class TestMultiprocessing(CmdlineTmpl):
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                expected_output_file="result.json", script=file_fork_wait,
                                check_func=check_func_wrapper(2))
-        self.assertIn("wait for child process", result.stdout.decode())
+        self.assertIn("Wait for child process", result.stdout.decode())
 
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                send_sig=signal.SIGINT, expected_output_file="result.json", script=file_fork_wait,

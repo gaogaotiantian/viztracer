@@ -9,7 +9,6 @@ from typing import Any, Dict, Optional, Sequence, Union
 import viztracer.snaptrace as snaptrace  # type: ignore
 
 from . import __version__
-from .util import color_print
 
 
 class _VizTracer:
@@ -365,7 +364,8 @@ class _VizTracer:
             self.data = {
                 "traceEvents": self._tracer.load(),
                 "viztracer_metadata": {
-                    "version": __version__
+                    "version": __version__,
+                    "overflow": False
                 }
             }
             metadata_count = 0
@@ -375,15 +375,8 @@ class _VizTracer:
                 else:
                     break
             self.total_entries = len(self.data["traceEvents"]) - metadata_count
-            if self.total_entries == self.tracer_entries and self.verbose > 0:
-                print("")
-                color_print("WARNING", ("Circular buffer is full, you lost some early data, "
-                                        "but you still have the most recent data."))
-                color_print("WARNING", ("    If you need more buffer, use \"viztracer --tracer_entries "
-                                        "<entry_number>(current: {})\"").format(self.tracer_entries))
-                color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
-                color_print("WARNING", "    use --quiet to shut me up")
-                print("")
+            if self.total_entries == self.tracer_entries:
+                self.data["viztracer_metadata"]["overflow"] = True
             self.parsed = True
 
         return self.total_entries
