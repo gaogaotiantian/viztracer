@@ -83,23 +83,27 @@ file_magic_comment = """
 # !viztracer: log_instant("test")
 a = 3  # !viztracer: log
 # !viztracer: log_var("a", a)
+# !viztracer: log_var("a", a) if a == 3
+# !viztracer: log_var("a", a) if a != 3
+a = 3  # !viztracer: log if a == 3
+a = 3  # !viztracer: log if a != 3
 """
 
 
 class TestMagicComment(CmdlineTmpl):
     def test_log_var(self):
         def check_func(data):
-            found_instant = False
-            found_var = False
+            instant_count = 0
+            var_count = 0
             for event in data["traceEvents"]:
                 if event["ph"] == "i":
                     self.assertEqual(event["name"], "test")
-                    found_instant = True
+                    instant_count += 1
                 elif event["ph"] == "C":
                     self.assertEqual(event["name"], "a")
                     self.assertEqual(event["args"], {"value": 3})
-                    found_var = True
-            self.assertTrue(found_instant)
-            self.assertTrue(found_var)
+                    var_count += 1
+            self.assertEqual(instant_count, 1)
+            self.assertEqual(var_count, 4)
 
         self.template(["viztracer", "--magic_comment", "cmdline_test.py"], script=file_magic_comment, check_func=check_func)

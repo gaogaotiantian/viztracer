@@ -292,8 +292,14 @@ class SourceProcessor:
     """
     def __init__(self):
         self.re_patterns = [
-            (re.compile(r"(\s*)#\s*!viztracer:\s*(.*?)$"), self.line_transform),
-            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log$"), self.inline_transform)
+            # !viztracer: log_var("var", var)
+            (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*$"), self.line_transform),
+            # a = 3  # !viztracer: log
+            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*$"), self.inline_transform),
+            # !viztracer: log_var("var", var) if var > 3
+            (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"), self.line_transform_condition),
+            # a = 3  # !viztracer: log if a != 3
+            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), self.inline_transform_condition)
         ]
 
     def process(self, source: Any):
@@ -318,12 +324,22 @@ class SourceProcessor:
     def line_transform(self, re_match):
         return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
 
+    def line_transform_condition(self, re_match):
+        return f"{re_match.group(1)}if {re_match.group(3)}: __viz_tracer__.{re_match.group(2)};"
+
     def inline_transform(self, re_match):
         stmt = re_match.group(1)
         if "=" in stmt:
             val_assigned = stmt[:stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}))"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}')"
+
+    def inline_transform_condition(self, re_match):
+        stmt = re_match.group(1)
+        if "=" in stmt:
+            val_assigned = stmt[:stmt.index("=")].strip()
+            return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}), cond={re_match.group(2)})"
+        return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}', cond={re_match.group(2)});"
 
 
 class CodeMonkey:
