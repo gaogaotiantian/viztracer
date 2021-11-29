@@ -141,14 +141,16 @@ class VizTracer(_VizTracer):
         signal.signal(signal.SIGUSR1, signal_start)
         signal.signal(signal.SIGUSR2, signal_stop)
 
-    def log_instant(self, name: str, args: Any = None, scope: str = "t") -> None:
-        self.add_instant(name, args=args, scope=scope)
+    def log_instant(self, name: str, args: Any = None, scope: str = "t", cond: bool = True) -> None:
+        if cond:
+            self.add_instant(name, args=args, scope=scope)
 
-    def log_var(self, name, var) -> None:
-        if isinstance(var, (float, int)):
-            self.add_counter(name, {"value": var})
-        else:
-            self.add_instant(name, args={"object": objprint.objstr(var, color=False)}, scope="t")
+    def log_var(self, name, var, cond: bool = True) -> None:
+        if cond:
+            if isinstance(var, (float, int)):
+                self.add_counter(name, {"value": var})
+            else:
+                self.add_instant(name, args={"object": objprint.objstr(var, color=False)}, scope="t")
 
     def log_event(self, event_name: str) -> VizEvent:
         call_frame = sys._getframe(1)
