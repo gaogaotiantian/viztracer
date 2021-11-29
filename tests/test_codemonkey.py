@@ -80,6 +80,8 @@ class TestAstTransformer(BaseTmpl):
 
 
 file_magic_comment = """
+def test():
+    pass
 # !viztracer: log_instant("test")
 a = 3  # !viztracer: log
 # !viztracer: log_var("a", a)
@@ -87,6 +89,7 @@ a = 3  # !viztracer: log
 # !viztracer: log_var("a", a) if a != 3
 a = 3  # !viztracer: log if a == 3
 a = 3  # !viztracer: log if a != 3
+test()  # !viztracer: log if a == 3
 """
 
 
@@ -97,13 +100,13 @@ class TestMagicComment(CmdlineTmpl):
             var_count = 0
             for event in data["traceEvents"]:
                 if event["ph"] == "i":
-                    self.assertEqual(event["name"], "test")
+                    self.assertIn("test", event["name"])
                     instant_count += 1
                 elif event["ph"] == "C":
                     self.assertEqual(event["name"], "a")
                     self.assertEqual(event["args"], {"value": 3})
                     var_count += 1
-            self.assertEqual(instant_count, 1)
+            self.assertEqual(instant_count, 2)
             self.assertEqual(var_count, 4)
 
         self.template(["viztracer", "--magic_comment", "cmdline_test.py"], script=file_magic_comment, check_func=check_func)
