@@ -823,7 +823,6 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
     struct MetadataNode* metadata_node = NULL;
     PyObject* task_dict = NULL;
-    PyObject* func_name_dict = PyDict_New();
 
     if (self->fix_pid > 0) {
         pid = self->fix_pid;
@@ -873,8 +872,6 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        PyObject* dict = PyDict_New();
-        PyObject* name = NULL;
         double ts = node->ts / 1000;
         unsigned long tid = node->tid;
 
@@ -882,7 +879,6 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             if (curr->data.fee.asyncio_task != NULL) {
                 tid = ((unsigned long)curr->data.fee.asyncio_task) & 0xffffff;
                 PyObject* task_id = PyLong_FromLong(tid);
-                PyDict_SetItemString(dict, "tid", task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;
                     if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
@@ -904,9 +900,9 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
         switch (node->ntype) {
         case FEE_NODE:
-            name = get_name_from_fee_node(node, func_name_dict);
-            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%f,\"name\":\"%s\"", node->data.fee.dur / 1000, PyUnicode_AsUTF8(name));
-            Py_DECREF(name);
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%f,\"name\":\"", node->data.fee.dur / 1000);
+            fprintfeename(fptr, node);
+            fputc('\"', fptr);
 
             if (node->data.fee.caller_lineno >= 0) {
                 fprintf(fptr, ",\"caller_lineno\":%d", node->data.fee.caller_lineno);
@@ -985,7 +981,6 @@ snaptrace_dump(TracerObject* self, PyObject* args)
         }
     }
 
-    Py_DECREF(func_name_dict);
     self->buffer_tail_idx = self->buffer_head_idx;
     fseek(fptr, -1, SEEK_CUR);
     fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s}}", overflowed? "true": "false");
