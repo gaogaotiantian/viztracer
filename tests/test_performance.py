@@ -67,6 +67,13 @@ class TestPerformance(BaseTmpl):
             with io.StringIO() as s:
                 tracer.save(s)
             instrumented_c_json = t.get_time()
+        tracer.start()
+        func()
+        tracer.stop()
+        with Timer() as t:
+            tracer.dump("tmp.json")
+        instrumented_c_dump = t.get_time()
+        os.remove("tmp.json")
         tracer.clear()
 
         gc.collect()
@@ -89,7 +96,8 @@ class TestPerformance(BaseTmpl):
               + time_str("json", origin, instrumented_c_vdb_json))
         print(time_str("c", origin, instrumented_c)
               + time_str("parse", origin, instrumented_c_parse)
-              + time_str("json", origin, instrumented_c_json))
+              + time_str("json", origin, instrumented_c_json)
+              + time_str("dump", origin, instrumented_c_dump))
         print(time_str("cProfile", origin, cprofile))
 
     def test_fib(self):

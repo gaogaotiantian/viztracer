@@ -5,7 +5,10 @@
 #ifndef __SNAPTRACE_UTIL_H__
 #define __SNAPTRACE_UTIL_H__
 
+#include <Python.h>
+
 void Print_Py(PyObject* o);
+void fprintjson(FILE* fptr, PyObject* obj);
 double get_ts(void);
 
 // target and prefix has to be NULL-terminated

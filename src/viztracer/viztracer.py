@@ -39,6 +39,7 @@ class VizTracer(_VizTracer):
                  trace_self: bool = False,
                  min_duration: float = 0,
                  minimize_memory: bool = False,
+                 dump_raw: bool = False,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []):
         super().__init__(
@@ -64,6 +65,7 @@ class VizTracer(_VizTracer):
         self.output_file = output_file
         self.system_print = None
         self.log_sparse = log_sparse
+        self.dump_raw = dump_raw
         self.minimize_memory = minimize_memory
         self._exiting = False
         if register_global:
@@ -111,6 +113,7 @@ class VizTracer(_VizTracer):
             "vdb": self.vdb,
             "pid_suffix": self.pid_suffix,
             "min_duration": self.min_duration,
+            "dump_raw": self.dump_raw,
             "minimize_memory": self.minimize_memory
         }
 
@@ -185,11 +188,6 @@ class VizTracer(_VizTracer):
         if file_info is None:
             file_info = self.file_info
         enabled = False
-        if self.enable:
-            enabled = True
-            self.stop()
-        if not self.parsed:
-            self.parse()
         if output_file is None:
             output_file = self.output_file
         if verbose is None:
@@ -199,15 +197,25 @@ class VizTracer(_VizTracer):
             output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
             output_file = ".".join(output_file_parts)
 
-        self._plugin_manager.event("pre-save")
-
         if isinstance(output_file, str):
             output_file = os.path.abspath(output_file)
             if not os.path.isdir(os.path.dirname(output_file)):
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
-        rb.save(output_file=output_file, file_info=file_info)
+        if self.enable:
+            enabled = True
+            self.stop()
+
+        self._plugin_manager.event("pre-save")
+
+        if self.dump_raw:
+            self.dump(output_file)
+        else:
+            if not self.parsed:
+                self.parse()
+
+            rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
+            rb.save(output_file=output_file, file_info=file_info)
 
         if self.viztmp is not None and os.path.exists(self.viztmp):
             os.remove(self.viztmp)

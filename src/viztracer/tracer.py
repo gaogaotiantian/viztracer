@@ -381,6 +381,9 @@ class _VizTracer:
 
         return self.total_entries
 
+    def dump(self, filename: str) -> None:
+        self._tracer.dump(filename)
+
     def overload_print(self):
         self.system_print = builtins.print
 

@@ -29,6 +29,7 @@ static PyObject* snaptrace_stop(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_pause(PyObject* self, PyObject* args);
 static PyObject* snaptrace_resume(PyObject* self, PyObject* args);
 static PyObject* snaptrace_load(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_dump(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_clear(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_cleanup(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
@@ -48,6 +49,7 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
 PyObject* multiprocessing_module = NULL;
+PyObject* json_module = NULL;
 PyObject* asyncio_module = NULL;
 PyObject* asyncio_tasks_module = NULL;
 PyObject* asyncio_tasks_current_task = NULL;
@@ -161,6 +163,7 @@ static PyMethodDef Tracer_methods[] = {
     {"start", (PyCFunction)snaptrace_start, METH_VARARGS, "start profiling"},
     {"stop", (PyCFunction)snaptrace_stop, METH_VARARGS, "stop profiling"},
     {"load", (PyCFunction)snaptrace_load, METH_VARARGS, "load buffer"},
+    {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS, "dump buffer to file"},
     {"clear", (PyCFunction)snaptrace_clear, METH_VARARGS, "clear buffer"},
     {"cleanup", (PyCFunction)snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
     {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
@@ -560,7 +563,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
     PyObject* ph_B = PyUnicode_FromString("B");
     PyObject* ph_E = PyUnicode_FromString("E");
-    PyObject* ph_I = PyUnicode_FromString("i");
+    PyObject* ph_i = PyUnicode_FromString("i");
     PyObject* ph_X = PyUnicode_FromString("X");
     PyObject* ph_C = PyUnicode_FromString("C");
     PyObject* ph_M = PyUnicode_FromString("M");
@@ -599,6 +602,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
         PyObject* process_name = PyObject_GetAttrString(current_process, "name");
 
         Py_DECREF(current_process_method);
+        Py_DECREF(current_process);
         PyDict_SetItemString(dict, "ph", ph_M);
         PyDict_SetItemString(dict, "pid", pid);
         PyDict_SetItemString(dict, "tid", pid);
@@ -662,7 +666,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
                     } else {
                         task_name = PyUnicode_FromString("Task");
                     }
-                    
                     PyDict_SetItem(task_dict, task_id, task_name);
                     Py_DECREF(task_name);
                 }
@@ -711,7 +714,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "cat", cat_fee);
             break;
         case INSTANT_NODE:
-            PyDict_SetItemString(dict, "ph", ph_I);
+            PyDict_SetItemString(dict, "ph", ph_i);
             PyDict_SetItemString(dict, "cat", cat_instant);
             PyDict_SetItemString(dict, "name", node->data.instant.name);
             PyDict_SetItemString(dict, "args", node->data.instant.args);
@@ -774,7 +777,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "ph", ph_M);
             PyDict_SetItemString(dict, "pid", pid);
             PyDict_SetItemString(dict, "tid", tid);
-            Py_DECREF(tid);
             PyDict_SetItemString(dict, "name", thread_name_string);
             Py_DECREF(thread_name_string);
             PyDict_SetItemString(args, "name", value);
@@ -790,13 +792,205 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(cat_instant);
     Py_DECREF(ph_B);
     Py_DECREF(ph_E);
-    Py_DECREF(ph_I);
+    Py_DECREF(ph_i);
     Py_DECREF(ph_X);
     Py_DECREF(ph_C);
     Py_DECREF(ph_M);
     Py_DECREF(func_name_dict);
     self->buffer_tail_idx = self->buffer_head_idx;
     return lst;
+}
+
+static PyObject*
+snaptrace_dump(TracerObject* self, PyObject* args)
+{
+    const char* filename = NULL;
+    FILE* fptr = NULL;
+    if (!PyArg_ParseTuple(args, "s", &filename)) {
+        PyErr_SetString(PyExc_TypeError, "Missing required file name");
+        Py_RETURN_NONE;
+    }
+    fptr = fopen(filename, "w");
+    if (!fptr) {
+        PyErr_Format(PyExc_ValueError, "Can't open file %s to write", filename);
+        Py_RETURN_NONE;
+    }
+
+    fprintf(fptr, "{\"traceEvents\":[");
+
+    struct EventNode* curr = self->buffer + self->buffer_head_idx;
+    unsigned long pid = 0;
+    uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
+    struct MetadataNode* metadata_node = NULL;
+    PyObject* task_dict = NULL;
+    PyObject* func_name_dict = PyDict_New();
+
+    if (self->fix_pid > 0) {
+        pid = self->fix_pid;
+    } else {
+#if _WIN32
+        pid = GetCurrentProcessId();
+#else
+        pid = getpid();
+#endif
+    }
+
+    // == Load the metadata first ==
+    //    Process Name
+    {
+        PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
+        if (!current_process_method) {
+            perror("Failed to access multiprocessing.current_process()");
+            exit(-1);
+        }
+        PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+        if (!current_process_method) {
+            perror("Failed to access multiprocessing.current_process()");
+            exit(-1);
+        }
+        PyObject* process_name = PyObject_GetAttrString(current_process, "name");
+
+        Py_DECREF(current_process_method);
+        Py_DECREF(current_process);
+        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"%s\"}},",
+                pid, pid, PyUnicode_AsUTF8(process_name));
+        Py_DECREF(process_name);
+    }
+
+    //    Thread Name
+    metadata_node = self->metadata_head;
+    while (metadata_node) {
+        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"thread_name\",\"args\":{\"name\":\"%s\"}},",
+                pid, metadata_node->tid, PyUnicode_AsUTF8(metadata_node->name));
+        metadata_node = metadata_node->next;
+    }
+
+    // Task Name if using LOG_ASYNC
+    // We need to make up some thread id for the task
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+        task_dict = PyDict_New();
+    }
+
+    while (curr != self->buffer + self->buffer_tail_idx) {
+        struct EventNode* node = curr;
+        PyObject* dict = PyDict_New();
+        PyObject* name = NULL;
+        double ts = node->ts / 1000;
+        unsigned long tid = node->tid;
+
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+            if (curr->data.fee.asyncio_task != NULL) {
+                tid = ((unsigned long)curr->data.fee.asyncio_task) & 0xffffff;
+                PyObject* task_id = PyLong_FromLong(tid);
+                PyDict_SetItemString(dict, "tid", task_id);
+                if (!PyDict_Contains(task_dict, task_id)) {
+                    PyObject* task_name = NULL;
+                    if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
+                        PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
+                        task_name = PyObject_CallObject(task_name_method, NULL);
+                        Py_DECREF(task_name_method);
+                    } else {
+                        task_name = PyUnicode_FromString("Task");
+                    }
+                    PyDict_SetItem(task_dict, task_id, task_name);
+                    Py_DECREF(task_name);
+                }
+                Py_DECREF(task_id);
+            }
+        }
+        if (node->ntype != RAW_NODE) {
+            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%f,", pid, tid, ts);
+        }
+
+        switch (node->ntype) {
+        case FEE_NODE:
+            name = get_name_from_fee_node(node, func_name_dict);
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%f,\"name\":\"%s\"", node->data.fee.dur / 1000, PyUnicode_AsUTF8(name));
+            Py_DECREF(name);
+
+            if (node->data.fee.caller_lineno >= 0) {
+                fprintf(fptr, ",\"caller_lineno\":%d", node->data.fee.caller_lineno);
+            }
+
+            PyObject* arg_dict = NULL;
+            if (node->data.fee.args) {
+                arg_dict = node->data.fee.args;
+                Py_INCREF(arg_dict);
+            }
+            if (node->data.fee.retval) {
+                if (!arg_dict) {
+                    arg_dict = PyDict_New();
+                }
+                PyDict_SetItemString(arg_dict, "return_value", node->data.fee.retval);
+            }
+            if (arg_dict) {
+                fprintf(fptr, ",\"args\":");
+                fprintjson(fptr, arg_dict);
+            }
+            break;
+        case INSTANT_NODE:
+            fprintf(fptr, "\"ph\":\"i\",\"cat\":\"instant\",\"name\":\"%s\",\"s\":\"%s\",\"args\":",
+                    PyUnicode_AsUTF8(node->data.instant.name), PyUnicode_AsUTF8(node->data.instant.scope));
+            fprintjson(fptr, node->data.instant.args);
+            break;
+        case COUNTER_NODE:
+            fprintf(fptr, "\"ph\":\"C\",\"name\":\"%s\",\"args\":",
+                    PyUnicode_AsUTF8(node->data.counter.name));
+            fprintjson(fptr, node->data.counter.args);
+            break;
+        case OBJECT_NODE:
+            fprintf(fptr, "\"ph\":\"%s\",\"id\":\"%s\",\"name\":\"%s\"",
+                    PyUnicode_AsUTF8(node->data.object.ph), PyUnicode_AsUTF8(node->data.object.id), PyUnicode_AsUTF8(node->data.object.name));
+            if (!(node->data.object.args == Py_None)) {
+                fprintf(fptr, ",\"args\":");
+                fprintjson(fptr, node->data.object.args);
+            }
+            break;
+        case RAW_NODE:
+            // We still need to tid from node and we need the pid
+            ;
+            PyObject* py_pid = PyLong_FromLong(pid);
+            PyObject* py_tid = PyLong_FromLong(node->tid);
+            PyObject* dict = node->data.raw;
+
+            PyDict_SetItemString(dict, "pid", py_pid);
+            PyDict_SetItemString(dict, "tid", py_tid);
+            fprintjson(fptr, dict);
+            fprintf(fptr, ",");
+            Py_DECREF(py_tid);
+            break;
+        default:
+            printf("Unknown Node Type!\n");
+            exit(1);
+        }
+        if (node->ntype != RAW_NODE) {
+            fprintf(fptr, "},");
+        }
+        clear_node(node);
+        curr = curr + 1;
+        if (curr == self->buffer + self->buffer_size) {
+            curr = self->buffer;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+        Py_ssize_t pos = 0;
+        PyObject* key = NULL;
+        PyObject* value = NULL;
+        while (PyDict_Next(task_dict, &pos, &key, &value)) {
+            PyObject* tid_repr = PyObject_Repr(key);
+            fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%s,\"name\":\"thread_name\",\"args\":{\"name\":\"%s\"}},",
+                    pid, PyUnicode_AsUTF8(tid_repr), PyUnicode_AsUTF8(value));
+            Py_DECREF(tid_repr);
+        }
+    }
+
+    Py_DECREF(func_name_dict);
+    self->buffer_tail_idx = self->buffer_head_idx;
+    fseek(fptr, -1, SEEK_CUR);
+    fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s}}", overflowed? "true": "false");
+    fclose(fptr);
+    Py_RETURN_NONE;
 }
 
 static PyObject*
@@ -1399,6 +1593,7 @@ PyInit_snaptrace(void)
     if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
         asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
     }
+    json_module = PyImport_ImportModule("json");
 
     return m;
 }

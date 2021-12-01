@@ -101,6 +101,8 @@ class VizUI:
                             help=argparse.SUPPRESS)
         parser.add_argument("--subprocess_child", action="store_true", default=False,
                             help=argparse.SUPPRESS)
+        parser.add_argument("--dump_raw", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--log_multiprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--log_async", action="store_true", default=False,
@@ -249,6 +251,7 @@ class VizUI:
             "plugins": options.plugins,
             "trace_self": options.trace_self,
             "min_duration": min_duration,
+            "dump_raw": True,
             "minimize_memory": options.minimize_memory
         }
 
@@ -281,7 +284,7 @@ class VizUI:
         if not options.ignore_multiprocess:
             patch_multiprocessing(tracer)
             if not options.subprocess_child:
-                patch_subprocess(self.args + ["--subprocess_child", "-o", tracer.output_file])
+                patch_subprocess(self.args + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file])
 
             # If we want to hook fork correctly with file waiter, we need to
             # use os.register_at_fork to write the file, and make sure
@@ -482,6 +485,7 @@ class VizUI:
             if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                 same_line_print("Wait for child processes to finish, Ctrl+C to skip")
                 while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                    print(os.listdir(self.multiprocess_output_dir))
                     time.sleep(0.5)
         except KeyboardInterrupt:
             pass

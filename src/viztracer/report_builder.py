@@ -13,6 +13,7 @@ import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, TextIO
 
 from .util import color_print, same_line_print
+from . import __version__
 
 
 def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
@@ -113,6 +114,8 @@ class ReportBuilder:
 
         if display_time_unit is not None:
             self.combined_json["displayTimeUnit"] = display_time_unit
+
+        self.combined_json["viztracer_metadata"]["version"] = __version__
 
         if file_info:
             self.combined_json["file_info"] = {"files": {}, "functions": {}}
