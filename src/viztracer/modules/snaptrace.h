@@ -6,6 +6,12 @@
 
 #include <Python.h>
 #include <frameobject.h>
+#if _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
+
 #define SNAPTRACE_MAX_STACK_DEPTH (1 << 0)
 #define SNAPTRACE_INCLUDE_FILES (1 << 1)
 #define SNAPTRACE_EXCLUDE_FILES (1 << 2)
