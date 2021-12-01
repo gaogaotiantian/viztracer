@@ -872,12 +872,12 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        long ts_long = node->ts;
+        long long ts_long = node->ts;
         unsigned long tid = node->tid;
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (curr->data.fee.asyncio_task != NULL) {
-                tid = ((unsigned long)curr->data.fee.asyncio_task) & 0xffffff;
+                tid = (unsigned long)(((unsigned long long)curr->data.fee.asyncio_task) & 0xffffff);
                 PyObject* task_id = PyLong_FromLong(tid);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;
@@ -896,14 +896,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
         }
         if (node->ntype != RAW_NODE) {
             // printf("%f") is about 10x slower than print("%d")
-            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%ld.%ld,", pid, tid, ts_long / 1000, ts_long % 1000);
+            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%lld.%lld,", pid, tid, ts_long / 1000, ts_long % 1000);
         }
 
         switch (node->ntype) {
         case FEE_NODE:
             ;
-            long dur_long = node->data.fee.dur;
-            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%ld.%ld,\"name\":\"", dur_long / 1000, dur_long % 1000);
+            long long dur_long = node->data.fee.dur;
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%lld.%lld,\"name\":\"", dur_long / 1000, dur_long % 1000);
             fprintfeename(fptr, node);
             fputc('\"', fptr);
 
