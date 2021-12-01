@@ -95,17 +95,18 @@ class TestPerformance(BaseTmpl):
         tracer.stop()
         with bm_timer.time("c", "parse"):
             tracer.parse()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ofile = os.path.join(tmpdir, "result.json")
-            with bm_timer.time("c", "save"):
-                tracer.save(output_file=ofile)
+            instrumented_c_parse = t.get_time()
+        with Timer() as t:
+            with io.StringIO() as s:
+                tracer.save(s)
+            instrumented_c_json = t.get_time()
         tracer.start()
         func()
         tracer.stop()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ofile = os.path.join(tmpdir, "result.json")
-            with bm_timer.time("c", "dump"):
-                tracer.dump(ofile)
+        with Timer() as t:
+            tracer.dump("tmp.json")
+        instrumented_c_dump = t.get_time()
+        os.remove("tmp.json")
         tracer.clear()
 
         # With cProfiler
@@ -117,7 +118,18 @@ class TestPerformance(BaseTmpl):
 
         gc.enable()
 
-        bm_timer.print_result()
+        def time_str(name, origin, instrumented):
+            return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
+
+        print(time_str("origin", origin, origin))
+        print(time_str("c+vdb", origin, instrumented_c_vdb)
+              + time_str("parse", origin, instrumented_c_vdb_parse)
+              + time_str("json", origin, instrumented_c_vdb_json))
+        print(time_str("c", origin, instrumented_c)
+              + time_str("parse", origin, instrumented_c_parse)
+              + time_str("json", origin, instrumented_c_json)
+              + time_str("dump", origin, instrumented_c_dump))
+        print(time_str("cProfile", origin, cprofile))
 
     def test_fib(self):
         def fib():

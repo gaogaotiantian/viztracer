@@ -485,6 +485,7 @@ class VizUI:
             if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                 same_line_print("Wait for child processes to finish, Ctrl+C to skip")
                 while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                    print(os.listdir(self.multiprocess_output_dir))
                     time.sleep(0.5)
         except KeyboardInterrupt:
             pass

@@ -823,6 +823,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
     struct MetadataNode* metadata_node = NULL;
     PyObject* task_dict = NULL;
+    PyObject* func_name_dict = PyDict_New();
 
     if (self->fix_pid > 0) {
         pid = self->fix_pid;
@@ -872,13 +873,16 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        long long ts_long = node->ts;
+        PyObject* dict = PyDict_New();
+        PyObject* name = NULL;
+        double ts = node->ts / 1000;
         unsigned long tid = node->tid;
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (curr->data.fee.asyncio_task != NULL) {
-                tid = (unsigned long)(((unsigned long long)curr->data.fee.asyncio_task) & 0xffffff);
+                tid = ((unsigned long)curr->data.fee.asyncio_task) & 0xffffff;
                 PyObject* task_id = PyLong_FromLong(tid);
+                PyDict_SetItemString(dict, "tid", task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;
                     if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
@@ -895,17 +899,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             }
         }
         if (node->ntype != RAW_NODE) {
-            // printf("%f") is about 10x slower than print("%d")
-            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%lld.%lld,", pid, tid, ts_long / 1000, ts_long % 1000);
+            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%f,", pid, tid, ts);
         }
 
         switch (node->ntype) {
         case FEE_NODE:
-            ;
-            long long dur_long = node->data.fee.dur;
-            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%lld.%lld,\"name\":\"", dur_long / 1000, dur_long % 1000);
-            fprintfeename(fptr, node);
-            fputc('\"', fptr);
+            name = get_name_from_fee_node(node, func_name_dict);
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%f,\"name\":\"%s\"", node->data.fee.dur / 1000, PyUnicode_AsUTF8(name));
+            Py_DECREF(name);
 
             if (node->data.fee.caller_lineno >= 0) {
                 fprintf(fptr, ",\"caller_lineno\":%d", node->data.fee.caller_lineno);
@@ -955,7 +956,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "pid", py_pid);
             PyDict_SetItemString(dict, "tid", py_tid);
             fprintjson(fptr, dict);
-            fputc(',', fptr);
+            fprintf(fptr, ",");
             Py_DECREF(py_tid);
             break;
         default:
@@ -963,7 +964,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             exit(1);
         }
         if (node->ntype != RAW_NODE) {
-            fputs("},", fptr);
+            fprintf(fptr, "},");
         }
         clear_node(node);
         curr = curr + 1;
@@ -984,6 +985,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
         }
     }
 
+    Py_DECREF(func_name_dict);
     self->buffer_tail_idx = self->buffer_head_idx;
     fseek(fptr, -1, SEEK_CUR);
     fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s}}", overflowed? "true": "false");
