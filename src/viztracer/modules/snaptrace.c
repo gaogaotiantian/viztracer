@@ -872,7 +872,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        double ts = node->ts / 1000;
+        long ts_long = node->ts;
         unsigned long tid = node->tid;
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
@@ -895,12 +895,15 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             }
         }
         if (node->ntype != RAW_NODE) {
-            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%f,", pid, tid, ts);
+            // printf("%f") is about 10x slower than print("%d")
+            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%ld.%ld,", pid, tid, ts_long / 1000, ts_long % 1000);
         }
 
         switch (node->ntype) {
         case FEE_NODE:
-            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%f,\"name\":\"", node->data.fee.dur / 1000);
+            ;
+            long dur_long = node->data.fee.dur;
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%ld.%ld,\"name\":\"", dur_long / 1000, dur_long % 1000);
             fprintfeename(fptr, node);
             fputc('\"', fptr);
 
@@ -952,7 +955,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "pid", py_pid);
             PyDict_SetItemString(dict, "tid", py_tid);
             fprintjson(fptr, dict);
-            fprintf(fptr, ",");
+            fputc(',', fptr);
             Py_DECREF(py_tid);
             break;
         default:
@@ -960,7 +963,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             exit(1);
         }
         if (node->ntype != RAW_NODE) {
-            fprintf(fptr, "},");
+            fputs("},", fptr);
         }
         clear_node(node);
         curr = curr + 1;
