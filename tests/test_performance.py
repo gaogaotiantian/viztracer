@@ -1,11 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import contextlib
 import cProfile
 import gc
-import io
 import os
 import random
+import tempfile
 import time
 from viztracer import VizTracer
 from .base_tmpl import BaseTmpl
@@ -26,79 +27,97 @@ class Timer:
         return time.perf_counter() - self.timer
 
 
+class BenchmarkTimer:
+    def __init__(self):
+        self.timer_baseline = None
+        self.timer_experiments = {}
+        self._set_up_funcs = []
+
+    @contextlib.contextmanager
+    def time(self, title, section=None, baseline=False):
+        for func, args, kwargs in self._set_up_funcs:
+            func(*args, **kwargs)
+        start_time = time.perf_counter()
+        try:
+            yield
+        finally:
+            end_time = time.perf_counter()
+            data = {
+                "dur": end_time - start_time,
+                "section": section
+            }
+            if baseline:
+                self.timer_baseline = data
+            else:
+                if title not in self.timer_experiments:
+                    self.timer_experiments[title] = []
+                self.timer_experiments[title].append(data)
+
+    def print_result(self):
+        def time_str(baseline, experiment):
+            return "{:.9f}({:.2f})[{}]".format(experiment["dur"], experiment["dur"] / baseline["dur"], experiment["section"])
+        for experiments in self.timer_experiments.values():
+            print(" ".join([time_str(self.timer_baseline, experiment) for experiment in experiments]))
+
+    def add_set_up_func(self, func, *args, **kwargs):
+        self._set_up_funcs.append((func, args, kwargs))
+
+
 class TestPerformance(BaseTmpl):
     def do_one_function(self, func):
+        bm_timer = BenchmarkTimer()
+        bm_timer.add_set_up_func(gc.collect)
         gc.collect()
         gc.disable()
         # the original speed
-        with Timer() as t:
+        with bm_timer.time("baseline", "baseline", baseline=True):
             func()
-            origin = t.get_time()
 
-        gc.collect()
         # With viztracer + c tracer + vdb
         tracer = VizTracer(verbose=0, vdb=True)
         tracer.start()
-        with Timer() as t:
+        with bm_timer.time("c+vdb", "c+vdb"):
             func()
-            instrumented_c_vdb = t.get_time()
         tracer.stop()
-        with Timer() as t:
+        with bm_timer.time("c+vdb", "parse"):
             tracer.parse()
-            instrumented_c_vdb_parse = t.get_time()
-        with Timer() as t:
-            tracer.save(output_file="tmp.json")
-            instrumented_c_vdb_json = t.get_time()
-        os.remove("tmp.json")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ofile = os.path.join(tmpdir, "result.json")
+            with bm_timer.time("c+vdb", "save"):
+                tracer.save(output_file=ofile)
         tracer.clear()
 
-        gc.collect()
         # With viztracer + c tracer
         tracer = VizTracer(verbose=0)
         tracer.start()
-        with Timer() as t:
+        with bm_timer.time("c", "c"):
             func()
-            instrumented_c = t.get_time()
         tracer.stop()
-        with Timer() as t:
+        with bm_timer.time("c", "parse"):
             tracer.parse()
-            instrumented_c_parse = t.get_time()
-        with Timer() as t:
-            with io.StringIO() as s:
-                tracer.save(s)
-            instrumented_c_json = t.get_time()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ofile = os.path.join(tmpdir, "result.json")
+            with bm_timer.time("c", "save"):
+                tracer.save(output_file=ofile)
         tracer.start()
         func()
         tracer.stop()
-        with Timer() as t:
-            tracer.dump("tmp.json")
-        instrumented_c_dump = t.get_time()
-        os.remove("tmp.json")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ofile = os.path.join(tmpdir, "result.json")
+            with bm_timer.time("c", "dump"):
+                tracer.dump(ofile)
         tracer.clear()
 
-        gc.collect()
         # With cProfiler
         pr = cProfile.Profile()
         pr.enable()
-        with Timer() as t:
+        with bm_timer.time("cProfile", "cProfile"):
             func()
-            cprofile = t.get_time()
         pr.disable()
 
         gc.enable()
 
-        def time_str(name, origin, instrumented):
-            return "{:.9f}({:.2f})[{}] ".format(instrumented, instrumented / origin, name)
-
-        print(time_str("origin", origin, origin))
-        print(time_str("c+vdb", origin, instrumented_c_vdb)
-              + time_str("parse", origin, instrumented_c_vdb_parse)
-              + time_str("json", origin, instrumented_c_vdb_json))
-        print(time_str("c", origin, instrumented_c)
-              + time_str("parse", origin, instrumented_c_parse)
-              + time_str("json", origin, instrumented_c_json)
-              + time_str("dump", origin, instrumented_c_dump))
-        print(time_str("cProfile", origin, cprofile))
+        bm_timer.print_result()
 
     def test_fib(self):
         def fib():
@@ -164,6 +183,52 @@ class TestPerformance(BaseTmpl):
                 return ret
             ListOperation(205)
         self.do_one_function(list_operation)
+
+    def test_float(self):
+        from math import sin, cos, sqrt
+
+        class Point(object):
+            __slots__ = ('x', 'y', 'z')
+
+            def __init__(self, i):
+                self.x = x = sin(i)
+                self.y = cos(i) * 3
+                self.z = (x * x) / 2
+
+            def __repr__(self):
+                return "<Point: x=%s, y=%s, z=%s>" % (self.x, self.y, self.z)
+
+            def normalize(self):
+                x = self.x
+                y = self.y
+                z = self.z
+                norm = sqrt(x * x + y * y + z * z)
+                self.x /= norm
+                self.y /= norm
+                self.z /= norm
+
+            def maximize(self, other):
+                self.x = self.x if self.x > other.x else other.x
+                self.y = self.y if self.y > other.y else other.y
+                self.z = self.z if self.z > other.z else other.z
+                return self
+
+        def maximize(points):
+            next = points[0]
+            for p in points[1:]:
+                next = next.maximize(p)
+            return next
+
+        def benchmark():
+            n = 100
+            points = [None] * n
+            for i in range(n):
+                points[i] = Point(i)
+            for p in points:
+                p.normalize()
+            return maximize(points)
+
+        self.do_one_function(benchmark)
 
 
 class TestFilterPerformance(BaseTmpl):
