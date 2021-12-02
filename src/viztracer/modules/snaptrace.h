@@ -4,6 +4,14 @@
 #ifndef __SNAPTRACE_H__
 #define __SNAPTRACE_H__
 
+#include <Python.h>
+#include <frameobject.h>
+#if _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
+
 #define SNAPTRACE_MAX_STACK_DEPTH (1 << 0)
 #define SNAPTRACE_INCLUDE_FILES (1 << 1)
 #define SNAPTRACE_EXCLUDE_FILES (1 << 2)
@@ -70,5 +78,11 @@ typedef struct {
     long buffer_tail_idx;
     struct MetadataNode* metadata_head;
 } TracerObject;
+
+extern PyObject* threading_module;
+extern PyObject* multiprocessing_module;
+extern PyObject* json_module;
+extern PyObject* asyncio_module;
+extern PyObject* asyncio_tasks_module;
 
 #endif

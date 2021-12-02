@@ -126,3 +126,42 @@ PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
 
     return ret;
 }
+
+static void fputs_escape(const char* s, FILE* fptr)
+{
+    while (*s != 0) {
+        if (*s == '\\' || *s == '\"') {
+            fputc('\\', fptr);
+        }
+        fputc(*s, fptr);
+        s++;
+    }
+}
+
+void fprintfeename(FILE* fptr, struct EventNode* node)
+{
+    if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
+        fputs(PyUnicode_AsUTF8(node->data.fee.co_name), fptr);
+        fputs(" (", fptr);
+        fputs_escape(PyUnicode_AsUTF8(node->data.fee.co_filename), fptr);
+        fprintf(fptr, ":%d)", node->data.fee.co_firstlineno);
+    } else {
+        if (node->data.fee.m_module) {
+            // The function belongs to a module
+            fputs(PyUnicode_AsUTF8(node->data.fee.m_module), fptr);
+            fputc('.', fptr);
+            fputs(node->data.fee.ml_name, fptr);
+        } else {
+            // The function is a class method
+            if (node->data.fee.tp_name) {
+                // It's not a static method, has __self__
+                fputs(node->data.fee.tp_name, fptr);
+                fputc('.', fptr);
+                fputs(node->data.fee.ml_name, fptr);
+            } else {
+                // It's a static method, does not have __self__
+                fputs(node->data.fee.ml_name, fptr);
+            }
+        }
+    }
+}
