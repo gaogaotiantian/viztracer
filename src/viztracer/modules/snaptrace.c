@@ -928,9 +928,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             }
             break;
         case INSTANT_NODE:
-            fprintf(fptr, "\"ph\":\"i\",\"cat\":\"instant\",\"name\":\"%s\",\"s\":\"%s\",\"args\":",
-                    PyUnicode_AsUTF8(node->data.instant.name), PyUnicode_AsUTF8(node->data.instant.scope));
-            fprintjson(fptr, node->data.instant.args);
+            if (node->data.instant.args == Py_None) {
+                fprintf(fptr, "\"ph\":\"i\",\"cat\":\"instant\",\"name\":\"%s\",\"s\":\"%s\"",
+                        PyUnicode_AsUTF8(node->data.instant.name), PyUnicode_AsUTF8(node->data.instant.scope));
+            } else {
+                fprintf(fptr, "\"ph\":\"i\",\"cat\":\"instant\",\"name\":\"%s\",\"s\":\"%s\",\"args\":",
+                        PyUnicode_AsUTF8(node->data.instant.name), PyUnicode_AsUTF8(node->data.instant.scope));
+                fprintjson(fptr, node->data.instant.args);
+            }
             break;
         case COUNTER_NODE:
             fprintf(fptr, "\"ph\":\"C\",\"name\":\"%s\",\"args\":",

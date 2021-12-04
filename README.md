@@ -187,6 +187,7 @@ VizTracer can log extra information without changing your source code
 * [Garbage Collector Operation](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-garbage-collector)
 * [Function Input Arguments](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-arguments)
 * [Function Return Value](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-function-return-value)
+* [Audit Events](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-audit)
 * [Raised Exceptions](https://viztracer.readthedocs.io/en/stable/extra_log.html#log-exception)
 
 ### Add Custom Event
