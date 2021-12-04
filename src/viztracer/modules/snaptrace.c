@@ -896,14 +896,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
         }
         if (node->ntype != RAW_NODE) {
             // printf("%f") is about 10x slower than print("%d")
-            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%lld.%lld,", pid, tid, ts_long / 1000, ts_long % 1000);
+            fprintf(fptr, "{\"pid\":%lu,\"tid\":%lu,\"ts\":%lld.%03lld,", pid, tid, ts_long / 1000, ts_long % 1000);
         }
 
         switch (node->ntype) {
         case FEE_NODE:
             ;
             long long dur_long = node->data.fee.dur;
-            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%lld.%lld,\"name\":\"", dur_long / 1000, dur_long % 1000);
+            fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%lld.%03lld,\"name\":\"", dur_long / 1000, dur_long % 1000);
             fprintfeename(fptr, node);
             fputc('\"', fptr);
 
