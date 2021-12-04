@@ -8,6 +8,7 @@ import configparser
 import multiprocessing.util  # type: ignore
 import platform
 import os
+import re
 import shutil
 import signal
 import sys
@@ -91,6 +92,8 @@ class VizUI:
                             help="log variable with specified names as a number(using VizCounter)")
         parser.add_argument("--log_attr", nargs="*", default=None,
                             help="log attribute with specified names")
+        parser.add_argument("--log_audit", nargs="*", default=None,
+                            help="log audit when audit event is raised, takes regex")
         parser.add_argument("--log_func_exec", nargs="*", default=None,
                             help="log execution of function with specified names")
         parser.add_argument("--log_func_entry", nargs="*", default=None,
@@ -291,9 +294,18 @@ class VizUI:
             # os.exec won't clear viztracer so that the file lives forever.
             # This is basically equivalent to py3.8 + Linux
             if hasattr(os, "register_at_fork") and hasattr(sys, "addaudithook"):
-                def audit_hook(event, args):  # pragma: no cover
-                    if event == "os.exec":
-                        tracer.exit_routine()
+                if options.log_audit is not None:
+                    audit_regex_list = [re.compile(regex) for regex in options.log_audit]
+
+                    def audit_hook(event, args):  # pragma: no cover
+                        if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
+                            tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
+                        if event == "os.exec":
+                            tracer.exit_routine()
+                else:
+                    def audit_hook(event, args):  # pragma: no cover
+                        if event == "os.exec":
+                            tracer.exit_routine()
                 sys.addaudithook(audit_hook)  # type: ignore
                 os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
 

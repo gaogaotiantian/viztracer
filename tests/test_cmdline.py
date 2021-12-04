@@ -8,6 +8,7 @@ import signal
 import sys
 import platform
 import re
+from unittest.case import skipIf
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -116,6 +117,14 @@ try:
     raise Exception("lol")
 except Exception:
     pass
+"""
+
+
+file_log_audit = """
+# something viztracer does not use
+import netrc
+a = 0
+b = id(a)
 """
 
 
@@ -309,6 +318,34 @@ class TestCommandLineBasic(CmdlineTmpl):
                       script=file_log_func_exec,
                       expected_output_file="result.json",
                       expected_entries=7)
+
+    @skipIf(sys.version_info < (3, 8), "sys.addaudithook does not exist on 3.8-")
+    def test_log_audit(self):
+        def check_func(include_names, exclude_names=[]):
+            def inner(data):
+                name_set = set()
+                for event in data["traceEvents"]:
+                    if event["ph"] == "i":
+                        name_set.add(event["name"])
+                self.assertGreaterEqual(name_set, set(include_names))
+                for name in exclude_names:
+                    self.assertNotIn(name, name_set)
+            return inner
+
+        self.template(["viztracer", "--log_audit", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_audit,
+                      expected_output_file="result.json",
+                      check_func=check_func(["builtins.id", "import"]))
+
+        self.template(["viztracer", "--log_audit", "i.*", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_audit,
+                      expected_output_file="result.json",
+                      check_func=check_func(["import"], ["buildins.id"]))
+
+        self.template(["viztracer", "--log_audit", "builtins.id", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_audit,
+                      expected_output_file="result.json",
+                      check_func=check_func(["builtins.id"], ["import"]))
 
     def test_log_exception(self):
         self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"],
