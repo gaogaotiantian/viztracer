@@ -293,21 +293,20 @@ class VizUI:
             # use os.register_at_fork to write the file, and make sure
             # os.exec won't clear viztracer so that the file lives forever.
             # This is basically equivalent to py3.8 + Linux
-            if hasattr(os, "register_at_fork") and hasattr(sys, "addaudithook"):
+            if hasattr(sys, "addaudithook"):
+                if hasattr(os, "register_at_fork"):
+                    def audit_hook(event, args):  # pragma: no cover
+                        if event == "os.exec":
+                            tracer.exit_routine()
+                    sys.addaudithook(audit_hook)  # type: ignore
+                    os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
                 if options.log_audit is not None:
                     audit_regex_list = [re.compile(regex) for regex in options.log_audit]
 
                     def audit_hook(event, args):  # pragma: no cover
                         if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
                             tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
-                        if event == "os.exec":
-                            tracer.exit_routine()
-                else:
-                    def audit_hook(event, args):  # pragma: no cover
-                        if event == "os.exec":
-                            tracer.exit_routine()
-                sys.addaudithook(audit_hook)  # type: ignore
-                os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
+                    sys.addaudithook(audit_hook)  # type: ignore
 
         # SIGTERM hook
         def term_handler(signalnum, frame):

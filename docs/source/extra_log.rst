@@ -74,6 +74,26 @@ them in the detailed information of the generated report. The log will be showed
 ``--`` is added to resolve the ambiguity. Every time an function matches regex ``<func_name>`` is called, its execution will be logged.
 If you don't know what regex is, simply using the full name of the function as ``<func_name>`` will allow you to log the function 
 
+Log Audit
+---------
+
+You can log audit events introduced since python 3.8. The audit events will be logged as instant events.
+
+.. code-block::
+
+    # -- is added to resolve ambiguity
+    viztracer --log_audit import builtins.input -- my_script.py
+
+    # regex is supported
+    viztracer --log_audit os.* -- my_script.py
+
+    # If no argument is given, log every audit
+    viztracer --log_audit -- my_script.py
+
+    # You sometimes need to quote the regex to avoid command line ambiguity
+    # (Linux terminal would think that you are passing files starts with '.')
+    viztracer --log_audit ".*" -- my_script.py
+
 Log Exception
 -------------
 
