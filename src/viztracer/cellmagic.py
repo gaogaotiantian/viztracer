@@ -10,16 +10,17 @@ try:
         @cell_magic
         def viztracer(self, line, cell, local_ns):
             from .viztracer import VizTracer
-            from .viewer import view
+            from .viewer import ServerThread
             from IPython.display import display  # type: ignore
             from ipywidgets import Button  # type: ignore
             code = self.shell.transform_cell(cell)
             file_path = "./viztracer_report.json"
             with VizTracer(verbose=0, output_file=file_path):
                 exec(code, local_ns, local_ns)
+            server = ServerThread(file_path)
 
             button = Button(description="VizTracer Report")
-            button.on_click(lambda b: view(file_path, once=True))
+            button.on_click(lambda b: server.view(file_path, once=True))
 
             display(button)
 

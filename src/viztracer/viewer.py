@@ -127,7 +127,7 @@ class VizViewerTCPServer(socketserver.TCPServer):
 
 
 class ServerThread(threading.Thread):
-    def __init__(self, path: str, port: int, flamegraph: bool):
+    def __init__(self, path: str, port: int = 9001, flamegraph: bool = False):
         self.path = path
         self.port = port
         self.link = f"http://127.0.0.1:{self.port}"
@@ -136,6 +136,8 @@ class ServerThread(threading.Thread):
         self.file_info = None
         self.httpd: Optional[VizViewerTCPServer] = None
         self.last_active = time.time()
+        self.ready = threading.Event()
+        self.ready.clear()
         super().__init__(daemon=True)
 
     def run(self):
@@ -147,6 +149,8 @@ class ServerThread(threading.Thread):
             flamegraph=self.flamegraph,
             quiet=True
         )
+        # If it returns from view(), also set ready
+        self.ready.set()
 
     def view(
             self,
@@ -195,6 +199,7 @@ class ServerThread(threading.Thread):
                 import webbrowser
                 webbrowser.open_new_tab(f'http://127.0.0.1:{port}')
             try:
+                self.ready.set()
                 if once:
                     self.httpd.timeout = timeout
                     while not self.httpd.__dict__.get("trace_served", False):
@@ -240,6 +245,7 @@ class DirectoryViewer:
             if port not in ports_used:
                 t = ServerThread(path, port, self.flamegraph)
                 t.start()
+                t.ready.wait()
                 return t
         assert False, "Should always have a port available"
 
