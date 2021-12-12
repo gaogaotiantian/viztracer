@@ -79,8 +79,8 @@ class MockOpen(unittest.TestCase):
         for _ in range(4):
             time.sleep(0.5)
             try:
-                resp = urllib.request.urlopen(url)
-            except:
+                resp = urllib.request.urlopen(url, timeout=2)
+            except Exception:
                 continue
             self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
 
@@ -242,7 +242,7 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9003/")
 
-    @unittest.skipIf(sys.platform == "darwin" , "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
     def test_directory_browser(self):
         html = '<html></html>'
         try:

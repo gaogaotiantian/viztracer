@@ -131,48 +131,43 @@ class VizViewerTCPServer(socketserver.TCPServer):
 
 
 class ServerThread(threading.Thread):
-    def __init__(self, path: str, port: int = 9001, flamegraph: bool = False):
+    def __init__(
+            self,
+            path: str,
+            port: int = 9001,
+            once: bool = False,
+            flamegraph: bool = False,
+            timeout: float = 10,
+            quiet: bool = False):
         self.path = path
         self.port = port
+        self.once = once
+        self.timeout = timeout
+        self.quiet = quiet
         self.link = f"http://127.0.0.1:{self.port}"
         self.flamegraph = flamegraph
         self.fg_data: Optional[List[Dict[str, Any]]] = None
         self.file_info = None
         self.httpd: Optional[VizViewerTCPServer] = None
         self.last_active = time.time()
+        self.retcode = None
         self.ready = threading.Event()
         self.ready.clear()
         super().__init__(daemon=True)
 
     def run(self):
-        self.view(
-            self.path,
-            server_only=True,
-            port=self.port,
-            once=False,
-            flamegraph=self.flamegraph,
-            quiet=True
-        )
+        self.retcode = self.view()
         # If it returns from view(), also set ready
         self.ready.set()
 
-    def view(
-            self,
-            path: str,
-            server_only: bool = False,
-            port: int = 9001,
-            once: bool = False,
-            flamegraph: bool = False,
-            timeout: float = 10,
-            quiet: bool = False) -> int:
-
+    def view(self) -> int:
         # Get file data
-        filename = os.path.basename(path)
+        filename = os.path.basename(self.path)
 
         Handler: Callable[..., HttpHandler]
-        if flamegraph:
+        if self.flamegraph:
             if filename.endswith("json"):
-                with open(path, encoding="utf-8", errors="ignore") as f:
+                with open(self.path, encoding="utf-8", errors="ignore") as f:
                     trace_data = json.load(f)
                 fg = FlameGraph(trace_data)
                 self.fg_data = fg.dump_to_perfetto()
@@ -182,7 +177,7 @@ class ServerThread(threading.Thread):
                 return 1
         elif filename.endswith("json"):
             trace_data = None
-            with open(path, encoding="utf-8", errors="ignore") as f:
+            with open(self.path, encoding="utf-8", errors="ignore") as f:
                 trace_data = json.load(f)
                 self.file_info = trace_data.get("file_info", {})
             Handler = functools.partial(PerfettoHandler, self)
@@ -193,25 +188,18 @@ class ServerThread(threading.Thread):
             return 1
 
         socketserver.TCPServer.allow_reuse_address = True
-        with VizViewerTCPServer(('0.0.0.0', port), Handler) as self.httpd:
-            if not once and not quiet:
+        with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
+            if not self.once and not self.quiet:
                 print("Running vizviewer")
-                print(f"You can also view your trace on http://localhost:{port}")
+                print(f"You can also view your trace on http://localhost:{self.port}")
                 print("Press Ctrl+C to quit")
-            if not server_only:
-                # import webbrowser only if necessary
-                import webbrowser
-                webbrowser.open_new_tab(f'http://127.0.0.1:{port}')
-            try:
-                self.ready.set()
-                if once:
-                    self.httpd.timeout = timeout
-                    while not self.httpd.__dict__.get("trace_served", False):
-                        self.httpd.handle_request()
-                else:
-                    self.httpd.serve_forever()
-            except KeyboardInterrupt:
-                return 0
+            self.ready.set()
+            if self.once:
+                self.httpd.timeout = self.timeout
+                while not self.httpd.__dict__.get("trace_served", False):
+                    self.httpd.handle_request()
+            else:
+                self.httpd.serve_forever()
 
         return 0
 
@@ -247,7 +235,7 @@ class DirectoryViewer:
         ports_used = set((serv.port for serv in self.servers.values()))
         for port in range(self.port + 1, self.port + max_port_number + 1):
             if port not in ports_used:
-                t = ServerThread(path, port, self.flamegraph)
+                t = ServerThread(path, port=port, flamegraph=self.flamegraph, quiet=True)
                 t.start()
                 t.ready.wait()
                 return t
@@ -286,6 +274,10 @@ class DirectoryViewer:
             try:
                 httpd.serve_forever()
             except KeyboardInterrupt:
+                for server in self.servers.values():
+                    server.httpd.shutdown()
+                    server.join()
+                self.servers = {}
                 return 0
 
 
@@ -322,18 +314,28 @@ def viewer_main():
         path = os.path.abspath(options.file[0])
         cwd = os.getcwd()
         try:
-            server = ServerThread(path, options.port, options.flamegraph)
-            ret_code = server.view(
+            server = ServerThread(
                 path,
-                server_only=options.server_only,
                 port=options.port,
                 once=options.once,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout
             )
+            server.start()
+            server.ready.wait()
+            if server.retcode is not None:
+                return server.retcode
+            if not options.server_only:
+                # import webbrowser only if necessary
+                import webbrowser
+                webbrowser.open_new_tab(f'http://127.0.0.1:{options.port}')
+            server.join()
+        except KeyboardInterrupt:
+            server.httpd.shutdown()
+            server.join(timeout=2)
         finally:
             os.chdir(cwd)
-        return ret_code
+        return 0
     else:
         print(f"File {f} does not exist!")
         return 1
