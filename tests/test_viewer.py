@@ -240,6 +240,7 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         with Viewer(test_data_dir):
@@ -252,6 +253,7 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9003/")
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_flamegraph(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         with Viewer(test_data_dir, flamegraph=True):
@@ -267,6 +269,7 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen("http://127.0.0.1:9002/flamegraph")
             self.assertEqual(len(json.loads(resp.read().decode("utf-8"))[0]["flamegraph"]), 2)
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_timeout(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         with Viewer(test_data_dir, timeout=2):
@@ -280,6 +283,7 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9002/")
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_max_port(self):
         try:
             tmp_dir = tempfile.mkdtemp()
