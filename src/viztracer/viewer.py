@@ -239,7 +239,7 @@ class DirectoryViewer:
                 t.start()
                 t.ready.wait()
                 return t
-        assert False, "Should always have a port available"
+        assert False, "Should always have a port available"  # pragma: no cover
 
     def clean_servers(self, force=False):
         curr_time = time.time()

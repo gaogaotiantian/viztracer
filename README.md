@@ -68,6 +68,8 @@ vizviewer --once result.json
 
 ```
 vizviewer result.json
+# You can display all the files in a directory and open them in browser too
+vizviewer ./
 ```
 
 <details>
