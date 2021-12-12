@@ -127,7 +127,7 @@ class DirectoryHandler(HttpHandler):
             with chdir_temp(self.directory):
                 super().do_GET()
 
-    def send_head(self):
+    def send_head(self):  # pragma: no cover
         """
         Return list_directory even if there's an index.html in the dir
         """
