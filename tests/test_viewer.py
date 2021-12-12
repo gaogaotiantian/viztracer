@@ -76,9 +76,13 @@ class MockOpen(unittest.TestCase):
         super().__init__()
 
     def get_and_check(self, url, expected):
-        time.sleep(0.5)
-        resp = urllib.request.urlopen(url)
-        self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
+        for _ in range(4):
+            time.sleep(0.5)
+            try:
+                resp = urllib.request.urlopen(url)
+            except:
+                continue
+            self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
 
     def __call__(self, url):
         self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
@@ -222,6 +226,28 @@ class TestViewer(CmdlineTmpl):
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
+        finally:
+            os.remove(f.name)
+
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
+    def test_directory(self):
+        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        with Viewer(test_data_dir):
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+            self.assertEqual(resp.code, 200)
+            self.assertIn("fib.json", resp.read().decode("utf-8"))
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9003/")
+
+    @unittest.skipIf(sys.platform == "darwin" , "MacOS has a high security check for multiprocessing")
+    def test_directory_browser(self):
+        html = '<html></html>'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+                f.write(html)
             tmp_dir = os.path.dirname(f.name)
             with unittest.mock.patch.object(sys, "argv", ["vizviewer", tmp_dir]):
                 with unittest.mock.patch.object(
@@ -239,19 +265,6 @@ class TestViewer(CmdlineTmpl):
                     self.assertEqual(killer_process.returncode, 0)
         finally:
             os.remove(f.name)
-
-    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
-    def test_directory(self):
-        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
-        with Viewer(test_data_dir):
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
-            self.assertEqual(resp.code, 200)
-            self.assertIn("fib.json", resp.read().decode("utf-8"))
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
-            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
-            self.assertEqual(resp.url, "http://127.0.0.1:9003/")
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_flamegraph(self):
