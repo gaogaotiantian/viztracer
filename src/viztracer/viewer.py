@@ -106,7 +106,11 @@ class HtmlHandler(HttpHandler):
 class DirectoryHandler(HttpHandler):
     def __init__(self, directory_viewer: "DirectoryViewer", *args, **kwargs):
         self.directory_viewer = directory_viewer
-        kwargs["directory"] = directory_viewer.base_path
+        # py3.6 does not have directory in kwargs
+        if "directory" in kwargs:
+            kwargs["directory"] = directory_viewer.base_path
+        else:
+            self.directory = directory_viewer.base_path
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
