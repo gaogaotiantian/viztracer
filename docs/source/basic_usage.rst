@@ -121,6 +121,16 @@ VizTracer will generate a ``result.json`` by default, which could be opened with
 
     vizviewer result.json
 
+You can also display all the files in a directory and open the reports in browser too. This is helpful
+when you have many files in one directory and want to check some or all of them.
+
+This could also be used when you have a report directory where reports are frequently added. You can
+leave ``vizviewer`` in the background and browse your reports with pure browser.
+
+.. code-block::
+
+    vizviewer your_directory/
+
 ``vizviewer`` will bring up webbrowser and open the report by default. You can disable this feature and
 only host an HTTP server on ``localhost:9001``, which you can access through your browser
 
