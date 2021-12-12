@@ -107,7 +107,7 @@ class DirectoryHandler(HttpHandler):
     def __init__(self, directory_viewer: "DirectoryViewer", *args, **kwargs):
         self.directory_viewer = directory_viewer
         # py3.6 does not have directory in kwargs
-        if sys.version_info > (3, 6):
+        if sys.version_info >= (3, 7):
             kwargs["directory"] = directory_viewer.base_path
         else:
             self.directory = directory_viewer.base_path
