@@ -2,10 +2,12 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import shutil
 from .cmdline_tmpl import CmdlineTmpl
 import json
 import multiprocessing
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -39,6 +41,12 @@ class Viewer(unittest.TestCase):
         self.process = None
         super().__init__()
 
+    def __enter__(self):
+        self.run()
+
+    def __exit__(self, type, value, traceback):
+        self.stop()
+
     def run(self):
         self.process = subprocess.Popen(self.cmd)
         self._wait_until_socket_on()
@@ -70,7 +78,7 @@ class MockOpen(unittest.TestCase):
     def get_and_check(self, url, expected):
         time.sleep(0.5)
         resp = urllib.request.urlopen(url)
-        self.assertEqual(resp.read().decode("utf-8"), expected)
+        self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
 
     def __call__(self, url):
         self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
@@ -214,8 +222,82 @@ class TestViewer(CmdlineTmpl):
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
+            tmp_dir = os.path.dirname(f.name)
+            with unittest.mock.patch.object(sys, "argv", ["vizviewer", tmp_dir]):
+                with unittest.mock.patch.object(
+                        webbrowser, "open_new_tab",
+                        MockOpen(r".*" + os.path.basename(f.name) + r".*")) as mock_obj:
+                    pid = os.getpid()
+                    killer_process = subprocess.Popen(
+                        ["python", "-c", f"import time, os, signal; time.sleep(1); os.kill({pid}, signal.SIGINT)"],
+                        stdout=subprocess.DEVNULL
+                    )
+                    viewer_main()
+                    mock_obj.p.join()
+                    self.assertEqual(mock_obj.p.exitcode, 0)
+                    killer_process.wait()
+                    self.assertEqual(killer_process.returncode, 0)
         finally:
             os.remove(f.name)
+
+    def test_directory(self):
+        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        with Viewer(test_data_dir):
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+            self.assertEqual(resp.code, 200)
+            self.assertIn("fib.json", resp.read().decode("utf-8"))
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9003/")
+
+    def test_directory_flamegraph(self):
+        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        with Viewer(test_data_dir, flamegraph=True):
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+            self.assertEqual(resp.code, 200)
+            self.assertIn("fib.json", resp.read().decode("utf-8"))
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            resp = urllib.request.urlopen("http://127.0.0.1:9002/vizviewer_info")
+            self.assertTrue(resp.code == 200)
+            self.assertTrue(json.loads(resp.read().decode("utf-8"))["is_flamegraph"], True)
+            resp = urllib.request.urlopen("http://127.0.0.1:9002/flamegraph")
+            self.assertEqual(len(json.loads(resp.read().decode("utf-8"))[0]["flamegraph"]), 2)
+
+    def test_directory_timeout(self):
+        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        with Viewer(test_data_dir, timeout=2):
+            time.sleep(0.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+            self.assertEqual(resp.code, 200)
+            self.assertIn("fib.json", resp.read().decode("utf-8"))
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            time.sleep(2.5)
+            resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
+            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+
+    def test_directory_max_port(self):
+        try:
+            tmp_dir = tempfile.mkdtemp()
+            json_data = {"traceEvents": []}
+            for i in range(15):
+                with open(os.path.join(tmp_dir, f"{i}.json"), "w") as f:
+                    json.dump(json_data, f)
+            with Viewer(tmp_dir):
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+                self.assertEqual(resp.code, 200)
+                for i in range(15):
+                    time.sleep(0.02)
+                    resp = urllib.request.urlopen(f"http://127.0.0.1:9001/{i}.json")
+                    self.assertEqual(resp.code, 200)
+                    self.assertRegex(resp.url, "http://127.0.0.1:90[0-1][0-9]/")
+        finally:
+            shutil.rmtree(tmp_dir)
 
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
