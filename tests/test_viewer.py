@@ -242,7 +242,8 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9003/")
 
-    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(sys.platform in ("darwin", "win32"),
+                     "MacOS has a high security check for multiprocessing, Windows can't handle SIGINT")
     def test_directory_browser(self):
         html = '<html></html>'
         try:
