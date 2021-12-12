@@ -4,7 +4,10 @@
 import argparse
 import contextlib
 import functools
+import html
+from http import HTTPStatus
 import http.server
+import io
 import json
 import os
 import socketserver
@@ -12,6 +15,7 @@ import sys
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
+import urllib.parse
 
 from .flamegraph import FlameGraph
 
@@ -122,6 +126,93 @@ class DirectoryHandler(HttpHandler):
         else:
             with chdir_temp(self.directory):
                 super().do_GET()
+
+    def send_head(self):
+        """
+        Return list_directory even if there's an index.html in the dir
+        """
+        path = self.translate_path(self.path)
+        if os.path.isdir(path):
+            parts = urllib.parse.urlsplit(self.path)
+            if not parts.path.endswith('/'):
+                # redirect browser - doing basically what apache does
+                self.send_response(HTTPStatus.MOVED_PERMANENTLY)
+                new_parts = (parts[0], parts[1], parts[2] + '/',
+                             parts[3], parts[4])
+                new_url = urllib.parse.urlunsplit(new_parts)
+                self.send_header("Location", new_url)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return None
+            else:
+                return self.list_directory(path)
+        return super().send_head()
+
+    def list_directory(self, path):  # pragma: no cover
+        """
+        Almost the same as SimpleHTTPRequestHandler.list_directory, but
+            * Does not display file that does not end with json
+            * Created a new tab when click
+        """
+        try:
+            list = os.listdir(path)
+        except OSError:
+            self.send_error(
+                HTTPStatus.NOT_FOUND,
+                "No permission to list directory")
+            return None
+        list.sort(key=lambda a: a.lower())
+        r = []
+        try:
+            displaypath = urllib.parse.unquote(self.path,
+                                               errors='surrogatepass')
+        except UnicodeDecodeError:
+            displaypath = urllib.parse.unquote(path)
+        displaypath = html.escape(displaypath, quote=False)
+        enc = sys.getfilesystemencoding()
+        title = 'Directory listing for %s' % displaypath
+        r.append('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+                 '"http://www.w3.org/TR/html4/strict.dtd">')
+        r.append('<html>\n<head>')
+        r.append('<meta http-equiv="Content-Type" '
+                 'content="text/html; charset=%s">' % enc)
+        r.append('<title>%s</title>\n</head>' % title)
+        r.append('<body>\n<h1>%s</h1>' % title)
+        r.append('<hr>\n<ul>')
+        for name in list:
+            fullname = os.path.join(path, name)
+            displayname = linkname = name
+            # Append / for directories or @ for symbolic links
+            if os.path.isdir(fullname):
+                displayname = name + "/"
+                linkname = name + "/"
+            elif not name.endswith("json") and not name.endswith("html"):
+                # Do not display files that we can't handle
+                continue
+            if os.path.islink(fullname):
+                displayname = name + "@"
+                # Note: a link to a directory displays with @ and links with /
+            if os.path.isdir(fullname):
+                r.append('<li><a href="%s">%s</a></li>'
+                         % (urllib.parse.quote(linkname,
+                                               errors='surrogatepass'),
+                            html.escape(displayname, quote=False)))
+            else:
+                # Open a new tab
+                r.append('<li><a href="%s" target="_blank">%s</a></li>'
+                         % (urllib.parse.quote(linkname,
+                                               errors='surrogatepass'),
+                            html.escape(displayname, quote=False)))
+        r.append('</ul>\n<hr>\n</body>\n</html>\n')
+        encoded = '\n'.join(r).encode(enc, 'surrogateescape')
+        f = io.BytesIO()
+        f.write(encoded)
+        f.seek(0)
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-type", "text/html; charset=%s" % enc)
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        return f
 
 
 class VizViewerTCPServer(socketserver.TCPServer):
