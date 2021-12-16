@@ -183,7 +183,7 @@ class VizUI:
         elif "--run" in argv[1:]:
             idx = argv.index("--run")
 
-        rcfile_parser = argparse.ArgumentParser()
+        rcfile_parser = argparse.ArgumentParser(add_help=False)
         rcfile_parser.add_argument("--rcfile", nargs="?", default=".viztracerrc")
         rc_options, _ = rcfile_parser.parse_known_args(argv[1:])
         default_namespace = self.load_config_file(rc_options.rcfile)
