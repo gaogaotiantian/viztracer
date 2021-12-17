@@ -164,8 +164,22 @@ loop.close()
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
-        result = self.template(["python", "-m", "viztracer"], expected_output_file=None)
-        self.assertIn("help", result.stdout.decode("utf8"))
+        result = self.template(["python", "-m", "viztracer"], expected_output_file=None).stdout.decode("utf8")
+        self.assertIn("help", result)
+        #  Check for a few more arguments to ensure we hit the intended argumentParser
+        self.assertIn("--output_file", result)
+        self.assertIn("--log_async", result)
+        self.assertIn("--attach", result)
+        self.assertIn("--plugins", result)
+        self.assertIn("--rcfile", result)
+
+    def test_help(self):
+        """Test that all three options print the same help page"""
+        result = self.template(["python", "-m", "viztracer"], expected_output_file=None).stdout.decode("utf-8")
+        result_h = self.template(["python", "-m", "viztracer", "-h"], expected_output_file=None).stdout.decode("utf-8")
+        result_help = self.template(["python", "-m", "viztracer", "--help"], expected_output_file=None).stdout.decode("utf-8")
+        self.assertEqual(result_h, result_help)
+        self.assertEqual(result, result_h)
 
     def test_run(self):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"])
