@@ -6,13 +6,31 @@ on:
 
 jobs:
   deploy-wheels:
-    name: Deploy wheels on ${{ matrix.os }}
+    name: Deploy wheels on ${{ matrix.os }} for ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [37, 38, 39, 310]
         manylinux-image: [manylinux2010, manylinux2014, manylinux_2_24]
+        arch: [auto]
+        include:
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 37
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 38
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 39
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 310
         exclude:
           # manyliunx image is not a valid variation on MacOS and Windows
           - os: macos-latest
@@ -26,6 +44,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Set up QEMU
+        if: ${{ matrix.arch == 'aarch64' }}
+        uses: docker/setup-qemu-action@v1
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -42,7 +63,8 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
-          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux-image }}
+          CIBW_ARCHS: ${{matrix.arch}}
+          CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
 
       - name: Publish wheels to PyPI Unix
