@@ -164,22 +164,24 @@ loop.close()
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
-        result = self.template(["python", "-m", "viztracer"], expected_output_file=None).stdout.decode("utf8")
-        self.assertIn("help", result)
+        result = self.template(["python", "-m", "viztracer"], expected_output_file=None)
+        result_stdout = result.stdout.decode("utf8")
+        self.assertIn("help", result_stdout)
         #  Check for a few more arguments to ensure we hit the intended argumentParser
-        self.assertIn("--output_file", result)
-        self.assertIn("--log_async", result)
-        self.assertIn("--attach", result)
-        self.assertIn("--plugins", result)
-        self.assertIn("--rcfile", result)
+        self.assertIn("--output_file", result_stdout)
+        self.assertIn("--log_async", result_stdout)
+        self.assertIn("--attach", result_stdout)
+        self.assertIn("--plugins", result_stdout)
+        self.assertIn("--rcfile", result_stdout)
 
     def test_help(self):
         """Test that all three options print the same help page"""
-        result = self.template(["python", "-m", "viztracer"], expected_output_file=None).stdout.decode("utf-8")
-        result_h = self.template(["python", "-m", "viztracer", "-h"], expected_output_file=None).stdout.decode("utf-8")
-        result_help = self.template(["python", "-m", "viztracer", "--help"], expected_output_file=None).stdout.decode("utf-8")
-        self.assertEqual(result_h, result_help)
-        self.assertEqual(result, result_h)
+        result = self.template(["python", "-m", "viztracer"], expected_output_file=None)
+        result_h = self.template(["python", "-m", "viztracer", "-h"], expected_output_file=None)
+        result_help = self.template(["python", "-m", "viztracer", "--help"], expected_output_file=None)
+
+        self.assertEqual(result_h.stdout.decode("utf-8"), result_help.stdout.decode("utf-8"))
+        self.assertEqual(result.stdout.decode("utf-8"), result_h.stdout.decode("utf-8"))
 
     def test_run(self):
         self.template(["python", "-m", "viztracer", "cmdline_test.py"])
