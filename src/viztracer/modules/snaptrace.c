@@ -53,6 +53,9 @@ PyObject* json_module = NULL;
 PyObject* asyncio_module = NULL;
 PyObject* asyncio_tasks_module = NULL;
 PyObject* asyncio_tasks_current_task = NULL;
+PyObject* trio_module = NULL;
+PyObject* trio_lowlevel_module = NULL;
+PyObject* trio_lowlevel_current_task = NULL;
 
 #if _WIN32
 extern LARGE_INTEGER qpc_freq; 
@@ -331,6 +334,17 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 if (is_python && is_call && (frame->f_code->co_flags & CO_COROUTINE) != 0) {
                     info->paused = 1;
                     PyObject* curr_task = PyObject_CallObject(asyncio_tasks_current_task, NULL);
+                    if (!curr_task) {  // RuntimeError: no running event loop
+                        PyErr_Clear();
+                        curr_task = Py_None;
+                    }
+                    if (trio_lowlevel_current_task != NULL && curr_task == Py_None ) {
+                        curr_task = PyObject_CallObject(trio_lowlevel_current_task, NULL);
+                        if (!curr_task) {  // RuntimeError: must be called from async context
+                            PyErr_Clear();
+                            curr_task = Py_None;
+                        }
+                    }
                     info->paused = 0;
                     info->curr_task = curr_task;
                     Py_INCREF(curr_task);
@@ -663,6 +677,8 @@ snaptrace_load(TracerObject* self, PyObject* args)
                         PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
                         task_name = PyObject_CallObject(task_name_method, NULL);
                         Py_DECREF(task_name_method);
+                    } else if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "name")) {
+                        task_name = PyObject_GetAttrString(curr->data.fee.asyncio_task, "name");
                     } else {
                         task_name = PyUnicode_FromString("Task");
                     }
@@ -885,6 +901,8 @@ snaptrace_dump(TracerObject* self, PyObject* args)
                         PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
                         task_name = PyObject_CallObject(task_name_method, NULL);
                         Py_DECREF(task_name_method);
+                    } else if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "name")) {
+                        task_name = PyObject_GetAttrString(curr->data.fee.asyncio_task, "name");
                     } else {
                         task_name = PyUnicode_FromString("Task");
                     }
@@ -1595,6 +1613,12 @@ PyInit_snaptrace(void)
     asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
     if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
         asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
+    }
+    if (trio_module = PyImport_ImportModule("trio")) {
+        trio_lowlevel_module = PyImport_AddModule("trio.lowlevel");
+        trio_lowlevel_current_task = PyObject_GetAttrString(trio_lowlevel_module, "current_task");
+    } else {
+        PyErr_Clear();
     }
     json_module = PyImport_ImportModule("json");
 
