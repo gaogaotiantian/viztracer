@@ -161,6 +161,29 @@ void clear_stack(struct FunctionNode** stack_top) {
     }
 }
 
+static PyObject* asyncio_curr_task()
+{
+    PyObject* curr_task = PyObject_CallObject(asyncio_tasks_current_task, NULL);
+    if (!curr_task) {  // RuntimeError: no running event loop
+        PyErr_Clear();
+        curr_task = Py_None;
+    }
+    return curr_task;  // reference is still "new"
+}
+
+static PyObject* trio_curr_task()
+{
+    if (trio_lowlevel_current_task == NULL) {return Py_None;}
+    PyObject* curr_task = PyObject_CallObject(trio_lowlevel_current_task, NULL);
+    if (!curr_task) {  // RuntimeError: must be called from async context
+        PyErr_Clear();
+        curr_task = Py_None;
+    }
+    return curr_task;  // reference is still "new"
+}
+
+PyObject* (*curr_task_getters[])() = {asyncio_curr_task, trio_curr_task};
+
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
     {"start", (PyCFunction)snaptrace_start, METH_VARARGS, "start profiling"},
@@ -332,17 +355,12 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (info->curr_task == NULL) {
                 if (is_python && is_call && (frame->f_code->co_flags & CO_COROUTINE) != 0) {
+                    PyObject* curr_task = Py_None;
                     info->paused = 1;
-                    PyObject* curr_task = PyObject_CallObject(asyncio_tasks_current_task, NULL);
-                    if (!curr_task) {  // RuntimeError: no running event loop
-                        PyErr_Clear();
-                        curr_task = Py_None;
-                    }
-                    if (trio_lowlevel_current_task != NULL && curr_task == Py_None ) {
-                        curr_task = PyObject_CallObject(trio_lowlevel_current_task, NULL);
-                        if (!curr_task) {  // RuntimeError: must be called from async context
-                            PyErr_Clear();
-                            curr_task = Py_None;
+                    for (int i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
+                        curr_task = (*curr_task_getters[i])();
+                        if (curr_task != Py_None) {
+                            break;
                         }
                     }
                     info->paused = 0;
