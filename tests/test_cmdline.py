@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import configparser
+import importlib.util
 from contextlib import contextmanager
 import os
 import signal
@@ -159,6 +160,22 @@ async def print_sum(x, y):
 loop = asyncio.get_event_loop()
 loop.run_until_complete(print_sum(1, 2))
 loop.close()
+"""
+
+
+file_log_trio = """
+import trio
+
+async def compute(x, y):
+    await trio.sleep(0.03)
+    return x + y
+
+async def print_sum(x, y):
+    async with trio.open_nursery() as nursery:
+        nursery.start_soon(compute, x, y)
+        nursery.start_soon(compute, x+1, y)
+
+trio.run(print_sum, 1, 2)
 """
 
 
@@ -389,6 +406,25 @@ class TestCommandLineBasic(CmdlineTmpl):
         else:
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_async,
+                          expected_output_file="result.json",
+                          success=False)
+
+    @skipIf(importlib.util.find_spec("trio") is None, reason="Trio-specific test")
+    def test_log_trio(self):
+        def check_func(data):
+            tids = set()
+            for entry in data["traceEvents"]:
+                tids.add(entry["tid"])
+            self.assertGreaterEqual(len(tids), 4)
+
+        if int(platform.python_version_tuple()[1]) >= 7:
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_trio,
+                          expected_output_file="result.json",
+                          check_func=check_func)
+        else:
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_trio,
                           expected_output_file="result.json",
                           success=False)
 
