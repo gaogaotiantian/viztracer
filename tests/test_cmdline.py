@@ -398,7 +398,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        if int(platform.python_version_tuple()[1]) >= 7:
+        if sys.version_info >= (3, 7):
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_async,
                           expected_output_file="result.json",
@@ -417,7 +417,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        if int(platform.python_version_tuple()[1]) >= 7:
+        if sys.version_info >= (3, 7):
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_trio,
                           expected_output_file="result.json",
