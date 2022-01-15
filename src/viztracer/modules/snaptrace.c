@@ -52,10 +52,10 @@ PyObject* multiprocessing_module = NULL;
 PyObject* json_module = NULL;
 PyObject* asyncio_module = NULL;
 PyObject* asyncio_tasks_module = NULL;
-PyObject* asyncio_tasks_current_task = NULL;
 PyObject* trio_module = NULL;
 PyObject* trio_lowlevel_module = NULL;
-PyObject* trio_lowlevel_current_task = NULL;
+
+static const PyObject* curr_task_getters[2];
 
 #if _WIN32
 extern LARGE_INTEGER qpc_freq; 
@@ -160,29 +160,6 @@ void clear_stack(struct FunctionNode** stack_top) {
         }
     }
 }
-
-static PyObject* asyncio_curr_task()
-{
-    PyObject* curr_task = PyObject_CallObject(asyncio_tasks_current_task, NULL);
-    if (!curr_task) {  // RuntimeError: no running event loop
-        PyErr_Clear();
-        curr_task = Py_None;
-    }
-    return curr_task;  // reference is still "new"
-}
-
-static PyObject* trio_curr_task()
-{
-    if (trio_lowlevel_current_task == NULL) {return Py_None;}
-    PyObject* curr_task = PyObject_CallObject(trio_lowlevel_current_task, NULL);
-    if (!curr_task) {  // RuntimeError: must be called from async context
-        PyErr_Clear();
-        curr_task = Py_None;
-    }
-    return curr_task;  // reference is still "new"
-}
-
-PyObject* (*curr_task_getters[])() = {asyncio_curr_task, trio_curr_task};
 
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
@@ -358,7 +335,15 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     PyObject* curr_task = Py_None;
                     info->paused = 1;
                     for (int i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
-                        curr_task = (*curr_task_getters[i])();
+                        if (curr_task_getters[i] == NULL) {
+                            continue;
+                        }
+                        curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
+                        if (!curr_task) {  // RuntimeError, probably
+                            PyErr_Clear();
+                            curr_task = Py_None;
+                            continue;
+                        }
                         if (curr_task != Py_None) {
                             break;
                         }
@@ -1630,11 +1615,11 @@ PyInit_snaptrace(void)
     asyncio_module = PyImport_ImportModule("asyncio");
     asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
     if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
-        asyncio_tasks_current_task = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
+        curr_task_getters[0] = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
     }
     if (trio_module = PyImport_ImportModule("trio")) {
         trio_lowlevel_module = PyImport_AddModule("trio.lowlevel");
-        trio_lowlevel_current_task = PyObject_GetAttrString(trio_lowlevel_module, "current_task");
+        curr_task_getters[1] = PyObject_GetAttrString(trio_lowlevel_module, "current_task");
     } else {
         PyErr_Clear();
     }
