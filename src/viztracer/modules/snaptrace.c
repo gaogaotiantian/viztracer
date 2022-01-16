@@ -335,17 +335,14 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     PyObject* curr_task = Py_None;
                     info->paused = 1;
                     for (int i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
-                        if (curr_task_getters[i] == NULL) {
-                            continue;
-                        }
-                        curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
-                        if (!curr_task) {  // RuntimeError, probably
-                            PyErr_Clear();
-                            curr_task = Py_None;
-                            continue;
-                        }
-                        if (curr_task != Py_None) {
-                            break;
+                        if (curr_task_getters[i] != NULL) {
+                            curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
+                            if (!curr_task) {
+                                PyErr_Clear();  // RuntimeError, probably
+                                curr_task = Py_None;
+                            } else if (curr_task != Py_None) {
+                                break;  // got a valid task
+                            }
                         }
                     }
                     info->paused = 0;
