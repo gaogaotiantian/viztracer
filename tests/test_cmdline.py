@@ -7,7 +7,6 @@ from contextlib import contextmanager
 import os
 import signal
 import sys
-import platform
 import re
 from unittest.case import skipIf
 from .cmdline_tmpl import CmdlineTmpl
