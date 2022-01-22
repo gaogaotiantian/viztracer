@@ -4,6 +4,8 @@
 import os
 import sys
 import subprocess
+
+from .package_env import package_matrix
 from .util import get_json_file_path, adapt_json_file, generate_json
 from .base_tmpl import BaseTmpl
 
@@ -144,6 +146,7 @@ class TestSimulator(BaseTmpl):
         self.assertIn("argument", result)
         sim.close()
 
+    @package_matrix(["~rich", "rich"])
     def test_tid_pid(self):
         sim = SimInterface(vdb_basic)
         result = sim.command("tid")
@@ -205,6 +208,7 @@ class TestSimulator(BaseTmpl):
         sim.command("args")
         sim.close()
 
+    @package_matrix(["~rich", "rich"])
     def test_up_down(self):
         sim = SimInterface(vdb_basic)
         result1 = sim.command("s")

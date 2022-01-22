@@ -10,6 +10,7 @@ import sys
 import re
 from unittest.case import skipIf
 from .cmdline_tmpl import CmdlineTmpl
+from .package_env import package_matrix
 
 
 file_c_function = """
@@ -206,6 +207,7 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_cmd_string(self):
         self.template(["viztracer", "-c", "lst=[]; lst.append(1)"], expected_entries=3)
 
+    @package_matrix(["~orjson", "orjson"])
     def test_outputfile(self):
         self.template(["python", "-m", "viztracer", "-o", "result.html", "cmdline_test.py"],
                       expected_output_file="result.html")
@@ -267,6 +269,7 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_minimize_memory(self):
         self.template(["python", "-m", "viztracer", "--minimize_memory", "cmdline_test.py"])
 
+    @package_matrix(["~orjson", "orjson"])
     def test_combine(self):
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
         self.template(["python", "-m", "viztracer", "--combine",
@@ -408,6 +411,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                           expected_output_file="result.json",
                           success=False)
 
+    @package_matrix(["~trio", "trio"])
     @skipIf(importlib.util.find_spec("trio") is None, reason="Trio-specific test")
     def test_log_trio(self):
         def check_func(data):
