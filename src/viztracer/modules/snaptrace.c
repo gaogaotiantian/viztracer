@@ -55,7 +55,7 @@ PyObject* asyncio_tasks_module = NULL;
 PyObject* trio_module = NULL;
 PyObject* trio_lowlevel_module = NULL;
 
-static const PyObject* curr_task_getters[2];
+static PyObject* curr_task_getters[2] = {0};
 
 #if _WIN32
 extern LARGE_INTEGER qpc_freq; 
@@ -334,7 +334,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 if (is_python && is_call && (frame->f_code->co_flags & CO_COROUTINE) != 0) {
                     PyObject* curr_task = Py_None;
                     info->paused = 1;
-                    for (int i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
+                    for (size_t i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
                         if (curr_task_getters[i] != NULL) {
                             curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
                             if (!curr_task) {
@@ -1614,7 +1614,7 @@ PyInit_snaptrace(void)
     if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
         curr_task_getters[0] = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
     }
-    if (trio_module = PyImport_ImportModule("trio")) {
+    if ((trio_module = PyImport_ImportModule("trio"))) {
         trio_lowlevel_module = PyImport_AddModule("trio.lowlevel");
         curr_task_getters[1] = PyObject_GetAttrString(trio_lowlevel_module, "current_task");
     } else {
