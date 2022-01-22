@@ -178,6 +178,26 @@ async def print_sum(x, y):
 trio.run(print_sum, 1, 2)
 """
 
+file_log_async_with_trio = """
+import asyncio
+import trio
+
+async def compute(x, y):
+    await asyncio.sleep(0.03)
+    return x + y
+
+async def print_sum(x, y):
+    t1 =  asyncio.create_task(compute(x, y))
+    t2 = asyncio.create_task( compute(x+1, y) )
+
+    await t1
+    await t2
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(print_sum(1, 2))
+loop.close()
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -393,6 +413,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_entries=2)
 
+    @package_matrix(["~trio", "trio"])
     def test_log_async(self):
         def check_func(data):
             tids = set()
@@ -423,12 +444,16 @@ class TestCommandLineBasic(CmdlineTmpl):
         if sys.version_info >= (3, 7):
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_trio,
-                          expected_output_file="result.json",
+                          check_func=check_func)
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_async_with_trio,
                           check_func=check_func)
         else:
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_trio,
-                          expected_output_file="result.json",
+                          success=False)
+            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                          script=file_log_async_with_trio,
                           success=False)
 
     def test_ignore_function(self):

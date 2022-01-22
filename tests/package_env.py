@@ -13,7 +13,8 @@ from unittest import SkipTest
 def get_curr_packages():
     freeze_process = subprocess.run([sys.executable, "-m", "pip", "freeze"],
                                     check=True, stdout=subprocess.PIPE)
-    return freeze_process.stdout.decode("utf-8").strip().split()
+    packages = freeze_process.stdout.decode("utf-8").strip().splitlines()
+    return [pkg for pkg in packages if "viztracer" not in pkg]
 
 
 @contextmanager
