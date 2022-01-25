@@ -96,8 +96,11 @@ class TestRemote(CmdlineTmpl):
             attach_cmd_with_t = attach_cmd + ["-t", "0.5"]
             p_attach = subprocess.Popen(attach_cmd_with_t, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p_attach.wait()
+            out, err = p_attach.stdout.read(), p_attach.stderr.read()
+            p_attach.stdout.close()
+            p_attach.stderr.close()
             self.assertTrue(p_attach.returncode == 0,
-                            msg=f"attach failed\n{p_attach.stdout.read()}\n{p_attach.stderr.read()}\n")
+                            msg=f"attach failed\n{out}\n{err}\n")
             if file_should_exist:
                 self.assertFileExists(output_file, 20)
                 os.remove(output_file)
