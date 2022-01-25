@@ -492,7 +492,7 @@ class VizUI:
         except KeyboardInterrupt:
             pass
 
-        run_python_code(pid, stop_code)
+        retcode, out, err = run_python_code(pid, stop_code)
         if retcode != 0:
             print(f"Failed to inject code [err {retcode}]")
             print(out.decode("utf-8"))
