@@ -85,39 +85,40 @@ class TestRemote(CmdlineTmpl):
         else:
             script_cmd = ["python", "attached_script.py"]
         p_script = subprocess.Popen(script_cmd)
-        pid_to_attach = p_script.pid
-        attach_cmd = attach_cmd + [str(pid_to_attach)]
+        try:
+            pid_to_attach = p_script.pid
+            attach_cmd = attach_cmd + [str(pid_to_attach)]
 
-        # Give it some time for viztracer to install
-        time.sleep(1)
+            # Give it some time for viztracer to install
+            time.sleep(1)
 
-        # Test attach feature
-        attach_cmd_with_t = attach_cmd + ["-t", "0.5"]
-        print(attach_cmd)
-        p_attach = subprocess.Popen(attach_cmd_with_t)
-        p_attach.wait()
-        self.assertTrue(p_attach.returncode == 0)
-        if file_should_exist:
-            self.assertFileExists(output_file, 20)
-            os.remove(output_file)
-        else:
-            self.assertFileNotExist(output_file)
+            # Test attach feature
+            attach_cmd_with_t = attach_cmd + ["-t", "0.5"]
+            p_attach = subprocess.Popen(attach_cmd_with_t)
+            p_attach.wait()
+            self.assertTrue(p_attach.returncode == 0)
+            if file_should_exist:
+                self.assertFileExists(output_file, 20)
+                os.remove(output_file)
+            else:
+                self.assertFileNotExist(output_file)
 
-        p_attach = subprocess.Popen(attach_cmd)
-        time.sleep(1.5)
-        p_attach.send_signal(signal.SIGINT)
-        p_attach.wait()
-        self.assertTrue(p_attach.returncode == 0)
-        time.sleep(0.5)
-        p_script.terminate()
-        p_script.wait()
+            p_attach = subprocess.Popen(attach_cmd)
+            time.sleep(1.5)
+            p_attach.send_signal(signal.SIGINT)
+            p_attach.wait()
+            self.assertTrue(p_attach.returncode == 0)
+            time.sleep(0.5)
 
-        if file_should_exist:
-            self.assertFileExists(output_file, 20)
-            os.remove(output_file)
-        else:
-            self.assertFileNotExist(output_file)
-        os.remove("attached_script.py")
+            if file_should_exist:
+                self.assertFileExists(output_file, 20)
+                os.remove(output_file)
+            else:
+                self.assertFileNotExist(output_file)
+            os.remove("attached_script.py")
+        finally:
+            p_script.terminate()
+            p_script.wait()
 
         p_attach_invalid = subprocess.Popen(attach_cmd)
         p_attach_invalid.wait()

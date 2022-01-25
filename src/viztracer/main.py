@@ -477,7 +477,12 @@ class VizUI:
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
         start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
         stop_code = "viztracer.attach.stop_attach()"
-        run_python_code(pid, start_code)
+        retcode, out, err, = run_python_code(pid, start_code)
+        if retcode != 0:
+            print(f"Failed to inject code [err {retcode}]")
+            print(out.decode("utf-8"))
+            print(err.decode("utf-8"))
+            return False, None
         try:
             if interval > 0:
                 time.sleep(interval)
@@ -488,6 +493,12 @@ class VizUI:
             pass
 
         run_python_code(pid, stop_code)
+        if retcode != 0:
+            print(f"Failed to inject code [err {retcode}]")
+            print(out.decode("utf-8"))
+            print(err.decode("utf-8"))
+            return False, None
+
         print("Use the following command to open the report:")
         color_print("OKGREEN", "vizviewer {}".format(self.init_kwargs["output_file"]))
 

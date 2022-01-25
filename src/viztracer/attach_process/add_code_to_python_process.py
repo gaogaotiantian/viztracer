@@ -308,7 +308,7 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
                     print('Timeout error: the attach may not have completed.')
             # print('--- Finished dll injection ---\n')
 
-    return 0
+    return 0, b"", b""
 
 
 @contextmanager
@@ -445,7 +445,7 @@ def run_python_code_linux(pid, python_code, connect_debugger_tracing=False, show
     out, err = p.communicate()
     # print('stdout: %s' % (out,))
     # print('stderr: %s' % (err,))
-    return out, err
+    return p.returncode, out, err
 
 
 def find_helper_script(filedir, script_name):
@@ -511,9 +511,12 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         )
     # print('Running lldb in target process.')
     out, err = p.communicate()
+    if p.returncode != 0:
+        print("Code injection failed.")
+        print(err)
     # print('stdout: %s' % (out,))
     # print('stderr: %s' % (err,))
-    return out, err
+    return p.returncode, out, err
 
 
 if IS_WINDOWS:
