@@ -3,11 +3,13 @@
 
 import argparse
 import atexit
+import base64
 import builtins
 import configparser
+import json
 import multiprocessing.util  # type: ignore
-import platform
 import os
+import platform
 import re
 import shutil
 import signal
@@ -19,10 +21,11 @@ import types
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
+from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
 from .patch import patch_multiprocessing, patch_subprocess
 from .report_builder import ReportBuilder
-from .util import time_str_to_us, color_print, same_line_print
+from .util import time_str_to_us, color_print, same_line_print, pid_exists
 from .viztracer import VizTracer
 
 
@@ -133,7 +136,9 @@ class VizUI:
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
-                            help="pid of process with VizTracer installed")
+                            help="pid of Python process to trace")
+        parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
+                            help="pid of Python process with VizTracer installed")
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
         return parser
@@ -324,6 +329,8 @@ class VizUI:
             return self.show_version()
         elif self.options.attach > 0:
             return self.attach()
+        elif self.options.attach_installed > 0:
+            return self.attach_installed()
         elif self.options.cmd_string is not None:
             return self.run_string()
         elif self.options.module:
@@ -453,9 +460,43 @@ class VizUI:
         return True, None
 
     def attach(self) -> Tuple[bool, Optional[str]]:
+        pid = self.options.attach
+        interval = self.options.t
+
+        if sys.platform != "win32" and not pid_exists(pid):
+            return False, f"pid {pid} does not exist!"
+
+        # If we are doing attach, we need to clean init_kwargs first
+        self.init_kwargs.update({
+            "output_file": os.path.abspath(self.ofile),
+            "pid_suffix": False,
+            "file_info": True,
+            "register_global": True,
+            "dump_raw": False
+        })
+        b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
+        start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
+        stop_code = "viztracer.attach.stop_attach()"
+        run_python_code(pid, start_code)
+        try:
+            if interval > 0:
+                time.sleep(interval)
+            else:
+                while True:
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            pass
+
+        run_python_code(pid, stop_code)
+        print("Use the following command to open the report:")
+        color_print("OKGREEN", "vizviewer {}".format(self.init_kwargs["output_file"]))
+
+        return True, None
+
+    def attach_installed(self):
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
-        pid = self.options.attach
+        pid = self.options.attach_installed
         interval = self.options.t
         try:
             os.kill(pid, signal.SIGUSR1)

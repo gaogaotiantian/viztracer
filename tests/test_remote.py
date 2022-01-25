@@ -25,8 +25,8 @@ class TestRemote(CmdlineTmpl):
         os.remove("remote.json")
 
     @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
-    def test_attach(self):
-        file_attach = textwrap.dedent("""
+    def test_attach_installed(self):
+        file_to_attach = textwrap.dedent("""
             from viztracer import VizTracer
             import time
             tracer = VizTracer(output_file='remote.json')
@@ -34,36 +34,75 @@ class TestRemote(CmdlineTmpl):
             while True:
                 time.sleep(0.5)
         """)
-        with open("attached_script.py", "w") as f:
-            f.write(file_attach)
+        if os.getenv("COVERAGE_RUN"):
+            attach_installed_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
+                                    "viztracer", "--attach_installed"]
+            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
+                          "viztracer", "-o", "remote.json", "--attach"]
+        else:
+            attach_installed_cmd = ["viztracer", "--attach_installed"]
+            attach_cmd = ["viztracer", "-o", "remote.json", "--attach"]
 
+        output_file = "remote.json"
+
+        self.attach_check(file_to_attach, attach_cmd, output_file)
+        self.attach_check(file_to_attach, attach_installed_cmd, output_file)
+
+    def test_attach(self):
+        file_to_attach = textwrap.dedent("""
+            import time
+            while True:
+                time.sleep(0.5)
+        """)
+        if os.getenv("COVERAGE_RUN"):
+            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
+                          "viztracer", "-o", "remote.json", "--attach"]
+        else:
+            attach_cmd = ["viztracer", "-o", "remote.json", "--attach"]
+
+        output_file = "remote.json"
+
+        self.attach_check(file_to_attach, attach_cmd, output_file)
+
+        file_to_attach_tracing = textwrap.dedent("""
+            import time
+            import viztracer
+            tracer = viztracer.VizTracer(tracer_entries=1000)
+            tracer.start()
+            while True:
+                time.sleep(0.5)
+        """)
+
+        self.attach_check(file_to_attach_tracing, attach_cmd, output_file, file_should_exist=False)
+
+    def attach_check(self, file_to_attach, attach_cmd, output_file, file_should_exist=True):
+        with open("attached_script.py", "w") as f:
+            f.write(file_to_attach)
+
+        # Run the process to attach first
         if os.getenv("COVERAGE_RUN"):
             script_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "attached_script.py"]
         else:
             script_cmd = ["python", "attached_script.py"]
         p_script = subprocess.Popen(script_cmd)
+        pid_to_attach = p_script.pid
+        attach_cmd = attach_cmd + [str(pid_to_attach)]
 
         # Give it some time for viztracer to install
         time.sleep(1)
 
-        # Test with -t
-        if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
-                          "viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
-        else:
-            attach_cmd = ["viztracer", "--attach", str(p_script.pid), "-t", "0.5"]
-        p_attach = subprocess.Popen(attach_cmd)
+        # Test attach feature
+        attach_cmd_with_t = attach_cmd + ["-t", "0.5"]
+        print(attach_cmd)
+        p_attach = subprocess.Popen(attach_cmd_with_t)
         p_attach.wait()
         self.assertTrue(p_attach.returncode == 0)
-        self.assertFileExists("remote.json", 20)
-
-        os.remove("remote.json")
-
-        if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
-                          "viztracer", "attach", "--attach", str(p_script.pid)]
+        if file_should_exist:
+            self.assertFileExists(output_file, 20)
+            os.remove(output_file)
         else:
-            attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
+            self.assertFileNotExist(output_file)
+
         p_attach = subprocess.Popen(attach_cmd)
         time.sleep(1.5)
         p_attach.send_signal(signal.SIGINT)
@@ -72,18 +111,17 @@ class TestRemote(CmdlineTmpl):
         time.sleep(0.5)
         p_script.terminate()
         p_script.wait()
-        self.assertFileExists("remote.json", 20)
-        os.remove("attached_script.py")
-        os.remove("remote.json")
 
-        if os.getenv("COVERAGE_RUN"):
-            attach_cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m",
-                          "viztracer", "attach", "--attach", str(p_script.pid)]
+        if file_should_exist:
+            self.assertFileExists(output_file, 20)
+            os.remove(output_file)
         else:
-            attach_cmd = ["viztracer", "attach", "--attach", str(p_script.pid)]
-        p_attach = subprocess.Popen(attach_cmd)
-        p_attach.wait()
-        self.assertTrue(p_attach.returncode != 0)
+            self.assertFileNotExist(output_file)
+        os.remove("attached_script.py")
+
+        p_attach_invalid = subprocess.Popen(attach_cmd)
+        p_attach_invalid.wait()
+        self.assertTrue(p_attach_invalid.returncode != 0)
 
     @unittest.skipIf(sys.platform != "win32", "Only test Windows")
     def test_windows(self):

@@ -35,6 +35,10 @@ class BaseTmpl(TestCase):
                 else:
                     time.sleep(0.5)
 
+    def assertFileNotExist(self, path):
+        if os.path.exists(path):
+            raise AssertionError(f"file {path} does not exist!")
+
     def assertTrueTimeout(self, func, timeout):
         start = time.time()
         while True:

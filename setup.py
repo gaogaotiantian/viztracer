@@ -33,7 +33,8 @@ setuptools.setup(
             "html/*.html",
             "web_dist/*",
             "web_dist/*/*",
-            "web_dist/*/*/*"
+            "web_dist/*/*/*",
+            "attach_process/*"
         ]
     },
     ext_modules=[
