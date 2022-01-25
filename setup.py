@@ -34,7 +34,9 @@ setuptools.setup(
             "web_dist/*",
             "web_dist/*/*",
             "web_dist/*/*/*",
-            "attach_process/*"
+            "attach_process/*",
+            "attach_process/*/*",
+            "attach_process/*/*/*",
         ]
     },
     ext_modules=[
