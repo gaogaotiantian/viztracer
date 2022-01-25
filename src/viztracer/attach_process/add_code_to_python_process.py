@@ -1,3 +1,5 @@
+# type: ignore
+
 r'''
 Copyright: Brainwy Software Ltda.
 
@@ -89,7 +91,7 @@ except NameError:
 
 @contextmanager
 def _create_win_event(name):
-    from .winappdbg.win32.kernel32 import CreateEventA, WaitForSingleObject, CloseHandle
+    from winappdbg.win32.kernel32 import CreateEventA, WaitForSingleObject, CloseHandle
 
     manual_reset = False  # i.e.: after someone waits it, automatically set to False.
     initial_state = False
@@ -261,7 +263,7 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
 
 def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, show_debug_info=0):
     assert '\'' not in python_code, 'Having a single quote messes with our command.'
-    from .winappdbg.process import Process
+    from winappdbg.process import Process
     if not isinstance(python_code, bytes):
         python_code = python_code.encode('utf-8')
 
@@ -317,8 +319,8 @@ def _acquire_mutex(mutex_name, timeout):
     Only one process may be attaching to a pid, so, create a system mutex
     to make sure this holds in practice.
     '''
-    from .winappdbg.win32.kernel32 import CreateMutex, GetLastError, CloseHandle
-    from .winappdbg.win32.defines import ERROR_ALREADY_EXISTS
+    from winappdbg.win32.kernel32 import CreateMutex, GetLastError, CloseHandle
+    from winappdbg.win32.defines import ERROR_ALREADY_EXISTS
 
     initial_time = time.time()
     while True:
@@ -339,8 +341,8 @@ def _acquire_mutex(mutex_name, timeout):
 @contextmanager
 def _win_write_to_shared_named_memory(python_code, pid):
     # Use the definitions from winappdbg when possible.
-    from .winappdbg.win32 import defines
-    from .winappdbg.win32.kernel32 import (
+    from winappdbg.win32 import defines
+    from winappdbg.win32.kernel32 import (
         CreateFileMapping,
         MapViewOfFile,
         CloseHandle,
@@ -526,6 +528,9 @@ else:
 
     def run_python_code(*args, **kwargs):
         print('Unable to attach to process in platform: %s', sys.platform)
+
+
+sys.path.append(os.path.dirname(__file__))
 
 
 def test():
