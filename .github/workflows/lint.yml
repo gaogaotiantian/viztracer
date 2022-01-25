@@ -23,4 +23,4 @@ jobs:
       - name: Run flake8
         run: flake8 . --exclude src/viztracer/attach_process/ --count --ignore=W503 --max-line-length=127 --statistics
       - name: Run mypy 
-        run: mypy src/
+        run: mypy src/ --exclude src/viztracer/attach_process/
