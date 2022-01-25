@@ -491,7 +491,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
 
     cmd.extend([
         "-o 'process detach'",
-        "-o 'script import os; os._exit(1)'",
+        "-o 'script import os; os._exit(0)'",
     ])
 
     # print ' '.join(cmd)
@@ -511,9 +511,6 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         )
     # print('Running lldb in target process.')
     out, err = p.communicate()
-    if p.returncode != 0:
-        print("Code injection failed.")
-        print(err)
     # print('stdout: %s' % (out,))
     # print('stderr: %s' % (err,))
     return p.returncode, out, err

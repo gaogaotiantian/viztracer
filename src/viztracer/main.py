@@ -475,7 +475,10 @@ class VizUI:
             "dump_raw": False
         })
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
-        start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
+        if sys.platform == "win32":
+            start_code = f"import viztracer.attach; viztracer.attach.start_attach(\"{b64s}\")"
+        else:
+            start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
         stop_code = "viztracer.attach.stop_attach()"
         retcode, out, err, = run_python_code(pid, start_code)
         if retcode != 0:

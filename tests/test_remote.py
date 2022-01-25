@@ -108,7 +108,11 @@ class TestRemote(CmdlineTmpl):
                 self.assertFileNotExist(output_file)
 
             p_attach = subprocess.Popen(attach_cmd)
-            time.sleep(1.5)
+            if sys.platform == "darwin":
+                # loading lldb is super slow on MacOS
+                time.sleep(5)
+            else:
+                time.sleep(1.5)
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
             self.assertTrue(p_attach.returncode == 0)
