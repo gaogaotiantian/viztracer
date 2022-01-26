@@ -48,6 +48,7 @@ class TestRemote(CmdlineTmpl):
         self.attach_check(file_to_attach, attach_cmd, output_file)
         self.attach_check(file_to_attach, attach_installed_cmd, output_file)
 
+    @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
     def test_attach(self):
         file_to_attach = textwrap.dedent("""
             import time
@@ -139,3 +140,4 @@ class TestRemote(CmdlineTmpl):
             tracer.install()
 
         self.template(["viztracer", "--attach", "1234"], success=False)
+        self.template(["viztracer", "--attach_installed", "1234"], success=False)

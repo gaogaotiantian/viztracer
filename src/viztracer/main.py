@@ -463,7 +463,10 @@ class VizUI:
         pid = self.options.attach
         interval = self.options.t
 
-        if sys.platform != "win32" and not pid_exists(pid):
+        if sys.platform == "win32":
+            return False, "VizTracer does not support this feature on Windows"
+
+        if not pid_exists(pid):
             return False, f"pid {pid} does not exist!"
 
         # If we are doing attach, we need to clean init_kwargs first
