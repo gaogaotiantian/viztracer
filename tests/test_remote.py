@@ -107,7 +107,7 @@ class TestRemote(CmdlineTmpl):
             time.sleep(0.5)
 
             if file_should_exist:
-                self.assertFileExists(output_file, 20)
+                self.assertFileExists(output_file, 40)
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
