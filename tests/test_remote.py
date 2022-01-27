@@ -82,8 +82,10 @@ class TestRemote(CmdlineTmpl):
             # Give it some time for viztracer to install
             time.sleep(1)
 
+            # lldb takes a while to attach on MacOS
+            wait_time = 5 if sys.platform == "darwin" else 1.5
             # Test attach feature
-            attach_cmd_with_t = attach_cmd + ["-t", "0.5"]
+            attach_cmd_with_t = attach_cmd + ["-t", str(wait_time)]
             p_attach = subprocess.Popen(attach_cmd_with_t, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p_attach.wait()
             out, err = p_attach.stdout.read(), p_attach.stderr.read()
@@ -98,11 +100,7 @@ class TestRemote(CmdlineTmpl):
                 self.assertFileNotExist(output_file)
 
             p_attach = subprocess.Popen(attach_cmd)
-            if sys.platform == "darwin":
-                # loading lldb is super slow on MacOS
-                time.sleep(5)
-            else:
-                time.sleep(1.5)
+            time.sleep(wait_time)
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
             self.assertTrue(p_attach.returncode == 0)
