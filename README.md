@@ -239,7 +239,7 @@ vizviewer --flamegraph result.json
 
 ### Remote attach
 
-VizTracer supports remote attach to a process as long as you installed VizTracer on that process.
+VizTracer supports remote attach to an arbitrary Python process to trace it, as long as viztracer is importable
 
 Refer to [remote attach docs](https://viztracer.readthedocs.io/en/stable/remote_attach.html)
 
