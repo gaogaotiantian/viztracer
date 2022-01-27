@@ -122,6 +122,7 @@ class TestRemote(CmdlineTmpl):
         p_attach_invalid.wait()
         self.assertTrue(p_attach_invalid.returncode != 0)
 
+    @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
     def test_uninstall(self):
         file_to_attach = textwrap.dedent("""
             import time
