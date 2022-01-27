@@ -94,7 +94,7 @@ class TestRemote(CmdlineTmpl):
             self.assertTrue(p_attach.returncode == 0,
                             msg=f"attach failed\n{out}\n{err}\n")
             if file_should_exist:
-                self.assertFileExists(output_file, 20)
+                self.assertFileExists(output_file, 40)
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
@@ -107,7 +107,7 @@ class TestRemote(CmdlineTmpl):
             time.sleep(0.5)
 
             if file_should_exist:
-                self.assertFileExists(output_file, 40)
+                self.assertFileExists(output_file, 20)
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
