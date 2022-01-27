@@ -40,3 +40,14 @@ def adapt_json_file(filename):
 
 def get_json_file_path(filename):
     return os.path.join(os.path.dirname(__file__), "data", filename)
+
+
+def cmd_with_coverage(cmd):
+    if os.getenv("COVERAGE_RUN"):
+        if cmd[0] == "python":
+            return ["coverage", "run", "--source", "viztracer", "--parallel-mode"] + cmd[1:]
+        elif cmd[0] == "viztracer":
+            return ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + cmd
+        else:
+            raise ValueError(f"can't get cmd with coverage for {cmd}")
+    return cmd

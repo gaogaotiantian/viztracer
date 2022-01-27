@@ -139,6 +139,8 @@ class VizUI:
                             help="pid of Python process to trace")
         parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
                             help="pid of Python process with VizTracer installed")
+        parser.add_argument("--uninstall", type=int, nargs="?", default=-1,
+                            help="pid of Python process with VizTracer to be uninstalled")
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
         return parser
@@ -331,6 +333,8 @@ class VizUI:
             return self.attach()
         elif self.options.attach_installed > 0:
             return self.attach_installed()
+        elif self.options.uninstall > 0:
+            return self.uninstall()
         elif self.options.cmd_string is not None:
             return self.run_string()
         elif self.options.module:
@@ -493,6 +497,7 @@ class VizUI:
             if interval > 0:
                 time.sleep(interval)
             else:
+                print("Attach success, press CTRL+C to stop and save report")
                 while True:
                     time.sleep(0.1)
         except KeyboardInterrupt:
@@ -510,6 +515,26 @@ class VizUI:
 
         return True, None
 
+    def uninstall(self) -> Tuple[bool, Optional[str]]:
+        pid = self.options.uninstall
+
+        if sys.platform == "win32":
+            return False, "VizTracer does not support this feature on Windows"
+
+        if not pid_exists(pid):
+            return False, f"pid {pid} does not exist!"
+
+        stop_code = "import viztracer.attach; viztracer.attach.uninstall_attach()"
+
+        retcode, out, err = run_python_code(pid, stop_code)
+        if retcode != 0:
+            print(f"Failed to inject code [err {retcode}]")
+            print(out.decode("utf-8"))
+            print(err.decode("utf-8"))
+            return False, None
+
+        return True, None
+
     def attach_installed(self):
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
@@ -523,6 +548,7 @@ class VizUI:
             if interval > 0:
                 time.sleep(interval)
             else:
+                print("Attach success, press CTRL+C to stop and save report")
                 while True:
                     time.sleep(0.1)
         except KeyboardInterrupt:

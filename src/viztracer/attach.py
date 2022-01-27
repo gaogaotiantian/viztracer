@@ -44,3 +44,18 @@ def stop_attach():
             builtins.__dict__.pop("__viz_tracer__")
             gc.collect()
         attach_status["attached"] = False
+
+
+def uninstall_attach():
+    global attach_status
+    attach_status = {
+        "created_tracer": False,
+        "save_path": "",
+        "attached": False
+    }
+    tracer = get_tracer()
+    if tracer:
+        tracer.stop()
+        tracer.clear()
+        builtins.__dict__.pop("__viz_tracer__")
+        gc.collect()
