@@ -33,6 +33,7 @@ class TestRemote(CmdlineTmpl):
             import time
             tracer = VizTracer(output_file='remote.json')
             tracer.install()
+            print("Ready", flush=True)
             while True:
                 time.sleep(0.5)
         """)
@@ -48,6 +49,7 @@ class TestRemote(CmdlineTmpl):
     def test_attach(self):
         file_to_attach = textwrap.dedent("""
             import time
+            print("Ready", flush=True)
             while True:
                 time.sleep(0.5)
         """)
@@ -62,6 +64,7 @@ class TestRemote(CmdlineTmpl):
             import viztracer
             tracer = viztracer.VizTracer(tracer_entries=1000)
             tracer.start()
+            print("Ready", flush=True)
             while True:
                 time.sleep(0.5)
         """)
@@ -74,16 +77,15 @@ class TestRemote(CmdlineTmpl):
 
         # Run the process to attach first
         script_cmd = cmd_with_coverage(["python", "attached_script.py"])
-        p_script = subprocess.Popen(script_cmd)
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
         try:
             pid_to_attach = p_script.pid
             attach_cmd = attach_cmd + [str(pid_to_attach)]
 
-            # Give it some time for viztracer to install
-            time.sleep(1)
+            out = p_script.stdout.readline()
+            self.assertIn("Ready", out.decode("utf-8"))
 
-            # lldb takes a while to attach on MacOS
-            wait_time = 5 if sys.platform == "darwin" else 1.5
+            wait_time = 2
             # Test attach feature
             attach_cmd_with_t = attach_cmd + ["-t", str(wait_time)]
             p_attach = subprocess.Popen(attach_cmd_with_t, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -93,16 +95,20 @@ class TestRemote(CmdlineTmpl):
             p_attach.stderr.close()
             self.assertTrue(p_attach.returncode == 0,
                             msg=f"attach failed\n{out}\n{err}\n")
+            self.assertIn("success", out.decode("utf-8"), msg=f"Attach success not in {out}")
             if file_should_exist:
                 self.assertFileExists(output_file, 40)
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
 
-            p_attach = subprocess.Popen(attach_cmd)
-            time.sleep(wait_time)
+            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.PIPE, bufsize=0)
+            # Read the attach success line
+            out = p_attach.stdout.readline()
+            self.assertIn("success", out.decode("utf-8"))
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
+            p_attach.stdout.close()
             self.assertTrue(p_attach.returncode == 0)
             time.sleep(0.5)
 
@@ -114,6 +120,7 @@ class TestRemote(CmdlineTmpl):
         finally:
             p_script.terminate()
             p_script.wait()
+            p_script.stdout.close()
             os.remove("attached_script.py")
 
         p_attach_invalid = subprocess.Popen(attach_cmd)

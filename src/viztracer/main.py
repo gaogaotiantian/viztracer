@@ -493,15 +493,8 @@ class VizUI:
             print(out.decode("utf-8"))
             print(err.decode("utf-8"))
             return False, None
-        try:
-            if interval > 0:
-                time.sleep(interval)
-            else:
-                print("Attach success, press CTRL+C to stop and save report")
-                while True:
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            pass
+
+        self._wait_attach(interval)
 
         retcode, out, err = run_python_code(pid, stop_code)
         if retcode != 0:
@@ -544,15 +537,8 @@ class VizUI:
             os.kill(pid, signal.SIGUSR1)
         except OSError:
             return False, f"pid {pid} does not exist"
-        try:
-            if interval > 0:
-                time.sleep(interval)
-            else:
-                print("Attach success, press CTRL+C to stop and save report")
-                while True:
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            pass
+
+        self._wait_attach(interval)
 
         try:
             os.kill(pid, signal.SIGUSR2)
@@ -560,6 +546,19 @@ class VizUI:
             return False, f"pid {pid} already finished"
 
         return True, None
+
+    def _wait_attach(self, interval):
+        # interval == 0 means waiting for CTRL+C
+        try:
+            if interval > 0:
+                print(f"Attach success, collect trace after {interval}s", flush=True)
+                time.sleep(interval)
+            else:
+                print("Attach success, press CTRL+C to stop and save report", flush=True)
+                while True:
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            pass
 
     def save(self) -> None:
         # This function will only be called from main process
