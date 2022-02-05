@@ -24,6 +24,7 @@ arguments from `viztracer` command line.
     viztracer --attach <pid> -o result.json
 
 ** viztracer has to be importable in the attaching process otherwise it will raise an exception **
+** gdb is required on Linux, and lldb is required on MacOS **
 
 All the arguments will be sent to the attached process to instantiate a `VizTracer` object.
 
