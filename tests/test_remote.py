@@ -3,7 +3,10 @@
 
 
 from viztracer import VizTracer
+import base64
+import json
 import os
+import re
 import signal
 import sys
 import time
@@ -194,6 +197,10 @@ class TestRemote(CmdlineTmpl):
         p_attach_invalid.wait()
         self.assertTrue(p_attach_invalid.returncode != 0)
 
+        p_attach_uninstall = subprocess.Popen(uninstall_cmd)
+        p_attach_uninstall.wait()
+        self.assertTrue(p_attach_uninstall.returncode != 0)
+
     @unittest.skipIf(sys.platform != "win32", "Only test Windows")
     def test_windows(self):
         tracer = VizTracer(output_file="remote.json")
@@ -202,3 +209,36 @@ class TestRemote(CmdlineTmpl):
 
         self.template(["viztracer", "--attach", "1234"], success=False)
         self.template(["viztracer", "--attach_installed", "1234"], success=False)
+        self.template(["viztracer", "--uninstall", "1234"], success=False)
+
+
+class TestAttachScript(CmdlineTmpl):
+    def test_attach_script(self):
+        # Isolate the attach stuff in a separate process
+        kwargs = {"output_file": "attach_test.json"}
+        kwargs_non_exist = {"output_file": "non_exist.json"}
+        kwargs_b64 = base64.urlsafe_b64encode(json.dumps(kwargs).encode("ascii")).decode("ascii")
+        kwargs_non_exist_b64 = base64.urlsafe_b64encode(json.dumps(kwargs_non_exist).encode("ascii")).decode("ascii")
+        attach_script = textwrap.dedent(f"""
+            import viztracer.attach
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
+            viztracer.attach.start_attach(\"{kwargs_b64}\")
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
+            viztracer.attach.start_attach(\"{kwargs_b64}\")
+            a = []
+            a.append(1)
+            viztracer.attach.stop_attach()
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
+            viztracer.attach.start_attach(\"{kwargs_non_exist_b64}\")
+            viztracer.attach.uninstall_attach()
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
+        """)
+
+        self.template(["python", "cmdline_test.py"],
+                      script=attach_script,
+                      expected_output_file="attach_test.json",
+                      expected_stdout=re.compile(r".*?False.*?True.*?False.*?False.*?", re.DOTALL),
+                      expected_stderr=".*Can't attach.*")
+        if os.path.exists("non_exist.json"):
+            os.remove("non_exist.json")
+            self.fail("uninstall failed to prevent tracer from saving data")

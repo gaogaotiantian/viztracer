@@ -482,26 +482,17 @@ class VizUI:
             "dump_raw": False
         })
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
-        if sys.platform == "win32":
-            start_code = f"import viztracer.attach; viztracer.attach.start_attach(\"{b64s}\")"
-        else:
-            start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
+        start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
         stop_code = "viztracer.attach.stop_attach()"
-        retcode, out, err, = run_python_code(pid, start_code)
-        if retcode != 0:
-            print(f"Failed to inject code [err {retcode}]")
-            print(out.decode("utf-8"))
-            print(err.decode("utf-8"))
-            return False, None
+        retcode, _, _, = run_python_code(pid, start_code)
+        if retcode != 0:  # pragma: no cover
+            return False, f"Failed to inject code [err {retcode}]"
 
         self._wait_attach(interval)
 
-        retcode, out, err = run_python_code(pid, stop_code)
-        if retcode != 0:
-            print(f"Failed to inject code [err {retcode}]")
-            print(out.decode("utf-8"))
-            print(err.decode("utf-8"))
-            return False, None
+        retcode, _, _ = run_python_code(pid, stop_code)
+        if retcode != 0:  # pragma: no cover
+            return False, f"Failed to inject code [err {retcode}]"
 
         print("Use the following command to open the report:")
         color_print("OKGREEN", "vizviewer {}".format(self.init_kwargs["output_file"]))
@@ -519,12 +510,9 @@ class VizUI:
 
         stop_code = "import viztracer.attach; viztracer.attach.uninstall_attach()"
 
-        retcode, out, err = run_python_code(pid, stop_code)
-        if retcode != 0:
-            print(f"Failed to inject code [err {retcode}]")
-            print(out.decode("utf-8"))
-            print(err.decode("utf-8"))
-            return False, None
+        retcode, _, _ = run_python_code(pid, stop_code)
+        if retcode != 0:  # pragma: no cover
+            return False, f"Failed to inject code [err {retcode}]"
 
         return True, None
 

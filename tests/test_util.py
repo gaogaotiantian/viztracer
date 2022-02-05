@@ -1,6 +1,9 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import os
+import sys
+import unittest
 import viztracer.util
 from .base_tmpl import BaseTmpl
 
@@ -28,3 +31,12 @@ class TestUtil(BaseTmpl):
         self.assertAlmostEqual(time_str_to_us("600ns"), 0.6)
         self.assertRaises(ValueError, time_str_to_us, "0.0.0")
         self.assertRaises(ValueError, time_str_to_us, "invalid")
+
+    @unittest.skipIf(sys.platform != "win32", "pid_exists only works on Unix")
+    def test_pid_exists(self):
+        pid_exists = viztracer.util.pid_exists
+        self.assertFalse(pid_exists(-1))
+        self.assertTrue(pid_exists(1))
+        self.assertTrue(pid_exists(os.getpid()))
+        with self.assertRaises(ValueError):
+            pid_exists(0)

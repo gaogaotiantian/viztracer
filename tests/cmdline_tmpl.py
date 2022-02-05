@@ -48,6 +48,7 @@ class CmdlineTmpl(BaseTmpl):
                  script_name="cmdline_test.py",
                  expected_entries=None,
                  expected_stdout=None,
+                 expected_stderr=None,
                  cleanup=True,
                  check_func=None,
                  concurrency=None,
@@ -112,8 +113,11 @@ class CmdlineTmpl(BaseTmpl):
                     data = json.load(f)
                     self.assertEventNumber(data, expected_entries)
 
-            if expected_stdout:
+            if expected_stdout is not None:
                 self.assertRegex(result.stdout.decode("utf-8"), expected_stdout)
+
+            if expected_stderr is not None:
+                self.assertRegex(result.stderr.decode("utf-8"), expected_stderr)
 
             if check_func:
                 assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")

@@ -102,7 +102,7 @@ def pid_exists(pid):
         elif err.errno == errno.EPERM:
             # EPERM clearly means there's a process to deny access to
             return True
-        else:
+        else:  # pragma: no cover
             # According to "man 2 kill" possible error values are
             # (EINVAL, EPERM, ESRCH)
             raise
