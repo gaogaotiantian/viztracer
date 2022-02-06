@@ -56,7 +56,7 @@ source venv/bin/activate
 Install the requirements for development
 
 ```
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 To build the project on Linux/MacOS, you can simply do ``make``.
@@ -75,8 +75,12 @@ python setup.py build install
 Check lint with flake8 and mypy
 
 ```
-flake8 src/ tests/ example/ --count --ignore=W503 --max-line-length=127 --statistics
-mypy src
+# On Unix
+make lint
+
+# explicit or windows
+flake8 src/ tests/ example/ --exclude "src/viztracer/attach_process/*" --count --ignore=W503 --max-line-length=127 --statistics
+mypy src/ --exclude src/viztracer/attach_process/
 ```
 
 ### Test
