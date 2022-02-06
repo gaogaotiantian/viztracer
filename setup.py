@@ -1,4 +1,5 @@
 import setuptools
+import sys
 from distutils.core import Extension
 
 with open("README.md") as f:
@@ -47,7 +48,8 @@ setuptools.setup(
                 "src/viztracer/modules/eventnode.c",
                 "src/viztracer/modules/snaptrace.c"
             ],
-            extra_link_args=["-lpthread"]
+            extra_compile_args={"win32": ["/WX"]}.get(sys.platform, ["-Werror"]),
+            extra_link_args={"win32": []}.get(sys.platform, ["-lpthread"])
         )
     ],
     classifiers=[
