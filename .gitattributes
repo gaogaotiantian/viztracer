@@ -1,3 +1,4 @@
 src/viztracer/html/** linguist-vendored
 example/json/* linguist-generated
 src/viztracer/web_dist/** linguist-vendored
+src/viztracer/attach_process/** linguist-vendored

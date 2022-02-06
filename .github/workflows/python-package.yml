@@ -23,6 +23,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install gdb
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install gdb
+        echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
     - name: Install dependencies
       if: matrix.os != 'windows-latest'
       run: |
