@@ -32,7 +32,7 @@ class TestUtil(BaseTmpl):
         self.assertRaises(ValueError, time_str_to_us, "0.0.0")
         self.assertRaises(ValueError, time_str_to_us, "invalid")
 
-    @unittest.skipIf(sys.platform != "win32", "pid_exists only works on Unix")
+    @unittest.skipIf(sys.platform == "win32", "pid_exists only works on Unix")
     def test_pid_exists(self):
         pid_exists = viztracer.util.pid_exists
         self.assertFalse(pid_exists(-1))
