@@ -101,7 +101,7 @@ class TestRemote(CmdlineTmpl):
                             msg=f"attach failed\n{out}\n{err}\n")
             self.assertIn("success", out.decode("utf-8"), msg=f"Attach success not in {out}")
             if file_should_exist:
-                self.assertFileExists(output_file, 40)
+                self.assertFileExists(output_file, 40, msg=f"{out}\n{err}\n")
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
