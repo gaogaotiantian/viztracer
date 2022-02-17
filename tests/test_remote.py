@@ -60,7 +60,6 @@ class TestRemote(CmdlineTmpl):
         output_file = f"remote_{int(time.time()*1000)}.json"
         attach_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--attach"])
 
-
         self.attach_check(file_to_attach, attach_cmd, output_file)
 
         file_to_attach_tracing = textwrap.dedent("""
