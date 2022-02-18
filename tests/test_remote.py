@@ -214,6 +214,7 @@ class TestRemote(CmdlineTmpl):
 
 
 class TestAttachSanity(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "win32", "Can't run attach on Windows")
     def test_basic(self):
         file_to_attach = textwrap.dedent("""
             import time
