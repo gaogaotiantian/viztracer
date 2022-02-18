@@ -3,6 +3,7 @@
 
 
 from viztracer import VizTracer
+from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
 import base64
 import json
 import os
@@ -210,6 +211,35 @@ class TestRemote(CmdlineTmpl):
         self.template(["viztracer", "--attach", "1234"], success=False)
         self.template(["viztracer", "--attach_installed", "1234"], success=False)
         self.template(["viztracer", "--uninstall", "1234"], success=False)
+
+
+class TestAttachSanity(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "win32", "Can't run attach on Windows")
+    def test_basic(self):
+        file_to_attach = textwrap.dedent("""
+            import time
+            print("Ready", flush=True)
+            while True:
+                time.sleep(0.5)
+        """)
+        with open("attached_script.py", "w") as f:
+            f.write(file_to_attach)
+
+        # Run the process to attach first
+        script_cmd = cmd_with_coverage(["python", "attached_script.py"])
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
+        try:
+            out = p_script.stdout.readline()
+            self.assertIn("Ready", out.decode("utf-8"))
+            pid_to_attach = p_script.pid
+            retcode, out, err = run_python_code(pid_to_attach, "print(\\\"finish\\\", flush=True);")
+            self.assertEqual(retcode, 0, msg=f"out: {out}; err: {err}")
+        finally:
+            p_script.terminate()
+            p_script.wait()
+            self.assertIn("finish", p_script.stdout.read().decode("utf-8"))
+            p_script.stdout.close()
+            os.remove("attached_script.py")
 
 
 class TestAttachScript(CmdlineTmpl):
