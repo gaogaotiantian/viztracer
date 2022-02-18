@@ -232,14 +232,12 @@ class TestAttachSanity(CmdlineTmpl):
             out = p_script.stdout.readline()
             self.assertIn("Ready", out.decode("utf-8"))
             pid_to_attach = p_script.pid
-            retcode, out, err = run_python_code(pid_to_attach, "print(\\\"finish\\\");exit(0)")
+            retcode, out, err = run_python_code(pid_to_attach, "print(\\\"finish\\\", flush=True);")
             self.assertEqual(retcode, 0, msg=f"out: {out}; err: {err}")
-            p_script.wait(timeout=10)
-            self.assertEqual(p_script.returncode, 0)
-            self.assertIn("finish", p_script.stdout.read().decode("utf-8"))
         finally:
             p_script.terminate()
             p_script.wait()
+            self.assertIn("finish", p_script.stdout.read().decode("utf-8"))
             p_script.stdout.close()
             os.remove("attached_script.py")
 
