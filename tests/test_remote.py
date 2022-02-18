@@ -140,7 +140,7 @@ class TestRemote(CmdlineTmpl):
             while True:
                 time.sleep(0.5)
         """)
-        output_file = f"remote_{int(time.time()*1000)}.json"
+        output_file = os.path.abspath(f"remote_{int(time.time()*1000)}.json")
         uninstall_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--uninstall"])
         attach_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--attach"])
 
