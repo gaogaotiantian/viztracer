@@ -57,9 +57,8 @@ class TestRemote(CmdlineTmpl):
             while True:
                 time.sleep(0.5)
         """)
-        attach_cmd = cmd_with_coverage(["viztracer", "-o", "remote.json", "--attach"])
-
-        output_file = "remote.json"
+        output_file = os.path.abspath(f"./remote_{int(time.time()*1000)}.json")
+        attach_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--attach"])
 
         self.attach_check(file_to_attach, attach_cmd, output_file)
 
@@ -101,7 +100,7 @@ class TestRemote(CmdlineTmpl):
                             msg=f"attach failed\n{out}\n{err}\n")
             self.assertIn("success", out.decode("utf-8"), msg=f"Attach success not in {out}")
             if file_should_exist:
-                self.assertFileExists(output_file, 40)
+                self.assertFileExists(output_file, 40, msg=f"{out}\n{err}\n")
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
@@ -141,10 +140,9 @@ class TestRemote(CmdlineTmpl):
             while True:
                 time.sleep(0.5)
         """)
-        uninstall_cmd = cmd_with_coverage(["viztracer", "-o", "remote.json", "--uninstall"])
-        attach_cmd = cmd_with_coverage(["viztracer", "-o", "remote.json", "--attach"])
-
-        output_file = "remote.json"
+        output_file = os.path.abspath(f"remote_{int(time.time()*1000)}.json")
+        uninstall_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--uninstall"])
+        attach_cmd = cmd_with_coverage(["viztracer", "-o", output_file, "--attach"])
 
         with open("attached_script.py", "w") as f:
             f.write(file_to_attach)

@@ -21,17 +21,20 @@ class BaseTmpl(TestCase):
         self.assertEqual(entries_count, expected_entries,
                          f"Event number incorrect, {entries_count}(expected {expected_entries}) - {entries}")
 
-    def assertFileExists(self, path, timeout=None):
+    def assertFileExists(self, path, timeout=None, msg=None):
+        err_msg = f"file {path} does not exist!"
+        if msg is not None:
+            err_msg = f"file {path} does not exist! {msg}"
         if timeout is None:
             if not os.path.exists(path):
-                raise AssertionError(f"file {path} does not exist!")
+                raise AssertionError(err_msg)
         else:
             start = time.time()
             while True:
                 if os.path.exists(path):
                     return
                 elif time.time() - start > timeout:
-                    raise AssertionError(f"file {path} does not exist!")
+                    raise AssertionError(err_msg)
                 else:
                     time.sleep(0.5)
 

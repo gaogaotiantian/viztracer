@@ -9,24 +9,30 @@ This is helpful when you don't want to restart the process to trace it. You can 
 the process once and forever, and only attach VizTracer when you want to trace it.
 The process will run normally without performance hit when you are not attaching VizTracer.
 
-*This feature does not support Windows*
+**This feature does not support Windows**
 
 To attach to the process and trace it, you have two ways:
 
-1. You can attach to an arbitrary Python process, as long as viztracer is importable in that process
+1. You can attach to an arbitrary Python process, as long as ``viztracer`` is importable in that process
 2. You can attach to a Python process that already installed VizTracer
 
-The first way is more flexible - it will inject code into the process to load `viztracer`. You can even pass
-arguments from `viztracer` command line.
+The **first** way is more flexible - it will inject code into the process to load ``viztracer``. You can even pass
+arguments from ``viztracer`` command line.
 
 .. code-block::
 
     viztracer --attach <pid> -o result.json
 
-** viztracer has to be importable in the attaching process otherwise it will raise an exception **
-** gdb is required on Linux, and lldb is required on MacOS **
+**viztracer has to be importable in the attached process otherwise it will raise an exception**
 
-All the arguments will be sent to the attached process to instantiate a `VizTracer` object.
+This means, you need to install ``viztracer`` in the environment(venv, pyenv etc.) of the attached process. You don't have
+to use the ``viztracer`` from the same environment to attach though.
+
+**gdb is required on Linux, and lldb is required on MacOS**
+
+Notice that, if there is already a globally registered ``VizTracer`` object in the attached process,
+that object will be used for tracing. If it's already running, then attaching won't do anything.
+Otherwise all the arguments will be sent to the attached process to instantiate a ``VizTracer`` object.
 
 By default, you need to Ctrl+C out of viztracer to save the report. Be aware that it is
 the attached process rather than attaching process(viztracer) that is saving the report,
@@ -39,8 +45,8 @@ You can also trace for a period of time using ``-t``
     viztracer --attach <pid> -t <seconds>
 
 Even though this looks decent, there are some dark magic going under the rug and you may want to do
-something cleaner, which brings up the second way - install viztracer in the process you want to profile.
-Another good thing about this way is that it's threading-aware. Even if you attach after spawning threads,
+something cleaner, which brings up the **second** way - pre-install viztracer in the process you want to profile.
+Another good thing about this way is that it's thread-aware. Even if you attach after spawning threads,
 you can still get profile data from the other threads.
 
 .. code-block:: python

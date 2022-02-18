@@ -29,6 +29,11 @@ jobs:
         sudo apt-get update
         sudo apt-get install gdb
         echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+    - name: Setup lldb
+      if: matrix.os == 'macos-latest'
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
     - name: Install dependencies
       if: matrix.os != 'windows-latest'
       run: |
