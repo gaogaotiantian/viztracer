@@ -63,6 +63,7 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
+          CIBW_SKIP: '*musllinux*'
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}

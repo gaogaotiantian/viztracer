@@ -669,7 +669,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
             if (curr->data.fee.asyncio_task == NULL) {
                 PyDict_SetItemString(dict, "tid", tid);
             } else {
-                PyObject* task_id = PyLong_FromUnsignedLongLong(((unsigned long long)curr->data.fee.asyncio_task) & 0xffffff);
+                PyObject* task_id = PyLong_FromUnsignedLongLong(((uintptr_t)curr->data.fee.asyncio_task) & 0xffffff);
                 PyDict_SetItemString(dict, "tid", task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;
@@ -893,7 +893,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (curr->data.fee.asyncio_task != NULL) {
-                tid = (unsigned long)(((unsigned long long)curr->data.fee.asyncio_task) & 0xffffff);
+                tid = (unsigned long)(((uintptr_t)curr->data.fee.asyncio_task) & 0xffffff);
                 PyObject* task_id = PyLong_FromLong(tid);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;

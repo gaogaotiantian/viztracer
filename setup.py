@@ -1,5 +1,6 @@
 import setuptools
 import sys
+import platform
 from distutils.core import Extension
 
 with open("README.md") as f:
@@ -16,6 +17,36 @@ with open("./src/viztracer/__init__.py") as f:
         print("Can't find version! Stop Here!")
         exit(1)
 
+# Determine which attach binary to take into package
+package_data = {
+    "viztracer": [
+        "html/*.js",
+        "html/*.css",
+        "html/*.html",
+        "web_dist/*",
+        "web_dist/*/*",
+        "web_dist/*/*/*",
+        "attach_process/__init__.py",
+        "attach_process/add_code_to_python_process.py",
+        "attach_process/LICENSE"
+    ]
+}
+
+if sys.platform == "darwin":
+    package_data["viztracer"].extend([
+        "attach_process/attach_x86_64.dylib",
+        "attach_process/linux_and_mac/lldb_prepare.py"
+    ])
+elif sys.platform == "linux" or sys.platform == "linux2":
+    if platform.machine() == "i686":
+        package_data["viztracer"].extend([
+            "attach_process/attach_linux_x86.so"
+        ])
+    elif platform.machine() == "x86_64":
+        package_data["viztracer"].extend([
+            "attach_process/attach_linux_amd64.so"
+        ])
+
 setuptools.setup(
     name="viztracer",
     version=version,
@@ -27,19 +58,7 @@ setuptools.setup(
     url="https://github.com/gaogaotiantian/viztracer",
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
-    package_data={
-        "viztracer": [
-            "html/*.js",
-            "html/*.css",
-            "html/*.html",
-            "web_dist/*",
-            "web_dist/*/*",
-            "web_dist/*/*/*",
-            "attach_process/*",
-            "attach_process/*/*",
-            "attach_process/*/*/*",
-        ]
-    },
+    package_data=package_data,
     ext_modules=[
         Extension(
             "viztracer.snaptrace",
