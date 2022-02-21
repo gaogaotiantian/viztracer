@@ -17,10 +17,16 @@ try:
             file_path = "./viztracer_report.json"
             with VizTracer(verbose=0, output_file=file_path):
                 exec(code, local_ns, local_ns)
-            server = ServerThread(file_path)
+
+            def view():  # pragma: no cover
+                server = ServerThread(file_path, once=True)
+                server.start()
+                server.ready.wait()
+                import webbrowser
+                webbrowser.open_new_tab(f'http://127.0.0.1:{server.port}')
 
             button = Button(description="VizTracer Report")
-            button.on_click(lambda b: server.view(file_path, once=True))
+            button.on_click(lambda b: view())
 
             display(button)
 
