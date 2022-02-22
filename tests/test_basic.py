@@ -169,6 +169,10 @@ class TestDecorator(BaseTmpl):
             f()
 
     def test_trace_and_save(self):
+        if os.getenv("GITHUB_ACTIONS"):
+            timeout = 60
+        else:
+            timeout = 20
         with tempfile.TemporaryDirectory() as tmp_dir:
 
             @trace_and_save(output_dir=tmp_dir)
@@ -184,7 +188,7 @@ class TestDecorator(BaseTmpl):
             def t():
                 self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
-            self.assertTrueTimeout(t, 20)
+            self.assertTrueTimeout(t, timeout)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -198,7 +202,7 @@ class TestDecorator(BaseTmpl):
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
 
-            self.assertTrueTimeout(t, 20)
+            self.assertTrueTimeout(t, timeout)
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
@@ -213,14 +217,14 @@ class TestDecorator(BaseTmpl):
                     ["ls result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
                 self.assertEqual(a.returncode, 0)
-            self.assertTrueTimeout(t1, 20)
+            self.assertTrueTimeout(t1, timeout)
 
             def t2():
                 a = subprocess.run(
                     ["rm result_my_function2*.json"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
                 self.assertEqual(a.returncode, 0)
-            self.assertTrueTimeout(t2, 20)
+            self.assertTrueTimeout(t2, timeout)
 
 
 class TestLogPrint(BaseTmpl):
