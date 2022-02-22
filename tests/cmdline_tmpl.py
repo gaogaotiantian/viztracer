@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import json
+from multiprocessing.connection import wait
 import os
 import shutil
 import subprocess
@@ -75,13 +76,22 @@ class CmdlineTmpl(BaseTmpl):
         if script:
             self.build_script(script, script_name)
         if send_sig is not None:
+            if isinstance(send_sig, tuple):
+                sig, wait_time = send_sig
+            else:
+                sig = send_sig
+                if os.getenv("GITHUB_ACTIONS"):
+                    # github action is slower
+                    wait_time = 5
+                else:
+                    wait_time = 2
             p = subprocess.Popen(cmd_list)
             if os.getenv("GITHUB_ACTIONS"):
                 # github action is slower
-                time.sleep(5)
+                time.sleep(wait_time)
             else:
-                time.sleep(2)
-            p.send_signal(send_sig)
+                time.sleep(wait_time)
+            p.send_signal(sig)
             p.wait()
             result = p
             if sys.platform == "win32":
