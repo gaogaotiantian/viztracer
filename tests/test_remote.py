@@ -137,6 +137,7 @@ class TestRemote(CmdlineTmpl):
             import viztracer
             tracer = viztracer.VizTracer()
             tracer.start()
+            print("Ready", flush=True)
             while True:
                 time.sleep(0.5)
         """)
@@ -149,8 +150,10 @@ class TestRemote(CmdlineTmpl):
 
         # Run the process to attach first
         script_cmd = cmd_with_coverage(["python", "attached_script.py"])
-        p_script = subprocess.Popen(script_cmd)
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
         try:
+            out = p_script.stdout.readline()
+            self.assertIn("Ready", out.decode("utf-8"))
             pid_to_attach = p_script.pid
             uninstall_cmd = uninstall_cmd + [str(pid_to_attach)]
             attach_cmd = attach_cmd + [str(pid_to_attach)]
@@ -190,6 +193,7 @@ class TestRemote(CmdlineTmpl):
         finally:
             p_script.terminate()
             p_script.wait()
+            p_script.stdout.close()
             os.remove("attached_script.py")
 
         p_attach_invalid = subprocess.Popen(attach_cmd)
