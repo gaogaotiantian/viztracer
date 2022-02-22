@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import json
-from multiprocessing.connection import wait
 import os
 import shutil
 import subprocess
