@@ -85,11 +85,7 @@ class CmdlineTmpl(BaseTmpl):
                 else:
                     wait_time = 2
             p = subprocess.Popen(cmd_list)
-            if os.getenv("GITHUB_ACTIONS"):
-                # github action is slower
-                time.sleep(wait_time)
-            else:
-                time.sleep(wait_time)
+            time.sleep(wait_time)
             p.send_signal(sig)
             p.wait()
             result = p

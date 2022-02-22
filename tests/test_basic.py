@@ -171,8 +171,10 @@ class TestDecorator(BaseTmpl):
     def test_trace_and_save(self):
         if os.getenv("GITHUB_ACTIONS"):
             timeout = 60
+            wait = 3
         else:
             timeout = 20
+            wait = 1
         with tempfile.TemporaryDirectory() as tmp_dir:
 
             @trace_and_save(output_dir=tmp_dir)
@@ -183,7 +185,7 @@ class TestDecorator(BaseTmpl):
                 time.sleep(0.0001)
                 my_function(10)
 
-            time.sleep(1)
+            time.sleep(wait)
 
             def t():
                 self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
@@ -197,7 +199,7 @@ class TestDecorator(BaseTmpl):
                 return
 
             cover_mkdir()
-            time.sleep(1)
+            time.sleep(wait)
 
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
