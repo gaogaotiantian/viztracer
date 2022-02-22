@@ -76,7 +76,11 @@ class CmdlineTmpl(BaseTmpl):
             self.build_script(script, script_name)
         if send_sig is not None:
             p = subprocess.Popen(cmd_list)
-            time.sleep(2)
+            if os.getenv("GITHUB_ACTIONS"):
+                # github action is slower
+                time.sleep(5)
+            else:
+                time.sleep(2)
             p.send_signal(send_sig)
             p.wait()
             result = p
