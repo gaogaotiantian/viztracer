@@ -6,7 +6,6 @@ from viztracer import VizTracer
 from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
 import base64
 import json
-import logging
 import os
 import re
 import signal
