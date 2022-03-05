@@ -17,7 +17,7 @@ def fib(n):
 
 class TestTracer(BaseTmpl):
     def test_double_parse(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         fib(10)
         tracer.stop()
@@ -37,7 +37,7 @@ class TestCTracer(BaseTmpl):
         tracer.parse()
 
     def test_c_run_after_clear(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         fib(5)
         tracer.stop()

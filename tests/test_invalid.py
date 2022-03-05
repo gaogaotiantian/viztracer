@@ -24,7 +24,7 @@ class TestInvalidArgs(BaseTmpl):
             "ignore_frozen": ["hello", 1, "True"],
             "log_async": ["hello", 1, "True"]
         }
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():
             for val in vals:
                 self.assertRaises(ValueError, tracer.__setattr__, args, val)
@@ -32,12 +32,12 @@ class TestInvalidArgs(BaseTmpl):
 
 class TestInvalidOperation(BaseTmpl):
     def test_generate_without_data(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         with self.assertRaises(Exception):
             tracer.generate_json()
 
     def test_save_invalid_format(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         _ = len([1, 2])
         tracer.stop()
@@ -45,7 +45,7 @@ class TestInvalidOperation(BaseTmpl):
             tracer.save("test.invalid")
 
     def test_add_invalid_variable(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         with self.assertRaises(Exception):
             tracer.add_variable("a", 1, event="invalid")

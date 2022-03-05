@@ -26,8 +26,8 @@ def package_keeper():
         curr_packages = get_curr_packages()
         for pkg in curr_packages:
             if pkg not in orig_packages:
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *orig_packages])
+                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg], stdout=subprocess.DEVNULL)
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *orig_packages], stdout=subprocess.DEVNULL)
 
 
 def setup_env(pkg_matrix):
@@ -38,9 +38,9 @@ def setup_env(pkg_matrix):
     for pkg_config in pkg_config_iter:
         for pkg in pkg_config:
             if pkg.startswith("~"):
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]])
+                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]], stdout=subprocess.DEVNULL)
             else:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg], stdout=subprocess.DEVNULL)
         yield
 
 

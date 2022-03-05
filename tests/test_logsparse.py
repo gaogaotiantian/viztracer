@@ -20,10 +20,9 @@ g()
 """
 
 
-file_pool = """
-from multiprocessing import Process, Pool
+file_multiprocess = """
+from multiprocessing import Process
 from viztracer import log_sparse
-import os
 import time
 
 @log_sparse
@@ -31,21 +30,11 @@ def f(x):
     return x*x
 
 if __name__ == "__main__":
-    process_num = 2
-    with Pool(processes=process_num) as pool:
-        print(pool.map(f, range(10)))
-
-        for i in pool.imap_unordered(f, range(10)):
-            print(i)
-
-        res = pool.apply_async(f, (20,))      # runs in *only* one process
-        print(res.get(timeout=1))             # prints "400"
-
-        res = pool.apply_async(os.getpid, ()) # runs in *only* one process
-        print(res.get(timeout=1))             # prints the PID of that process
-
-        multiple_results = [pool.apply_async(os.getpid, ()) for i in range(process_num)]
-        print([res.get(timeout=1) for res in multiple_results])
+    for i in range(3):
+        p = Process(target=f, args=(i,))
+        p.start()
+        p.join()
+        time.sleep(0.1)
 """
 
 
@@ -71,9 +60,9 @@ class TestLogSparse(CmdlineTmpl):
         if multiprocessing.get_start_method() == "fork":
             try:
                 self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
-                              script=file_pool,
+                              script=file_multiprocess,
                               expected_output_file="result.json",
-                              expected_entries=21,
+                              expected_entries=3,
                               concurrency="multiprocessing")
             except Exception as e:
                 # coveragepy has some issue with multiprocess pool

@@ -479,7 +479,8 @@ class VizUI:
             "pid_suffix": False,
             "file_info": True,
             "register_global": True,
-            "dump_raw": False
+            "dump_raw": False,
+            "verbose": 1 if self.verbose != 0 else 0
         })
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
         start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"

@@ -1,18 +1,31 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-from unittest import TestCase
 import gc
+import io
+import logging
 import os
+import sys
 import time
+from unittest import TestCase
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
 
 
 class BaseTmpl(TestCase):
     def setUp(self):
-        print("{} start".format(self.id()))
+        logging.info("=" * 60)
+        logging.info(f"{self.id()} start")
+        self.stdout = io.StringIO()
+        self.stdout_orig, sys.stdout = sys.stdout, self.stdout
 
     def tearDown(self):
-        print("{} finish".format(self.id()))
+        sys.stdout = self.stdout_orig
+        logging.info(f"{self.id()} finish")
         gc.collect()
 
     def assertEventNumber(self, data, expected_entries):
@@ -40,7 +53,7 @@ class BaseTmpl(TestCase):
 
     def assertFileNotExist(self, path):
         if os.path.exists(path):
-            raise AssertionError(f"file {path} does not exist!")
+            raise AssertionError(f"file {path} does exist!")
 
     def assertTrueTimeout(self, func, timeout):
         start = time.time()

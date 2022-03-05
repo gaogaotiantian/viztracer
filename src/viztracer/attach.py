@@ -29,6 +29,8 @@ def start_attach(init_kwargs_b64: str):
         return
     attach_status["attached"] = True
     attach_status["save_path"] = init_kwargs["output_file"]
+    if tracer.verbose > 0:
+        print("Detected attaching viztracer, start tracing.", flush=True)
     tracer.start()
 
 
@@ -37,6 +39,8 @@ def stop_attach():
         tracer: VizTracer = get_tracer()
         tracer.stop()
         tracer.save(attach_status["save_path"])
+        if tracer.verbose > 0:
+            print(f"Saved report to {attach_status['save_path']}", flush=True)
         attach_status["attached"] = False
         if attach_status["created_tracer"]:
             tracer.stop()
