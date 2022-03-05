@@ -94,7 +94,7 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertEventNumber(tracer.data, 10)
 
     def test_save(self):
-        tracer = VizTracer(tracer_entries=10, verbose=0)
+        tracer = VizTracer(tracer_entries=10)
         tracer.start()
         fib(5)
         tracer.stop()
