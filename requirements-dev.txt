@@ -2,6 +2,7 @@ setuptools
 wheel
 twine
 coverage
+pywinpty==1.1.6; python_version < '3.7' and sys_platform == 'win32'
 ipywidgets
 mypy
 loky>=3.0.0
