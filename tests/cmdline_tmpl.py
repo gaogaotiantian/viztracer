@@ -106,8 +106,8 @@ class CmdlineTmpl(BaseTmpl):
             try:
                 result = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
             except subprocess.TimeoutExpired as e:
-                logging.error(f"stdout: {e.stdout.decode('utf-8')}")
-                logging.error(f"stderr: {e.stderr.decode('utf-8')}")
+                logging.error(f"stdout: {e.stdout}")
+                logging.error(f"stderr: {e.stderr}")
                 raise e
         if not (success ^ (result.returncode != 0)):
             logging.error(f"stdout: {result.stdout.decode('utf-8')}")
