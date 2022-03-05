@@ -86,7 +86,7 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertTrue(had_exception)
 
     def test_tracer_entries(self):
-        tracer = VizTracer(tracer_entries=10, verbose=0)
+        tracer = VizTracer(tracer_entries=10)
         tracer.start()
         fib(10)
         tracer.stop()
@@ -211,7 +211,7 @@ class TestDecorator(BaseTmpl):
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
-            @trace_and_save(verbose=0)
+            @trace_and_save
             def my_function2(n):
                 fib(n)
             my_function2(10)
