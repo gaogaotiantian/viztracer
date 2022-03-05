@@ -7,7 +7,7 @@ from .base_tmpl import BaseTmpl
 
 class TestVizEvent(BaseTmpl):
     def test_basic(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         with tracer.log_event("event"):
             a = []

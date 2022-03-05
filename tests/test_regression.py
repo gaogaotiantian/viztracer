@@ -4,10 +4,9 @@
 
 import multiprocessing
 import os
-import subprocess
+import signal
 import sys
 import tempfile
-import time
 import unittest
 
 import viztracer
@@ -19,7 +18,7 @@ from .base_tmpl import BaseTmpl
 
 class TestIssue1(BaseTmpl):
     def test_datetime(self):
-        tracer = viztracer.VizTracer()
+        tracer = viztracer.VizTracer(verbose=0)
         tracer.start()
         from datetime import timedelta
         timedelta(hours=5)
@@ -27,7 +26,7 @@ class TestIssue1(BaseTmpl):
         tracer.parse()
         tracer.save(output_file="tmp.json")
 
-        tracer = viztracer.VizTracer()
+        tracer = viztracer.VizTracer(verbose=0)
         tracer.start()
         from datetime import timedelta
         timedelta(hours=5)
@@ -47,7 +46,7 @@ class TestStackOptimization(BaseTmpl):
     def test_instant(self):
         def s():
             return 0
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         # This is a library function which will be ignored, but
         # this could trick the system into a ignoring status
@@ -83,7 +82,7 @@ class TestFunctionArg(BaseTmpl):
             if n < 2:
                 return 1
             return f(n - 1) + f(n - 2)
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         f(5)
         tracer.stop()
@@ -131,20 +130,10 @@ for i in range(10):
 
 
 class TestTermCaught(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "win32", "windows does not have graceful term")
     def test_term(self):
-        if sys.platform == "win32":
-            return
-
-        self.build_script(term_code)
-        cmd = ["viztracer", "-o", "term.json", "cmdline_test.py"]
-        if os.getenv("COVERAGE_RUN"):
-            cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + cmd
-        p = subprocess.Popen(cmd)
-        time.sleep(1.5)
-        p.terminate()
-        p.wait(timeout=10)
-        self.assertFileExists("term.json", 10)
-        self.cleanup(output_file="term.json")
+        self.template(["viztracer", "-o", "term.json", "cmdline_test.py"],
+                      expected_output_file="term.json", script=term_code, send_sig=signal.SIGTERM)
 
 
 class TestIssue42(BaseTmpl):
@@ -155,7 +144,7 @@ class TestIssue42(BaseTmpl):
             lst = []
             lst.append(1)
 
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         f()
         tracer.stop()

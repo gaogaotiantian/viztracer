@@ -38,9 +38,9 @@ def setup_env(pkg_matrix):
     for pkg_config in pkg_config_iter:
         for pkg in pkg_config:
             if pkg.startswith("~"):
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]])
+                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]], stdout=subprocess.DEVNULL)
             else:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg], stdout=subprocess.DEVNULL)
         yield
 
 

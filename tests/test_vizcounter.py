@@ -12,7 +12,7 @@ class Hello(VizCounter):
 
 class TestCounterClass(BaseTmpl):
     def test_basic(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         counter = VizCounter(tracer, "name")
         counter.a = 1
@@ -22,7 +22,7 @@ class TestCounterClass(BaseTmpl):
         self.assertEqual(entries, 2)
 
     def test_exception(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         counter = VizCounter(tracer, "name")
         with self.assertRaises(Exception) as _:
@@ -35,7 +35,7 @@ class TestCounterClass(BaseTmpl):
         tracer.clear()
 
     def test_inherit(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = Hello(tracer, "name")
         a.b = 1

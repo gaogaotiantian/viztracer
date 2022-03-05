@@ -39,6 +39,7 @@ class Viewer(unittest.TestCase):
             self.cmd.append(f"{timeout}")
 
         self.process = None
+        self.stopped = False
         super().__init__()
 
     def __enter__(self):
@@ -48,14 +49,23 @@ class Viewer(unittest.TestCase):
         self.stop()
 
     def run(self):
-        self.process = subprocess.Popen(self.cmd)
+        self.stopped = False
+        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self._wait_until_socket_on()
         self.assertIs(self.process.poll(), None)
 
     def stop(self):
-        self.process.send_signal(signal.SIGINT)
-        self.process.wait(timeout=20)
-        self.assertEqual(self.process.returncode, 0)
+        if not self.stopped:
+            try:
+                if self.process.poll() is None:
+                    self.process.send_signal(signal.SIGINT)
+                    self.process.wait(timeout=20)
+                out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
+                self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
+            finally:
+                self.process.stdout.close()
+                self.process.stderr.close()
+                self.stopped = True
 
     def _wait_until_socket_on(self):
         for _ in range(10):
@@ -141,6 +151,7 @@ class TestViewer(CmdlineTmpl):
             self.assertTrue(resp.code == 200)
             self.assertTrue(v.process.returncode == 0)
         finally:
+            v.stop()
             os.remove(f.name)
 
         json_script = '{"file_info": {}, "traceEvents": []}'
@@ -163,6 +174,7 @@ class TestViewer(CmdlineTmpl):
             finally:
                 try:
                     v.process.wait(timeout=20)
+                    v.stop()
                 except subprocess.TimeoutExpired:
                     v.stop()
                     v.process.kill()
@@ -184,6 +196,7 @@ class TestViewer(CmdlineTmpl):
             finally:
                 try:
                     v.process.wait(timeout=20)
+                    v.stop()
                 except subprocess.TimeoutExpired:
                     v.stop()
                     v.process.kill()
@@ -210,7 +223,9 @@ class TestViewer(CmdlineTmpl):
             finally:
                 try:
                     v.process.wait(timeout=20)
+                    v.stop()
                 except subprocess.TimeoutExpired:
+                    v.stop()
                     v.process.kill()
         finally:
             os.remove(f.name)

@@ -12,7 +12,7 @@ def generate_json(filename):
     cwd = os.getcwd()
     os.chdir(data_dir)
     path = os.path.join(os.path.dirname(__file__), "data", filename)
-    subprocess.run(["python", path])
+    subprocess.run(["python", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     os.chdir(cwd)
 
 

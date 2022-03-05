@@ -4,6 +4,7 @@
 import contextlib
 import cProfile
 import gc
+import logging
 import os
 import random
 import tempfile
@@ -57,7 +58,7 @@ class BenchmarkTimer:
         def time_str(baseline, experiment):
             return "{:.9f}({:.2f})[{}]".format(experiment["dur"], experiment["dur"] / baseline["dur"], experiment["section"])
         for experiments in self.timer_experiments.values():
-            print(" ".join([time_str(self.timer_baseline, experiment) for experiment in experiments]))
+            logging.info(" ".join([time_str(self.timer_baseline, experiment) for experiment in experiments]))
 
     def add_set_up_func(self, func, *args, **kwargs):
         self._set_up_funcs.append((func, args, kwargs))
@@ -258,10 +259,10 @@ class TestFilterPerformance(BaseTmpl):
         tracer.stop()
         tracer.cleanup()
 
-        print("Filter performance:")
-        print("Baseline:        {:.9f}(1)".format(baseline))
-        print("Include:         {:.9f}({:.2f})".format(include_files, include_files / baseline))
-        print("Max stack depth: {:.9f}({:.2f})".format(max_stack_depth, max_stack_depth / baseline))
+        logging.info("Filter performance:")
+        logging.info("Baseline:        {:.9f}(1)".format(baseline))
+        logging.info("Include:         {:.9f}({:.2f})".format(include_files, include_files / baseline))
+        logging.info("Max stack depth: {:.9f}({:.2f})".format(max_stack_depth, max_stack_depth / baseline))
 
     def test_hanoi(self):
         def hanoi():

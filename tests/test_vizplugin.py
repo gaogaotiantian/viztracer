@@ -48,7 +48,7 @@ class MyPluginFuture(VizPluginBase):
 class TestVizPlugin(CmdlineTmpl):
     def test_basic(self):
         pl = MyPlugin()
-        tracer = VizTracer(plugins=[pl])
+        tracer = VizTracer(plugins=[pl], verbose=0)
         tracer.start()
         tracer.stop()
         tracer.save()
@@ -64,19 +64,19 @@ class TestVizPlugin(CmdlineTmpl):
 
     def test_terminate(self):
         pl = MyPlugin()
-        with VizTracer(plugins=[pl]):
+        with VizTracer(plugins=[pl], verbose=0):
             _ = []
 
         pl = MyPlugin(terminate_well=False)
         with self.assertRaises(VizPluginError):
-            with VizTracer(plugins=[pl]):
+            with VizTracer(plugins=[pl], verbose=0):
                 _ = []
 
     def test_version(self):
         pl = MyPluginFuture()
         s = io.StringIO()
         with redirect_stdout(s):
-            with VizTracer(plugins=[pl]):
+            with VizTracer(plugins=[pl], verbose=0):
                 _ = []
         self.assertIn("support version is higher", s.getvalue())
 

@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -84,10 +85,14 @@ class CmdlineTmpl(BaseTmpl):
                     wait_time = 5
                 else:
                     wait_time = 2
-            p = subprocess.Popen(cmd_list)
+            p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(wait_time)
             p.send_signal(sig)
-            p.wait()
+            p.wait(timeout=60)
+            stdout, stderr = p.stdout.read(), p.stderr.read()
+            p.stdout.close()
+            p.stderr.close()
+            p.stdout, p.stderr = stdout, stderr
             result = p
             if sys.platform == "win32":
                 # If we are on win32, we can't get anything useful from
@@ -101,12 +106,12 @@ class CmdlineTmpl(BaseTmpl):
             try:
                 result = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
             except subprocess.TimeoutExpired as e:
-                print(e.stdout, e.stderr)
+                logging.error(f"stdout: {e.stdout.decode('utf-8')}")
+                logging.error(f"stderr: {e.stderr.decode('utf-8')}")
                 raise e
         if not (success ^ (result.returncode != 0)):
-            print(success, result.returncode)
-            print(result.stdout)
-            print(result.stderr)
+            logging.error(f"stdout: {result.stdout.decode('utf-8')}")
+            logging.error(f"stderr: {result.stderr.decode('utf-8')}")
         self.assertTrue(success ^ (result.returncode != 0))
         if success:
             if expected_output_file:

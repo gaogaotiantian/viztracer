@@ -22,7 +22,7 @@ from .util import cmd_with_coverage
 class TestRemote(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
     def test_install(self):
-        tracer = VizTracer(output_file="remote.json")
+        tracer = VizTracer(output_file="remote.json", verbose=0)
         tracer.install()
         os.kill(os.getpid(), signal.SIGUSR1)
         time.sleep(0.1)
@@ -80,7 +80,7 @@ class TestRemote(CmdlineTmpl):
 
         # Run the process to attach first
         script_cmd = cmd_with_coverage(["python", "attached_script.py"])
-        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         try:
             pid_to_attach = p_script.pid
             attach_cmd = attach_cmd + [str(pid_to_attach)]
@@ -93,12 +93,12 @@ class TestRemote(CmdlineTmpl):
             attach_cmd_with_t = attach_cmd + ["-t", str(wait_time)]
             p_attach = subprocess.Popen(attach_cmd_with_t, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             p_attach.wait()
-            out, err = p_attach.stdout.read(), p_attach.stderr.read()
+            out, err = p_attach.stdout.read().decode("utf-8"), p_attach.stderr.read().decode("utf-8")
             p_attach.stdout.close()
             p_attach.stderr.close()
-            self.assertTrue(p_attach.returncode == 0,
-                            msg=f"attach failed\n{out}\n{err}\n")
-            self.assertIn("success", out.decode("utf-8"), msg=f"Attach success not in {out}")
+            self.assertEqual(p_attach.returncode, 0,
+                             msg=f"attach failed\n{out}\n{err}\n")
+            self.assertIn("success", out, msg=f"Attach success not in {out}")
             if file_should_exist:
                 self.assertFileExists(output_file, 40, msg=f"{out}\n{err}\n")
                 os.remove(output_file)
@@ -112,7 +112,7 @@ class TestRemote(CmdlineTmpl):
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
             p_attach.stdout.close()
-            self.assertTrue(p_attach.returncode == 0)
+            self.assertEqual(p_attach.returncode, 0)
             time.sleep(0.5)
 
             if file_should_exist:
@@ -126,7 +126,7 @@ class TestRemote(CmdlineTmpl):
             p_script.stdout.close()
             os.remove("attached_script.py")
 
-        p_attach_invalid = subprocess.Popen(attach_cmd)
+        p_attach_invalid = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL)
         p_attach_invalid.wait()
         self.assertTrue(p_attach_invalid.returncode != 0)
 
@@ -150,7 +150,7 @@ class TestRemote(CmdlineTmpl):
 
         # Run the process to attach first
         script_cmd = cmd_with_coverage(["python", "attached_script.py"])
-        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         try:
             out = p_script.stdout.readline()
             self.assertIn("Ready", out.decode("utf-8"))
@@ -162,7 +162,7 @@ class TestRemote(CmdlineTmpl):
             time.sleep(1)
 
             # Try to attach. This should fail as viztracer is already running
-            p_attach = subprocess.Popen(attach_cmd)
+            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if sys.platform == "darwin":
                 # loading lldb is super slow on MacOS
                 time.sleep(5)
@@ -178,7 +178,7 @@ class TestRemote(CmdlineTmpl):
             subprocess.check_call(uninstall_cmd)
 
             # Try it again
-            p_attach = subprocess.Popen(attach_cmd)
+            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if sys.platform == "darwin":
                 # loading lldb is super slow on MacOS
                 time.sleep(5)
@@ -196,11 +196,11 @@ class TestRemote(CmdlineTmpl):
             p_script.stdout.close()
             os.remove("attached_script.py")
 
-        p_attach_invalid = subprocess.Popen(attach_cmd)
+        p_attach_invalid = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         p_attach_invalid.wait()
         self.assertTrue(p_attach_invalid.returncode != 0)
 
-        p_attach_uninstall = subprocess.Popen(uninstall_cmd)
+        p_attach_uninstall = subprocess.Popen(uninstall_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         p_attach_uninstall.wait()
         self.assertTrue(p_attach_uninstall.returncode != 0)
 

@@ -22,7 +22,7 @@ class MyThread(threading.Thread):
 
 class TestMultithread(BaseTmpl):
     def test_basic(self):
-        tracer = VizTracer(max_stack_depth=4)
+        tracer = VizTracer(max_stack_depth=4, verbose=0)
         tracer.start()
 
         thread1 = MyThread()
@@ -49,7 +49,7 @@ class TestMultithread(BaseTmpl):
         self.assertEqual(len([e for e in metadata if e["name"] == "thread_name"]), 5)
 
     def test_with_small_buffer(self):
-        tracer = VizTracer(tracer_entries=300)
+        tracer = VizTracer(tracer_entries=300, verbose=0)
         tracer.start()
 
         thread1 = MyThread()

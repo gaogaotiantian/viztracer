@@ -26,6 +26,7 @@ class TestTracerBasic(BaseTmpl):
                 return 1
             return fib(n - 1) + fib(n - 2)
         t = _VizTracer()
+        t.verbose = 0
         t.start()
         fib(5)
         t.stop()
@@ -39,6 +40,7 @@ class TestTracerBasic(BaseTmpl):
             for _ in range(n):
                 random.randrange(n)
         t = _VizTracer(ignore_c_function=True)
+        t.verbose = 0
         t.start()
         fun(10)
         t.stop()
@@ -51,6 +53,7 @@ class TestTracerBasic(BaseTmpl):
                 return 1
             return fib(n - 1) + fib(n - 2)
         t = _VizTracer()
+        t.verbose = 0
         t.start()
         fib(5)
         t.stop()
@@ -61,20 +64,20 @@ class TestTracerBasic(BaseTmpl):
 
 class TestVizTracerBasic(BaseTmpl):
     def test_run(self):
-        snap = VizTracer()
+        snap = VizTracer(verbose=0)
         snap.run("import random; random.randrange(10)", output_file="test_run.json")
         self.assertTrue(os.path.exists("test_run.json"))
         os.remove("test_run.json")
 
     def test_with(self):
-        with VizTracer(output_file="test_with.json") as _:
+        with VizTracer(output_file="test_with.json", verbose=0) as _:
             fib(10)
         self.assertTrue(os.path.exists("test_with.json"))
         os.remove("test_with.json")
 
         had_exception = False
         try:
-            with VizTracer(output_file="test_with.json"):
+            with VizTracer(output_file="test_with.json", verbose=0):
                 _ = 1 / 0
         except ZeroDivisionError:
             had_exception = True
@@ -83,7 +86,7 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertTrue(had_exception)
 
     def test_tracer_entries(self):
-        tracer = VizTracer(tracer_entries=10)
+        tracer = VizTracer(tracer_entries=10, verbose=0)
         tracer.start()
         fib(10)
         tracer.stop()
@@ -91,7 +94,7 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertEventNumber(tracer.data, 10)
 
     def test_save(self):
-        tracer = VizTracer(tracer_entries=10)
+        tracer = VizTracer(tracer_entries=10, verbose=0)
         tracer.start()
         fib(5)
         tracer.stop()
@@ -107,7 +110,7 @@ class TestVizTracerBasic(BaseTmpl):
 
 class TestInstant(BaseTmpl):
     def test_addinstant(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         tracer.add_instant('instant - "karma": True')
         tracer.add_instant('instant', args={"karma": True})
@@ -116,7 +119,7 @@ class TestInstant(BaseTmpl):
         self.assertEventNumber(tracer.data, 2)
 
     def test_invalid_scope(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         tracer.add_instant('instant - "karma": True', scope="invalid")
         tracer.stop()
@@ -128,7 +131,7 @@ class TestFunctionArg(BaseTmpl):
     def test_addfunctionarg(self):
         def f(tracer):
             tracer.add_func_args("hello", "world")
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         f(tracer)
         tracer.stop()
@@ -140,7 +143,7 @@ class TestFunctionArg(BaseTmpl):
 
 class TestDecorator(BaseTmpl):
     def test_pause_resume(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
 
         @ignore_function(tracer=tracer)
         def ignore(n):
@@ -162,7 +165,7 @@ class TestDecorator(BaseTmpl):
         if "__viz_tracer__" in builtins.__dict__:
             builtins.__dict__.pop("__viz_tracer__")
 
-        tracer = VizTracer(register_global=False)
+        tracer = VizTracer(register_global=False, verbose=0)
 
         tracer.start()
         with self.assertRaises(NameError):
@@ -177,7 +180,7 @@ class TestDecorator(BaseTmpl):
             wait = 1
         with tempfile.TemporaryDirectory() as tmp_dir:
 
-            @trace_and_save(output_dir=tmp_dir)
+            @trace_and_save(output_dir=tmp_dir, verbose=0)
             def my_function(n):
                 fib(n)
 
@@ -194,7 +197,7 @@ class TestDecorator(BaseTmpl):
 
         with tempfile.TemporaryDirectory() as tmp_dir:
 
-            @trace_and_save(output_dir=os.path.join(tmp_dir, "new_dir"))
+            @trace_and_save(output_dir=os.path.join(tmp_dir, "new_dir"), verbose=0)
             def cover_mkdir():
                 return
 
@@ -208,7 +211,7 @@ class TestDecorator(BaseTmpl):
 
         if sys.platform in ["linux", "linux2", "darwin"]:
             # ls does not work on windows. Don't bother fixing it because it's just coverage test
-            @trace_and_save
+            @trace_and_save(verbose=0)
             def my_function2(n):
                 fib(n)
             my_function2(10)
@@ -231,7 +234,7 @@ class TestDecorator(BaseTmpl):
 
 class TestLogPrint(BaseTmpl):
     def test_log_print(self):
-        tracer = VizTracer(log_print=True)
+        tracer = VizTracer(log_print=True, verbose=0)
         tracer.start()
         print("hello")
         print("hello")
@@ -286,7 +289,7 @@ class TestGlobalTracer(BaseTmpl):
         with self.assertRaises(NameError):
             _ = __viz_tracer__  # noqa: F821
         self.assertIs(get_tracer(), None)
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         builtins.__dict__["__viz_tracer__"] = tracer
         self.assertIs(get_tracer(), tracer)
         builtins.__dict__.pop("__viz_tracer__")

@@ -25,7 +25,7 @@ class Hello(VizObject):
 
 class TestVizObject(BaseTmpl):
     def test_basic(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = VizObject(tracer, "my variable")
         a.hello = 1
@@ -35,7 +35,7 @@ class TestVizObject(BaseTmpl):
         self.assertEqual(entries, 3)
 
     def test_include(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = VizObject(tracer, "my variable", include_attributes=["b", "c"])
         a.hello = 1
@@ -47,7 +47,7 @@ class TestVizObject(BaseTmpl):
         self.assertEqual(entries, 3)
 
     def test_exclude(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = VizObject(tracer, "my variable", exclude_attributes=["b", "c"])
         a.hello = 1
@@ -59,7 +59,7 @@ class TestVizObject(BaseTmpl):
         self.assertEqual(entries, 3)
 
     def test_trigger_on_change(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.stop()
         tracer.cleanup()
         tracer.start()
@@ -74,7 +74,7 @@ class TestVizObject(BaseTmpl):
         self.assertEqual(entries, 2)
 
     def test_config(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = VizObject(tracer, "my variable")
         a.config("trigger_on_change", False)
@@ -90,7 +90,7 @@ class TestVizObject(BaseTmpl):
             a.config("invalid", "value")
 
     def test_decorator(self):
-        tracer = VizTracer()
+        tracer = VizTracer(verbose=0)
         tracer.start()
         a = Hello(tracer)
         a.config("include_attributes", ["a", "b"])
@@ -110,7 +110,7 @@ class TestVizObject(BaseTmpl):
             change_invalid()
 
     def test_buffer_wrap(self):
-        tracer = VizTracer(tracer_entries=10)
+        tracer = VizTracer(tracer_entries=10, verbose=0)
         tracer.start()
         a = VizObject(tracer, "my variable")
         for i in range(15):

@@ -26,3 +26,4 @@ class TestLogging(BaseTmpl):
         tracer.start()
         logging.warning("lol")
         tracer.stop()
+        logging.getLogger().removeHandler(handler)
