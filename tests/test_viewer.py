@@ -80,9 +80,10 @@ class Viewer(unittest.TestCase):
 
 
 class MockOpen(unittest.TestCase):
-    def __init__(self, file_content):
+    def __init__(self, file_content, int_pid=None):
         self.p = None
         self.file_content = file_content
+        self.int_pid = int_pid
         super().__init__()
 
     def get_and_check(self, url, expected):
@@ -93,6 +94,8 @@ class MockOpen(unittest.TestCase):
             except Exception:
                 continue
             self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
+        if self.int_pid is not None:
+            os.kill(self.int_pid, signal.SIGINT)
 
     def __call__(self, url):
         self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
@@ -268,17 +271,10 @@ class TestViewer(CmdlineTmpl):
             with unittest.mock.patch.object(sys, "argv", ["vizviewer", tmp_dir]):
                 with unittest.mock.patch.object(
                         webbrowser, "open_new_tab",
-                        MockOpen(r".*" + os.path.basename(f.name) + r".*")) as mock_obj:
-                    pid = os.getpid()
-                    killer_process = subprocess.Popen(
-                        ["python", "-c", f"import time, os, signal; time.sleep(1); os.kill({pid}, signal.SIGINT)"],
-                        stdout=subprocess.DEVNULL
-                    )
+                        MockOpen(r".*" + os.path.basename(f.name) + r".*", int_pid=os.getpid())) as mock_obj:
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
-                    killer_process.wait()
-                    self.assertEqual(killer_process.returncode, 0)
         finally:
             os.remove(f.name)
 
