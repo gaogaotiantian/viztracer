@@ -171,14 +171,12 @@ class TestRemote(CmdlineTmpl):
             time.sleep(1)
 
             # Try to attach. This should fail as viztracer is already running
-            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if sys.platform == "darwin":
-                # loading lldb is super slow on MacOS
-                time.sleep(5)
-            else:
-                time.sleep(1.5)
+            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            out = p_attach.stdout.readline()
+            self.assertIn("success", out.decode("utf-8"))
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
+            p_attach.stdout.close()
             self.assertTrue(p_attach.returncode == 0)
             time.sleep(0.5)
             self.assertFileNotExist(output_file)
@@ -187,14 +185,12 @@ class TestRemote(CmdlineTmpl):
             subprocess.check_call(uninstall_cmd)
 
             # Try it again
-            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if sys.platform == "darwin":
-                # loading lldb is super slow on MacOS
-                time.sleep(5)
-            else:
-                time.sleep(1.5)
+            p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            out = p_attach.stdout.readline()
+            self.assertIn("success", out.decode("utf-8"))
             p_attach.send_signal(signal.SIGINT)
             p_attach.wait()
+            p_attach.stdout.close()
             self.assertTrue(p_attach.returncode == 0)
             time.sleep(0.5)
             self.assertFileExists(output_file)
