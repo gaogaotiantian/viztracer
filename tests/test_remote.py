@@ -6,7 +6,6 @@ from viztracer import VizTracer
 from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
 import base64
 import json
-import logging
 import os
 import re
 import signal
@@ -48,7 +47,7 @@ class TestRemote(CmdlineTmpl):
         output_file = "remote.json"
 
         self.attach_check(file_to_attach, attach_cmd, output_file)
-        self.attach_check(file_to_attach, attach_installed_cmd, output_file)
+        self.attach_check(file_to_attach, attach_installed_cmd, output_file, use_installed=True)
 
     @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
     def test_attach(self):
@@ -75,7 +74,7 @@ class TestRemote(CmdlineTmpl):
 
         self.attach_check(file_to_attach_tracing, attach_cmd, output_file, file_should_exist=False)
 
-    def attach_check(self, file_to_attach, attach_cmd, output_file, file_should_exist=True):
+    def attach_check(self, file_to_attach, attach_cmd, output_file, file_should_exist=True, use_installed=False):
         with open("attached_script.py", "w") as f:
             f.write(file_to_attach)
 
@@ -121,19 +120,16 @@ class TestRemote(CmdlineTmpl):
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
-        except AssertionError:
-            p_script.terminate()
-            p_script.wait()
-            attached_out, attached_err = p_script.stdout.read().decode("utf-8"), p_script.stderr.read().decode("utf-8")
-            logging.warning(attached_out)
-            logging.warning(attached_err)
-            raise
         finally:
             p_script.terminate()
             p_script.wait()
+            attached_out, attached_err = p_script.stdout.read().decode("utf-8"), p_script.stderr.read().decode("utf-8")
             p_script.stdout.close()
             p_script.stderr.close()
             os.remove("attached_script.py")
+            if file_should_exist and not use_installed:
+                self.assertIn("Detected attaching", attached_out, msg=f"out:\n{attached_out}\nerr:\n{attached_err}\n")
+                self.assertIn("Saved report to", attached_out, msg=f"out:\n{attached_out}\nerr:\n{attached_err}\n")
 
         p_attach_invalid = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL)
         p_attach_invalid.wait()
