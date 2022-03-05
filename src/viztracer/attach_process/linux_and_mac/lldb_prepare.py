@@ -16,7 +16,7 @@ def load_lib_and_attach(debugger, command, result, internal_dict):
     options = lldb.SBExpressionOptions()
     options.SetFetchDynamicValue()
     options.SetTryAllThreads(run_others=False)
-    options.SetTimeoutInMicroSeconds(timeout=10000000)
+    options.SetTimeoutInMicroSeconds(timeout=60000000)
 
     print(dll)
     target = debugger.GetSelectedTarget()
