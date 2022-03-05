@@ -6,6 +6,7 @@ from viztracer import VizTracer
 from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
 import base64
 import json
+import logging
 import os
 import re
 import signal
@@ -80,7 +81,7 @@ class TestRemote(CmdlineTmpl):
 
         # Run the process to attach first
         script_cmd = cmd_with_coverage(["python", "attached_script.py"])
-        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
             pid_to_attach = p_script.pid
             attach_cmd = attach_cmd + [str(pid_to_attach)]
@@ -120,10 +121,18 @@ class TestRemote(CmdlineTmpl):
                 os.remove(output_file)
             else:
                 self.assertFileNotExist(output_file)
+        except AssertionError:
+            p_script.terminate()
+            p_script.wait()
+            attached_out, attached_err = p_script.stdout.read().decode("utf-8"), p_script.stderr.read().decode("utf-8")
+            logging.warning(attached_out)
+            logging.warning(attached_err)
+            raise
         finally:
             p_script.terminate()
             p_script.wait()
             p_script.stdout.close()
+            p_script.stderr.close()
             os.remove("attached_script.py")
 
         p_attach_invalid = subprocess.Popen(attach_cmd, stdout=subprocess.DEVNULL)
