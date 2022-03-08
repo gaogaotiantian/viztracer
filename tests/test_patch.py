@@ -35,6 +35,9 @@ child_r, parent_w = os.pipe()
 patch_spawned_process({'output_file': "$tmpdir/result.json", 'pid_suffix': True})
 pid = os.getpid()
 
+assert multiprocessing.spawn._main.__qualname__ == "_main"
+assert multiprocessing.spawn._main.__module__ == "multiprocessing.spawn"
+
 argv = sys.argv
 sys.argv = ["python", "--multiprocessing-fork"]
 
@@ -56,6 +59,16 @@ import time
 def foo():
     while(True):
         time.sleep(0.5)
+"""
+
+
+file_after_patch_check = """
+import multiprocessing.spawn
+import subprocess
+assert multiprocessing.spawn.get_command_line.__module__ == "multiprocessing.spawn"
+assert multiprocessing.spawn.get_command_line.__qualname__ == "get_command_line"
+assert subprocess.Popen.__init__.__qualname__ == "Popen.__init__"
+assert subprocess.Popen.__init__.__module__ == "subprocess"
 """
 
 
@@ -84,3 +97,10 @@ class TestPatchSpawn(CmdlineTmpl):
         self.assertEqual(len(files), 1)
         self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
         shutil.rmtree(tmpdir)
+
+
+class TestPatchSideEffect(CmdlineTmpl):
+    def test_func_names(self):
+        self.template(["viztracer", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_after_patch_check)

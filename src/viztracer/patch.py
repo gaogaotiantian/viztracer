@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import functools
 import os
 import sys
 import textwrap
@@ -11,7 +12,9 @@ from .viztracer import VizTracer
 
 
 def patch_subprocess(viz_args) -> None:
+    import subprocess
 
+    @functools.wraps(subprocess.Popen.__init__)
     def subprocess_init(self, args: Union[str, Sequence], **kwargs) -> None:
         if sys.version_info >= (3, 7):
             from collections.abc import Sequence
@@ -45,7 +48,6 @@ def patch_subprocess(viz_args) -> None:
         viz_args.pop(idx)
         viz_args.pop(idx)
 
-    import subprocess
     setattr(subprocess.Popen, "__originit__", subprocess.Popen.__init__)
     setattr(subprocess.Popen, "__init__", subprocess_init)
 
@@ -63,10 +65,12 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
     from multiprocessing.util import register_after_fork  # type: ignore
+    import multiprocessing.spawn
 
     register_after_fork(tracer, func_after_fork)
 
     # For spawn process
+    @functools.wraps(multiprocessing.spawn.get_command_line)
     def get_command_line(**kwds) -> List[str]:
         '''
         Returns prefix of command line used for spawning a child process
@@ -85,7 +89,6 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
             opts = multiprocessing.util._args_from_interpreter_flags()
             return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
 
-    import multiprocessing.spawn
     multiprocessing.spawn.get_command_line = get_command_line
 
 
@@ -116,6 +119,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
     from multiprocessing.spawn import prepare
     import multiprocessing.spawn
 
+    @functools.wraps(multiprocessing.spawn._main)
     def _main_3839(fd, parent_sentinel):
         with os.fdopen(fd, 'rb', closefd=True) as from_parent:
             process.current_process()._inheriting = True
@@ -130,6 +134,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
                 del process.current_process()._inheriting
         return self._bootstrap(parent_sentinel)
 
+    @functools.wraps(multiprocessing.spawn._main)
     def _main_3637(fd):
         with os.fdopen(fd, 'rb', closefd=True) as from_parent:
             process.current_process()._inheriting = True
