@@ -57,6 +57,7 @@ def foo():
 foo_infinite = """
 import time
 def foo():
+    print("ready", flush=True)
     while(True):
         time.sleep(0.5)
 """
@@ -91,7 +92,7 @@ class TestPatchSpawn(CmdlineTmpl):
         self.template(["python", "cmdline_test.py"],
                       expected_output_file=None,
                       script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
-                      send_sig=signal.SIGTERM)
+                      send_sig=(signal.SIGTERM, "ready"))
 
         files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)

@@ -77,16 +77,23 @@ class CmdlineTmpl(BaseTmpl):
             self.build_script(script, script_name)
         if send_sig is not None:
             if isinstance(send_sig, tuple):
-                sig, wait_time = send_sig
+                sig, wait = send_sig
             else:
                 sig = send_sig
                 if os.getenv("GITHUB_ACTIONS"):
                     # github action is slower
-                    wait_time = 5
+                    wait = 5
                 else:
-                    wait_time = 2
+                    wait = 2
             p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(wait_time)
+            if isinstance(wait, str):
+                while True:
+                    line = p.stdout.readline().decode("utf-8")
+                    if wait in line:
+                        time.sleep(0.5)
+                        break
+            elif isinstance(wait, (int, float)):
+                time.sleep(wait)
             p.send_signal(sig)
             p.wait(timeout=60)
             stdout, stderr = p.stdout.read(), p.stderr.read()
