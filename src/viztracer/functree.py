@@ -94,7 +94,7 @@ class FuncTreeNode:
             raise Exception("This should not be possible")
 
 
-class FuncTree:
+class FuncTree:  # pragma: no cover
     def __init__(self, pid: int = 0, tid: int = 0):
         self.root: FuncTreeNode = FuncTreeNode()
         self.curr: FuncTreeNode = self.root
