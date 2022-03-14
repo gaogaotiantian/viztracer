@@ -1,6 +1,10 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+# This file is deprecated, do not use it anymore
+
+# pragma: no cover
+
 try:
     import readline  # noqa: F401
 except ImportError:
@@ -141,6 +145,7 @@ def main():
         s = f.read()
 
     sim = Simulator(s, no_clear=options.no_clear, extra_newline=options.extra_newline)
+    print("This feature is deprecated and will be removed on 0.16.0")
     sim.start()
 
 

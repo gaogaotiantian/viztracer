@@ -146,7 +146,7 @@ class TestSimulator(BaseTmpl):
         self.assertIn("argument", result)
         sim.close()
 
-    #@package_matrix(["~rich", "rich"])
+    @package_matrix(["~rich", "rich"])
     def test_tid_pid(self):
         sim = SimInterface(vdb_basic)
         result = sim.command("tid")
