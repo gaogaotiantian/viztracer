@@ -1,4 +1,7 @@
 [run]
 cover_pylib = True
 source = viztracer
-omit = */viztracer/attach_process/*
+omit =
+    */viztracer/attach_process/*
+    */viztracer/prog_snapshot.py
+    */viztracer/simulator.py

@@ -234,6 +234,8 @@ Debug Your Saved Report
 VizTracer allows you to debug your json report just like pdb. You can understand how your program is executed by 
 interact with it. Even better, you can **go back in time** because you know what happened before. 
 
+**This feature will be removed from 0.16.0**
+
 .. code-block:: 
 
     vdb <your_json_report>

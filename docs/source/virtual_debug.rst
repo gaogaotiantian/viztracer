@@ -1,6 +1,8 @@
 Virtual Debug
 =============
 
+**This feature will be removed on 0.16.0**
+
 To use virtual debug, you need to trace your program with ``--vdb`` using ``viztracer``
 
 .. code-block:

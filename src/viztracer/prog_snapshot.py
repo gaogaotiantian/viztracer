@@ -3,8 +3,6 @@
 
 # This file is deprecated, do not use it anymore
 
-# pragma: no cover
-
 try:
     import orjson as json  # type: ignore
 except ImportError:
