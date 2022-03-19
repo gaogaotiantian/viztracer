@@ -88,7 +88,7 @@ setuptools.setup(
         "Topic :: System :: Logging"
     ],
     python_requires=">=3.6",
-    install_requires=["objprint>=0.1.3"],
+    install_requires=["objprint>=0.1.3","printy>=2.2.0"],
     extras_require={
         "full": ["rich", "orjson"]
     },

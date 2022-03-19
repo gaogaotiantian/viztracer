@@ -6,7 +6,7 @@ import errno
 import os
 import re
 from typing import Union
-
+from printy import printy
 
 def size_fmt(num: Union[int, float], suffix: str = 'B'):
     for unit in ['', 'Ki', 'Mi', 'Gi']:
