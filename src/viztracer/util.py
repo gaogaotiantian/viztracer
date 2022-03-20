@@ -5,6 +5,7 @@
 import errno
 import os
 import re
+import sys
 from typing import Union
 
 
@@ -30,8 +31,25 @@ class _bcolors:
 bcolors = _bcolors()
 
 
+color_support = True
+
+
+if sys.platform == "win32":
+    try:
+        # https://stackoverflow.com/questions/36760127/...
+        # how-to-use-the-new-support-for-ansi-escape-sequences-in-the-windows-10-console
+        from ctypes import windll
+        kernel32 = windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:  # pragma: no cover
+        color_support = False
+
+
 def color_print(color, s: str, **kwargs):
-    print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
+    if color_support:
+        print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
+    else:  # pragma: no cover
+        print(s)
 
 
 def same_line_print(s: str, width=80, **kwargs):
