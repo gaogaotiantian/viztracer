@@ -420,7 +420,8 @@ def viewer_main():
                 # import webbrowser only if necessary
                 import webbrowser
                 webbrowser.open_new_tab(f'http://127.0.0.1:{options.port}')
-            server.join()
+            while server.is_alive():
+                server.join(timeout=1)
         except KeyboardInterrupt:
             server.httpd.shutdown()
             server.join(timeout=2)
