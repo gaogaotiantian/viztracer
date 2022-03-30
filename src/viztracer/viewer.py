@@ -283,7 +283,7 @@ class ServerThread(threading.Thread):
             if not self.once and not self.quiet:
                 print("Running vizviewer")
                 print(f"You can also view your trace on http://localhost:{self.port}")
-                print("Press Ctrl+C to quit")
+                print("Press Ctrl+C to quit", flush=True)
             self.ready.set()
             if self.once:
                 self.httpd.timeout = self.timeout
@@ -357,7 +357,7 @@ class DirectoryViewer:
         with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as httpd:
             print("Running vizviewer")
             print(f"You can also view your trace on http://localhost:{self.port}")
-            print("Press Ctrl+C to quit")
+            print("Press Ctrl+C to quit", flush=True)
             if not self.server_only:
                 # import webbrowser only if necessary
                 import webbrowser
