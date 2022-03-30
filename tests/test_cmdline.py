@@ -314,9 +314,13 @@ class TestCommandLineBasic(CmdlineTmpl):
             self.assertGreater(len(data["traceEvents"]), 10000)
 
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
-        self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
-                       os.path.join(example_json_dir, "multithread.json")],
-                      send_sig=(signal.SIGTERM, "Ctrl+C"), expected_output_file="result.json", check_func=check_func)
+        if sys.platform == "win32":
+            self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
+                           os.path.join(example_json_dir, "multithread.json")], success=False)
+        else:
+            self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
+                           os.path.join(example_json_dir, "multithread.json")],
+                          send_sig=(signal.SIGTERM, "Ctrl+C"), expected_output_file="result.json", check_func=check_func)
 
     def test_min_duration(self):
         self.template(["python", "-m", "viztracer", "--min_duration", "1s", "cmdline_test.py"], expected_entries=0)
