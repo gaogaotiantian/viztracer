@@ -28,6 +28,9 @@ class BaseTmpl(TestCase):
         logging.info(f"{self.id()} finish")
         gc.collect()
 
+    def dbgPrint(self, *args, **kwargs):
+        print(*args, file=self.stdout_orig, **kwargs)
+
     def assertEventNumber(self, data, expected_entries):
         entries = [entry for entry in data["traceEvents"] if entry["ph"] != "M"]
         entries_count = len(entries)
