@@ -1,6 +1,7 @@
 // Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 // For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+#include <Python.h>
 #include <stdio.h>
 #include "eventnode.h"
 
