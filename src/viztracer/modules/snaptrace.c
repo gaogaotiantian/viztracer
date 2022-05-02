@@ -2,8 +2,8 @@
 // For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 #define PY_SSIZE_T_CLEAN
-#include <stdlib.h>
 #include <Python.h>
+#include <stdlib.h>
 #include <frameobject.h>
 #include <time.h>
 #if _WIN32
