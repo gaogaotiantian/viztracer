@@ -67,10 +67,10 @@ class _EventBase:
 
             @functools.wraps(func)
             def wrapper(self, *args, **kwargs) -> Any:
-                if when == "before" or when == "both":
+                if when in ("before", "both"):
                     self._viztracer_log()
                 ret = func(self, *args, **kwargs)
-                if when == "after" or when == "both":
+                if when in ("after", "both"):
                     self._viztracer_log()
                 return ret
             return wrapper
