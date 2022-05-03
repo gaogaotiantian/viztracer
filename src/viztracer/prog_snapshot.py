@@ -201,7 +201,7 @@ class ProgSnapshot:
         trace_events = raw_data["traceEvents"]
         for event in trace_events:
             self.load_event(event)
-        self.first_tree = min([tree for tree in self.get_trees()], key=lambda x: x.first_ts())
+        self.first_tree = min(list(self.get_trees()), key=lambda x: x.first_ts())
         first_ts = self.first_tree.first_ts()
         self.curr_tree = self.first_tree
         self.curr_frame = Frame(None, self.first_tree.first_node())
