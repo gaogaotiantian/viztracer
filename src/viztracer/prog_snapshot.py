@@ -201,7 +201,7 @@ class ProgSnapshot:
         trace_events = raw_data["traceEvents"]
         for event in trace_events:
             self.load_event(event)
-        self.first_tree = min([tree for tree in self.get_trees()], key=lambda x: x.first_ts())
+        self.first_tree = min(list(self.get_trees()), key=lambda x: x.first_ts())
         first_ts = self.first_tree.first_ts()
         self.curr_tree = self.first_tree
         self.curr_frame = Frame(None, self.first_tree.first_node())
@@ -239,7 +239,7 @@ class ProgSnapshot:
 
     def check_version(self, version):
         def get_version_tuple(v):
-            return tuple([int(elem) for elem in v.split(".")])
+            return tuple(int(elem) for elem in v.split("."))
         if get_version_tuple(version) < get_version_tuple(self.compatible_version):
             color_print("FAIL", "Error, json file version too old.")
             return False
