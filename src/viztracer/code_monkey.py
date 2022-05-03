@@ -85,7 +85,7 @@ class AstTransformer(ast.NodeTransformer):
         ret: List[ast.stmt] = [node]
         self.curr_lineno = node.lineno
         if self.inst_type in ("log_var", "log_number", "log_attr", "log_func_exec"):
-            if isinstance(node, ast.AugAssign) or isinstance(node, ast.AnnAssign):
+            if isinstance(node, (ast.AugAssign, ast.AnnAssign)):
                 instrumented_nodes = self.get_assign_log_nodes(node.target)
                 if instrumented_nodes:
                     ret.extend(instrumented_nodes)
@@ -102,7 +102,7 @@ class AstTransformer(ast.NodeTransformer):
         """
         if isinstance(node, ast.Name):
             return [node.id]
-        elif isinstance(node, ast.Attribute) or isinstance(node, ast.Subscript) or isinstance(node, ast.Starred):
+        elif isinstance(node, (ast.Attribute, ast.Subscript, ast.Starred)):
             return self.get_assign_targets(node.value)
         elif isinstance(node, ast.Tuple) or isinstance(node, ast.List):
             return reduce(lambda a, b: a + b, [self.get_assign_targets(elt) for elt in node.elts])
@@ -116,9 +116,9 @@ class AstTransformer(ast.NodeTransformer):
         """
         if isinstance(node, ast.Attribute):
             return [node]
-        elif isinstance(node, ast.Name) or isinstance(node, ast.Subscript) or isinstance(node, ast.Starred):
+        elif isinstance(node, (ast.Name, ast.Subscript, ast.Starred)):
             return []
-        elif isinstance(node, ast.Tuple) or isinstance(node, ast.List):
+        elif isinstance(node, (ast.Tuple, ast.List)):
             return reduce(lambda a, b: a + b, [self.get_assign_targets_with_attr(elt) for elt in node.elts])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
