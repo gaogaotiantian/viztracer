@@ -131,7 +131,7 @@ class AstTransformer(ast.NodeTransformer):
         if this target is not supposed to be logged, return []
         """
         ret: List[ast.stmt] = []
-        if self.inst_type == "log_var" or self.inst_type == "log_number":
+        if self.inst_type in ("log_var", "log_number"):
             target_ids = self.get_assign_targets(target)
             for target_id in target_ids:
                 for varname in self.inst_args["varnames"]:

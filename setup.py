@@ -36,7 +36,7 @@ if sys.platform == "darwin":
         "attach_process/attach_x86_64.dylib",
         "attach_process/linux_and_mac/lldb_prepare.py"
     ])
-elif sys.platform == "linux" or sys.platform == "linux2":
+elif sys.platform in ("linux", "linux2"):
     if platform.machine() == "i686":
         package_data["viztracer"].extend([
             "attach_process/attach_linux_x86.so"
