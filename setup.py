@@ -1,7 +1,6 @@
 import setuptools
 import sys
 import platform
-from distutils.core import Extension
 
 with open("README.md") as f:
     long_description = f.read()
@@ -60,7 +59,7 @@ setuptools.setup(
     package_dir={"": "src"},
     package_data=package_data,
     ext_modules=[
-        Extension(
+        setuptools.Extension(
             "viztracer.snaptrace",
             sources=[
                 "src/viztracer/modules/util.c",
