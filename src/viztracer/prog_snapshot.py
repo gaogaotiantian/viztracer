@@ -239,7 +239,7 @@ class ProgSnapshot:
 
     def check_version(self, version):
         def get_version_tuple(v):
-            return tuple([int(elem) for elem in v.split(".")])
+            return tuple(int(elem) for elem in v.split("."))
         if get_version_tuple(version) < get_version_tuple(self.compatible_version):
             color_print("FAIL", "Error, json file version too old.")
             return False
