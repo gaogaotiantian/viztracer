@@ -9,7 +9,7 @@
 
 void Print_Py(PyObject* o);
 void fprintjson(FILE* fptr, PyObject* obj);
-double get_ts(void);
+double get_system_ts(void);
 
 // target and prefix has to be NULL-terminated
 inline int startswith(const char* target, const char* prefix)
