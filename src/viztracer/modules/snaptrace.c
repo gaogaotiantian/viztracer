@@ -45,6 +45,7 @@ static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
+static double get_ts(struct ThreadInfo*);
 
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
@@ -58,7 +59,7 @@ PyObject* trio_lowlevel_module = NULL;
 static PyObject* curr_task_getters[2] = {0};
 
 #if _WIN32
-extern LARGE_INTEGER qpc_freq; 
+LARGE_INTEGER qpc_freq;
 #endif
 
 static struct ThreadInfo* get_thread_info(TracerObject* self)
@@ -71,6 +72,21 @@ static struct ThreadInfo* get_thread_info(TracerObject* self)
     info = pthread_getspecific(self->thread_key);
 #endif
     return info;
+}
+
+static double get_ts(struct ThreadInfo* info)
+{
+    double curr_ts = get_system_ts();
+    if (curr_ts <= info->prev_ts) {
+        // We use artificial timestamp to avoid timestamp conflict.
+        // 20 ns should be a safe granularity because that's normally
+        // how long clock_gettime() takes.
+        // It's possible to have three same timestamp in a row so we
+        // need to check if curr_ts <= prev_ts instead of ==
+        curr_ts = info->prev_ts + 20;
+    }
+    info->prev_ts = curr_ts;
+    return curr_ts;
 }
 
 
@@ -361,7 +377,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 info->stack_top->next->prev = info->stack_top;
             }
             info->stack_top = info->stack_top->next;
-            info->stack_top->ts = get_ts();
+            info->stack_top->ts = get_ts(info);
             if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
                 log_func_args(info->stack_top, frame);
             }
@@ -369,7 +385,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             struct FunctionNode* stack_top = info->stack_top;
             if (stack_top->prev) {
                 // if stack_top has prev, it's not the fake node so it's at least root
-                double dur = get_ts() - info->stack_top->ts;
+                double dur = get_ts(info) - info->stack_top->ts;
                 int log_this_entry = dur >= self->min_duration;
 
                 if (log_this_entry) {
@@ -1062,7 +1078,8 @@ snaptrace_setpid(TracerObject* self, PyObject* args)
 static PyObject*
 snaptrace_getts(TracerObject* self, PyObject* args)
 {
-    double ts = get_ts();
+    struct ThreadInfo* info = get_thread_info(self);
+    double ts = get_ts(info);
 
     return PyFloat_FromDouble(ts / 1000);
 }
@@ -1239,7 +1256,7 @@ snaptrace_addinstant(TracerObject* self, PyObject* args)
     node = get_next_node(self);
     node->ntype = INSTANT_NODE;
     node->tid = info->tid;
-    node->ts = get_ts();
+    node->ts = get_ts(info);
     node->data.instant.name = name;
     node->data.instant.args = instant_args;
     node->data.instant.scope = scope;
@@ -1286,7 +1303,7 @@ snaptrace_addcounter(TracerObject* self, PyObject* args)
     node = get_next_node(self);
     node->ntype = COUNTER_NODE;
     node->tid = info->tid;
-    node->ts = get_ts();
+    node->ts = get_ts(info);
     node->data.counter.name = name;
     node->data.counter.args = counter_args;
     Py_INCREF(name);
@@ -1312,7 +1329,7 @@ snaptrace_addobject(TracerObject* self, PyObject* args)
     node = get_next_node(self);
     node->ntype = OBJECT_NODE;
     node->tid = info->tid;
-    node->ts = get_ts();
+    node->ts = get_ts(info);
     node->data.object.ph = ph;
     node->data.object.id = id;
     node->data.object.name = name;
@@ -1437,6 +1454,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 
     info->curr_task = NULL;
     info->curr_task_frame = NULL;
+    info->prev_ts = 0.0;
 
     PyGILState_Release(state);
 
