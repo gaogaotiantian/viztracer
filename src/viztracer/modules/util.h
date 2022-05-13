@@ -38,4 +38,20 @@ inline int startswith(const char* target, const char* prefix)
     return (*prefix) == 0;
 }
 
+inline double get_system_ts(void)
+{
+#if _WIN32
+    LARGE_INTEGER counter = {0};
+    QueryPerformanceCounter(&counter);
+    double curr_ts = (double) counter.QuadPart;
+    curr_ts *= 1000000000LL;
+    curr_ts /= qpc_freq.QuadPart;
+    return curr_ts;
+#else
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return ((double)t.tv_sec * 1e9 + t.tv_nsec);
+#endif
+}
+
 #endif

@@ -31,19 +31,3 @@ void fprintjson(FILE* fptr, PyObject* obj)
     Py_DECREF(call_args);
     Py_DECREF(args_str);
 }
-
-double get_system_ts(void)
-{
-#if _WIN32
-    LARGE_INTEGER counter = {0};
-    QueryPerformanceCounter(&counter);
-    double curr_ts = (double) counter.QuadPart;
-    curr_ts *= 1000000000LL;
-    curr_ts /= qpc_freq.QuadPart;
-    return curr_ts;
-#else
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    return ((double)t.tv_sec * 1e9 + t.tv_nsec);
-#endif
-}
