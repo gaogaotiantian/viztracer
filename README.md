@@ -206,7 +206,11 @@ VizTracer supports inserting custom events while the program is running. This wo
 
 VizTracer supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
 
+For other multi-thread scenarios, you can use ``enable_thread_tracing()`` to let VizTracer know about the thread to trace it.
+
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)
+
+Refer to [multi thread docs](https://viztracer.readthedocs.io/en/stable/concurrency.html) for details
 
 
 ### Multi Process Support
