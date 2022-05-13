@@ -293,3 +293,7 @@ class VizTracer(_VizTracer):
             os.chdir(self.cwd)
             self.save()
             self.terminate()
+
+
+def get_tracer() -> Optional[VizTracer]:
+    return builtins.__dict__.get("__viz_tracer__", None)
