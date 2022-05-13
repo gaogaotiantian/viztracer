@@ -62,6 +62,11 @@ static PyObject* curr_task_getters[2] = {0};
 LARGE_INTEGER qpc_freq;
 #endif
 
+#ifndef Py_NOGIL
+#define Py_BEGIN_CRITICAL_SECTION(m)
+#define Py_END_CRITICAL_SECTION
+#endif
+
 static struct ThreadInfo* get_thread_info(TracerObject* self)
 {
     // self is non-NULL value
@@ -94,6 +99,7 @@ static inline struct EventNode* get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
 
+    Py_BEGIN_CRITICAL_SECTION(&self->mutex);
     node = self->buffer + self->buffer_tail_idx;
     // This is actually faster than modulo
     self->buffer_tail_idx = self->buffer_tail_idx + 1;
@@ -109,6 +115,7 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     } else {
         self->total_entries += 1;
     }
+    Py_END_CRITICAL_SECTION;
 
     return node;
 }
@@ -647,6 +654,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
 
     
     //    Thread Name
+    Py_BEGIN_CRITICAL_SECTION(&self->mutex);
     metadata_node = self->metadata_head;
     while (metadata_node) {
         PyObject* dict = PyDict_New();
@@ -666,6 +674,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
         metadata_node = metadata_node->next;
         PyList_Append(lst, dict);
     }
+    Py_END_CRITICAL_SECTION;
 
     // Task Name if using LOG_ASYNC
     // We need to make up some thread id for the task
@@ -889,12 +898,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     }
 
     //    Thread Name
+    Py_BEGIN_CRITICAL_SECTION(&self->mutex);
     metadata_node = self->metadata_head;
     while (metadata_node) {
         fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"thread_name\",\"args\":{\"name\":\"%s\"}},",
                 pid, metadata_node->tid, PyUnicode_AsUTF8(metadata_node->name));
         metadata_node = metadata_node->next;
     }
+    Py_END_CRITICAL_SECTION;
 
     // Task Name if using LOG_ASYNC
     // We need to make up some thread id for the task
@@ -1427,6 +1438,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     Py_DECREF(current_thread);
 
     // Check for existing node for the same tid first
+    Py_BEGIN_CRITICAL_SECTION(&self->mutex);
     struct MetadataNode* node = self->metadata_head;
     int found_node = 0;
 
@@ -1451,6 +1463,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
         node->next = self->metadata_head;
         self->metadata_head = node;
     }
+    Py_END_CRITICAL_SECTION;
 
     info->curr_task = NULL;
     info->curr_task_frame = NULL;

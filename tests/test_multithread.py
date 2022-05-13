@@ -48,7 +48,7 @@ class TestMultithread(BaseTmpl):
 
         tracer.stop()
         entries = tracer.parse()
-        self.assertGreater(entries, 180)
+        self.assertGreater(entries, 170)
 
         metadata = [e for e in tracer.data["traceEvents"] if e["ph"] == "M"]
         self.assertEqual(len([e for e in metadata if e["name"] == "process_name"]), 1)
