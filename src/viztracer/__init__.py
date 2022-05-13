@@ -1,7 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-__version__ = "0.15.1"
+__version__ = "0.15.2"
 
 
 from .cellmagic import load_ipython_extension
