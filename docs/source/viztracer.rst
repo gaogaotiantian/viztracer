@@ -264,6 +264,10 @@ VizTracer
 
         parse the data collected, return number of total entries
 
+    .. py:method:: enable_thread_tracing()
+
+        enable tracing in the current thread, useful when you use multi-thread without builtin threading module
+
     .. py:method:: add_instant(name, scope="g")
         
         :param str name: name of this instant event

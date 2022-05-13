@@ -9,7 +9,7 @@ asyncio
 VizTracer supports ``asyncio`` module natively. However, you can use ``--log_async`` to make the report clearer.
 
 Under the rug, asyncio is a single-thread program that's scheduled by Python built-ins. With ``--log_async``, you can visualize
-different tasks as "threads", which could seperate the real work from the underlying structure, and giving you a more intuitive
+different tasks as "threads", which could separate the real work from the underlying structure, and giving you a more intuitive
 understanding of how different tasks consume the runtime.
 
 .. code-block::
@@ -21,6 +21,21 @@ threading
 
 VizTracer supports python native ``threading`` module without the need to do any modification to your code. 
 Just start ``VizTracer`` before you create threads and it will just work.
+
+other multi-thread
+------------------
+
+If you are using multi-thread via other mechanism, for example, PyQt thread, VizTracer can't support it out of the box.
+However, you can notice VizTracer that you are in a separate thread and enable tracing in that thread with ``enable_thread_tracing``
+
+.. code-block:: python
+
+    from viztracer import get_tracer
+
+    class YourThread:
+        def run(self):
+            # This will tell VizTracer to trace the thread
+            get_tracer().enable_thread_tracing()
 
 subprocess
 ----------

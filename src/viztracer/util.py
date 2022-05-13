@@ -126,10 +126,3 @@ def pid_exists(pid):
             raise
     else:
         return True
-
-
-def get_tracer():
-    try:
-        return __viz_tracer__
-    except NameError:
-        return None

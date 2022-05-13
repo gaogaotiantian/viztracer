@@ -5,6 +5,7 @@ import builtins
 import gc
 from io import StringIO
 import os
+import sys
 from typing import Any, Dict, Optional, Sequence, Union
 import viztracer.snaptrace as snaptrace  # type: ignore
 
@@ -283,6 +284,9 @@ class _VizTracer:
 
     def cleanup(self):
         self._tracer.cleanup()
+
+    def enable_thread_tracing(self):
+        sys.setprofile(self._tracer.threadtracefunc)
 
     def getts(self) -> float:
         return self._tracer.getts()

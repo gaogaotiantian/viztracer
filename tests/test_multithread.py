@@ -1,7 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-from viztracer import VizTracer
+from viztracer import VizTracer, get_tracer
 import time
 import threading
 from .base_tmpl import BaseTmpl
@@ -17,6 +17,12 @@ def fib(n):
 
 class MyThread(threading.Thread):
     def run(self):
+        fib(10)
+
+
+class MyThreadTraceAware(threading.Thread):
+    def run(self):
+        get_tracer().enable_thread_tracing()
         fib(10)
 
 
@@ -42,7 +48,7 @@ class TestMultithread(BaseTmpl):
 
         tracer.stop()
         entries = tracer.parse()
-        self.assertGreater(entries, 160)
+        self.assertGreater(entries, 180)
 
         metadata = [e for e in tracer.data["traceEvents"] if e["ph"] == "M"]
         self.assertEqual(len([e for e in metadata if e["name"] == "process_name"]), 1)
@@ -70,6 +76,48 @@ class TestMultithread(BaseTmpl):
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 300)
+
+    def test_manual_tracefunc(self):
+        tracer = VizTracer(max_stack_depth=4, verbose=0)
+        # Force disable threading trace
+        threading.setprofile(None)
+        tracer.start()
+
+        threads = [MyThread() for _ in range(4)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertLess(entries, 180)
+
+        metadata = [e for e in tracer.data["traceEvents"] if e["ph"] == "M"]
+        self.assertEqual(len([e for e in metadata if e["name"] == "process_name"]), 1)
+        self.assertEqual(len([e for e in metadata if e["name"] == "thread_name"]), 1)
+
+        tracer.clear()
+
+        tracer.start()
+
+        threads = [MyThreadTraceAware() for _ in range(4)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertGreater(entries, 180)
+
+        metadata = [e for e in tracer.data["traceEvents"] if e["ph"] == "M"]
+        self.assertEqual(len([e for e in metadata if e["name"] == "process_name"]), 1)
+        self.assertEqual(len([e for e in metadata if e["name"] == "thread_name"]), 5)
 
 
 file_log_sparse = """

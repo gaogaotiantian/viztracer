@@ -7,8 +7,7 @@ import builtins
 import gc
 import json
 import sys
-from .util import get_tracer
-from .viztracer import VizTracer
+from .viztracer import VizTracer, get_tracer
 
 
 attach_status = {

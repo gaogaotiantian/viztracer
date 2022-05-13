@@ -1361,8 +1361,16 @@ snaptrace_getfunctionarg(TracerObject* self, PyObject* args)
 }
 
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
-    struct ThreadInfo* info = calloc(1, sizeof(struct ThreadInfo));
+    struct ThreadInfo* info = get_thread_info(self);
 
+    if (info != NULL) {
+        // If we have created the thread info, just return it.
+        return info;
+    }
+
+    // Otherwise, we need to create thread info.
+
+    info = calloc(1, sizeof(struct ThreadInfo));
     info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
 
 #if _WIN32  
