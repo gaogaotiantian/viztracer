@@ -6,11 +6,6 @@
 #include "snaptrace.h"
 
 
-#if _WIN32
-#include <windows.h>
-LARGE_INTEGER qpc_freq;
-#endif
-
 // Utility functions
 
 void Print_Py(PyObject* o)

@@ -7,9 +7,13 @@
 
 #include <Python.h>
 
+#if _WIN32
+#include <windows.h>
+extern LARGE_INTEGER qpc_freq;
+#endif
+
 void Print_Py(PyObject* o);
 void fprintjson(FILE* fptr, PyObject* obj);
-double get_system_ts(void);
 
 // target and prefix has to be NULL-terminated
 inline int startswith(const char* target, const char* prefix)

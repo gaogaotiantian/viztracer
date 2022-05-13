@@ -59,7 +59,7 @@ PyObject* trio_lowlevel_module = NULL;
 static PyObject* curr_task_getters[2] = {0};
 
 #if _WIN32
-extern LARGE_INTEGER qpc_freq; 
+LARGE_INTEGER qpc_freq;
 #endif
 
 static struct ThreadInfo* get_thread_info(TracerObject* self)
