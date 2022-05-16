@@ -597,6 +597,8 @@ static PyObject*
 snaptrace_load(TracerObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
+
+    SNAPTRACE_THREAD_PROTECT_START(self);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
@@ -612,8 +614,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
     struct MetadataNode* metadata_node = NULL;
     PyObject* task_dict = NULL;
     PyObject* func_name_dict = PyDict_New();
-
-    SNAPTRACE_THREAD_PROTECT_START(self);
 
     if (self->fix_pid > 0) {
         pid = PyLong_FromLong(self->fix_pid);
