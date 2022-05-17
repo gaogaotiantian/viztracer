@@ -62,6 +62,21 @@ static PyObject* curr_task_getters[2] = {0};
 LARGE_INTEGER qpc_freq;
 #endif
 
+#ifdef Py_NOGIL
+// The "nogil" implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
+// a per-tracer mutex. The mutex is acquired in SNAPTRACE_THREAD_PROTECT_START
+// and released in SNAPTRACE_THREAD_PROTECT_END.
+// NOTE: these macros delimit a C scope so any variables accessed after
+// a SNAPTRACE_THREAD_PROTECT_END need to be declared before
+// SNAPTRACE_THREAD_PROTECT_START.
+#define SNAPTRACE_THREAD_PROTECT_START(self) Py_BEGIN_CRITICAL_SECTION(&self->mutex)
+#define SNAPTRACE_THREAD_PROTECT_END(self) Py_END_CRITICAL_SECTION
+#else
+// The default implementation is a no-op.
+#define SNAPTRACE_THREAD_PROTECT_START(self)
+#define SNAPTRACE_THREAD_PROTECT_END(self)
+#endif
+
 static struct ThreadInfo* get_thread_info(TracerObject* self)
 {
     // self is non-NULL value
@@ -94,6 +109,7 @@ static inline struct EventNode* get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
 
+    SNAPTRACE_THREAD_PROTECT_START(self);
     node = self->buffer + self->buffer_tail_idx;
     // This is actually faster than modulo
     self->buffer_tail_idx = self->buffer_tail_idx + 1;
@@ -109,6 +125,7 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     } else {
         self->total_entries += 1;
     }
+    SNAPTRACE_THREAD_PROTECT_END(self);
 
     return node;
 }
@@ -587,6 +604,8 @@ static PyObject*
 snaptrace_load(TracerObject* self, PyObject* args)
 {
     PyObject* lst = PyList_New(0);
+
+    SNAPTRACE_THREAD_PROTECT_START(self);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
@@ -830,6 +849,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(ph_M);
     Py_DECREF(func_name_dict);
     self->buffer_tail_idx = self->buffer_head_idx;
+    SNAPTRACE_THREAD_PROTECT_END(self);
     return lst;
 }
 
@@ -850,6 +870,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 
     fprintf(fptr, "{\"traceEvents\":[");
 
+    SNAPTRACE_THREAD_PROTECT_START(self);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     unsigned long pid = 0;
     uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
@@ -1027,6 +1048,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     fseek(fptr, -1, SEEK_CUR);
     fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s}}", overflowed? "true": "false");
     fclose(fptr);
+    SNAPTRACE_THREAD_PROTECT_END(self);
     Py_RETURN_NONE;
 }
 
@@ -1410,6 +1432,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 #endif
 
     PyGILState_STATE state = PyGILState_Ensure();
+    SNAPTRACE_THREAD_PROTECT_START(self);
 
     PyObject* current_thread_method = PyObject_GetAttrString(threading_module, "current_thread");
     if (!current_thread_method) {
@@ -1456,6 +1479,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     info->curr_task_frame = NULL;
     info->prev_ts = 0.0;
 
+    SNAPTRACE_THREAD_PROTECT_END(self);
     PyGILState_Release(state);
 
     return info;
