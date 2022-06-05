@@ -11,6 +11,7 @@ import io
 import json
 import os
 import socketserver
+import subprocess
 import sys
 import threading
 import time
@@ -43,6 +44,22 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         # To quiet the http server
         pass
+
+
+class ExternalProcessorHandler(HttpHandler):
+    def __init__(
+            self,
+            server_thread: "ServerThread",
+            *args, **kwargs):
+        self.server_thread = server_thread
+        super().__init__(*args, **kwargs)
+
+    def do_GET(self):
+        self.server.last_request = self.path
+        self.server_thread.notify_active()
+        self.directory = os.path.join(os.path.dirname(__file__), "web_dist")
+        with chdir_temp(self.directory):
+            return super().do_GET()
 
 
 class PerfettoHandler(HttpHandler):
@@ -215,6 +232,36 @@ class DirectoryHandler(HttpHandler):
         return f
 
 
+class ExternalProcessorProcess:
+    trace_processor_path = os.path.join(os.path.dirname(__file__), "web_dist", "trace_processor")
+
+    def __init__(self, path: str):
+        self.path = path
+        self._process = subprocess.Popen(
+            [
+                sys.executable,
+                self.trace_processor_path,
+                self.path,
+                "-D"
+            ],
+            stderr=subprocess.PIPE
+        )
+        self._wait_start()
+
+    def _wait_start(self):
+        while True:
+            line = self._process.stderr.readline().decode("utf-8")
+            if "This server can be used" in line:
+                break
+
+    def stop(self):
+        self._process.terminate()
+        try:
+            self._process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+
+
 class VizViewerTCPServer(socketserver.TCPServer):
     def handle_timeout(self) -> None:
         self.trace_served = True
@@ -228,6 +275,7 @@ class ServerThread(threading.Thread):
             port: int = 9001,
             once: bool = False,
             flamegraph: bool = False,
+            use_external_processor: bool = False,
             timeout: float = 10,
             quiet: bool = False):
         self.path = path
@@ -237,6 +285,8 @@ class ServerThread(threading.Thread):
         self.quiet = quiet
         self.link = f"http://127.0.0.1:{self.port}"
         self.flamegraph = flamegraph
+        self.use_external_procesor = use_external_processor
+        self.externel_processor_process: Optional[ExternalProcessorProcess] = None
         self.fg_data: Optional[List[Dict[str, Any]]] = None
         self.file_info = None
         self.httpd: Optional[VizViewerTCPServer] = None
@@ -268,10 +318,14 @@ class ServerThread(threading.Thread):
                 return 1
         elif filename.endswith("json"):
             trace_data = None
-            with open(self.path, encoding="utf-8", errors="ignore") as f:
-                trace_data = json.load(f)
-                self.file_info = trace_data.get("file_info", {})
-            Handler = functools.partial(PerfettoHandler, self)
+            if self.use_external_procesor:
+                Handler = functools.partial(ExternalProcessorHandler, self)
+                self.externel_processor_process = ExternalProcessorProcess(self.path)
+            else:
+                with open(self.path, encoding="utf-8", errors="ignore") as f:
+                    trace_data = json.load(f)
+                    self.file_info = trace_data.get("file_info", {})
+                Handler = functools.partial(PerfettoHandler, self)
         elif filename.endswith("html"):
             Handler = functools.partial(HtmlHandler, self)
         else:
@@ -292,6 +346,9 @@ class ServerThread(threading.Thread):
             else:
                 self.httpd.serve_forever()
 
+        if self.externel_processor_process is not None:
+            self.externel_processor_process.stop()
+
         return 0
 
     def notify_active(self):
@@ -299,12 +356,20 @@ class ServerThread(threading.Thread):
 
 
 class DirectoryViewer:
-    def __init__(self, path: str, port: int, server_only: bool, flamegraph: bool, timeout: int):
+    def __init__(
+            self,
+            path: str,
+            port: int,
+            server_only: bool,
+            flamegraph: bool,
+            timeout: int,
+            use_external_processor: bool):
         self.base_path = os.path.abspath(path)
         self.port = port
         self.server_only = server_only
         self.flamegraph = flamegraph
         self.timeout = timeout
+        self.use_external_processor = use_external_processor
         self.max_port_number = 10
         self.servers: Dict[str, ServerThread] = {}
 
@@ -326,7 +391,12 @@ class DirectoryViewer:
         ports_used = set((serv.port for serv in self.servers.values()))
         for port in range(self.port + 1, self.port + max_port_number + 1):
             if port not in ports_used:
-                t = ServerThread(path, port=port, flamegraph=self.flamegraph, quiet=True)
+                t = ServerThread(
+                    path,
+                    port=port,
+                    flamegraph=self.flamegraph,
+                    use_external_processor=self.use_external_processor,
+                    quiet=True)
                 t.start()
                 t.ready.wait()
                 return t
@@ -385,9 +455,26 @@ def viewer_main():
                         help="Timeout in seconds to stop the server without trace data requests")
     parser.add_argument("--flamegraph", default=False, action="store_true",
                         help="Show flamegraph of data")
+    parser.add_argument("--use_external_processor", default=False, action="store_true",
+                        help="Use the more powerful external trace processor instead of WASM")
 
     options = parser.parse_args(sys.argv[1:])
     f = options.file[0]
+
+    if options.use_external_processor:
+        # Perfetto trace processor only accepts requests from localhost:10000
+        options.port = 10000
+        # external trace process won't work with once or flamegraph or directory
+        if options.once:
+            print("You can't use --once with --use_external_processor")
+            return 1
+        if options.flamegraph:
+            print("You can't use --flamegraph with --use_external_processor")
+            return 1
+        if os.path.isdir(f):
+            print("You can't use --use_external_processor on a directory")
+            return 1
+
     if os.path.isdir(f):
         cwd = os.getcwd()
         try:
@@ -396,7 +483,8 @@ def viewer_main():
                 port=options.port,
                 server_only=options.server_only,
                 flamegraph=options.flamegraph,
-                timeout=options.timeout
+                timeout=options.timeout,
+                use_external_processor=options.use_external_processor
             )
             directory_viewer.run()
         finally:
@@ -410,7 +498,8 @@ def viewer_main():
                 port=options.port,
                 once=options.once,
                 flamegraph=options.flamegraph,
-                timeout=options.timeout
+                timeout=options.timeout,
+                use_external_processor=options.use_external_processor
             )
             server.start()
             server.ready.wait()

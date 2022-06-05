@@ -6,16 +6,17 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
   <link rel="shortcut icon" id="favicon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
 </head>
-<body data-perfetto_version='{"stable":"v23.0-50554e3ba"}'>
+<body data-perfetto_version='{"stable":"v25.0-cca3e0ce7"}'>
   <!--
     Don't add any content here. The whole <body> is replaced by
     frontend/index.ts when bootstrapping. This is only used for very early
     error reporting.
   -->
   <style>
-  #app_load_failure {opacity:0;transition:opacity 1s ease;position:absolute;background:#080082;top:0;left:0;width:100%;height:100%;bottom:0;right:0;margin:0;opacity:0;user-select:text}
-  #app_load_failure > pre {color:#fff;position:absolute;margin:auto;white-space:pre-wrap;top:50%;transform:translate(0,-50%);max-width:90vw;width:880px;left:0;right:0;font-size:16px;line-height:30px;font-weight:700}
+  #app_load_failure {opacity:0;transition:opacity 1s ease;position:absolute;overflow:auto;background:#080082;top:0;left:0;width:100%;height:100%;bottom:0;right:0;margin:0;opacity:0;user-select:text}
+  #app_load_failure > pre {color:#fff;position:absolute;margin:auto;white-space:pre-wrap;top:10vh;max-width:90vw;width:880px;left:0;right:0;font-size:16px;line-height:30px;font-weight:700}
   #app_load_failure > pre span {background:#fff;color:#080082;padding:2px}
+  #app_load_failure_dbg { overflow-wrap: break-word; font-size: 12px; line-height: 1; font-weight: initial;}
   #app_load_failure a {color:#fff}
   #app_load { position: absolute; top: 0; left: 0; right:0; bottom: 0; background-color: #2c3e50;}
   #app_load_spinner { margin: 30vh auto; width: 150px; height: 150px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: app_load_spin 1s ease-in-out infinite; }

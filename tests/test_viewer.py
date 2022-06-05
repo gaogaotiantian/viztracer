@@ -21,7 +21,7 @@ import webbrowser
 
 
 class Viewer(unittest.TestCase):
-    def __init__(self, file_path, once=False, flamegraph=False, timeout=None):
+    def __init__(self, file_path, once=False, flamegraph=False, timeout=None, use_external_processor=None):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
                         "-m", "viztracer.viewer", "-s", file_path]
@@ -37,6 +37,9 @@ class Viewer(unittest.TestCase):
         if timeout is not None:
             self.cmd.append("--timeout")
             self.cmd.append(f"{timeout}")
+
+        if use_external_processor is not None:
+            self.cmd.append("--use_external_processor")
 
         self.process = None
         self.stopped = False
@@ -141,6 +144,23 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
+    def test_use_external_processor(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, use_external_processor=True)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+            finally:
+                v.stop()
+        finally:
+            os.remove(f.name)
+
     def test_once(self):
         html = '<html></html>'
         try:
@@ -189,6 +209,11 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
+
+            # --once won't work with --use_external_processor
+            self.template(["vizviewer", "--once", "--use_external_processor", f.name],
+                          success=False, expected_output_file=None)
+
             v = Viewer(f.name, once=True, timeout=1)
             v.run()
             try:
@@ -211,6 +236,11 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
+
+            # --once won't work with --use_external_processor
+            self.template(["vizviewer", "--flamegraph", "--use_external_processor", f.name],
+                          success=False, expected_output_file=None)
+
             v = Viewer(f.name, once=True, flamegraph=True)
             v.run()
             try:
@@ -250,6 +280,9 @@ class TestViewer(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        # --use_external_processor won't work with directory
+        self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False, expected_output_file=None)
+
         with Viewer(test_data_dir):
             time.sleep(0.5)
             resp = urllib.request.urlopen("http://127.0.0.1:9001/")
