@@ -38,7 +38,7 @@ class Viewer(unittest.TestCase):
             self.cmd.append("--timeout")
             self.cmd.append(f"{timeout}")
 
-        if use_external_processor is not None:
+        if use_external_processor:
             self.cmd.append("--use_external_processor")
 
         self.process = None
@@ -154,7 +154,7 @@ class TestViewer(CmdlineTmpl):
             try:
                 v.run()
                 time.sleep(0.5)
-                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                resp = urllib.request.urlopen("http://127.0.0.1:10000")
                 self.assertTrue(resp.code == 200)
             finally:
                 v.stop()

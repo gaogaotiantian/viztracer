@@ -259,7 +259,7 @@ class ExternalProcessorProcess:
         try:
             self._process.wait(timeout=2)
         except subprocess.TimeoutExpired:
-            self._process.kill()
+            self._process.kill()  # pragma: no cover
 
 
 class VizViewerTCPServer(socketserver.TCPServer):
