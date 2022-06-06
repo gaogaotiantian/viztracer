@@ -54,7 +54,7 @@ class Viewer(unittest.TestCase):
 
     def run(self):
         self.stopped = False
-        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self._wait_until_socket_on()
         self.assertIs(self.process.poll(), None)
 
@@ -64,12 +64,12 @@ class Viewer(unittest.TestCase):
                 if self.process.poll() is None:
                     self.process.send_signal(signal.SIGINT)
                     self.process.wait(timeout=20)
-                out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
+                out, err = self.process.communicate()
                 self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=5)
-                out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
+                out, err = self.process.communicate()
                 self.fail(f"Process timeout - stdout:\n{out}\nstderr\n{err}\n")
             finally:
                 self.process.stdout.close()

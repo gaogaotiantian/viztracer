@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import argparse
+import atexit
 import contextlib
 import functools
 import html
@@ -246,6 +247,7 @@ class ExternalProcessorProcess:
             ],
             stderr=subprocess.PIPE
         )
+        atexit.register(self.stop)
         self._wait_start()
 
     def _wait_start(self):
@@ -261,6 +263,7 @@ class ExternalProcessorProcess:
             self._process.wait(timeout=2)
         except subprocess.TimeoutExpired:  # pragma: no cover
             self._process.kill()
+        atexit.unregister(self.stop)
 
 
 class VizViewerTCPServer(socketserver.TCPServer):
