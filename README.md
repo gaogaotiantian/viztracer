@@ -70,6 +70,8 @@ vizviewer --once result.json
 vizviewer result.json
 # You can display all the files in a directory and open them in browser too
 vizviewer ./
+# For very large trace files, try external trace processor
+vizviewer --use_external_processor result.json
 ```
 
 <details>
