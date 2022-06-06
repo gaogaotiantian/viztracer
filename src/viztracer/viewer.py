@@ -249,6 +249,7 @@ class ExternalProcessorProcess:
         self._wait_start()
 
     def _wait_start(self):
+        print("Loading and parsing trace data, this could take a while...")
         while True:
             line = self._process.stderr.readline().decode("utf-8")
             if "This server can be used" in line:
@@ -258,8 +259,8 @@ class ExternalProcessorProcess:
         self._process.terminate()
         try:
             self._process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            self._process.kill()  # pragma: no cover
+        except subprocess.TimeoutExpired:  # pragma: no cover
+            self._process.kill()
 
 
 class VizViewerTCPServer(socketserver.TCPServer):
@@ -512,7 +513,8 @@ def viewer_main():
             while server.is_alive():
                 server.join(timeout=1)
         except KeyboardInterrupt:
-            server.httpd.shutdown()
+            if server.httpd is not None:
+                server.httpd.shutdown()
             server.join(timeout=2)
         finally:
             os.chdir(cwd)
