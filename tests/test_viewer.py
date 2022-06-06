@@ -66,6 +66,11 @@ class Viewer(unittest.TestCase):
                     self.process.wait(timeout=20)
                 out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
                 self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+                out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
+                self.fail(f"Process timeout - stdout:\n{out}\nstderr\n{err}\n")
             finally:
                 self.process.stdout.close()
                 self.process.stderr.close()
