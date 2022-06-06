@@ -145,11 +145,24 @@ after serve the trace file
 
     vizviewer --once result.json
 
+You can serve your HTTP server on a different port with ``--port`` or its equivalent ``-p``
+
+.. code-block::
+
+    vizviewer --port 10000 result.json
+
 You can also show flamegraph of the result
 
 .. code-block::
 
     vizviewer --flamegraph result.json
+
+You can use the external trace processor with ``--use_external_processor``, which does not have the
+RAM limits as the browser. This is helpful when you try to open large trace.
+
+.. code-block::
+
+    viztracer --use_external_processor result.json
 
 ``vizviewer`` can also show standalone html report - it just host a simple HTTP server for the file
 

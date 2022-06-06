@@ -21,7 +21,7 @@ import webbrowser
 
 
 class Viewer(unittest.TestCase):
-    def __init__(self, file_path, once=False, flamegraph=False, timeout=None):
+    def __init__(self, file_path, once=False, flamegraph=False, timeout=None, use_external_processor=None):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
                         "-m", "viztracer.viewer", "-s", file_path]
@@ -38,8 +38,12 @@ class Viewer(unittest.TestCase):
             self.cmd.append("--timeout")
             self.cmd.append(f"{timeout}")
 
+        if use_external_processor:
+            self.cmd.append("--use_external_processor")
+
         self.process = None
         self.stopped = False
+        self.use_external_processor = use_external_processor
         super().__init__()
 
     def __enter__(self):
@@ -50,7 +54,7 @@ class Viewer(unittest.TestCase):
 
     def run(self):
         self.stopped = False
-        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self._wait_until_socket_on()
         self.assertIs(self.process.poll(), None)
 
@@ -60,23 +64,29 @@ class Viewer(unittest.TestCase):
                 if self.process.poll() is None:
                     self.process.send_signal(signal.SIGINT)
                     self.process.wait(timeout=20)
-                out, err = self.process.stdout.read().decode("utf-8"), self.process.stderr.read().decode("utf-8")
+                out, err = self.process.communicate()
                 self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+                out, err = self.process.communicate()
+                self.fail(f"Process timeout - stdout:\n{out}\nstderr\n{err}\n")
             finally:
                 self.process.stdout.close()
                 self.process.stderr.close()
                 self.stopped = True
 
     def _wait_until_socket_on(self):
+        port = 10000 if self.use_external_processor else 9001
         for _ in range(10):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
-            result = sock.connect_ex(('127.0.0.1', 9001))
+            result = sock.connect_ex(('127.0.0.1', port))
             sock.close()
             if result == 0:
                 return
             time.sleep(1)
-        self.fail("Can't connect to 127.0.0.1:9001")
+        self.fail(f"Can't connect to 127.0.0.1:{port}")
 
 
 class MockOpen(unittest.TestCase):
@@ -141,6 +151,23 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
+    def test_use_external_processor(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, use_external_processor=True)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:10000", timeout=10)
+                self.assertTrue(resp.code == 200)
+            finally:
+                v.stop()
+        finally:
+            os.remove(f.name)
+
     def test_once(self):
         html = '<html></html>'
         try:
@@ -189,6 +216,11 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
+
+            # --once won't work with --use_external_processor
+            self.template(["vizviewer", "--once", "--use_external_processor", f.name],
+                          success=False, expected_output_file=None)
+
             v = Viewer(f.name, once=True, timeout=1)
             v.run()
             try:
@@ -211,6 +243,11 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
+
+            # --once won't work with --use_external_processor
+            self.template(["vizviewer", "--flamegraph", "--use_external_processor", f.name],
+                          success=False, expected_output_file=None)
+
             v = Viewer(f.name, once=True, flamegraph=True)
             v.run()
             try:
@@ -250,6 +287,9 @@ class TestViewer(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        # --use_external_processor won't work with directory
+        self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False, expected_output_file=None)
+
         with Viewer(test_data_dir):
             time.sleep(0.5)
             resp = urllib.request.urlopen("http://127.0.0.1:9001/")
