@@ -43,6 +43,7 @@ class Viewer(unittest.TestCase):
 
         self.process = None
         self.stopped = False
+        self.use_external_processor = use_external_processor
         super().__init__()
 
     def __enter__(self):
@@ -71,15 +72,16 @@ class Viewer(unittest.TestCase):
                 self.stopped = True
 
     def _wait_until_socket_on(self):
+        port = 10000 if self.use_external_processor else 9001
         for _ in range(10):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
-            result = sock.connect_ex(('127.0.0.1', 9001))
+            result = sock.connect_ex(('127.0.0.1', port))
             sock.close()
             if result == 0:
                 return
             time.sleep(1)
-        self.fail("Can't connect to 127.0.0.1:9001")
+        self.fail(f"Can't connect to 127.0.0.1:{port}")
 
 
 class MockOpen(unittest.TestCase):
@@ -154,7 +156,7 @@ class TestViewer(CmdlineTmpl):
             try:
                 v.run()
                 time.sleep(0.5)
-                resp = urllib.request.urlopen("http://127.0.0.1:10000")
+                resp = urllib.request.urlopen("http://127.0.0.1:10000", timeout=10)
                 self.assertTrue(resp.code == 200)
             finally:
                 v.stop()
