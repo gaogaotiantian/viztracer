@@ -1,8 +1,14 @@
+# Build Packages
 setuptools
 wheel
 twine
-coverage
-pywinpty==1.1.6; python_version < '3.7' and sys_platform == 'win32'
-ipywidgets
+
+# Lint & Coverage
+flake8
 mypy
+coverage
+
+# 3rd party packages for test
+ipywidgets
+pywinpty==1.1.6; python_version < '3.7' and sys_platform == 'win32'
 loky>=3.0.0
