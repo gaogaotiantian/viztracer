@@ -57,16 +57,35 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
     return inner
 
 
-def log_sparse(func: Callable) -> Callable:
+def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callable:
     tracer = get_tracer()
-    if not tracer or not tracer.log_sparse:
+    if tracer is None or not tracer.log_sparse:
+        if func is None:
+            return lambda f: f
         return func
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        tracer = get_tracer()
-        if tracer:
-            # This should always be true
+    if func is None:
+        def inner(dec_func: Callable):
+            @functools.wraps(dec_func)
+            def wrapper(*args, **kwargs) -> Any:
+                assert isinstance(tracer, VizTracer)
+                if not tracer.enable:
+                    orig_max_stack_depth = tracer.max_stack_depth
+                    tracer.max_stack_depth = stack_depth
+                    tracer.start()
+                    ret = dec_func(*args, **kwargs)
+                    tracer.stop()
+                    tracer.max_stack_depth = orig_max_stack_depth
+                    return ret
+                else:
+                    return dec_func(*args, **kwargs)
+            return wrapper
+        return inner
+    else:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            assert callable(func)
+            assert isinstance(tracer, VizTracer)
             start = tracer.getts()
             ret = func(*args, **kwargs)
             dur = tracer.getts() - start
@@ -79,8 +98,6 @@ def log_sparse(func: Callable) -> Callable:
                 "cat": "FEE"
             }
             tracer.add_raw(raw_data)
-        else:  # pragma: no cover
-            raise Exception("This should not be possible")
-        return ret
+            return ret
 
-    return wrapper
+        return wrapper

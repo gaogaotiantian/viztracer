@@ -136,7 +136,16 @@ First, you need to add decorator ``@log_sparse`` on the function you want to log
 
     from viztracer import log_sparse
 
+    # @log_sparse will only log this function
     @log_sparse
+    def function_you_want_to_log():
+        # function body
+
+    # @log_sparse(stack_depth=5) will log this function and its descendants
+    # with a limit stach depth of 5
+    # Nested @log_sparse with stack_depth won't work
+    # (only the outermost function and its stack will be logged)
+    @log_sparse(stack_depth=5)
     def function_you_want_to_log():
         # function body
 

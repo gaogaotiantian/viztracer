@@ -16,7 +16,44 @@ def f():
 def g():
     return f()
 
-g()
+assert g() == 1
+"""
+
+
+file_stack = """
+from viztracer import log_sparse
+
+def h():
+    return 1
+
+def f():
+    return h()
+
+@log_sparse(stack_depth=2)
+def g():
+    return f()
+
+assert g() == 1
+assert g() == 1
+"""
+
+
+file_stack_nested = """
+from viztracer import log_sparse
+
+@log_sparse(stack_depth=2)
+def h():
+    return 1
+
+def f():
+    return h()
+
+@log_sparse(stack_depth=2)
+def g():
+    return f()
+
+assert g() == 1
+assert g() == 1
 """
 
 
@@ -53,8 +90,20 @@ class TestLogSparse(CmdlineTmpl):
                       expected_output_file="result.json",
                       check_func=check_func)
 
+    def test_stack(self):
+        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+                      script=file_stack,
+                      expected_output_file="result.json",
+                      expected_entries=4)
+
+        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+                      script=file_stack_nested,
+                      expected_output_file="result.json",
+                      expected_entries=4)
+
     def test_without_tracer(self):
         self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)
+        self.template(["python", "cmdline_test.py"], script=file_stack, expected_output_file=None)
 
     def test_multiprocess(self):
         if multiprocessing.get_start_method() == "fork":
