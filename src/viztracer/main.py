@@ -358,9 +358,7 @@ class VizUI:
 
         self.install_all_hooks(tracer)
 
-        if options.log_sparse:
-            tracer.enable = True
-        else:
+        if not options.log_sparse:
             tracer.start()
 
         exec(code, global_dict)
