@@ -73,7 +73,7 @@ class VizTracer(_VizTracer):
 
         self.cwd = os.getcwd()
 
-        self.viztmp = None
+        self.viztmp: Optional[str] = None
 
         self._afterfork_cb: Optional[Callable] = None
         self._afterfork_args: Tuple = tuple()
@@ -87,7 +87,7 @@ class VizTracer(_VizTracer):
         return self.__pid_suffix
 
     @pid_suffix.setter
-    def pid_suffix(self, pid_suffix: bool):
+    def pid_suffix(self, pid_suffix: bool) -> None:
         if type(pid_suffix) is bool:
             self.__pid_suffix = pid_suffix
         else:
@@ -117,19 +117,19 @@ class VizTracer(_VizTracer):
             "minimize_memory": self.minimize_memory
         }
 
-    def __enter__(self):
+    def __enter__(self) -> "VizTracer":
         self.start()
         return self
 
-    def __exit__(self, type, value, trace):
+    def __exit__(self, type, value, trace) -> None:
         self.stop()
         self.save()
         self.terminate()
 
-    def register_global(self):
+    def register_global(self) -> None:
         builtins.__dict__["__viz_tracer__"] = self
 
-    def install(self):
+    def install(self) -> None:
         if sys.platform == "win32":
             print("remote install is not supported on Windows!")
             sys.exit(1)
@@ -148,7 +148,7 @@ class VizTracer(_VizTracer):
         if cond:
             self.add_instant(name, args=args, scope=scope)
 
-    def log_var(self, name, var, cond: bool = True) -> None:
+    def log_var(self, name: str, var: Any, cond: bool = True) -> None:
         if cond:
             if isinstance(var, (float, int)):
                 self.add_counter(name, {"value": var})
@@ -159,22 +159,22 @@ class VizTracer(_VizTracer):
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
-    def set_afterfork(self, callback: Callable, *args, **kwargs):
+    def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback
         self._afterfork_args = args
         self._afterfork_kwargs = kwargs
 
-    def start(self):
+    def start(self) -> None:
         if not self.enable:
             self._plugin_manager.event("pre-start")
             _VizTracer.start(self)
 
-    def stop(self):
+    def stop(self) -> None:
         if self.enable:
             _VizTracer.stop(self)
             self._plugin_manager.event("post-stop")
 
-    def run(self, command: str, output_file: Optional[str] = None):
+    def run(self, command: str, output_file: Optional[str] = None) -> None:
         self.start()
         exec(command)
         self.stop()
@@ -184,7 +184,7 @@ class VizTracer(_VizTracer):
             self,
             output_file: Optional[str] = None,
             file_info: Optional[bool] = None,
-            verbose: Optional[int] = None):
+            verbose: Optional[int] = None) -> None:
         if file_info is None:
             file_info = self.file_info
         enabled = False
@@ -223,7 +223,7 @@ class VizTracer(_VizTracer):
         if enabled:
             self.start()
 
-    def fork_save(self, output_file: Optional[str] = None):
+    def fork_save(self, output_file: Optional[str] = None) -> multiprocessing.Process:
         if multiprocessing.get_start_method() != "fork":
             # You have to parse first if you are not forking, address space is not copied
             # Since it's not forking, we can't pickle tracer, just set it to None when
@@ -248,7 +248,7 @@ class VizTracer(_VizTracer):
 
         return p
 
-    def label_file_to_write(self):
+    def label_file_to_write(self) -> None:
         output_file = self.output_file
         if self.pid_suffix:
             output_file_parts = output_file.split(".")
@@ -260,10 +260,10 @@ class VizTracer(_VizTracer):
             pass
         self.viztmp = output_file
 
-    def terminate(self):
+    def terminate(self) -> None:
         self._plugin_manager.terminate()
 
-    def register_exit(self):
+    def register_exit(self) -> None:
         self.cwd = os.getcwd()
 
         def term_handler(sig, frame):
@@ -284,7 +284,7 @@ class VizTracer(_VizTracer):
         from multiprocessing.util import Finalize  # type: ignore
         Finalize(self, self.exit_routine, exitpriority=-1)
 
-    def exit_routine(self):
+    def exit_routine(self) -> None:
         # We need to avoid SIGTERM terminate our process when we dump data
         signal.signal(signal.SIGTERM, lambda sig, frame: 0)
         self.stop()

@@ -15,12 +15,12 @@ class VizEvent:
         self.event_name = event_name
         self.file_name = file_name
         self.lineno = lineno
-        self.start = None
+        self.start = 0.0
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.start = self._tracer.getts()
 
-    def __exit__(self, type, value, trace):
+    def __exit__(self, type, value, trace) -> None:
         dur = self._tracer.getts() - self.start
         raw_data = {
             "ph": "X",

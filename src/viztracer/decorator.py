@@ -65,7 +65,7 @@ def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callabl
         return func
 
     if func is None:
-        def inner(dec_func: Callable):
+        def inner(dec_func: Callable) -> Callable:
             @functools.wraps(dec_func)
             def wrapper(*args, **kwargs) -> Any:
                 assert isinstance(tracer, VizTracer)

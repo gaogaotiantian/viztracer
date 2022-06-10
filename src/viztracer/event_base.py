@@ -59,7 +59,7 @@ class _EventBase:
         self._viztracer_log()
 
     @staticmethod
-    def triggerlog(method: Optional[Callable] = None, when: str = "after"):
+    def triggerlog(method: Optional[Callable] = None, when: str = "after") -> Callable:
         if when not in ["after", "before", "both"]:
             raise ValueError("when has to be one of 'after', 'before' or 'both', not {}".format(when))
 

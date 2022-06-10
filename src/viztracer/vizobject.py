@@ -12,11 +12,11 @@ class VizObject(_EventBase):
         if self._viztracer_tracer:
             self._viztracer_tracer.add_object("N", self._viztracer_id, self._viztracer_name)
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._viztracer_tracer:
             self._viztracer_tracer.add_object("D", self._viztracer_id, self._viztracer_name)
 
-    def _viztracer_log(self, ph: str = "O"):
+    def _viztracer_log(self, ph: str = "O") -> None:
         if not self._viztracer_tracer:
             return
         d = {}

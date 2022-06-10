@@ -124,7 +124,7 @@ class AstTransformer(ast.NodeTransformer):
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return []
 
-    def get_assign_log_nodes(self, target) -> List[ast.stmt]:
+    def get_assign_log_nodes(self, target: ast.expr) -> List[ast.stmt]:
         """
         given a target of any type of Assign, return the instrumented node
         that log this variable
@@ -193,7 +193,7 @@ class AstTransformer(ast.NodeTransformer):
             event="instant"
         )
 
-    def get_add_variable_node(self, name, var_node, event) -> ast.Expr:
+    def get_add_variable_node(self, name: str, var_node: ast.AST, event: str) -> ast.Expr:
         node_instrument = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
@@ -211,7 +211,7 @@ class AstTransformer(ast.NodeTransformer):
         )
         return node_instrument
 
-    def get_add_func_exec_node(self, name, val, lineno) -> ast.Expr:
+    def get_add_func_exec_node(self, name: str, val: ast.AST, lineno: int) -> ast.Expr:
         node_instrument = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
@@ -290,18 +290,6 @@ class SourceProcessor:
     """
     Pre-process comments like #!viztracer: log_instant("event")
     """
-    def __init__(self):
-        self.re_patterns = [
-            # !viztracer: log_var("var", var)
-            (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*$"), self.line_transform),
-            # a = 3  # !viztracer: log
-            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*$"), self.inline_transform),
-            # !viztracer: log_var("var", var) if var > 3
-            (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"), self.line_transform_condition),
-            # a = 3  # !viztracer: log if a != 3
-            (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), self.inline_transform_condition)
-        ]
-
     def process(self, source: Any):
         if isinstance(source, bytes):
             source = source.decode("utf-8")
@@ -314,32 +302,43 @@ class SourceProcessor:
             for pattern, transform in self.re_patterns:
                 m = pattern.match(line)
                 if m:
-                    new_lines.append(transform(m))
+                    new_lines.append(transform(self, m))
                     break
             else:
                 new_lines.append(line)
 
         return "\n".join(new_lines)
 
-    def line_transform(self, re_match):
+    def line_transform(self, re_match: re.Match) -> str:
         return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
 
-    def line_transform_condition(self, re_match):
+    def line_transform_condition(self, re_match: re.Match) -> str:
         return f"{re_match.group(1)}if {re_match.group(3)}: __viz_tracer__.{re_match.group(2)};"
 
-    def inline_transform(self, re_match):
+    def inline_transform(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
             val_assigned = stmt[:stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}))"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}')"
 
-    def inline_transform_condition(self, re_match):
+    def inline_transform_condition(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
             val_assigned = stmt[:stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}), cond={re_match.group(2)})"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}', cond={re_match.group(2)});"
+
+    re_patterns = [
+        # !viztracer: log_var("var", var)
+        (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*$"), line_transform),
+        # a = 3  # !viztracer: log
+        (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*$"), inline_transform),
+        # !viztracer: log_var("var", var) if var > 3
+        (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"), line_transform_condition),
+        # a = 3  # !viztracer: log if a != 3
+        (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), inline_transform_condition)
+    ]
 
 
 class CodeMonkey:

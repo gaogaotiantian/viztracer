@@ -3,6 +3,7 @@
 
 
 import functools
+from multiprocessing import Process
 import os
 import sys
 import textwrap
@@ -96,16 +97,18 @@ class SpawnProcess:
     def __init__(
             self,
             viztracer_kwargs: Dict[str, Any],
+            run: Callable,
             target: Callable,
             args: List[Any],
             kwargs: Dict[str, Any]):
         self._viztracer_kwargs = viztracer_kwargs
+        self._run = run
         self._target = target
         self._args = args
         self._kwargs = kwargs
         self._exiting = False
 
-    def run(self):
+    def run(self) -> None:
         import viztracer
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
@@ -126,9 +129,8 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
             try:
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
-                self = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwargs)
-                sp._run = self.run
+                self: Process = reduction.pickle.load(from_parent)
+                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs)
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
@@ -141,9 +143,8 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
             try:
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
-                self = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self._target, self._args, self._kwargs)
-                sp._run = self.run
+                self: Process = reduction.pickle.load(from_parent)
+                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs)
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
