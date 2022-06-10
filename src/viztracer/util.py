@@ -9,7 +9,7 @@ import sys
 from typing import Union
 
 
-def size_fmt(num: Union[int, float], suffix: str = 'B'):
+def size_fmt(num: Union[int, float], suffix: str = 'B') -> str:
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
@@ -45,14 +45,14 @@ if sys.platform == "win32":
         color_support = False
 
 
-def color_print(color, s: str, **kwargs):
+def color_print(color, s: str, **kwargs) -> None:
     if color_support:
         print(bcolors.__getattribute__(color) + s + bcolors.ENDC, **kwargs)
     else:  # pragma: no cover
         print(s)
 
 
-def same_line_print(s: str, width=80, **kwargs):
+def same_line_print(s: str, width=80, **kwargs) -> None:
     print(f"\r{'':<{width}}", end="")  # clear the line
     print(f"\r{s}", end="", **kwargs)
 

@@ -5,7 +5,7 @@ from .event_base import _EventBase
 
 
 class VizCounter(_EventBase):
-    def _viztracer_log(self):
+    def _viztracer_log(self) -> None:
         if not self._viztracer_tracer:
             return
         d = {}

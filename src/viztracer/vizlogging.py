@@ -11,10 +11,10 @@ class VizLoggingHandler(Handler):
         super().__init__(*args, **kwargs)
         self._tracer = None
 
-    def emit(self, record: LogRecord):
+    def emit(self, record: LogRecord) -> None:
         if not self._tracer:
             return
         self._tracer.add_instant(f"logging - {self.format(record)}", scope="p")
 
-    def setTracer(self, tracer: VizTracer):
+    def setTracer(self, tracer: VizTracer) -> None:
         self._tracer = tracer

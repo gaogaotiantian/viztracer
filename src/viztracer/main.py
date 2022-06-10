@@ -29,6 +29,12 @@ from .util import time_str_to_us, color_print, same_line_print, pid_exists
 from .viztracer import VizTracer
 
 
+# For all the procedures in VizUI, return a tuple as the result
+# The first element bool indicates whether the procedure succeeds
+# The second element is the error message if it fails.
+VizProcedureResult = Tuple[bool, Optional[str]]
+
+
 class VizUI:
     def __init__(self):
         self.tracer: Optional[VizTracer] = None
@@ -152,7 +158,7 @@ class VizUI:
             return False  # pragma: no cover
         return self.parent_pid == os.getpid()
 
-    def load_config_file(self, filename=".viztracerrc"):
+    def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
         ret = argparse.Namespace()
         if os.path.exists(filename):
             cfg_parser = configparser.ConfigParser()
@@ -181,7 +187,7 @@ class VizUI:
                 raise FileNotFoundError(f"{filename} does not exist")
         return ret
 
-    def parse(self, argv: List[str]) -> Tuple[bool, Optional[str]]:
+    def parse(self, argv: List[str]) -> VizProcedureResult:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
         # We need to filter those out, they might conflict with our arguments
         idx: Optional[int] = None
@@ -326,7 +332,7 @@ class VizUI:
             signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
 
-    def run(self) -> Tuple[bool, Optional[str]]:
+    def run(self) -> VizProcedureResult:
         if self.options.version:
             return self.show_version()
         elif self.options.attach > 0:
@@ -349,7 +355,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Any, global_dict: Dict[str, Any]):
+    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
 
@@ -385,7 +391,7 @@ class VizUI:
 
         return True, None
 
-    def run_module(self):
+    def run_module(self) -> VizProcedureResult:
         import runpy
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
@@ -396,7 +402,7 @@ class VizUI:
         sys.path.insert(0, os.getcwd())
         return self.run_code(code, global_dict)
 
-    def run_string(self):
+    def run_string(self) -> VizProcedureResult:
         cmd_string = self.options.cmd_string
         main_mod = types.ModuleType("__main__")
         setattr(main_mod, "__file__", "<string>")
@@ -407,7 +413,7 @@ class VizUI:
         sys.argv = ["-c"] + self.command[:]
         return self.run_code(code, main_mod.__dict__)
 
-    def run_command(self) -> Tuple[bool, Optional[str]]:
+    def run_command(self) -> VizProcedureResult:
         command = self.command
         options = self.options
         file_name = command[0]
@@ -446,7 +452,7 @@ class VizUI:
         sys.argv = command[:]
         return self.run_code(code, main_mod.__dict__)
 
-    def run_combine(self, files: List[str], align: bool = False) -> Tuple[bool, Optional[str]]:
+    def run_combine(self, files: List[str], align: bool = False) -> VizProcedureResult:
         options = self.options
         builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
         if options.output_file:
@@ -457,11 +463,11 @@ class VizUI:
 
         return True, None
 
-    def show_version(self) -> Tuple[bool, Optional[str]]:
+    def show_version(self) -> VizProcedureResult:
         print(__version__)
         return True, None
 
-    def attach(self) -> Tuple[bool, Optional[str]]:
+    def attach(self) -> VizProcedureResult:
         pid = self.options.attach
         interval = self.options.t
 
@@ -498,7 +504,7 @@ class VizUI:
 
         return True, None
 
-    def uninstall(self) -> Tuple[bool, Optional[str]]:
+    def uninstall(self) -> VizProcedureResult:
         pid = self.options.uninstall
 
         if sys.platform == "win32":
@@ -515,7 +521,7 @@ class VizUI:
 
         return True, None
 
-    def attach_installed(self):
+    def attach_installed(self) -> VizProcedureResult:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
         pid = self.options.attach_installed
@@ -534,7 +540,7 @@ class VizUI:
 
         return True, None
 
-    def _wait_attach(self, interval):
+    def _wait_attach(self, interval) -> None:
         # interval == 0 means waiting for CTRL+C
         try:
             if interval > 0:

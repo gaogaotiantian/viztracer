@@ -295,12 +295,12 @@ class ServerThread(threading.Thread):
         self.file_info = None
         self.httpd: Optional[VizViewerTCPServer] = None
         self.last_active = time.time()
-        self.retcode = None
+        self.retcode: Optional[int] = None
         self.ready = threading.Event()
         self.ready.clear()
         super().__init__(daemon=True)
 
-    def run(self):
+    def run(self) -> None:
         self.retcode = self.view()
         # If it returns from view(), also set ready
         self.ready.set()
@@ -355,7 +355,7 @@ class ServerThread(threading.Thread):
 
         return 0
 
-    def notify_active(self):
+    def notify_active(self) -> None:
         self.last_active = time.time()
 
 
@@ -385,7 +385,7 @@ class DirectoryViewer:
         server = self.servers[path]
         return server.link
 
-    def create_server(self, path) -> ServerThread:
+    def create_server(self, path: str) -> ServerThread:
         max_port_number = self.max_port_number
         ports_used = set((serv.port for serv in self.servers.values()))
         if len(ports_used) == max_port_number:
@@ -406,26 +406,28 @@ class DirectoryViewer:
                 return t
         assert False, "Should always have a port available"  # pragma: no cover
 
-    def clean_servers(self, force=False):
+    def clean_servers(self, force: bool = False) -> None:
         curr_time = time.time()
         removed_path = []
         for path, server in self.servers.items():
             if curr_time - server.last_active > self.timeout:
-                server.httpd.shutdown()
+                if server.httpd is not None:
+                    server.httpd.shutdown()
                 removed_path.append(path)
                 server.join()
         for path in removed_path:
             self.servers.pop(path)
         if len(removed_path) == 0 and force:
-            max_idle_time, max_idle_path = 0, None
-            for path, server in self.servers.items():
-                if curr_time - server.last_active > max_idle_time:
-                    max_idle_time, max_idle_path = curr_time - server.last_active, path
+            max_idle_time, max_idle_path = max(
+                (curr_time - server.last_active, path)
+                for path, server in self.servers.items()
+            )
             server = self.servers.pop(max_idle_path)
-            server.httpd.shutdown()
+            if server.httpd:
+                server.httpd.shutdown()
             server.join()
 
-    def run(self):
+    def run(self) -> int:
         Handler = functools.partial(DirectoryHandler, self)
         socketserver.TCPServer.allow_reuse_address = True
         with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as httpd:
@@ -440,13 +442,14 @@ class DirectoryViewer:
                 httpd.serve_forever()
             except KeyboardInterrupt:
                 for server in self.servers.values():
-                    server.httpd.shutdown()
+                    if server.httpd:
+                        server.httpd.shutdown()
                     server.join()
                 self.servers = {}
-                return 0
+        return 0
 
 
-def viewer_main():
+def viewer_main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs=1, help="html/json/gz file to open")
     parser.add_argument("--server_only", "-s", default=False, action="store_true",
@@ -521,10 +524,11 @@ def viewer_main():
             server.join(timeout=2)
         finally:
             os.chdir(cwd)
-        return 0
     else:
         print(f"File {f} does not exist!")
         return 1
+
+    return 0
 
 
 if __name__ == "__main__":

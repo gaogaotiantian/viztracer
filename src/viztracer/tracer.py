@@ -60,7 +60,7 @@ class _VizTracer:
         return self.__max_stack_depth
 
     @max_stack_depth.setter
-    def max_stack_depth(self, max_stack_depth: Union[str, int]):
+    def max_stack_depth(self, max_stack_depth: Union[str, int]) -> None:
         if isinstance(max_stack_depth, str):
             try:
                 self.__max_stack_depth = int(max_stack_depth)
@@ -77,7 +77,7 @@ class _VizTracer:
         return self.__include_files
 
     @include_files.setter
-    def include_files(self, include_files: Optional[Sequence[str]]):
+    def include_files(self, include_files: Optional[Sequence[str]]) -> None:
         if include_files is None:
             self.__include_files = None
         elif isinstance(include_files, list):
@@ -94,7 +94,7 @@ class _VizTracer:
         return self.__exclude_files
 
     @exclude_files.setter
-    def exclude_files(self, exclude_files: Optional[Sequence[str]]):
+    def exclude_files(self, exclude_files: Optional[Sequence[str]]) -> None:
         if exclude_files is None:
             self.__exclude_files = None
         elif isinstance(exclude_files, list):
@@ -111,7 +111,7 @@ class _VizTracer:
         return self.__ignore_c_function
 
     @ignore_c_function.setter
-    def ignore_c_function(self, ignore_c_function: bool):
+    def ignore_c_function(self, ignore_c_function: bool) -> None:
         if isinstance(ignore_c_function, bool):
             self.__ignore_c_function = ignore_c_function
         else:
@@ -123,7 +123,7 @@ class _VizTracer:
         return self.__ignore_frozen
 
     @ignore_frozen.setter
-    def ignore_frozen(self, ignore_frozen: bool):
+    def ignore_frozen(self, ignore_frozen: bool) -> None:
         if isinstance(ignore_frozen, bool):
             self.__ignore_frozen = ignore_frozen
         else:
@@ -135,7 +135,7 @@ class _VizTracer:
         return self.__log_func_retval
 
     @log_func_retval.setter
-    def log_func_retval(self, log_func_retval: bool):
+    def log_func_retval(self, log_func_retval: bool) -> None:
         if isinstance(log_func_retval, bool):
             self.__log_func_retval = log_func_retval
         else:
@@ -147,7 +147,7 @@ class _VizTracer:
         return self.__log_async
 
     @log_async.setter
-    def log_async(self, log_async: bool):
+    def log_async(self, log_async: bool) -> None:
         if isinstance(log_async, bool):
             self.__log_async = log_async
         else:
@@ -159,7 +159,7 @@ class _VizTracer:
         return self.__log_print
 
     @log_print.setter
-    def log_print(self, log_print: bool):
+    def log_print(self, log_print: bool) -> None:
         if isinstance(log_print, bool):
             self.__log_print = log_print
         else:
@@ -170,7 +170,7 @@ class _VizTracer:
         return self.__log_func_args
 
     @log_func_args.setter
-    def log_func_args(self, log_func_args: bool):
+    def log_func_args(self, log_func_args: bool) -> None:
         if isinstance(log_func_args, bool):
             self.__log_func_args = log_func_args
         else:
@@ -182,7 +182,7 @@ class _VizTracer:
         return self.__log_gc
 
     @log_gc.setter
-    def log_gc(self, log_gc: bool):
+    def log_gc(self, log_gc: bool) -> None:
         if isinstance(log_gc, bool):
             self.__log_gc = log_gc
             if log_gc:
@@ -197,7 +197,7 @@ class _VizTracer:
         return self.__vdb
 
     @vdb.setter
-    def vdb(self, vdb: bool):
+    def vdb(self, vdb: bool) -> None:
         if isinstance(vdb, bool):
             self.__vdb = vdb
         else:
@@ -209,7 +209,7 @@ class _VizTracer:
         return self.__verbose
 
     @verbose.setter
-    def verbose(self, verbose: Union[str, int]):
+    def verbose(self, verbose: Union[str, int]) -> None:
         if isinstance(verbose, str):
             try:
                 self.__verbose = int(verbose)
@@ -233,7 +233,7 @@ class _VizTracer:
             raise ValueError("duration needs to be a float, not {}".format(min_duration))
         self.config()
 
-    def config(self):
+    def config(self) -> None:
         if not self.initialized:
             return
 
@@ -255,7 +255,7 @@ class _VizTracer:
 
         self._tracer.config(**cfg)
 
-    def start(self):
+    def start(self) -> None:
         self.enable = True
         self.parsed = False
         if self.log_print:
@@ -265,40 +265,40 @@ class _VizTracer:
         self.config()
         self._tracer.start()
 
-    def stop(self):
+    def stop(self) -> None:
         self.enable = False
         if self.log_print:
             self.restore_print()
         self._tracer.stop()
 
-    def pause(self):
+    def pause(self) -> None:
         if self.enable:
             self._tracer.pause()
 
-    def resume(self):
+    def resume(self) -> None:
         if self.enable:
             self._tracer.resume()
 
-    def clear(self):
+    def clear(self) -> None:
         self._tracer.clear()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self._tracer.cleanup()
 
-    def enable_thread_tracing(self):
+    def enable_thread_tracing(self) -> None:
         sys.setprofile(self._tracer.threadtracefunc)
 
     def getts(self) -> float:
         return self._tracer.getts()
 
-    def add_instant(self, name: str, args: Any = None, scope: str = "g"):
+    def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
         if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
             self._tracer.addinstant(name, args, scope)
 
-    def add_variable(self, name: str, var: Any, event: str = "instant"):
+    def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
         if self.enable:
             if event == "instant":
                 self.add_instant(f"{name} = {repr(var)}", scope="p")
@@ -310,22 +310,22 @@ class _VizTracer:
             else:
                 raise ValueError("{} is not supported".format(event))
 
-    def add_counter(self, name: str, args: Dict[str, Any]):
+    def add_counter(self, name: str, args: Dict[str, Any]) -> None:
         if self.enable:
             self._tracer.addcounter(name, args)
 
-    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None):
+    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None) -> None:
         if self.enable:
             self._tracer.addobject(ph, obj_id, name, args)
 
-    def add_func_args(self, key: str, value: Any):
+    def add_func_args(self, key: str, value: Any) -> None:
         if self.enable:
             self._tracer.addfunctionarg(key, value)
 
-    def add_raw(self, raw: Dict[str, Any]):
+    def add_raw(self, raw: Dict[str, Any]) -> None:
         self._tracer.addraw(raw)
 
-    def add_garbage_collection(self, phase: str, info: Dict[str, Any]):
+    def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
         if self.enable:
             if phase == "start":
                 args = {
@@ -345,7 +345,7 @@ class _VizTracer:
                     "uncollectable": 0
                 })
 
-    def add_func_exec(self, name: str, val: Any, lineno: int):
+    def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
         exec_line = "({}) {} = {}".format(lineno, name, val)
         curr_args = self._tracer.getfunctionarg()
         if not curr_args:
@@ -356,7 +356,7 @@ class _VizTracer:
             else:
                 curr_args["exec_steps"] = [exec_line]
 
-    def _set_curr_stack_depth(self, stack_depth: int):
+    def _set_curr_stack_depth(self, stack_depth: int) -> None:
         self._tracer.setcurrstack(stack_depth)
 
     def parse(self) -> int:
@@ -388,7 +388,7 @@ class _VizTracer:
     def dump(self, filename: str) -> None:
         self._tracer.dump(filename)
 
-    def overload_print(self):
+    def overload_print(self) -> None:
         self.system_print = builtins.print
 
         def new_print(*args, **kwargs):
@@ -400,5 +400,5 @@ class _VizTracer:
             self.resume()
         builtins.print = new_print
 
-    def restore_print(self):
+    def restore_print(self) -> None:
         builtins.print = self.system_print

@@ -29,7 +29,7 @@ class _FlameTree:
         self.root: _FlameNode = _FlameNode(None, "__root__")
         self.parse(func_tree)
 
-    def parse(self, func_tree: FuncTree):
+    def parse(self, func_tree: FuncTree) -> None:
         self.root = _FlameNode(None, "__root__")
         for child in func_tree.root.children:
             self.root.get_child(child)

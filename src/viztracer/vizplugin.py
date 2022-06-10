@@ -25,7 +25,7 @@ class VizPluginBase:
     def __init__(self):
         pass
 
-    def support_version(self):
+    def support_version(self) -> str:
         # You have to overload this to return the latest version of viztracer
         # your plugin supports. This is for API backward compatibility.
         # Simply return the version string
@@ -97,7 +97,7 @@ class VizPluginManager:
             print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
             sys.exit(1)
 
-    def _send_message(self, plugin: VizPluginBase, m_type: str, payload: Dict):
+    def _send_message(self, plugin: VizPluginBase, m_type: str, payload: Dict) -> None:
         # this is the only interface to communicate with vizplugin
         # in the future we may need to do version compatibility
         # here
@@ -112,25 +112,25 @@ class VizPluginManager:
         else:
             self.resolve(support_version, ret)
 
-    def event(self, when: str):
+    def event(self, when: str) -> None:
         for plugin in self._plugins:
             self._send_message(plugin, "event", {"when": when})
 
-    def command(self, cmd: Dict):
+    def command(self, cmd: Dict) -> None:
         for plugin in self._plugins:
             self._send_message(plugin, "command", cmd)
 
-    def terminate(self):
+    def terminate(self) -> None:
         self.command({"cmd_type": "terminate"})
         for plugin in self._plugins:
             del plugin
         self._plugins = []
 
-    def assert_success(self, plugin: VizPluginBase, cmd: Dict, ret: Optional[Dict]):
+    def assert_success(self, plugin: VizPluginBase, cmd: Dict, ret: Optional[Dict]) -> None:
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 
-    def resolve(self, version: str, ret: Dict):
+    def resolve(self, version: str, ret: Dict) -> None:
         if not ret or "action" not in ret:
             return
         if ret["action"] == "handle_data":
