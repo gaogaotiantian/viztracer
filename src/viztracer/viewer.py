@@ -366,7 +366,7 @@ class ServerThread(threading.Thread):
     def is_port_in_use(self) -> bool:
         with contextlib.closing(
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ) as sock:
+        ) as sock:
             if sock.connect_ex(('127.0.0.1', self.port)) == 0:
                 return True
             else:
