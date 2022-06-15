@@ -337,18 +337,22 @@ class ServerThread(threading.Thread):
             return 1
 
         socketserver.TCPServer.allow_reuse_address = True
-        with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
-            if not self.once and not self.quiet:
-                print("Running vizviewer")
-                print(f"You can also view your trace on http://localhost:{self.port}")
-                print("Press Ctrl+C to quit", flush=True)
-            self.ready.set()
-            if self.once:
-                self.httpd.timeout = self.timeout
-                while not self.httpd.__dict__.get("trace_served", False):
-                    self.httpd.handle_request()
-            else:
-                self.httpd.serve_forever()
+        try:
+            with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
+                if not self.once and not self.quiet:
+                    print("Running vizviewer")
+                    print(f"You can also view your trace on http://localhost:{self.port}")
+                    print("Press Ctrl+C to quit", flush=True)
+                self.ready.set()
+                if self.once:
+                    self.httpd.timeout = self.timeout
+                    while not self.httpd.__dict__.get("trace_served", False):
+                        self.httpd.handle_request()
+                else:
+                    self.httpd.serve_forever()
+        except OSError:
+            print(f'Error! Port {self.port} is already in use, try another port with "--port"')
+            return 1
 
         if self.externel_processor_process is not None:
             self.externel_processor_process.stop()

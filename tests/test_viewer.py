@@ -21,7 +21,15 @@ import webbrowser
 
 
 class Viewer(unittest.TestCase):
-    def __init__(self, file_path, once=False, flamegraph=False, timeout=None, use_external_processor=None):
+    def __init__(
+        self,
+        file_path,
+        once=False,
+        flamegraph=False,
+        timeout=None,
+        use_external_processor=None,
+        expect_success=True
+    ):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
                         "-m", "viztracer.viewer", "-s", file_path]
@@ -44,6 +52,7 @@ class Viewer(unittest.TestCase):
         self.process = None
         self.stopped = False
         self.use_external_processor = use_external_processor
+        self.expect_success = expect_success
         super().__init__()
 
     def __enter__(self):
@@ -65,7 +74,8 @@ class Viewer(unittest.TestCase):
                     self.process.send_signal(signal.SIGINT)
                     self.process.wait(timeout=20)
                 out, err = self.process.communicate()
-                self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
+                if self.expect_success:
+                    self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=5)
@@ -163,6 +173,30 @@ class TestViewer(CmdlineTmpl):
                 time.sleep(0.5)
                 resp = urllib.request.urlopen("http://127.0.0.1:10000", timeout=10)
                 self.assertTrue(resp.code == 200)
+            finally:
+                v.stop()
+        finally:
+            os.remove(f.name)
+
+    def test_port_in_use_error(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen("http://127.0.0.1:9001")
+                self.assertTrue(resp.code == 200)
+                v2 = Viewer(f.name, expect_success=False)
+                try:
+                    v2.run()
+                    self.assertNotEqual(v2.process.returncode, 0)
+                    stdout = v2.process.stdout.read()
+                    self.assertIn("Error", stdout)
+                finally:
+                    v2.stop()
             finally:
                 v.stop()
         finally:
