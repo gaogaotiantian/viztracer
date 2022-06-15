@@ -11,6 +11,7 @@ import http.server
 import io
 import json
 import os
+import socket
 import socketserver
 import subprocess
 import sys
@@ -336,23 +337,23 @@ class ServerThread(threading.Thread):
             print(f"Do not support file type {filename}")
             return 1
 
-        socketserver.TCPServer.allow_reuse_address = True
-        try:
-            with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
-                if not self.once and not self.quiet:
-                    print("Running vizviewer")
-                    print(f"You can also view your trace on http://localhost:{self.port}")
-                    print("Press Ctrl+C to quit", flush=True)
-                self.ready.set()
-                if self.once:
-                    self.httpd.timeout = self.timeout
-                    while not self.httpd.__dict__.get("trace_served", False):
-                        self.httpd.handle_request()
-                else:
-                    self.httpd.serve_forever()
-        except OSError:
+        if self.is_port_in_use():
             print(f'Error! Port {self.port} is already in use, try another port with "--port"')
             return 1
+
+        socketserver.TCPServer.allow_reuse_address = True
+        with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
+            if not self.once and not self.quiet:
+                print("Running vizviewer")
+                print(f"You can also view your trace on http://localhost:{self.port}")
+                print("Press Ctrl+C to quit", flush=True)
+            self.ready.set()
+            if self.once:
+                self.httpd.timeout = self.timeout
+                while not self.httpd.__dict__.get("trace_served", False):
+                    self.httpd.handle_request()
+            else:
+                self.httpd.serve_forever()
 
         if self.externel_processor_process is not None:
             self.externel_processor_process.stop()
@@ -361,6 +362,15 @@ class ServerThread(threading.Thread):
 
     def notify_active(self) -> None:
         self.last_active = time.time()
+
+    def is_port_in_use(self) -> bool:
+        with contextlib.closing(
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ) as sock:
+            if sock.connect_ex(('127.0.0.1', self.port)) == 0:
+                return True
+            else:
+                return False
 
 
 class DirectoryViewer:
