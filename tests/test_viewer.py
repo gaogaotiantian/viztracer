@@ -178,6 +178,7 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_port_in_use_error(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
