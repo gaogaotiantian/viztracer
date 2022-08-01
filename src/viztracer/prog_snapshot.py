@@ -453,7 +453,7 @@ class ProgSnapshot:
         return True, None
 
     def goto_tid(self, tid):
-        assert(type(tid) is int)
+        assert (type(tid) is int)
         forest = self.func_trees[self.curr_tree.pid]
         if tid not in forest:
             return False, "No such tid"
@@ -465,7 +465,7 @@ class ProgSnapshot:
         return True, None
 
     def goto_pid(self, pid):
-        assert(type(pid) is int)
+        assert (type(pid) is int)
         if pid not in self.func_trees:
             return False, "No such pid"
         else:
