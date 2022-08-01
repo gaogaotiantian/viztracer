@@ -95,7 +95,7 @@ Custom Event
 
 .. py:class:: VizObject(_EventBase)
 
-    ``VizObject`` is almost exactly the same as ``VizCounter``, with the exeption that ``VizObject`` can log jsonifiable objects(``dict``, ``list``, ``string``, ``int``, ``float``)
+    ``VizObject`` is almost exactly the same as ``VizCounter``, with the exception that ``VizObject`` can log jsonifiable objects(``dict``, ``list``, ``string``, ``int``, ``float``)
 
 
 Inheritance

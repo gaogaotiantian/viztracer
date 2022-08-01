@@ -76,7 +76,7 @@ VizTracer
 
         **NOTICE**
 
-        In command line, ``--include_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--``
+        In command line, ``--include_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify command using ``--``
 
         .. code-block::
 
@@ -100,7 +100,7 @@ VizTracer
         
         **NOTICE**
 
-        In command line, ``--exclude_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify comand using ``--``
+        In command line, ``--exclude_files`` takes multiple arguments, which will be ambiguous about the command that actually needs to run, so you need to explicitly specify command using ``--``
 
         .. code-block::
 

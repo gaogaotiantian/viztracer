@@ -21,9 +21,9 @@ More help can be found in "Support - Controls".
 
 ## Install
 
-The prefered way to install VizTracer is via pip
+The preferred way to install VizTracer is via pip
 
-```
+```sh
 pip install viztracer
 ```
 
@@ -33,7 +33,7 @@ pip install viztracer
 
 Assume you have a python script to run:
 
-```
+```sh
 python3 my_script.py arg1 arg2
 ```
 
@@ -49,24 +49,23 @@ viztracer my_script.py arg1 arg2
 A <code>result.json</code> file will be generated, which you can open with <code>vizviewer</code>
 </summary>
 
-vizviewer will host an HTTP server on ``http://localhost:9001``. You can also open your browser
-and use that address.
+vizviewer will host an HTTP server on ``http://localhost:9001``. You can also open your browser and use that address.
 
 If you do not want vizviewer to open the webbrowser automatically, you can use
 
-```
+```sh
 vizviewer --server_only result.json
 ```
 
 If you just need to bring up the trace report once, and do not want the persistent server, use
 
-```
+```sh
 vizviewer --once result.json
 ```
 
 </details>
 
-```
+```sh
 vizviewer result.json
 # You can display all the files in a directory and open them in browser too
 vizviewer ./
@@ -80,27 +79,23 @@ vizviewer --use_external_processor result.json
 You can also generate standalone <code>html</code> file
 </summary>
 
-```
+```sh
 viztracer -o result.html my_script.py arg1 arg2
 ```
 
-The standalone HTML file is powered by [catapult](https://github.com/catapult-project/catapult) trace viewer
-which is an old tool Google made and is being replaced by [Perfetto](https://perfetto.dev/) gradually.
+The standalone HTML file is powered by [catapult](https://github.com/catapult-project/catapult) trace viewer which is an old tool Google made and is being replaced by [Perfetto](https://perfetto.dev/) gradually.
 
-Catapult trace viewer is sluggish with larger traces and is not actively maintained. It is recommended to use
-Perfetto instead.
+Catapult trace viewer is sluggish with larger traces and is not actively maintained. It is recommended to use Perfetto instead.
 
-However, if you really need a standalone HTML file, this is the only option. Perfetto does not support
-standalone files.
+However, if you really need a standalone HTML file, this is the only option. Perfetto does not support standalone files.
 
 You can use vizviewer to open the html file as well, just to make the interface consistent
 
-```
+```sh
 vizviewer result.html
 ```
 
 </details>
-
 
 <details>
 
@@ -108,7 +103,7 @@ vizviewer result.html
 Or add <code>--open</code> to open the reports right after tracing
 </summary>
 
-```
+```sh
 viztracer --open my_scripy.py arg1 arg2
 viztracer -o result.html --open my_script.py arg1 arg2
 ```
@@ -227,7 +222,7 @@ Refer to [multi process docs](https://viztracer.readthedocs.io/en/stable/concurr
 
 ### Async Support
 
-VizTracer supports ```asyncio``` natively, but could enhance the report by using ```--log_async```. 
+VizTracer supports ```asyncio``` natively, but could enhance the report by using ```--log_async```.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/async_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/async_example.png)
 
@@ -237,7 +232,7 @@ Refer to [async docs](https://viztracer.readthedocs.io/en/stable/concurrency.htm
 
 VizTracer can show flamegraph of traced data.
 
-```
+```sh
 vizviewer --flamegraph result.json
 ```
 
@@ -258,7 +253,7 @@ VizTracer needs to dump the internal data to json format. It is recommended for 
 You can virtually debug your program with you saved json report. The interface is very similar to ```pdb```. Even better, you can **go back in time**
 because VizTracer has all the info recorded for you.
 
-```
+```sh
 vdb <your_json_report>
 ```
 
@@ -274,7 +269,7 @@ VizTracer will introduce 2x to 3x overhead in the worst case. The overhead is mu
 An example run for test_performance with Python 3.8 / Ubuntu 18.04.4 on Github VM
 </summary>
 
-```
+```sh
 fib:
 0.000678067(1.00)[origin]
 0.019880272(29.32)[py] 0.011103901(16.38)[parse] 0.021165599(31.21)[json]
@@ -299,7 +294,6 @@ slow_fib  (1135, 758):
 0.029481623(1.03)[c] 0.001152415(0.04)[parse] 0.002191417(0.08)[json]
 0.028289305(0.98)[cProfile]
 ```
-
 </details>
 
 ## Documentation
