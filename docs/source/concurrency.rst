@@ -93,7 +93,7 @@ generic multi process support
 
 VizTracer has a simple instrumentation for all the third party libraries to integrate VizTracer to their multi process code.
 
-First, your main process has to be exeucted by ``viztracer``. Inline VizTracer won't work. In your program, you need
+First, your main process has to be executed by ``viztracer``. Inline VizTracer won't work. In your program, you need
 ``get_tracer().init_kwargs``, which is a ``Dict`` that can be easily serializable with ``pickle`` or other libraries.
 
 Then, pass this argument to your sub-process, and instantiate a VizTracer object with it

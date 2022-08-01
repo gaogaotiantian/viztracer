@@ -9,7 +9,7 @@ Welcome to VizTracer's documentation!
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code to help you intuitively understand your code and figure out the time consuming part of your code.
 
-VizTracer can display every function executed and the corresponding entry/exit time from the beginning of the program to the end, which is helpful for programmers to catch sporatic performance issues.
+VizTracer can display every function executed and the corresponding entry/exit time from the beginning of the program to the end, which is helpful for programmers to catch sporadic performance issues.
 
 .. toctree::
    :maxdepth: 1
