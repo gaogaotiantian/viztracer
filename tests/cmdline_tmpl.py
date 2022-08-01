@@ -129,7 +129,7 @@ class CmdlineTmpl(BaseTmpl):
                     self.assertTrue(os.path.exists(expected_output_file))
 
             if expected_entries:
-                assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+                assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
                 with open(expected_output_file) as f:
                     data = json.load(f)
                     self.assertEventNumber(data, expected_entries)
@@ -141,7 +141,7 @@ class CmdlineTmpl(BaseTmpl):
                 self.assertRegex(result.stderr.decode("utf-8"), expected_stderr)
 
             if check_func:
-                assert(type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+                assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
                 with open(expected_output_file) as f:
                     data = json.load(f)
                     check_func(data)
