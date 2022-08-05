@@ -40,6 +40,7 @@ class VizTracer(_VizTracer):
                  min_duration: float = 0,
                  minimize_memory: bool = False,
                  dump_raw: bool = False,
+                 sanitize_function_name: bool = False,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []):
         super().__init__(
@@ -66,6 +67,7 @@ class VizTracer(_VizTracer):
         self.system_print = None
         self.log_sparse = log_sparse
         self.dump_raw = dump_raw
+        self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
         self._exiting = False
         if register_global:
@@ -209,7 +211,7 @@ class VizTracer(_VizTracer):
         self._plugin_manager.event("pre-save")
 
         if self.dump_raw:
-            self.dump(output_file)
+            self.dump(output_file, sanitize_function_name=self.sanitize_function_name)
         else:
             if not self.parsed:
                 self.parse()

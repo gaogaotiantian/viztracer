@@ -139,7 +139,7 @@ static void fputs_escape(const char* s, FILE* fptr)
     }
 }
 
-void fprintfeename(FILE* fptr, struct EventNode* node)
+void fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name)
 {
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
         fputs(PyUnicode_AsUTF8(node->data.fee.co_name), fptr);
@@ -147,22 +147,35 @@ void fprintfeename(FILE* fptr, struct EventNode* node)
         fputs_escape(PyUnicode_AsUTF8(node->data.fee.co_filename), fptr);
         fprintf(fptr, ":%d)", node->data.fee.co_firstlineno);
     } else {
+        const char* ml_name = node->data.fee.ml_name;
+
+        if (sanitize_function_name) {
+            const char *c = ml_name;
+            while (*c != '\0') {
+                if(!Py_UNICODE_ISPRINTABLE(*c)) {
+                    ml_name = NULL;
+                    break;
+                }
+                c ++;
+            }
+        }
         if (node->data.fee.m_module) {
             // The function belongs to a module
             fputs(PyUnicode_AsUTF8(node->data.fee.m_module), fptr);
             fputc('.', fptr);
-            fputs(node->data.fee.ml_name, fptr);
         } else {
             // The function is a class method
             if (node->data.fee.tp_name) {
                 // It's not a static method, has __self__
                 fputs(node->data.fee.tp_name, fptr);
                 fputc('.', fptr);
-                fputs(node->data.fee.ml_name, fptr);
             } else {
                 // It's a static method, does not have __self__
-                fputs(node->data.fee.ml_name, fptr);
             }
+        }
+        // We will have to put ml_name at the end anyway.
+        if (ml_name) {
+            fputs(ml_name, fptr);
         }
     }
 }
