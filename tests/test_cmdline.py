@@ -466,7 +466,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                           script=file_log_async_with_trio,
                           success=False)
 
-    @skipIf(sys.platform == "win32", "jaxlib does not support Windows")
+    @skipIf(sys.platform == "win32" or sys.version_info < (3, 7), "jaxlib does not support Windows")
     def test_sanitize_function_name(self):
         self.template(["viztracer", "--sanitize_function_name", "cmdline_test.py"],
                       script=file_sanitize_function_name,
