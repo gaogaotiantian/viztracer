@@ -115,6 +115,8 @@ class VizUI:
                             help=argparse.SUPPRESS)
         parser.add_argument("--dump_raw", action="store_true", default=False,
                             help=argparse.SUPPRESS)
+        parser.add_argument("--sanitize_function_name", action="store_true", default=False,
+                            help="Sanitize logged function names to enforce utf-8 encoding")
         parser.add_argument("--log_multiprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--log_async", action="store_true", default=False,
@@ -267,6 +269,7 @@ class VizUI:
             "plugins": options.plugins,
             "trace_self": options.trace_self,
             "min_duration": min_duration,
+            "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
             "minimize_memory": options.minimize_memory
         }

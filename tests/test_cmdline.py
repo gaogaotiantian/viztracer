@@ -198,6 +198,12 @@ loop.run_until_complete(print_sum(1, 2))
 loop.close()
 """
 
+file_sanitize_function_name = """
+import jaxlib.mlir.dialects.builtin
+import jaxlib.mlir.dialects.chlo
+import jaxlib.mlir.dialects.mhlo
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -459,6 +465,12 @@ class TestCommandLineBasic(CmdlineTmpl):
             self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
                           script=file_log_async_with_trio,
                           success=False)
+
+    @skipIf(sys.platform == "win32" or sys.version_info < (3, 7), "jaxlib does not support Windows")
+    def test_sanitize_function_name(self):
+        self.template(["viztracer", "--sanitize_function_name", "cmdline_test.py"],
+                      script=file_sanitize_function_name,
+                      expected_stdout=".*vizviewer.*")
 
     def test_ignore_function(self):
         def check_func(data):

@@ -857,8 +857,9 @@ static PyObject*
 snaptrace_dump(TracerObject* self, PyObject* args)
 {
     const char* filename = NULL;
+    int sanitize_function_name = 0;
     FILE* fptr = NULL;
-    if (!PyArg_ParseTuple(args, "s", &filename)) {
+    if (!PyArg_ParseTuple(args, "sp", &filename, &sanitize_function_name)) {
         PyErr_SetString(PyExc_TypeError, "Missing required file name");
         Py_RETURN_NONE;
     }
@@ -959,7 +960,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             ;
             long long dur_long = node->data.fee.dur;
             fprintf(fptr, "\"ph\":\"X\",\"cat\":\"fee\",\"dur\":%lld.%03lld,\"name\":\"", dur_long / 1000, dur_long % 1000);
-            fprintfeename(fptr, node);
+            fprintfeename(fptr, node, sanitize_function_name);
             fputc('\"', fptr);
 
             if (node->data.fee.caller_lineno >= 0) {

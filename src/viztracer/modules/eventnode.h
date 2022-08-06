@@ -74,5 +74,5 @@ void clear_node(struct EventNode* node);
 
 // get name from FEE node, passing in a dictionary for name cache
 PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict);
-void fprintfeename(FILE*, struct EventNode* node);
+void fprintfeename(FILE*, struct EventNode* node, uint8_t sanitize_function_name);
 #endif
