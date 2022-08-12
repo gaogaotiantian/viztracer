@@ -3,11 +3,9 @@
 
 
 import functools
-import multiprocessing
 from multiprocessing import Process
 import os
 import re
-import signal
 import sys
 import textwrap
 from typing import Any, Callable, Dict, List, Sequence, Union
@@ -165,7 +163,6 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
 def install_all_hooks(
         tracer: VizTracer,
         args: List[str],
-        is_main_process: bool = False,
         patch_multiprocess: bool = True) -> None:
 
     # multiprocess hook
@@ -191,11 +188,3 @@ def install_all_hooks(
                 if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
                     tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
             sys.addaudithook(audit_hook)  # type: ignore
-
-    # SIGTERM hook
-    def term_handler(signalnum, frame):
-        sys.exit(0)
-
-    if not is_main_process:
-        signal.signal(signal.SIGTERM, term_handler)
-        multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)

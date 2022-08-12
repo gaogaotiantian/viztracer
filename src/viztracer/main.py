@@ -328,7 +328,6 @@ class VizUI:
 
         install_all_hooks(tracer,
                           self.args,
-                          is_main_process=self.is_main_process,
                           patch_multiprocess=not options.ignore_multiprocess)
 
         def term_handler(signalnum, frame):
