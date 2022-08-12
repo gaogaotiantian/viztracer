@@ -3,8 +3,11 @@
 
 
 import functools
+import multiprocessing
 from multiprocessing import Process
 import os
+import re
+import signal
 import sys
 import textwrap
 from typing import Any, Callable, Dict, List, Sequence, Union
@@ -53,7 +56,7 @@ def patch_subprocess(viz_args) -> None:
     setattr(subprocess.Popen, "__init__", subprocess_init)
 
 
-def patch_multiprocessing(tracer: VizTracer) -> None:
+def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
@@ -83,7 +86,7 @@ def patch_multiprocessing(tracer: VizTracer) -> None:
             prog = textwrap.dedent(f"""
                     from multiprocessing.spawn import spawn_main;
                     from viztracer.patch import patch_spawned_process;
-                    patch_spawned_process({tracer.init_kwargs});
+                    patch_spawned_process({tracer.init_kwargs}, {args});
                     spawn_main(%s)
                     """)
             prog %= ', '.join('%s=%r' % item for item in kwds.items())
@@ -100,24 +103,27 @@ class SpawnProcess:
             run: Callable,
             target: Callable,
             args: List[Any],
-            kwargs: Dict[str, Any]):
+            kwargs: Dict[str, Any],
+            cmdline_args: List[str]):
         self._viztracer_kwargs = viztracer_kwargs
         self._run = run
         self._target = target
         self._args = args
         self._kwargs = kwargs
+        self._cmdline_args = cmdline_args
         self._exiting = False
 
     def run(self) -> None:
         import viztracer
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
+        install_all_hooks(tracer, self._cmdline_args)
         tracer.register_exit()
         tracer.start()
         self._run()
 
 
-def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
+def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[str]):
     from multiprocessing import reduction, process  # type: ignore
     from multiprocessing.spawn import prepare
     import multiprocessing.spawn
@@ -130,7 +136,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
                 self: Process = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs)
+                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs, cmdline_args)
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
@@ -144,7 +150,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
                 preparation_data = reduction.pickle.load(from_parent)
                 prepare(preparation_data)
                 self: Process = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs)
+                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs, cmdline_args)
                 self.run = sp.run
             finally:
                 del process.current_process()._inheriting
@@ -154,3 +160,42 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any]):
         multiprocessing.spawn._main = _main_3839  # type: ignore
     else:
         multiprocessing.spawn._main = _main_3637  # type: ignore
+
+
+def install_all_hooks(
+        tracer: VizTracer,
+        args: List[str],
+        is_main_process: bool = False,
+        patch_multiprocess: bool = True) -> None:
+
+    # multiprocess hook
+    if patch_multiprocess:
+        patch_multiprocessing(tracer, args)
+        patch_subprocess(args + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file])
+
+    # If we want to hook fork correctly with file waiter, we need to
+    # use os.register_at_fork to write the file, and make sure
+    # os.exec won't clear viztracer so that the file lives forever.
+    # This is basically equivalent to py3.8 + Linux
+    if hasattr(sys, "addaudithook"):
+        if hasattr(os, "register_at_fork") and patch_multiprocess:
+            def audit_hook(event, _):  # pragma: no cover
+                if event == "os.exec":
+                    tracer.exit_routine()
+            sys.addaudithook(audit_hook)  # type: ignore
+            os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
+        if tracer.log_audit is not None:
+            audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
+
+            def audit_hook(event, _):  # pragma: no cover
+                if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
+                    tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
+            sys.addaudithook(audit_hook)  # type: ignore
+
+    # SIGTERM hook
+    def term_handler(signalnum, frame):
+        sys.exit(0)
+
+    if not is_main_process:
+        signal.signal(signal.SIGTERM, term_handler)
+        multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
