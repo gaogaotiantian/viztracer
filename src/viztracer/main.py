@@ -152,13 +152,6 @@ class VizUI:
                             help="time you want to trace the process")
         return parser
 
-    @property
-    def is_main_process(self) -> bool:
-        options = self.options
-        if options.subprocess_child:
-            return False  # pragma: no cover
-        return self.parent_pid == os.getpid()
-
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
         ret = argparse.Namespace()
         if os.path.exists(filename):
