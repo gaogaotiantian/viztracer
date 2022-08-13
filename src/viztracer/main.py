@@ -326,11 +326,11 @@ class VizUI:
         def term_handler(signalnum, frame):
             sys.exit(0)
 
+        signal.signal(signal.SIGTERM, term_handler)
+
         if options.subprocess_child:
-            signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
         else:
-            signal.signal(signal.SIGTERM, term_handler)
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
         if not options.log_sparse:
