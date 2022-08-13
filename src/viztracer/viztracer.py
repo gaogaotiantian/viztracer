@@ -263,7 +263,6 @@ class VizTracer(_VizTracer):
         with open(output_file, "w") as _:
             # create an empty file
             pass
-        print(output_file)
         self.viztmp = output_file
 
     def terminate(self) -> None:
