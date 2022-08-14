@@ -10,7 +10,6 @@ import json
 import multiprocessing.util  # type: ignore
 import os
 import platform
-import re
 import shutil
 import signal
 import sys
@@ -23,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from . import __version__
 from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
-from .patch import patch_multiprocessing, patch_subprocess
+from .patch import install_all_hooks
 from .report_builder import ReportBuilder
 from .util import time_str_to_us, color_print, same_line_print, pid_exists
 from .viztracer import VizTracer
@@ -153,13 +152,6 @@ class VizUI:
                             help="time you want to trace the process")
         return parser
 
-    @property
-    def is_main_process(self) -> bool:
-        options = self.options
-        if options.subprocess_child:
-            return False  # pragma: no cover
-        return self.parent_pid == os.getpid()
-
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
         ret = argparse.Namespace()
         if os.path.exists(filename):
@@ -262,6 +254,7 @@ class VizUI:
             "log_gc": options.log_gc,
             "log_sparse": options.log_sparse,
             "log_async": options.log_async,
+            "log_audit": options.log_audit,
             "vdb": options.vdb,
             "pid_suffix": True,
             "file_info": False,
@@ -296,45 +289,6 @@ class VizUI:
 
         return None
 
-    def install_all_hooks(self, tracer: VizTracer) -> None:
-        options = self.options
-
-        # multiprocess hook
-        if not options.ignore_multiprocess:
-            patch_multiprocessing(tracer)
-            if not options.subprocess_child:
-                patch_subprocess(self.args + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file])
-
-            # If we want to hook fork correctly with file waiter, we need to
-            # use os.register_at_fork to write the file, and make sure
-            # os.exec won't clear viztracer so that the file lives forever.
-            # This is basically equivalent to py3.8 + Linux
-            if hasattr(sys, "addaudithook"):
-                if hasattr(os, "register_at_fork"):
-                    def audit_hook(event, args):  # pragma: no cover
-                        if event == "os.exec":
-                            tracer.exit_routine()
-                    sys.addaudithook(audit_hook)  # type: ignore
-                    os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
-                if options.log_audit is not None:
-                    audit_regex_list = [re.compile(regex) for regex in options.log_audit]
-
-                    def audit_hook(event, args):  # pragma: no cover
-                        if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
-                            tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
-                    sys.addaudithook(audit_hook)  # type: ignore
-
-        # SIGTERM hook
-        def term_handler(signalnum, frame):
-            sys.exit(0)
-
-        if self.is_main_process:
-            signal.signal(signal.SIGTERM, term_handler)
-            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
-        else:
-            signal.signal(signal.SIGTERM, term_handler)
-            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
-
     def run(self) -> VizProcedureResult:
         if self.options.version:
             return self.show_version()
@@ -365,7 +319,19 @@ class VizUI:
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
-        self.install_all_hooks(tracer)
+        install_all_hooks(tracer,
+                          self.args,
+                          patch_multiprocess=not options.ignore_multiprocess)
+
+        def term_handler(signalnum, frame):
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, term_handler)
+
+        if options.subprocess_child:
+            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
+        else:
+            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
         if not options.log_sparse:
             tracer.start()

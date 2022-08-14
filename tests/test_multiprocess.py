@@ -11,6 +11,12 @@ from unittest.case import skipIf
 from .cmdline_tmpl import CmdlineTmpl
 
 
+file_grandparent = """
+import subprocess
+subprocess.run(["python", "parent.py"])
+"""
+
+
 file_parent = """
 import subprocess
 subprocess.run(["python", "child.py"])
@@ -77,6 +83,33 @@ def f():
 if __name__ == "__main__":
     fib(2)
     p = Process(target=f)
+    p.start()
+    p.join()
+    time.sleep(0.1)
+"""
+
+file_nested_multiprocessing = """
+import multiprocessing
+from multiprocessing import Process
+import time
+
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+
+def f():
+    fib(5)
+
+def spawn():
+    p = Process(target=f)
+    p.start()
+    p.join()
+
+if __name__ == "__main__":
+    fib(2)
+    p = Process(target=spawn)
     p.start()
     p.join()
     time.sleep(0.1)
@@ -196,6 +229,30 @@ class TestSubprocess(CmdlineTmpl):
                           expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
 
+    def test_nested(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 5)
+        with open("parent.py", "w") as f:
+            f.write(file_parent)
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json", script=file_grandparent, check_func=check_func)
+        os.remove("parent.py")
+
+    def test_nested_multiproessing(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 3)
+        with open("parent.py", "w") as f:
+            f.write(file_multiprocessing)
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json", script=file_grandparent, check_func=check_func)
+        os.remove("parent.py")
+
     @unittest.skipIf(sys.platform == "win32", "Can't get anything on Windows with SIGTERM")
     def test_term(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -248,6 +305,19 @@ class TestMultiprocessing(CmdlineTmpl):
                       check_func=check_func,
                       concurrency="multiprocessing")
 
+    def test_nested_multiprosessing(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 3)
+
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_nested_multiprocessing,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
     def test_multiprocessing_entry_limit(self):
         result = self.template(["viztracer", "-o", "result.json", "--tracer_entries", "10", "cmdline_test.py"],
                                expected_output_file="result.json",
@@ -263,7 +333,7 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 1)
 
-        self.template(["viztracer", "-o", "result.json", "--ignore_multiproces", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "--ignore_multiprocess", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=file_multiprocessing,
                       check_func=check_func,

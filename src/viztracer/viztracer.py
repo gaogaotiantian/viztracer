@@ -32,6 +32,7 @@ class VizTracer(_VizTracer):
                  log_gc: bool = False,
                  log_sparse: bool = False,
                  log_async: bool = False,
+                 log_audit: Optional[Sequence[str]] = None,
                  vdb: bool = False,
                  pid_suffix: bool = False,
                  file_info: bool = True,
@@ -66,6 +67,7 @@ class VizTracer(_VizTracer):
         self.output_file = output_file
         self.system_print = None
         self.log_sparse = log_sparse
+        self.log_audit = log_audit
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
@@ -112,6 +114,7 @@ class VizTracer(_VizTracer):
             "log_gc": self.log_gc,
             "log_sparse": self.log_sparse,
             "log_async": self.log_async,
+            "log_audit": self.log_audit,
             "vdb": self.vdb,
             "pid_suffix": self.pid_suffix,
             "min_duration": self.min_duration,

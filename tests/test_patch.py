@@ -32,7 +32,7 @@ reduction.dump(process, fp)
 set_spawning_popen(None)
 child_r, parent_w = os.pipe()
 
-patch_spawned_process({'output_file': "$tmpdir/result.json", 'pid_suffix': True})
+patch_spawned_process({'output_file': "$tmpdir/result.json", 'pid_suffix': True}, [])
 pid = os.getpid()
 
 assert multiprocessing.spawn._main.__qualname__ == "_main"
