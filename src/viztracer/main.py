@@ -27,6 +27,8 @@ from .report_builder import ReportBuilder
 from .util import time_str_to_us, color_print, same_line_print, pid_exists
 from .viztracer import VizTracer
 
+from viztracer.vcompressor import VCompressor
+
 
 # For all the procedures in VizUI, return a tuple as the result
 # The first element bool indicates whether the procedure succeeds
@@ -134,6 +136,10 @@ class VizUI:
                                   "Will by default generate json files"))
         parser.add_argument("--module", "-m", nargs="?", default=None,
                             help="run module with VizTracer")
+        parser.add_argument("--compress", nargs="?", default=None,
+                            help="Compress a json report to a compact cvf format")
+        parser.add_argument("--decompress", nargs="?", default=None,
+                            help="Decompress a compressed cvf file to a json format")
         parser.add_argument("--combine", nargs="*", default=[],
                             help=("combine all json reports to a single report. "
                                   "Specify all the json reports you want to combine"))
@@ -304,6 +310,10 @@ class VizUI:
             return self.run_module()
         elif self.command:
             return self.run_command()
+        elif self.options.compress:
+            return self.run_compress()
+        elif self.options.decompress:
+            return self.run_decompress()
         elif self.options.combine:
             return self.run_combine(files=self.options.combine)
         elif self.options.align_combine:
@@ -420,6 +430,46 @@ class VizUI:
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
         return self.run_code(code, main_mod.__dict__)
+
+    def run_compress(self):
+        file_to_compress = self.options.compress
+        if not file_to_compress or not os.path.exists(file_to_compress):
+            return False, f"Unable to find file {file_to_compress}"
+
+        if not file_to_compress.endswith(".json"):
+            return False, "Only support compressing json report"
+
+        if not self.options.output_file:
+            output_file = "result.cvf"
+        else:
+            output_file = self.options.output_file
+
+        compressor = VCompressor()
+
+        with open(file_to_compress) as f:
+            data = json.load(f)
+            compressor.compress(data, output_file)
+
+        return True, None
+
+    def run_decompress(self):
+        file_to_decompress = self.options.decompress
+        if not file_to_decompress or not os.path.exists(file_to_decompress):
+            return False, f"Unable to find file {file_to_decompress}"
+
+        if not self.options.output_file:
+            output_file = "result.json"
+        else:
+            output_file = self.options.output_file
+
+        compressor = VCompressor()
+
+        data = compressor.decompress(file_to_decompress)
+
+        with open(output_file, "w") as f:
+            json.dump(data, f)
+
+        return True, None
 
     def run_combine(self, files: List[str], align: bool = False) -> VizProcedureResult:
         options = self.options
