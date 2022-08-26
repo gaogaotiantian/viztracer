@@ -1,3 +1,5 @@
+.PHONY: refresh build install build_dist json release lint test clean
+
 refresh: clean build install lint
 
 build:
