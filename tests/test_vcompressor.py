@@ -32,11 +32,12 @@ class TestVCompressor(CmdlineTmpl):
 class TestVCompressorPerformance(CmdlineTmpl):
 
     def _human_readable_filesize(self, filesize: int) -> str:
-        units = [("PB", 1 << 50), ("TB", 1 << 40), ("GB", 1 << 30), ("MB", 1 << 20), ("KB", 1 << 10), ("B", 1)]
+        units = [("PB", 1 << 50), ("TB", 1 << 40), ("GB", 1 << 30), ("MB", 1 << 20), ("KB", 1 << 10)]
         for unit_name, unit_base in units:
             norm_size = filesize / unit_base
             if norm_size >= 0.8:
                 return "{:8.2f}{}".format(norm_size, unit_name)
+        return "{:8.2f}B".format(filesize)
 
     def _print_cr_result(self,
                          filename: str,
