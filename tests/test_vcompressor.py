@@ -80,7 +80,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
 
     def test_benchmark_basic(self):
         # More testcases can be added here
-        testcases_filename = ["vdb_basic.json", "multithread.json", "vdb_multithread.json"]
+        testcases_filename = ["vdb_basic.json", "multithread.json"]
 
         for subtest_idx, filename in enumerate(testcases_filename, start=1):
             path = get_json_file_path(filename)
