@@ -15,7 +15,7 @@ class TestVCompressor(CmdlineTmpl):
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "result.json")
             self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("vdb_multithread.json")],
+                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("multithread.json")],
                 expected_output_file=cvf_path, cleanup=False
             )
 
