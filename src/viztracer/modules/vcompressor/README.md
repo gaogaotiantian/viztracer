@@ -32,7 +32,7 @@ header(header) - pid(pid) - tid(tid) - name(str)
 
 ### FEE
 
-header(header) - pid(pid) - tid(pid) - name(str) - count(uint64) - [start(ts) - dur(ts)]*
+header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - dur(ts)]*
 
 ### File info
 
