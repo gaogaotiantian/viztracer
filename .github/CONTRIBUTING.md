@@ -85,7 +85,7 @@ mypy src/ --exclude src/viztracer/attach_process/
 
 ### Test
 
-VizTracer uses built-in library ``unitest`` for testing.
+VizTracer uses built-in library ``unittest`` for testing.
 
 You can do ``make test`` on Linux/MacOS, or do ``python -m unittest``. To run a specific
 test, refer to unittest [docs](https://docs.python.org/3/library/unittest.html)
