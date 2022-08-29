@@ -51,7 +51,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         else:
             logging.info("{}. On file \"{}\":".format(subtest_idx, filename))
         logging.info("    [Space] ({} as baseline)".format(baseline_name))
-        logging.info("      Original:    {}".format(self._human_readable_filesize(original_size)))
+        logging.info("      Uncompressed: {}".format(self._human_readable_filesize(original_size)))
         logging.info("      Baseline:    {}(1.00)".format(self._human_readable_filesize(baseline_size)))
         logging.info("      VCompressor: {}({:.2f})".format(self._human_readable_filesize(vcompressor_size),
                                                             vcompressor_size / baseline_size))
