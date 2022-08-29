@@ -7,10 +7,13 @@ import logging
 import tempfile
 import lzma
 from shutil import copyfileobj
-from typing import Optional
+from typing import Callable, Optional
+from collections import namedtuple
+from functools import wraps
 
 from .cmdline_tmpl import CmdlineTmpl
 from .util import get_json_file_path
+from .test_performance import Timer
 
 
 class TestVCompressor(CmdlineTmpl):
@@ -29,6 +32,30 @@ class TestVCompressor(CmdlineTmpl):
             )
 
 
+BenchmarkResult = namedtuple("BenchmarkResult", ["file_size", "elapsed_time"])  # unit: byte, second
+
+
+def _benchmark(benchmark_process: Callable[[str, str], None],  # func(uncompressed_file_path, compressed_file_path)
+               loop_time: int = 3) -> Callable[[str], BenchmarkResult]:
+    @wraps(benchmark_process)
+    def _wraper(self, uncompressed_file_path: str) -> BenchmarkResult:
+        compression_time_total = 0.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            compressed_file_path = os.path.join(tmpdir, "result.compressed")
+            # pre-warm
+            benchmark_process(self, uncompressed_file_path, compressed_file_path)
+            os.remove(compressed_file_path)
+            # real benchmark
+            for _ in range(loop_time):
+                with Timer() as t:
+                    benchmark_process(self, uncompressed_file_path, compressed_file_path)
+                    compression_time_total += t.get_time()
+                compressed_file_size = os.path.getsize(compressed_file_path)
+                os.remove(compressed_file_path)
+        return BenchmarkResult(compressed_file_size, compression_time_total / loop_time)
+    return _wraper
+
+
 class TestVCompressorPerformance(CmdlineTmpl):
 
     def _human_readable_filesize(self, filesize: int) -> str:
@@ -42,45 +69,53 @@ class TestVCompressorPerformance(CmdlineTmpl):
     def _print_cr_result(self,
                          filename: str,
                          original_size: int,
-                         baseline_size: int,
-                         vcompressor_size: int,
+                         baseline_result: BenchmarkResult,
+                         vcompress_result: BenchmarkResult,
                          baseline_name: str = "LZMA",
                          subtest_idx: Optional[int] = None):
         if subtest_idx is None:
-            logging.info("On file \"{}\":".format(filename))
+            logging.info("On file \"{}\" ({} as baseline):".format(filename, baseline_name))
         else:
-            logging.info("{}. On file \"{}\":".format(subtest_idx, filename))
-        logging.info("    [Space] ({} as baseline)".format(baseline_name))
+            logging.info("{}. On file \"{}\" ({} as baseline):".format(subtest_idx, filename, baseline_name))
+
+        # Space-wise Info
+
+        logging.info("    [Space]")
         logging.info("      Uncompressed: {}".format(self._human_readable_filesize(original_size)))
         # Here, CR stands for compress ratio.
-        logging.info("      Baseline:     {}(1.00) [CR:{:6.2f}%]".format(self._human_readable_filesize(baseline_size),
-                                                                         baseline_size / original_size * 100))
-        logging.info("      VCompressor:  {}({:.2f}) [CR:{:6.2f}%]".format(self._human_readable_filesize(vcompressor_size),
-                                                                           vcompressor_size / baseline_size,
-                                                                           vcompressor_size / original_size * 100))
+        logging.info("      Baseline:     {}(1.00) [CR:{:6.2f}%]".format(
+            self._human_readable_filesize(baseline_result.file_size),
+            baseline_result.file_size / original_size * 100
+        ))
+        logging.info("      VCompressor:  {}({:.2f}) [CR:{:6.2f}%]".format(
+            self._human_readable_filesize(vcompress_result.file_size),
+            vcompress_result.file_size / baseline_result.file_size,
+            vcompress_result.file_size / original_size * 100
+        ))
 
-    def get_filesize_vcompressor(self, original_file_path: str) -> int:
-        '''Use the demo file to get the file size (in bytes) after VCompressor compression.'''
+        # Time-wise Info
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            compressed_file_path = os.path.join(tmpdir, "result.cvf")
-            self.template(
-                ["viztracer", "-o", compressed_file_path, "--compress", original_file_path],
-                expected_output_file=compressed_file_path, cleanup=False
-            )
-            compressed_file_size = os.path.getsize(compressed_file_path)
-        return compressed_file_size
+        logging.info("    [Time]")
+        logging.info("      Baseline:     {:9.3f}s(1.00)".format(
+            baseline_result.elapsed_time,
+        ))
+        logging.info("      VCompressor:  {:9.3f}s({:.2f})".format(
+            vcompress_result.elapsed_time,
+            vcompress_result.elapsed_time / baseline_result.elapsed_time,
+        ))
 
-    def get_filesize_lzma(self, original_file_path: str, compression_level: int = lzma.PRESET_DEFAULT) -> int:
-        '''Use the demo file to get the file size (in bytes) after lzma compression, as a baseline.'''
+    @_benchmark
+    def _benchmark_vcompressor(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
+        self.template(
+            ["viztracer", "-o", compressed_file_path, "--compress", uncompressed_file_path],
+            expected_output_file=compressed_file_path, cleanup=False
+        )
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            compressed_file_path = os.path.join(tmpdir, "result.xz")
-            with open(original_file_path, "rb") as original_file, \
-                 lzma.open(compressed_file_path, "wb", preset=compression_level) as compressed_file:
-                copyfileobj(original_file, compressed_file)
-            compressed_file_size = os.path.getsize(compressed_file_path)
-        return compressed_file_size
+    @_benchmark
+    def _benchmark_lzma(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
+        with open(uncompressed_file_path, "rb") as original_file, \
+             lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
+            copyfileobj(original_file, compressed_file)
 
     def test_benchmark_basic(self):
         # More testcases can be added here
@@ -89,7 +124,8 @@ class TestVCompressorPerformance(CmdlineTmpl):
         for subtest_idx, filename in enumerate(testcases_filename, start=1):
             path = get_json_file_path(filename)
             original_size = os.path.getsize(path)
-            baseline_size = self.get_filesize_lzma(path)
+            baseline_result = self._benchmark_lzma(path)
             with self.subTest(testcase=filename):
-                vcompress_size = self.get_filesize_vcompressor(path)
-                self._print_cr_result(filename, original_size, baseline_size, vcompress_size, subtest_idx=subtest_idx)
+                vcompress_result = self._benchmark_vcompressor(path)
+                self._print_cr_result(filename, original_size,
+                                      baseline_result, vcompress_result, subtest_idx=subtest_idx)
