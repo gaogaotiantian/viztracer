@@ -52,9 +52,12 @@ class TestVCompressorPerformance(CmdlineTmpl):
             logging.info("{}. On file \"{}\":".format(subtest_idx, filename))
         logging.info("    [Space] ({} as baseline)".format(baseline_name))
         logging.info("      Uncompressed: {}".format(self._human_readable_filesize(original_size)))
-        logging.info("      Baseline:    {}(1.00)".format(self._human_readable_filesize(baseline_size)))
-        logging.info("      VCompressor: {}({:.2f})".format(self._human_readable_filesize(vcompressor_size),
-                                                            vcompressor_size / baseline_size))
+        # Here, CR stands for compress ratio.
+        logging.info("      Baseline:     {}(1.00) [CR:{:6.2f}%]".format(self._human_readable_filesize(baseline_size),
+                                                                         baseline_size / original_size * 100))
+        logging.info("      VCompressor:  {}({:.2f}) [CR:{:6.2f}%]".format(self._human_readable_filesize(vcompressor_size),
+                                                                           vcompressor_size / baseline_size,
+                                                                           vcompressor_size / original_size * 100))
 
     def get_filesize_vcompressor(self, original_file_path: str) -> int:
         '''Use the demo file to get the file size (in bytes) after VCompressor compression.'''
