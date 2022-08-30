@@ -166,7 +166,7 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
         goto clean_exit;
     }
 
-    fptr = fopen(filename, "w");
+    fptr = fopen(filename, "wb");
     if (!fptr) {
         PyErr_Format(PyExc_ValueError, "Can't open file %s to write", filename);
         goto clean_exit;
@@ -212,7 +212,7 @@ vcompressor_decompress(VcompressorObject* self, PyObject* args) {
         return NULL;
     }
 
-    fptr = fopen(filename, "r");
+    fptr = fopen(filename, "rb");
     if (!fptr) {
         PyErr_Format(PyExc_ValueError, "Can't open file %s to write", filename);
         goto clean_exit;
