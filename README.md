@@ -250,7 +250,7 @@ VizTracer needs to dump the internal data to json format. It is recommended for 
 
 ## Virtual Debug
 
-You can virtually debug your program with you saved json report. The interface is very similar to ```pdb```. Even better, you can **go back in time**
+You can virtually debug your program with your saved json report. The interface is very similar to ```pdb```. Even better, you can **go back in time**
 because VizTracer has all the info recorded for you.
 
 ```sh
