@@ -8,7 +8,7 @@ from .viztracer import VizTracer
 
 
 class _EventBase:
-    def __init__(self, tracer: VizTracer, name: str = "", **kwargs):
+    def __init__(self, tracer: Optional[VizTracer], name: str = "", **kwargs):
         self._viztracer_tracer: VizTracer = tracer
         self._viztracer_name: str = name
         self._viztracer_enable: bool = False
@@ -73,6 +73,7 @@ class _EventBase:
                 if when in ("after", "both"):
                     self._viztracer_log()
                 return ret
+
             return wrapper
 
         if method:

@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import shutil
 from .cmdline_tmpl import CmdlineTmpl
 import json
 import multiprocessing
@@ -22,13 +21,13 @@ import webbrowser
 
 class Viewer(unittest.TestCase):
     def __init__(
-        self,
-        file_path,
-        once=False,
-        flamegraph=False,
-        timeout=None,
-        use_external_processor=None,
-        expect_success=True
+            self,
+            file_path,
+            once=False,
+            flamegraph=False,
+            timeout=None,
+            use_external_processor=None,
+            expect_success=True
     ):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
@@ -319,19 +318,23 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    def basic_judgment(self):
+        time.sleep(0.5)
+        resp = urllib.request.urlopen("http://127.0.0.1:9001/")
+        self.assertEqual(resp.code, 200)
+        self.assertIn("fib.json", resp.read().decode("utf-8"))
+        resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
+        self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         # --use_external_processor won't work with directory
-        self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False, expected_output_file=None)
+        self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False,
+                      expected_output_file=None)
 
         with Viewer(test_data_dir):
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
-            self.assertEqual(resp.code, 200)
-            self.assertIn("fib.json", resp.read().decode("utf-8"))
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
-            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            self.basic_judgment()
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9003/")
 
@@ -357,12 +360,7 @@ class TestViewer(CmdlineTmpl):
     def test_directory_flamegraph(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         with Viewer(test_data_dir, flamegraph=True):
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
-            self.assertEqual(resp.code, 200)
-            self.assertIn("fib.json", resp.read().decode("utf-8"))
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
-            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            self.basic_judgment()
             resp = urllib.request.urlopen("http://127.0.0.1:9002/vizviewer_info")
             self.assertTrue(resp.code == 200)
             self.assertTrue(json.loads(resp.read().decode("utf-8"))["is_flamegraph"], True)
@@ -373,20 +371,14 @@ class TestViewer(CmdlineTmpl):
     def test_directory_timeout(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         with Viewer(test_data_dir, timeout=2):
-            time.sleep(0.5)
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/")
-            self.assertEqual(resp.code, 200)
-            self.assertIn("fib.json", resp.read().decode("utf-8"))
-            resp = urllib.request.urlopen("http://127.0.0.1:9001/fib.json")
-            self.assertEqual(resp.url, "http://127.0.0.1:9002/")
+            self.basic_judgment()
             time.sleep(2.5)
             resp = urllib.request.urlopen("http://127.0.0.1:9001/old.json")
             self.assertEqual(resp.url, "http://127.0.0.1:9002/")
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_max_port(self):
-        try:
-            tmp_dir = tempfile.mkdtemp()
+        with tempfile.TemporaryDirectory() as tmp_dir:
             json_data = {"traceEvents": []}
             for i in range(15):
                 with open(os.path.join(tmp_dir, f"{i}.json"), "w") as f:
@@ -400,8 +392,6 @@ class TestViewer(CmdlineTmpl):
                     resp = urllib.request.urlopen(f"http://127.0.0.1:9001/{i}.json")
                     self.assertEqual(resp.code, 200)
                     self.assertRegex(resp.url, "http://127.0.0.1:90[0-1][0-9]/")
-        finally:
-            shutil.rmtree(tmp_dir)
 
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)

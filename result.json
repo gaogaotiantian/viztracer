@@ -1,0 +1,1 @@
+{"traceEvents": [{"ph": "M", "pid": 11831, "tid": 11831, "name": "process_name", "args": {"name": "MainProcess"}}, {"ph": "M", "pid": 11831, "tid": 281932, "name": "thread_name", "args": {"name": "MainThread"}}], "viztracer_metadata": {"version": "0.15.4", "overflow": false}, "file_info": {"files": {}, "functions": {}}}
