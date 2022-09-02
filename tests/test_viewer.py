@@ -3,7 +3,6 @@
 
 
 import shutil
-from tabnanny import check
 from .cmdline_tmpl import CmdlineTmpl
 import json
 import multiprocessing
@@ -50,7 +49,7 @@ class Viewer(unittest.TestCase):
 
         if use_external_processor:
             self.cmd.append("--use_external_processor")
-        
+
         if port:
             self.port = port
             self.cmd.append("--port")
@@ -109,7 +108,7 @@ class Viewer(unittest.TestCase):
                 return
             time.sleep(1)
         self.fail(f"Can't connect to 127.0.0.1:{port}")
-    
+
     def url(self) -> str:
         return f'http://127.0.0.1:{self.port}'
 
@@ -138,16 +137,12 @@ class MockOpen(unittest.TestCase):
 
 
 class TestViewer(CmdlineTmpl):
-    # def _is_port_free(self, port):
-        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # return sock.connect_ex(('localhost', port)) != 0
-        
     def _find_a_free_port(self) -> int:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(('', 0))
         port = sock.getsockname()[1]
         sock.close()
-        
+
         return port
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
