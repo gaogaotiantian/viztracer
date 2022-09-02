@@ -3,6 +3,7 @@
 
 
 import shutil
+from tabnanny import check
 from .cmdline_tmpl import CmdlineTmpl
 import json
 import multiprocessing
@@ -28,7 +29,8 @@ class Viewer(unittest.TestCase):
         flamegraph=False,
         timeout=None,
         use_external_processor=None,
-        expect_success=True
+        expect_success=True,
+        port=None,
     ):
         if os.getenv("COVERAGE_RUN"):
             self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
@@ -48,6 +50,14 @@ class Viewer(unittest.TestCase):
 
         if use_external_processor:
             self.cmd.append("--use_external_processor")
+        
+        if not port:
+            self.port = self._find_a_free_port()
+        else:
+            self.port = port
+
+        self.cmd.append("--port")
+        self.cmd.append(f"{self.port}")
 
         self.process = None
         self.stopped = False
@@ -87,7 +97,7 @@ class Viewer(unittest.TestCase):
                 self.stopped = True
 
     def _wait_until_socket_on(self):
-        port = 10000 if self.use_external_processor else 9001
+        port = self.port
         for _ in range(10):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
@@ -97,6 +107,21 @@ class Viewer(unittest.TestCase):
                 return
             time.sleep(1)
         self.fail(f"Can't connect to 127.0.0.1:{port}")
+    
+    def url(self) -> str:
+        return f'127.0.0.1:{self.port}'
+
+    def _is_port_free(self, port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            return sock.connect_ex(('localhost', port)) != 0
+        
+    def _find_a_free_port(self) -> int:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        
+        return port
 
 
 class MockOpen(unittest.TestCase):
