@@ -421,8 +421,14 @@ class TestViewer(CmdlineTmpl):
                     time.sleep(0.02)
                     resp = urllib.request.urlopen(f"{v.url()}/{i}.json")
                     self.assertEqual(resp.code, 200)
-                    port = str(v.port)
-                    self.assertRegex(resp.url, f"http://127.0.0.1:{port[:-2]}[{port[-2]}-{int(port[-2])+1}][0-9]/")
+
+                    def _extract_port(u: str) -> int:
+                        pattern = re.compile("http://127.0.0.1:([0-9]+)/")
+                        ret = pattern.match(u)
+                        self.assertIsNotNone(ret)
+                        return int(ret.group(1))
+                    
+                    self.assertGreaterEqual(_extract_port(resp.url), v.port)
         finally:
             shutil.rmtree(tmp_dir)
 
