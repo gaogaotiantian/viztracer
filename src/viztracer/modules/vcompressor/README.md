@@ -38,12 +38,5 @@ header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - 
 
 ### File info
 
-header(header) - file_count(uint64) - func_count(uint64) - n Files - n Functions
-
-### Files
-header(header) - file name - line count(uint64) - compressed size(uint64) - uncompressed size(uint64) - compressed content
-
-
-### Functions
-header(header) - function name - file name - lineno
+header(header) - compressed size(uint64) - uncompressed size(uint64) - compressed content
 

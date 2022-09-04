@@ -263,49 +263,36 @@ clean_exit:
 
 }
 
+
 int dump_file_info(PyObject* file_info, FILE* fptr){
-    PyObject* files = PyDict_GetItemString(file_info, "files");
-    PyObject* funtions = PyDict_GetItemString(file_info, "functions");
-    uint64_t file_count = PyDict_Size(files);
-    uint64_t function_count = PyDict_Size(funtions);
-    Py_ssize_t ppos = 0;
-    PyObject* key   = NULL;
-    PyObject* value = NULL;
 
+    // dump json string
+    PyObject* json_module_name = PyUnicode_FromString("json");
+    PyObject* json_module = PyImport_Import(json_module_name);
+    PyObject* dumps_func = PyObject_GetAttrString(json_module, "dumps");
+    PyObject* args = PyTuple_New(1);
+    PyTuple_SetItem(args, 0, file_info);
+    PyObject* ret = PyObject_CallObject(dumps_func, args);
+    const char* file_info_content = PyUnicode_AsUTF8(ret);
+
+    // compress and dump file_info
+    uint64_t content_length = strlen(file_info_content) + 1;
+    uint64_t compression_length = compressBound(content_length);
+    unsigned char* buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length);
+    compress(buffer, &compression_length, (unsigned char*)file_info_content, content_length);
+
+    // write data
     fputc(VC_HEADER_FILE_INFO, fptr);
-    fwrite(&file_count, sizeof(uint64_t), 1, fptr);
-    fwrite(&function_count, sizeof(uint64_t), 1, fptr);
-    // dump files
-    while (PyDict_Next(files, &ppos, &key, &value)) {
-        const char * file_name = PyUnicode_AsUTF8(key);
-        const char * file_content = PyUnicode_AsUTF8(PyList_GET_ITEM(value, 0));
-        uint64_t line_count = PyLong_AsLong(PyList_GET_ITEM(value, 1));
-        uint64_t content_length = strlen(file_content) + 1;
-        // compress file data
-        uint64_t compression_length = compressBound(content_length);
-        unsigned char* buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length);
-        compress(buffer, &compression_length, (unsigned char*)file_content, content_length);
-        // write data
-        fputc(VC_HEADER_FILE_NAME, fptr);
-        fwritestr(file_name, fptr);
-        fwrite(&line_count, sizeof(uint64_t), 1, fptr);
-        fwrite(&compression_length, sizeof(uint64_t), 1, fptr);
-        fwrite(&content_length, sizeof(uint64_t), 1, fptr);
-        fwrite(buffer, sizeof(char), compression_length, fptr);
-        free(buffer);
-    }
+    fwrite(&compression_length, sizeof(uint64_t), 1, fptr);
+    fwrite(&content_length, sizeof(uint64_t), 1, fptr);
+    fwrite(buffer, sizeof(char), compression_length, fptr);
+    free(buffer);
 
-    // dump functions
-    ppos = 0;
-    while (PyDict_Next(funtions, &ppos, &key, &value)) {
-        const char * func_name = PyUnicode_AsUTF8(key);
-        fputc(VC_HEADER_FUNCTION_NAME, fptr);
-        fwritestr(func_name, fptr);
-        uint64_t lineno = PyLong_AsLong(PyList_GET_ITEM(value, 1));
-        const char * file_name = PyUnicode_AsUTF8(PyList_GET_ITEM(value, 0));
-        fwritestr(file_name, fptr);
-        fwrite(&lineno, sizeof(uint64_t), 1, fptr);
-    }
+    Py_DECREF(json_module_name);
+    Py_DECREF(json_module);
+    Py_DECREF(dumps_func);
+    Py_DECREF(args);
+    Py_DECREF(ret);
 
     return 0;
 }
@@ -313,95 +300,44 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
 
 PyObject*
 load_file_info(FILE* fptr){
-    PyObject* file_info = PyDict_New();
-    PyObject* files = PyDict_New();
-    PyObject* functions = PyDict_New();
-    PyObject* file_name = NULL;
-    PyObject* file_content = NULL;
-    PyObject* file_line_count = NULL;
-    PyObject* file_info_list = NULL;
-    PyObject* function_name = NULL;
-    PyObject* function_file_name = NULL;
-    PyObject* function_position = NULL;
-    PyObject* function_info_list = NULL;
+    PyObject * file_info = NULL;
+    PyObject * str_object = NULL;
+    PyObject * args = PyTuple_New(1);
+    PyObject * json_module_name = PyUnicode_FromString("json");
+    PyObject * json_module = PyImport_Import(json_module_name);
+    PyObject * loads_func = PyObject_GetAttrString(json_module, "loads");
 
-    char buffer[STRING_BUFFER_SIZE] = {0};
 
     uint8_t header = 0;
-    uint64_t function_count = 0;
-    uint64_t file_count = 0;
-    uint64_t read_function_count = 0;
-    uint64_t read_file_count = 0;
-    uint64_t line_count = 0;
     uint64_t compression_length = 0;
     uint64_t content_length = 0;
-    uint64_t position_line = 0;
 
-    PyDict_SetItemString(file_info, "files", files);
-    PyDict_SetItemString(file_info, "functions", functions);
-    Py_DECREF(files);
-    Py_DECREF(functions);
-
-    while (fread(&header, sizeof(uint8_t), 1, fptr)){
-        switch (header){
-            case VC_HEADER_FILE_INFO:
-                READ_DATA(&file_count, uint64_t, fptr);
-                READ_DATA(&function_count, uint64_t, fptr);
-                break;
-            case VC_HEADER_FILE_NAME:
-                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
-                file_name = PyUnicode_FromString(buffer);
-                READ_DATA(&line_count, uint64_t, fptr);
-                READ_DATA(&compression_length, uint64_t, fptr);
-                READ_DATA(&content_length, uint64_t, fptr);
-                // decompress file content
-                unsigned char* compression_buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length);
-                unsigned char* content_buffer = (unsigned char*)malloc(sizeof(unsigned char) * content_length);
-                fread(compression_buffer, sizeof(char), compression_length, fptr);
-                uncompress(content_buffer, &content_length, compression_buffer, compression_length);
-                file_content = PyUnicode_FromString((const char *)content_buffer);
-                file_info_list = PyList_New(0);
-                file_line_count = PyLong_FromLong(line_count);
-                PyList_Append(file_info_list, file_content);
-                PyList_Append(file_info_list, file_line_count);
-                PyDict_SetItem(files, file_name, file_info_list);
-                free(compression_buffer);
-                free(content_buffer);
-                Py_DECREF(file_name);
-                Py_DECREF(file_content);
-                Py_DECREF(file_info_list);
-                Py_DECREF(file_line_count);
-                read_file_count++;
-                break;
-            case VC_HEADER_FUNCTION_NAME:
-                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
-                function_name = PyUnicode_FromString(buffer);
-                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
-                function_file_name = PyUnicode_FromString(buffer);
-                READ_DATA(&position_line, uint64_t, fptr);
-                function_position = PyLong_FromLong(position_line);
-                function_info_list = PyList_New(0);
-                PyList_Append(function_info_list, function_file_name);
-                PyList_Append(function_info_list, function_position);
-                PyDict_SetItem(functions, function_name, function_info_list);
-                Py_DECREF(function_name);
-                Py_DECREF(function_file_name);
-                Py_DECREF(function_position);
-                Py_DECREF(function_info_list);
-                read_function_count++;
-                break;
-            default:
-                printf("wrong header %d\n", header);
-                break;
-        }
-        if(file_count != 0 && file_count == read_file_count && function_count == read_function_count){
-            break;
-        }
+    fread(&header, sizeof(uint8_t), 1, fptr);
+    if(header == VC_HEADER_FILE_INFO){
+        READ_DATA(&compression_length, uint64_t, fptr);
+        READ_DATA(&content_length, uint64_t, fptr);
+        // decompress file content
+        unsigned char* compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
+        unsigned char* content_buffer = (unsigned char*)malloc(sizeof(char) * content_length);
+        fread(compression_buffer, sizeof(char), compression_length, fptr);
+        uncompress(content_buffer, &content_length, compression_buffer, compression_length);
+        str_object = PyUnicode_FromString((const char *)content_buffer);
+        PyTuple_SetItem(args, 0, str_object);
+        file_info = PyObject_CallObject(loads_func, args);
+        free(compression_buffer);
+        free(content_buffer);
     }
-    clean_exit:
-        if (PyErr_Occurred()) {
-            Py_DECREF(file_info);
-            return NULL;
-        }
-        return file_info;
+
+clean_exit:
+    Py_DECREF(json_module_name);
+    Py_DECREF(json_module);
+    Py_DECREF(loads_func);
+    Py_DECREF(str_object);
+    Py_DECREF(args);
+
+    if (PyErr_Occurred()) {
+        Py_DECREF(file_info);
+        return NULL;
+    }
+    return file_info;
 }

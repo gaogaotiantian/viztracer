@@ -230,8 +230,11 @@ vcompressor_decompress(VcompressorObject* self, PyObject* args) {
     parsed_events = load_events_from_file(fptr);
 
     file_info = load_file_info(fptr);
-    PyDict_SetItemString(parsed_events, "file_info", file_info);
-    Py_DECREF(file_info);
+    if(file_info){
+        PyDict_SetItemString(parsed_events, "file_info", file_info);
+        Py_DECREF(file_info);
+    }
+
 
 
 clean_exit:
