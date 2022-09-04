@@ -267,12 +267,14 @@ clean_exit:
 int dump_file_info(PyObject* file_info, FILE* fptr){
 
     // dump json string
+    PyObject* ret = NULL;
     PyObject* json_module_name = PyUnicode_FromString("json");
     PyObject* json_module = PyImport_Import(json_module_name);
     PyObject* dumps_func = PyObject_GetAttrString(json_module, "dumps");
     PyObject* args = PyTuple_New(1);
+    
     PyTuple_SetItem(args, 0, file_info);
-    PyObject* ret = PyObject_CallObject(dumps_func, args);
+    ret = PyObject_CallObject(dumps_func, args);
     const char* file_info_content = PyUnicode_AsUTF8(ret);
 
     // compress and dump file_info
@@ -300,12 +302,12 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
 
 PyObject*
 load_file_info(FILE* fptr){
-    PyObject * file_info = NULL;
-    PyObject * str_object = NULL;
-    PyObject * args = PyTuple_New(1);
-    PyObject * json_module_name = PyUnicode_FromString("json");
-    PyObject * json_module = PyImport_Import(json_module_name);
-    PyObject * loads_func = PyObject_GetAttrString(json_module, "loads");
+    PyObject* file_info = NULL;
+    PyObject* str_object = NULL;
+    PyObject* args = PyTuple_New(1);
+    PyObject* json_module_name = PyUnicode_FromString("json");
+    PyObject* json_module = PyImport_Import(json_module_name);
+    PyObject* loads_func = PyObject_GetAttrString(json_module, "loads");
 
 
     uint8_t header = 0;
