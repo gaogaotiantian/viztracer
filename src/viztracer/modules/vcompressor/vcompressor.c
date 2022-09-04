@@ -146,6 +146,7 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     PyObject* raw_data = NULL;
     PyObject* trace_events = NULL;
     PyObject* parsed_events = NULL;
+    PyObject* file_info = NULL;
     const char* filename = NULL;
     FILE* fptr = NULL;
 
@@ -184,6 +185,13 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
 
     dump_parsed_trace_events(parsed_events, fptr);
 
+    
+    file_info = PyDict_GetItemString(raw_data, "file_info");
+    if(file_info != NULL){
+        dump_file_info(file_info, fptr);
+    }
+
+
 clean_exit:
 
     if (parsed_events) {
@@ -205,6 +213,7 @@ clean_exit:
 static PyObject*
 vcompressor_decompress(VcompressorObject* self, PyObject* args) {
     PyObject* parsed_events = NULL;
+    PyObject* file_info = NULL;
     const char* filename = NULL;
     FILE* fptr = NULL;
 
@@ -219,6 +228,11 @@ vcompressor_decompress(VcompressorObject* self, PyObject* args) {
     }
 
     parsed_events = load_events_from_file(fptr);
+
+    file_info = load_file_info(fptr);
+    PyDict_SetItemString(parsed_events, "file_info", file_info);
+    Py_DECREF(file_info);
+
 
 clean_exit:
 
