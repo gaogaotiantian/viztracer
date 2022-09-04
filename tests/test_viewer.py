@@ -427,7 +427,7 @@ class TestViewer(CmdlineTmpl):
                         ret = pattern.match(u)
                         self.assertIsNotNone(ret)
                         return int(ret.group(1))
-                    
+
                     self.assertGreaterEqual(_extract_port(resp.url), v.port)
         finally:
             shutil.rmtree(tmp_dir)
