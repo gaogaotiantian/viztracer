@@ -383,7 +383,7 @@ load_file_info(FILE* fptr){
                 function_info_list = PyList_New(0);
                 PyList_Append(function_info_list, function_file_name);
                 PyList_Append(function_info_list, function_position);
-                PyDict_SetItem(functions, function_name, file_info_list);
+                PyDict_SetItem(functions, function_name, function_info_list);
                 Py_DECREF(function_name);
                 Py_DECREF(function_file_name);
                 Py_DECREF(function_position);
