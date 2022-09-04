@@ -38,7 +38,7 @@ BenchmarkResult = namedtuple("BenchmarkResult", ["file_size", "elapsed_time"])  
 def _benchmark(benchmark_process: Callable[[str, str], None],  # func(uncompressed_file_path, compressed_file_path)
                loop_time: int = 3) -> Callable[[str], BenchmarkResult]:
     @wraps(benchmark_process)
-    def _wraper(self, uncompressed_file_path: str) -> BenchmarkResult:
+    def _wrapper(self, uncompressed_file_path: str) -> BenchmarkResult:
         compression_time_total = 0.
         with tempfile.TemporaryDirectory() as tmpdir:
             compressed_file_path = os.path.join(tmpdir, "result.compressed")
@@ -53,48 +53,51 @@ def _benchmark(benchmark_process: Callable[[str, str], None],  # func(uncompress
                 compressed_file_size = os.path.getsize(compressed_file_path)
                 os.remove(compressed_file_path)
         return BenchmarkResult(compressed_file_size, compression_time_total / loop_time)
-    return _wraper
+    return _wrapper
 
 
 class TestVCompressorPerformance(CmdlineTmpl):
 
-    def _human_readable_filesize(self, filesize: int) -> str:
+    @staticmethod
+    def _human_readable_filesize(filesize: int) -> str:  # filesize in bytes
         units = [("PB", 1 << 50), ("TB", 1 << 40), ("GB", 1 << 30), ("MB", 1 << 20), ("KB", 1 << 10)]
         for unit_name, unit_base in units:
             norm_size = filesize / unit_base
             if norm_size >= 0.8:
-                return "{:8.2f}{}".format(norm_size, unit_name)
-        return "{:8.2f}B".format(filesize)
+                return f"{norm_size:8.2f}{unit_name}"
+        return f"{filesize:8.2f}B"
 
-    def _print_cr_result(self,
-                         filename: str,
-                         original_size: int,
-                         baseline_result: BenchmarkResult,
-                         vcompress_result: BenchmarkResult,
-                         baseline_name: str = "LZMA",
-                         subtest_idx: Optional[int] = None):
+    @classmethod
+    def _print_cr_result(
+        cls,
+        filename: str,
+        original_size: int,
+        baseline_result: BenchmarkResult,
+        vcompress_result: BenchmarkResult,
+        baseline_name: str = "LZMA",
+        subtest_idx: Optional[int] = None
+    ):
         if subtest_idx is None:
-            logging.info("On file \"{}\" ({} as baseline):".format(filename, baseline_name))
+            logging.info(f"On file \"{filename}\" ({baseline_name} as baseline):")
         else:
-            logging.info("{}. On file \"{}\" ({} as baseline):".format(subtest_idx, filename, baseline_name))
+            logging.info(f"{subtest_idx}. On file \"{filename}\" ({baseline_name} as baseline):")
 
         # Space-wise Info
-
         logging.info("    [Space]")
-        logging.info("      Uncompressed: {}".format(self._human_readable_filesize(original_size)))
-        # Here, CR stands for compress ratio.
-        logging.info("      Baseline:     {}(1.00) [CR:{:6.2f}%]".format(
-            self._human_readable_filesize(baseline_result.file_size),
-            baseline_result.file_size / original_size * 100
+        logging.info("      Uncompressed: {}".format(
+            cls._human_readable_filesize(original_size)),
+        )
+        logging.info("      Baseline:     {}(1.00) [CR:{:6.2f}%]".format(  # CR stands for compress ratio.
+            cls._human_readable_filesize(baseline_result.file_size),
+            baseline_result.file_size / original_size * 100,
         ))
         logging.info("      VCompressor:  {}({:.2f}) [CR:{:6.2f}%]".format(
-            self._human_readable_filesize(vcompress_result.file_size),
+            cls._human_readable_filesize(vcompress_result.file_size),
             vcompress_result.file_size / baseline_result.file_size,
-            vcompress_result.file_size / original_size * 100
+            vcompress_result.file_size / original_size * 100,
         ))
 
         # Time-wise Info
-
         logging.info("    [Time]")
         logging.info("      Baseline:     {:9.3f}s(1.00)".format(
             baseline_result.elapsed_time,
@@ -113,9 +116,9 @@ class TestVCompressorPerformance(CmdlineTmpl):
 
     @_benchmark
     def _benchmark_lzma(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
-        with open(uncompressed_file_path, "rb") as original_file, \
-             lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
-            copyfileobj(original_file, compressed_file)
+        with open(uncompressed_file_path, "rb") as original_file:
+            with lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
+                copyfileobj(original_file, compressed_file)
 
     def test_benchmark_basic(self):
         # More testcases can be added here
