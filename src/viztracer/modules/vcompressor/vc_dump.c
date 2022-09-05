@@ -274,14 +274,17 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
     PyObject* args = PyTuple_New(1);
     
     PyTuple_SetItem(args, 0, file_info);
+    Py_INCREF(file_info);
     ret = PyObject_CallObject(dumps_func, args);
     const char* file_info_content = PyUnicode_AsUTF8(ret);
 
     // compress and dump file_info
-    uint64_t content_length = strlen(file_info_content) + 1;
-    uint64_t compression_length = compressBound(content_length);
-    unsigned char* buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length);
-    compress(buffer, &compression_length, (unsigned char*)file_info_content, content_length);
+    uLongf content_length_ulongf = strlen(file_info_content) + 1;
+    uLongf compression_length_ulongf = compressBound(content_length_ulongf);
+    unsigned char* buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length_ulongf);
+    compress(buffer, &compression_length_ulongf, (unsigned char*)file_info_content, content_length_ulongf);
+    uint64_t content_length = content_length_ulongf;
+    uint64_t compression_length = compression_length_ulongf;
 
     // write data
     fputc(VC_HEADER_FILE_INFO, fptr);
@@ -322,7 +325,9 @@ load_file_info(FILE* fptr){
         unsigned char* compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
         unsigned char* content_buffer = (unsigned char*)malloc(sizeof(char) * content_length);
         fread(compression_buffer, sizeof(char), compression_length, fptr);
-        uncompress(content_buffer, &content_length, compression_buffer, compression_length);
+        uLongf content_length_ulongf = content_length;
+        uLongf compression_length_ulongf = compression_length;
+        uncompress(content_buffer, &content_length_ulongf, compression_buffer, compression_length_ulongf);
         str_object = PyUnicode_FromString((const char *)content_buffer);
         PyTuple_SetItem(args, 0, str_object);
         file_info = PyObject_CallObject(loads_func, args);
