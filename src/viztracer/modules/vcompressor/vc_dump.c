@@ -4,7 +4,6 @@
 #include <Python.h>
 #include "vcompressor.h"
 #include "vc_dump.h"
-#include "zlib.h"
 
 #define STRING_BUFFER_SIZE 512
 
@@ -267,37 +266,54 @@ clean_exit:
 int dump_file_info(PyObject* file_info, FILE* fptr){
 
     // dump json string
-    PyObject* ret = NULL;
+    uint64_t content_length = 0;
+    uint64_t compression_length = 0;
+
+    PyObject* json_ret = NULL;
+    PyObject* zlib_ret = NULL;
+    PyObject* bytes_data = NULL;
     PyObject* json_module_name = PyUnicode_FromString("json");
     PyObject* json_module = PyImport_Import(json_module_name);
     PyObject* dumps_func = PyObject_GetAttrString(json_module, "dumps");
-    PyObject* args = PyTuple_New(1);
+    PyObject* json_args = PyTuple_New(1);
+    PyObject* zlib_module_name = PyUnicode_FromString("zlib");
+    PyObject* zlib_module = PyImport_Import(zlib_module_name);
+    PyObject* compress_func = PyObject_GetAttrString(zlib_module, "compress");
+    PyObject* zlib_args = PyTuple_New(1);
     
-    PyTuple_SetItem(args, 0, file_info);
-    Py_INCREF(file_info);
-    ret = PyObject_CallObject(dumps_func, args);
-    const char* file_info_content = PyUnicode_AsUTF8(ret);
+    // json dumps file_info
+    PyTuple_SetItem(json_args, 0, file_info);
+    Py_INCREF(file_info); 
+    json_ret = PyObject_CallObject(dumps_func, json_args);
 
-    // compress and dump file_info
-    uLongf content_length_ulongf = strlen(file_info_content) + 1;
-    uLongf compression_length_ulongf = compressBound(content_length_ulongf);
-    unsigned char* buffer = (unsigned char*)malloc(sizeof(unsigned char) * compression_length_ulongf);
-    compress(buffer, &compression_length_ulongf, (unsigned char*)file_info_content, content_length_ulongf);
-    uint64_t content_length = content_length_ulongf;
-    uint64_t compression_length = compression_length_ulongf;
+    // convert string to bytes
+    bytes_data = PyObject_CallMethod(json_ret, "encode", NULL);
+    content_length = PyBytes_Size(bytes_data);
+
+    // compress bytes data
+    PyTuple_SetItem(zlib_args, 0, bytes_data);
+    Py_INCREF(json_ret);
+    zlib_ret = PyObject_CallObject(compress_func, zlib_args);
+    compression_length = PyBytes_Size(zlib_ret);
+    const char * buffer = PyBytes_AsString(zlib_ret);
 
     // write data
     fputc(VC_HEADER_FILE_INFO, fptr);
     fwrite(&compression_length, sizeof(uint64_t), 1, fptr);
     fwrite(&content_length, sizeof(uint64_t), 1, fptr);
     fwrite(buffer, sizeof(char), compression_length, fptr);
-    free(buffer);
 
+    Py_DECREF(json_ret);
+    Py_DECREF(zlib_ret);
+    Py_DECREF(bytes_data);
     Py_DECREF(json_module_name);
     Py_DECREF(json_module);
     Py_DECREF(dumps_func);
-    Py_DECREF(args);
-    Py_DECREF(ret);
+    Py_DECREF(json_args);
+    Py_DECREF(zlib_module_name);
+    Py_DECREF(zlib_module);
+    Py_DECREF(compress_func);
+    Py_DECREF(zlib_args);
 
     return 0;
 }
@@ -305,46 +321,63 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
 
 PyObject*
 load_file_info(FILE* fptr){
-    PyObject* file_info = NULL;
-    PyObject* str_object = NULL;
-    PyObject* args = PyTuple_New(1);
-    PyObject* json_module_name = PyUnicode_FromString("json");
-    PyObject* json_module = PyImport_Import(json_module_name);
-    PyObject* loads_func = PyObject_GetAttrString(json_module, "loads");
-
-
     uint8_t header = 0;
     uint64_t compression_length = 0;
     uint64_t content_length = 0;
+
+    PyObject* file_info = NULL;
+    PyObject* zlib_ret = NULL;
+    PyObject* bytes_data = NULL;
+    PyObject* string_data = NULL;
+    PyObject* json_module_name = PyUnicode_FromString("json");
+    PyObject* json_module = PyImport_Import(json_module_name);
+    PyObject* loads_func = PyObject_GetAttrString(json_module, "loads");
+    PyObject* json_args = PyTuple_New(1);
+    PyObject* zlib_module_name = PyUnicode_FromString("zlib");
+    PyObject* zlib_module = PyImport_Import(zlib_module_name);
+    PyObject* decompress_func = PyObject_GetAttrString(zlib_module, "decompress");
+    PyObject* zlib_args = PyTuple_New(1);
 
     fread(&header, sizeof(uint8_t), 1, fptr);
     if(header == VC_HEADER_FILE_INFO){
         READ_DATA(&compression_length, uint64_t, fptr);
         READ_DATA(&content_length, uint64_t, fptr);
-        // decompress file content
+
+        // read compressed data
         unsigned char* compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
-        unsigned char* content_buffer = (unsigned char*)malloc(sizeof(char) * content_length);
         fread(compression_buffer, sizeof(char), compression_length, fptr);
-        uLongf content_length_ulongf = content_length;
-        uLongf compression_length_ulongf = compression_length;
-        uncompress(content_buffer, &content_length_ulongf, compression_buffer, compression_length_ulongf);
-        str_object = PyUnicode_FromString((const char *)content_buffer);
-        PyTuple_SetItem(args, 0, str_object);
-        file_info = PyObject_CallObject(loads_func, args);
+        bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
+
+        // decompress data
+        PyTuple_SetItem(zlib_args, 0, bytes_data);
+        Py_INCREF(bytes_data);
+        zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
+
+        // convert depressed bytes to json
+        string_data = PyObject_CallMethod(zlib_ret, "decode", NULL);
+        PyTuple_SetItem(json_args, 0, string_data);
+        Py_INCREF(string_data);
+        file_info = PyObject_CallObject(loads_func, json_args);
         free(compression_buffer);
-        free(content_buffer);
     }
 
 clean_exit:
+    Py_DECREF(zlib_ret);
+    Py_DECREF(bytes_data);
+    Py_DECREF(string_data);
     Py_DECREF(json_module_name);
     Py_DECREF(json_module);
     Py_DECREF(loads_func);
-    Py_DECREF(str_object);
-    Py_DECREF(args);
+    Py_DECREF(json_args);
+    Py_DECREF(zlib_module_name);
+    Py_DECREF(zlib_module);
+    Py_DECREF(decompress_func);
+    Py_DECREF(zlib_args);
 
     if (PyErr_Occurred()) {
         Py_DECREF(file_info);
         return NULL;
     }
+
     return file_info;
 }

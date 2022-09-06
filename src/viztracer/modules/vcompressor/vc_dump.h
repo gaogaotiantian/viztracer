@@ -8,8 +8,6 @@
 #define VC_HEADER_PROCESS_NAME 0x02
 #define VC_HEADER_THREAD_NAME 0x03
 #define VC_HEADER_FILE_INFO 0x11
-#define VC_HEADER_FILE_NAME 0x12
-#define VC_HEADER_FUNCTION_NAME 0x13
 
 int dump_metadata(FILE* fptr);
 
