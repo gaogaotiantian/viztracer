@@ -144,6 +144,28 @@ class TestViewer(CmdlineTmpl):
         sock.close()
 
         return port
+    
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
+    def test_custom_port(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                f.write(json_script)
+            v = Viewer(f.name, port=self._find_a_free_port())
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen(v.url())
+                self.assertTrue(resp.code == 200)
+                resp = urllib.request.urlopen(f"{v.url()}/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen(f"{v.url()}/localtrace")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+            finally:
+                v.stop()
+        finally:
+            os.remove(f.name)
+            
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_json(self):
@@ -151,7 +173,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, port=self._find_a_free_port())
+            v = Viewer(f.name)
             try:
                 v.run()
                 time.sleep(0.5)
@@ -172,7 +194,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-            v = Viewer(f.name, port=self._find_a_free_port())
+            v = Viewer(f.name)
             try:
                 v.run()
                 time.sleep(0.5)
@@ -206,7 +228,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, port=self._find_a_free_port())
+            v = Viewer(f.name)
             try:
                 v.run()
                 time.sleep(0.5)
@@ -230,7 +252,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-            v = Viewer(f.name, once=True, port=self._find_a_free_port())
+            v = Viewer(f.name, once=True)
             v.run()
             time.sleep(0.5)
             resp = urllib.request.urlopen(v.url())
@@ -245,7 +267,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, once=True, port=self._find_a_free_port())
+            v = Viewer(f.name, once=True)
             v.run()
             try:
                 time.sleep(0.5)
@@ -278,7 +300,7 @@ class TestViewer(CmdlineTmpl):
             self.template(["vizviewer", "--once", "--use_external_processor", f.name],
                           success=False, expected_output_file=None)
 
-            v = Viewer(f.name, once=True, timeout=1, port=self._find_a_free_port())
+            v = Viewer(f.name, once=True, timeout=1)
             v.run()
             try:
                 v.process.wait(timeout=5)
@@ -305,7 +327,7 @@ class TestViewer(CmdlineTmpl):
             self.template(["vizviewer", "--flamegraph", "--use_external_processor", f.name],
                           success=False, expected_output_file=None)
 
-            v = Viewer(f.name, once=True, flamegraph=True, port=self._find_a_free_port())
+            v = Viewer(f.name, once=True, flamegraph=True)
             v.run()
             try:
                 time.sleep(0.5)
@@ -347,7 +369,7 @@ class TestViewer(CmdlineTmpl):
         # --use_external_processor won't work with directory
         self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False, expected_output_file=None)
 
-        with Viewer(test_data_dir, port=self._find_a_free_port()) as v:
+        with Viewer(test_data_dir) as v:
             time.sleep(0.5)
             resp = urllib.request.urlopen(v.url())
             self.assertEqual(resp.code, 200)
@@ -378,7 +400,7 @@ class TestViewer(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_flamegraph(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
-        with Viewer(test_data_dir, flamegraph=True, port=self._find_a_free_port()) as v:
+        with Viewer(test_data_dir, flamegraph=True) as v:
             time.sleep(0.5)
             resp = urllib.request.urlopen(v.url())
             self.assertEqual(resp.code, 200)
@@ -394,7 +416,7 @@ class TestViewer(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_timeout(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
-        with Viewer(test_data_dir, timeout=2, port=self._find_a_free_port()) as v:
+        with Viewer(test_data_dir, timeout=2) as v:
             time.sleep(0.5)
             resp = urllib.request.urlopen(v.url())
             self.assertEqual(resp.code, 200)
@@ -413,7 +435,7 @@ class TestViewer(CmdlineTmpl):
             for i in range(15):
                 with open(os.path.join(tmp_dir, f"{i}.json"), "w") as f:
                     json.dump(json_data, f)
-            with Viewer(tmp_dir, port=self._find_a_free_port()) as v:
+            with Viewer(tmp_dir) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertEqual(resp.code, 200)
