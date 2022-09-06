@@ -144,7 +144,7 @@ class TestViewer(CmdlineTmpl):
         sock.close()
 
         return port
-    
+
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_custom_port(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
@@ -165,7 +165,6 @@ class TestViewer(CmdlineTmpl):
                 v.stop()
         finally:
             os.remove(f.name)
-            
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_json(self):
