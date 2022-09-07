@@ -2,18 +2,18 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import os
 import logging
-import tempfile
 import lzma
-from shutil import copyfileobj
-from typing import List, Callable, Optional, Tuple, overload
+import os
+import tempfile
 from collections import namedtuple
 from functools import wraps
+from shutil import copyfileobj
+from typing import Callable, List, Optional, Tuple, overload
 
 from .cmdline_tmpl import CmdlineTmpl
-from .util import get_json_file_path
 from .test_performance import Timer
+from .util import get_json_file_path
 
 
 class TestVCompressor(CmdlineTmpl):
@@ -86,7 +86,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         return f"{filesize:8.2f}B"
 
     @classmethod
-    def _print_cr_result(
+    def _print_result(
         cls,
         filename: str,
         original_size: int,
@@ -148,10 +148,11 @@ class TestVCompressorPerformance(CmdlineTmpl):
         for subtest_idx, filename in enumerate(testcases_filename, start=1):
             path = get_json_file_path(filename)
             original_size = os.path.getsize(path)
-            other_results = [                             # More compressor can be added here
+            # More compressors can be added here
+            other_results = [
                 ("LZMA", self._benchmark_lzma(path)),
             ]
             with self.subTest(testcase=filename):
                 vcompress_result = self._benchmark_vcompressor(path)
-                self._print_cr_result(filename, original_size,
-                                      vcompress_result, other_results, subtest_idx=subtest_idx)
+                self._print_result(filename, original_size,
+                                   vcompress_result, other_results, subtest_idx=subtest_idx)
