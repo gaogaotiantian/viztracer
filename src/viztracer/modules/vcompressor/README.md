@@ -13,8 +13,6 @@ A one-byte header indicating the following data type
 0x02 - Process name
 0x03 - Thread name
 0x11 - File info
-0x12 - File name
-0x13 - Function name
 
 #### str
 

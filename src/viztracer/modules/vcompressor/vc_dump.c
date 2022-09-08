@@ -5,6 +5,9 @@
 #include "vcompressor.h"
 #include "vc_dump.h"
 
+PyObject* json_module = NULL;
+PyObject* zlib_module = NULL;
+
 #define STRING_BUFFER_SIZE 512
 
 #define READ_DATA(ptr, type, fptr)                                           \
@@ -156,6 +159,7 @@ load_events_from_file(FILE* fptr)
     uint8_t header = 0;
     PyObject* parsed_events = PyDict_New();
     PyObject* trace_events = PyList_New(0);
+    PyObject* file_info = NULL;
     PyObject* name = NULL;
     PyObject* event = NULL;
     uint64_t pid = 0;
@@ -239,11 +243,13 @@ load_events_from_file(FILE* fptr)
                 }
                 Py_DECREF(name);
                 break;
+            case VC_HEADER_FILE_INFO:
+                file_info = load_file_info(fptr);
+                PyDict_SetItemString(parsed_events, "file_info", file_info);
+                Py_DECREF(file_info);
+                break;
             default:
-                // printf("wrong header %d\n", header);
-                // load file info after this
-                fseek(fptr, -1, SEEK_CUR);
-                goto clean_exit;
+                printf("wrong header %d\n", header);
         }
     }
 
@@ -262,22 +268,21 @@ clean_exit:
 
 }
 
+int import_modules(){
+    zlib_module = PyImport_ImportModule("zlib");
+    json_module = PyImport_ImportModule("json");
+    return 0;
+}
 
 int dump_file_info(PyObject* file_info, FILE* fptr){
-
-    // dump json string
+    const char * buffer = NULL;
     uint64_t content_length = 0;
     uint64_t compression_length = 0;
-
     PyObject* json_ret = NULL;
     PyObject* zlib_ret = NULL;
     PyObject* bytes_data = NULL;
-    PyObject* json_module_name = PyUnicode_FromString("json");
-    PyObject* json_module = PyImport_Import(json_module_name);
     PyObject* dumps_func = PyObject_GetAttrString(json_module, "dumps");
     PyObject* json_args = PyTuple_New(1);
-    PyObject* zlib_module_name = PyUnicode_FromString("zlib");
-    PyObject* zlib_module = PyImport_Import(zlib_module_name);
     PyObject* compress_func = PyObject_GetAttrString(zlib_module, "compress");
     PyObject* zlib_args = PyTuple_New(1);
     
@@ -292,10 +297,9 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
 
     // compress bytes data
     PyTuple_SetItem(zlib_args, 0, bytes_data);
-    Py_INCREF(json_ret);
     zlib_ret = PyObject_CallObject(compress_func, zlib_args);
     compression_length = PyBytes_Size(zlib_ret);
-    const char * buffer = PyBytes_AsString(zlib_ret);
+    buffer = PyBytes_AsString(zlib_ret);
 
     // write data
     fputc(VC_HEADER_FILE_INFO, fptr);
@@ -303,76 +307,57 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
     fwrite(&content_length, sizeof(uint64_t), 1, fptr);
     fwrite(buffer, sizeof(char), compression_length, fptr);
 
-    Py_DECREF(json_ret);
     Py_DECREF(zlib_ret);
     Py_DECREF(bytes_data);
-    Py_DECREF(json_module_name);
-    Py_DECREF(json_module);
     Py_DECREF(dumps_func);
     Py_DECREF(json_args);
-    Py_DECREF(zlib_module_name);
-    Py_DECREF(zlib_module);
     Py_DECREF(compress_func);
     Py_DECREF(zlib_args);
 
     return 0;
 }
 
-
 PyObject*
 load_file_info(FILE* fptr){
-    uint8_t header = 0;
+    unsigned char* compression_buffer = NULL;
     uint64_t compression_length = 0;
     uint64_t content_length = 0;
-
     PyObject* file_info = NULL;
     PyObject* zlib_ret = NULL;
     PyObject* bytes_data = NULL;
     PyObject* string_data = NULL;
-    PyObject* json_module_name = PyUnicode_FromString("json");
-    PyObject* json_module = PyImport_Import(json_module_name);
     PyObject* loads_func = PyObject_GetAttrString(json_module, "loads");
     PyObject* json_args = PyTuple_New(1);
-    PyObject* zlib_module_name = PyUnicode_FromString("zlib");
-    PyObject* zlib_module = PyImport_Import(zlib_module_name);
     PyObject* decompress_func = PyObject_GetAttrString(zlib_module, "decompress");
     PyObject* zlib_args = PyTuple_New(1);
 
-    fread(&header, sizeof(uint8_t), 1, fptr);
-    if(header == VC_HEADER_FILE_INFO){
-        READ_DATA(&compression_length, uint64_t, fptr);
-        READ_DATA(&content_length, uint64_t, fptr);
+    READ_DATA(&compression_length, uint64_t, fptr);
+    READ_DATA(&content_length, uint64_t, fptr);
 
-        // read compressed data
-        unsigned char* compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
-        fread(compression_buffer, sizeof(char), compression_length, fptr);
-        bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
-
-        // decompress data
-        PyTuple_SetItem(zlib_args, 0, bytes_data);
-        Py_INCREF(bytes_data);
-        zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
-
-        // convert depressed bytes to json
-        string_data = PyObject_CallMethod(zlib_ret, "decode", NULL);
-        PyTuple_SetItem(json_args, 0, string_data);
-        Py_INCREF(string_data);
-        file_info = PyObject_CallObject(loads_func, json_args);
-        free(compression_buffer);
+    // read compressed data
+    compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
+    if(compression_buffer == NULL){
+        goto clean_exit;
     }
+    fread(compression_buffer, sizeof(char), compression_length, fptr);
+    bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
+
+    // decompress data
+    PyTuple_SetItem(zlib_args, 0, bytes_data);
+    zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
+
+    // convert depressed bytes to json
+    string_data = PyObject_CallMethod(zlib_ret, "decode", NULL);
+    PyTuple_SetItem(json_args, 0, string_data);
+    file_info = PyObject_CallObject(loads_func, json_args);
+    Py_DECREF(zlib_ret);
+    free(compression_buffer);
 
 clean_exit:
-    Py_DECREF(zlib_ret);
-    Py_DECREF(bytes_data);
-    Py_DECREF(string_data);
-    Py_DECREF(json_module_name);
-    Py_DECREF(json_module);
     Py_DECREF(loads_func);
-    Py_DECREF(json_args);
-    Py_DECREF(zlib_module_name);
-    Py_DECREF(zlib_module);
-    Py_DECREF(decompress_func);
     Py_DECREF(zlib_args);
+    Py_DECREF(json_args);
+    Py_DECREF(decompress_func);
 
     if (PyErr_Occurred()) {
         Py_DECREF(file_info);
