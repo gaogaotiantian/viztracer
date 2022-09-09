@@ -31,6 +31,62 @@ class TestVCompressor(CmdlineTmpl):
                 expected_output_file=dup_json_path
             )
 
+    def test_compress_invalid(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            not_exist_path = os.path.join(tmpdir, "do_not_exist.json")
+            result = self.template(
+                ["viztracer", "-o", cvf_path, "--compress", not_exist_path],
+                expected_output_file=None, success=False
+            )
+            self.assertIn("Unable to find file", result.stdout.decode("utf8"))
+
+            result = self.template(
+                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("fib")],
+                expected_output_file=None, success=False
+            )
+            self.assertIn("Only support compressing json report", result.stdout.decode("utf8"))
+
+    def test_compress_default_outputfile(self):
+        default_compress_output = "result.cvf"
+        self.template(
+            ["viztracer", "--compress", get_json_file_path("multithread.json")],
+            expected_output_file=default_compress_output, cleanup=False
+        )
+        self.assertTrue(os.path.exists(default_compress_output))
+
+        self.template(
+            ["viztracer", "-o", "result.json", "--decompress", default_compress_output],
+            expected_output_file="result.json"
+        )
+        self.cleanup(output_file=default_compress_output)
+
+    def test_decompress_invalid(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            not_exist_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "result.json")
+            result = self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", not_exist_path],
+                expected_output_file=dup_json_path, success=False
+            )
+            self.assertIn("Unable to find file", result.stdout.decode("utf8"))
+
+    def test_decompress_default_outputfile(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            default_decompress_output = "result.json"
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("multithread.json")],
+                expected_output_file=cvf_path, cleanup=False
+            )
+
+            self.template(
+                ["viztracer", "--decompress", cvf_path],
+                expected_output_file=default_decompress_output, cleanup=False
+            )
+            self.assertTrue(os.path.exists(default_decompress_output))
+            self.cleanup(output_file=default_decompress_output)
+
 
 class TestVCompressorPerformance(CmdlineTmpl):
 
