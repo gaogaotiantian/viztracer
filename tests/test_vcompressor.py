@@ -132,7 +132,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
     def _benchmark_vcompressor(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
         self.template(
             ["viztracer", "-o", compressed_file_path, "--compress", uncompressed_file_path],
-            expected_output_file=compressed_file_path, cleanup=False
+            expected_output_file=compressed_file_path, script=None, cleanup=False
         )
 
     @_benchmark
