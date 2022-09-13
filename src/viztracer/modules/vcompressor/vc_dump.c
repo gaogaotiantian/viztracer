@@ -5,9 +5,6 @@
 #include "vcompressor.h"
 #include "vc_dump.h"
 
-PyObject* json_module = NULL;
-PyObject* zlib_module = NULL;
-
 #define STRING_BUFFER_SIZE 512
 
 #define READ_DATA(ptr, type, fptr)                                           \
@@ -268,11 +265,6 @@ clean_exit:
 
 }
 
-int import_modules(){
-    zlib_module = PyImport_ImportModule("zlib");
-    json_module = PyImport_ImportModule("json");
-    return 0;
-}
 
 int dump_file_info(PyObject* file_info, FILE* fptr){
     const char * buffer = NULL;
@@ -285,6 +277,16 @@ int dump_file_info(PyObject* file_info, FILE* fptr){
     PyObject* json_args = PyTuple_New(1);
     PyObject* compress_func = PyObject_GetAttrString(zlib_module, "compress");
     PyObject* zlib_args = PyTuple_New(1);
+
+    if (!dumps_func) {
+        perror("Failed to access json.dumps()");
+        exit(-1);
+    }
+
+    if (!compress_func) {
+        perror("Failed to access zlib.compress()");
+        exit(-1);
+    }
     
     // json dumps file_info
     PyTuple_SetItem(json_args, 0, file_info);
@@ -330,6 +332,16 @@ load_file_info(FILE* fptr){
     PyObject* json_args = PyTuple_New(1);
     PyObject* decompress_func = PyObject_GetAttrString(zlib_module, "decompress");
     PyObject* zlib_args = PyTuple_New(1);
+
+    if (!loads_func) {
+        perror("Failed to access json.loads()");
+        exit(-1);
+    }
+
+    if (!decompress_func) {
+        perror("Failed to access zlib.decompress()");
+        exit(-1);
+    }
 
     READ_DATA(&compression_length, uint64_t, fptr);
     READ_DATA(&content_length, uint64_t, fptr);

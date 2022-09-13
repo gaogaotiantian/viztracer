@@ -15,8 +15,6 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr);
 
 int dump_file_info(PyObject* file_info, FILE* fptr);
 
-int import_modules();
-
 PyObject* load_events_from_file(FILE* fptr);
 
 PyObject* load_file_info(FILE* fptr);

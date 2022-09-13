@@ -5,6 +5,9 @@
 #include "vcompressor.h"
 #include "vc_dump.h"
 
+PyObject* json_module = NULL;
+PyObject* zlib_module = NULL;
+
 static PyObject* 
 vcompressor_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 {
@@ -299,7 +302,8 @@ PyInit_vcompressor(void)
         return NULL;
     }
 
-    import_modules();
+    zlib_module = PyImport_ImportModule("zlib");
+    json_module = PyImport_ImportModule("json");
 
     return m;
 }
