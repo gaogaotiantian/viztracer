@@ -390,6 +390,9 @@ load_file_info(FILE* fptr)
     PyTuple_SetItem(zlib_args, 0, bytes_data);
     zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
     Py_DECREF(zlib_args);
+    if(!zlib_ret){
+        goto clean_exit;
+    }
 
     // decode depressed bytes to string
     string_data = PyObject_CallMethod(zlib_ret, "decode", NULL);
@@ -403,6 +406,9 @@ load_file_info(FILE* fptr)
     PyTuple_SetItem(json_args, 0, string_data);
     file_info = PyObject_CallObject(loads_func, json_args);
     Py_DECREF(json_args);
+    if (!file_info){
+        goto clean_exit;
+    }
 
 clean_exit:
     if (loads_func){
