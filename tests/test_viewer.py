@@ -109,8 +109,8 @@ class Viewer(unittest.TestCase):
             time.sleep(1)
         self.fail(f"Can't connect to 127.0.0.1:{port}")
 
-    def url(self) -> str:
-        return f'http://127.0.0.1:{self.port}'
+    def url(self, offset: int = 0) -> str:
+        return f'http://127.0.0.1:{self.port+offset}'
 
 
 class MockOpen(unittest.TestCase):
@@ -374,9 +374,9 @@ class TestViewer(CmdlineTmpl):
             self.assertEqual(resp.code, 200)
             self.assertIn("fib.json", resp.read().decode("utf-8"))
             resp = urllib.request.urlopen(f"{v.url()}/fib.json")
-            self.assertEqual(resp.url, f"http://127.0.0.1:{v.port+1}/")
+            self.assertEqual(resp.url, f"{v.url(1)}/")
             resp = urllib.request.urlopen(f"{v.url()}/old.json")
-            self.assertEqual(resp.url, f"http://127.0.0.1:{v.port+2}/")
+            self.assertEqual(resp.url, f"{v.url(2)}/")
 
     @unittest.skipIf(sys.platform in ("darwin", "win32"),
                      "MacOS has a high security check for multiprocessing, Windows can't handle SIGINT")
@@ -405,11 +405,11 @@ class TestViewer(CmdlineTmpl):
             self.assertEqual(resp.code, 200)
             self.assertIn("fib.json", resp.read().decode("utf-8"))
             resp = urllib.request.urlopen(f"{v.url()}/fib.json")
-            self.assertEqual(resp.url, f"http://127.0.0.1:{v.port+1}/")
-            resp = urllib.request.urlopen(f"http://127.0.0.1:{v.port+1}/vizviewer_info")
+            self.assertEqual(resp.url, f"{v.url(1)}/")
+            resp = urllib.request.urlopen(f"{v.url(1)}/vizviewer_info")
             self.assertTrue(resp.code == 200)
             self.assertTrue(json.loads(resp.read().decode("utf-8"))["is_flamegraph"], True)
-            resp = urllib.request.urlopen(f"http://127.0.0.1:{v.port+1}/flamegraph")
+            resp = urllib.request.urlopen(f"{v.url(1)}/flamegraph")
             self.assertEqual(len(json.loads(resp.read().decode("utf-8"))[0]["flamegraph"]), 2)
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
@@ -421,10 +421,10 @@ class TestViewer(CmdlineTmpl):
             self.assertEqual(resp.code, 200)
             self.assertIn("fib.json", resp.read().decode("utf-8"))
             resp = urllib.request.urlopen(f"{v.url()}/fib.json")
-            self.assertEqual(resp.url, f"http://127.0.0.1:{v.port+1}/")
+            self.assertEqual(resp.url, f"{v.url(1)}/")
             time.sleep(2.5)
             resp = urllib.request.urlopen(f"{v.url()}/old.json")
-            self.assertEqual(resp.url, f"http://127.0.0.1:{v.port+1}/")
+            self.assertEqual(resp.url, f"{v.url(1)}/")
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory_max_port(self):
@@ -442,14 +442,7 @@ class TestViewer(CmdlineTmpl):
                     time.sleep(0.02)
                     resp = urllib.request.urlopen(f"{v.url()}/{i}.json")
                     self.assertEqual(resp.code, 200)
-
-                    def _extract_port(u: str) -> int:
-                        pattern = re.compile("http://127.0.0.1:([0-9]+)/")
-                        ret = pattern.match(u)
-                        self.assertIsNotNone(ret)
-                        return int(ret.group(1))
-
-                    self.assertGreaterEqual(_extract_port(resp.url), v.port)
+                    self.assertRegex(resp.url, "http://127.0.0.1:90[0-1][0-9]/")
         finally:
             shutil.rmtree(tmp_dir)
 
