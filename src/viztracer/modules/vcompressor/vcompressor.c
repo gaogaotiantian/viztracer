@@ -188,9 +188,12 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
 
     dump_parsed_trace_events(parsed_events, fptr);
 
+    // file_info here should not be released
     file_info = PyDict_GetItemString(raw_data, "file_info");
-    if(file_info != NULL){
-        dump_file_info(file_info, fptr);
+    if (file_info != NULL){
+        if (dump_file_info(file_info, fptr)!= 0){
+            goto clean_exit;
+        }
     }
 
 clean_exit:
