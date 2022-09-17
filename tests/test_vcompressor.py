@@ -13,7 +13,7 @@ from typing import Callable, List, Optional, Tuple, overload
 
 from .cmdline_tmpl import CmdlineTmpl
 from .test_performance import Timer
-from .util import get_json_file_path
+from .util import get_tests_data_file_path
 
 
 class TestVCompressor(CmdlineTmpl):
@@ -22,7 +22,7 @@ class TestVCompressor(CmdlineTmpl):
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "result.json")
             self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("multithread.json")],
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
                 expected_output_file=cvf_path, cleanup=False
             )
 
@@ -42,7 +42,7 @@ class TestVCompressor(CmdlineTmpl):
             self.assertIn("Unable to find file", result.stdout.decode("utf8"))
 
             result = self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("fib")],
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("fib.py")],
                 expected_output_file=None, success=False
             )
             self.assertIn("Only support compressing json report", result.stdout.decode("utf8"))
@@ -50,7 +50,7 @@ class TestVCompressor(CmdlineTmpl):
     def test_compress_default_outputfile(self):
         default_compress_output = "result.cvf"
         self.template(
-            ["viztracer", "--compress", get_json_file_path("multithread.json")],
+            ["viztracer", "--compress", get_tests_data_file_path("multithread.json")],
             expected_output_file=default_compress_output, cleanup=False
         )
         self.assertTrue(os.path.exists(default_compress_output))
@@ -76,7 +76,7 @@ class TestVCompressor(CmdlineTmpl):
             cvf_path = os.path.join(tmpdir, "result.cvf")
             default_decompress_output = "result.json"
             self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_json_file_path("multithread.json")],
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
                 expected_output_file=cvf_path, cleanup=False
             )
 
@@ -202,7 +202,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         testcases_filename = ["vdb_basic.json", "multithread.json"]
 
         for subtest_idx, filename in enumerate(testcases_filename, start=1):
-            path = get_json_file_path(filename)
+            path = get_tests_data_file_path(filename)
             original_size = os.path.getsize(path)
             # More compressors can be added here
             other_results = [
