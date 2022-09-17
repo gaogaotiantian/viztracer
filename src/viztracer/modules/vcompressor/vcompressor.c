@@ -191,7 +191,7 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     // file_info here should not be released
     file_info = PyDict_GetItemString(raw_data, "file_info");
     if (file_info != NULL){
-        if (dump_file_info(file_info, fptr)!= 0){
+        if (dump_file_info(file_info, fptr) != 0){
             goto clean_exit;
         }
     }
