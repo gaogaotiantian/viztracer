@@ -311,6 +311,13 @@ int dump_file_info(PyObject* file_info, FILE* fptr)
     if (!bytes_data){
         goto clean_exit;
     }
+    // Make sure that PyBytes_Size succeed
+    if (!PyBytes_Check(bytes_data)){
+        // need to release bytes_data here, bytes_data will not release after clean_exit
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "Failed to convert string to bytes");
+        goto clean_exit;
+    }
 
     // compress bytes data
     zlib_args = PyTuple_New(1);
@@ -320,6 +327,11 @@ int dump_file_info(PyObject* file_info, FILE* fptr)
     // zlib_args steals bytes_data, so release zlib_args will release bytes_data
     Py_DECREF(zlib_args);
     if (!zlib_ret){
+        goto clean_exit;
+    }
+    if (!PyBytes_Check(zlib_ret)){
+        Py_DECREF(zlib_ret);
+        PyErr_SetString(PyExc_ValueError, "zlib.compress() returns a none bytes object");
         goto clean_exit;
     }
     compression_length = PyBytes_Size(zlib_ret);
@@ -342,7 +354,7 @@ clean_exit:
     }
 
     if (PyErr_Occurred()) {
-        return -1;
+        return 1;
     }
 
     return 0;
@@ -384,13 +396,27 @@ load_file_info(FILE* fptr)
     fread(compression_buffer, sizeof(char), compression_length, fptr);
     bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
     free(compression_buffer);
+    if(!bytes_data){
+        // There's error handling in PyBytes_FromStringAndSize
+        goto clean_exit;
+    }
 
     // decompress data
     zlib_args = PyTuple_New(1);
     PyTuple_SetItem(zlib_args, 0, bytes_data);
     zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
     Py_DECREF(zlib_args);
-    if(!zlib_ret){
+    if (!zlib_ret){
+        goto clean_exit;
+    }
+    if (!PyBytes_Check(zlib_ret)){
+        Py_DECREF(zlib_ret);
+        PyErr_SetString(PyExc_ValueError, "zlib.decompress() returns a none bytes object");
+        goto clean_exit;
+    }
+    if ((uint64_t)PyBytes_Size(zlib_ret) != content_length){
+        Py_DECREF(zlib_ret);
+        PyErr_SetString(PyExc_ValueError, "Decompressed content length doesn't match, file may be corrupted");
         goto clean_exit;
     }
 
