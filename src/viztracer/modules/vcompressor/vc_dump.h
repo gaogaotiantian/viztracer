@@ -7,11 +7,16 @@
 #define VC_HEADER_FEE 0x01
 #define VC_HEADER_PROCESS_NAME 0x02
 #define VC_HEADER_THREAD_NAME 0x03
+#define VC_HEADER_FILE_INFO 0x11
 
 int dump_metadata(FILE* fptr);
 
 int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr);
 
+int dump_file_info(PyObject* file_info, FILE* fptr);
+
 PyObject* load_events_from_file(FILE* fptr);
+
+PyObject* load_file_info(FILE* fptr);
 
 #endif

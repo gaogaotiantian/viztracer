@@ -5,6 +5,9 @@
 #include "vcompressor.h"
 #include "vc_dump.h"
 
+PyObject* json_module = NULL;
+PyObject* zlib_module = NULL;
+
 static PyObject* 
 vcompressor_new(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 {
@@ -146,6 +149,7 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     PyObject* raw_data = NULL;
     PyObject* trace_events = NULL;
     PyObject* parsed_events = NULL;
+    PyObject* file_info = NULL;
     const char* filename = NULL;
     FILE* fptr = NULL;
 
@@ -183,6 +187,14 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     Py_INCREF(parsed_events);
 
     dump_parsed_trace_events(parsed_events, fptr);
+
+    // file_info here is a borrowed reference
+    file_info = PyDict_GetItemString(raw_data, "file_info");
+    if (file_info != NULL){
+        if (dump_file_info(file_info, fptr) != 0){
+            goto clean_exit;
+        }
+    }
 
 clean_exit:
 
@@ -292,6 +304,9 @@ PyInit_vcompressor(void)
         Py_DECREF(m);
         return NULL;
     }
+
+    zlib_module = PyImport_ImportModule("zlib");
+    json_module = PyImport_ImportModule("json");
 
     return m;
 }

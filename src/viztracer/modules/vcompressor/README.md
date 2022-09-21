@@ -36,4 +36,5 @@ header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - 
 
 ### File info
 
-header(header) - fileinfo(str)
+header(header) - compressed size(uint64) - uncompressed size(uint64) - compressed content
+
