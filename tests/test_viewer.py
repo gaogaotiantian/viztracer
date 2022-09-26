@@ -299,10 +299,10 @@ class TestViewer(CmdlineTmpl):
             self.template(["vizviewer", "--once", "--use_external_processor", f.name],
                           success=False, expected_output_file=None)
 
-            v = Viewer(f.name, once=True, timeout=1)
+            v = Viewer(f.name, once=True, timeout=3)
             v.run()
             try:
-                v.process.wait(timeout=5)
+                v.process.wait(timeout=6)
             except subprocess.TimeoutExpired:
                 v.stop()
                 self.fail("--once did not timeout correctly")
