@@ -88,7 +88,7 @@ def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
                     spawn_main(%s)
                     """)
             prog %= ', '.join('%s=%r' % item for item in kwds.items())
-            opts = multiprocessing.util._args_from_interpreter_flags()
+            opts = multiprocessing.util._args_from_interpreter_flags()  # type: ignore
             return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
 
     multiprocessing.spawn.get_command_line = get_command_line
