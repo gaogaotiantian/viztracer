@@ -26,6 +26,7 @@ parse_trace_events(PyObject* trace_events)
 {
     PyObject* parsed_events = NULL;
     PyObject* fee_events = NULL;
+    PyObject* instant_events = NULL;
     PyObject* process_names = NULL;
     PyObject* thread_names = NULL;
     PyObject* key = NULL;
@@ -37,12 +38,15 @@ parse_trace_events(PyObject* trace_events)
     // Initialize the event holder
     parsed_events = PyDict_New();
     fee_events = PyDict_New();
+    instant_events = PyDict_New();
     process_names = PyDict_New();
     thread_names = PyDict_New();
     PyDict_SetItemString(parsed_events, "fee_events", fee_events);
+    PyDict_SetItemString(parsed_events, "instant_events", instant_events);
     PyDict_SetItemString(parsed_events, "process_names", process_names);
     PyDict_SetItemString(parsed_events, "thread_names", thread_names);
     Py_DECREF(fee_events);
+    Py_DECREF(instant_events);
     Py_DECREF(process_names);
     Py_DECREF(thread_names);
 
@@ -53,8 +57,10 @@ parse_trace_events(PyObject* trace_events)
         PyObject* args_name = NULL;
         PyObject* pid = NULL;
         PyObject* tid = NULL;
+        PyObject* scope = NULL;
         PyObject* ts = NULL;
         PyObject* dur = NULL;
+        PyObject* args = NULL;
         PyObject* event_ts_list = NULL;
         if (PyErr_Occurred() || !PyDict_CheckExact(event)) {
             PyErr_SetString(PyExc_ValueError, "event format failure");
@@ -128,6 +134,42 @@ parse_trace_events(PyObject* trace_events)
                     goto clean_exit;
                 }
                 Py_DECREF(id_key);
+                break;
+            case 'i':
+                name = PyDict_GetItemString(event, "name");
+                pid = PyDict_GetItemString(event, "pid");
+                tid = PyDict_GetItemString(event, "tid");
+                scope = PyDict_GetItemString(event, "s");
+                ts = PyDict_GetItemString(event, "ts");
+                args = PyDict_GetItemString(event, "args");
+
+                if (!pid || !tid || !scope || !ts || !args) {
+                    PyErr_SetString(PyExc_ValueError, "event format failure");
+                    goto clean_exit;
+                }
+                // Prepare the tuple key
+                key = PyTuple_New(4);
+
+                // PyTuple_SetItem steals reference
+                Py_INCREF(pid);
+                Py_INCREF(tid);
+                Py_INCREF(name);
+                Py_INCREF(scope);
+                PyTuple_SetItem(key, 0, pid);
+                PyTuple_SetItem(key, 1, tid);
+                PyTuple_SetItem(key, 2, name);
+                PyTuple_SetItem(key, 3, scope);
+
+                if (!PyDict_Contains(instant_events, key)) {
+                    event_ts_list = PyList_New(0);
+                    PyDict_SetItem(instant_events, key, event_ts_list);
+                    Py_DECREF(event_ts_list);
+                } else {
+                    event_ts_list = PyDict_GetItem(instant_events, key);
+                }
+                Py_DECREF(key);
+                PyList_Append(event_ts_list, ts);
+                PyList_Append(event_ts_list, args);
                 break;
         }
     }
