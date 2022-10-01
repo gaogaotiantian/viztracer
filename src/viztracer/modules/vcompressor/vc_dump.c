@@ -99,6 +99,7 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
     PyObject* process_names = PyDict_GetItemString(trace_events, "process_names");
     PyObject* thread_names  = PyDict_GetItemString(trace_events, "thread_names");
     PyObject* fee_events    = PyDict_GetItemString(trace_events, "fee_events");
+    PyObject* instant_events = PyDict_GetItemString(trace_events, "instant_events");
     Py_ssize_t ppos = 0;
     PyObject* key   = NULL;
     PyObject* value = NULL;
@@ -146,6 +147,57 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         }
     }
 
+    // Iterate through instant events
+    ppos = 0;
+    PyObject* dumps_func = NULL;
+    PyObject* dumps_func_args = PyTuple_New(1);
+    PyObject* args_object = NULL;
+    dumps_func = PyObject_GetAttrString(json_module, "dumps");
+    if (!dumps_func) {
+        goto clean_exit;
+    }
+
+    while (PyDict_Next(instant_events, &ppos, &key, &value)) {
+        // head
+        fputc(VC_HEADER_INSTANT_EVENT, fptr);
+
+        // pid-tid-name-scope
+        uint64_t pid = PyLong_AsLong(PyTuple_GetItem(key, 0));
+        uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
+        const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
+        const char* scope = PyUnicode_AsUTF8(PyTuple_GetItem(key, 3));
+        fwrite(&pid, sizeof(uint64_t), 1, fptr);
+        fwrite(&tid, sizeof(uint64_t), 1, fptr);
+        fwritestr(name, fptr);
+        fwritestr(scope, fptr);
+
+        // count
+        uint64_t ts_size = PyList_GET_SIZE(value);
+        fwrite(&ts_size, sizeof(uint64_t), 1, fptr);
+
+        for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size / 2; idx++) {
+            // ts
+            double ts = PyFloat_AsDouble(PyList_GET_ITEM(value, 2 * idx));
+            int64_t ts64 = ts * 1000;
+            fwrite(&ts64, sizeof(int64_t), 1, fptr);
+
+            // args
+            PyTuple_SetItem(dumps_func_args, 0, PyList_GET_ITEM(value, 2 * idx + 1));
+            args_object = PyObject_CallObject(dumps_func, dumps_func_args);
+            const char* args = PyUnicode_AsUTF8(args_object);
+            fwritestr(args, fptr);
+        }
+    }
+    clean_exit:
+        if(dumps_func) {
+            Py_DECREF(dumps_func);
+        }
+        if(dumps_func_args) {
+            Py_DECREF(dumps_func_args);
+        }
+        if(args_object) {
+            Py_DECREF(args_object);
+        }
     return 0;
 }
 
@@ -158,18 +210,25 @@ load_events_from_file(FILE* fptr)
     PyObject* trace_events = PyList_New(0);
     PyObject* file_info = NULL;
     PyObject* name = NULL;
+    PyObject* scope = NULL;
     PyObject* event = NULL;
+    PyObject* args = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
     uint64_t count = 0;
     uint64_t ts = 0;
     uint64_t dur = 0;
-    PyObject* args = NULL;
     PyObject* unicode_X = PyUnicode_FromString("X");
     PyObject* unicode_M = PyUnicode_FromString("M");
+    PyObject* unicode_i = PyUnicode_FromString("i");
     PyObject* unicode_FEE = PyUnicode_FromString("FEE");
+    PyObject* unicode_INSTANT = PyUnicode_FromString("INSTANT");
     PyObject* unicode_process_name = PyUnicode_FromString("process_name");
     PyObject* unicode_thread_name = PyUnicode_FromString("thread_name");
+
+    PyObject* loads_func = NULL;
+    PyObject* loads_func_args = PyTuple_New(1);
+    PyObject* str = NULL;
 
     char buffer[STRING_BUFFER_SIZE] = {0};
 
@@ -240,6 +299,39 @@ load_events_from_file(FILE* fptr)
                 }
                 Py_DECREF(name);
                 break;
+            case VC_HEADER_INSTANT_EVENT:
+                loads_func = PyObject_GetAttrString(json_module, "loads");
+                if (!loads_func){
+                    goto clean_exit;
+                }
+                READ_DATA(&pid, uint64_t, fptr);
+                READ_DATA(&tid, uint64_t, fptr);
+                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+                name = PyUnicode_FromString(buffer);
+                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+                scope = PyUnicode_FromString(buffer);
+                READ_DATA(&count, uint64_t, fptr);
+                for (uint64_t i = 0; i < count / 2; i++) {
+                    READ_DATA(&ts, uint64_t, fptr);
+                    freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+                    str = Py_BuildValue("s", buffer);
+                    PyTuple_SetItem(loads_func_args, 0, str);
+                    args = PyObject_CallObject(loads_func, loads_func_args);
+                    event = PyDict_New();
+                    PyDict_SetItemString(event, "pviztra    h", unicode_i);
+                    PyDict_SetItemString(event, "name", name);
+                    PyDict_SetItemString(event, "cat", unicode_INSTANT);
+                    PyDict_SetItemString(event, "s", scope);
+                    PyDict_SetItemStringULL(event, "pid", pid);
+                    PyDict_SetItemStringULL(event, "tid", tid);
+                    PyDict_SetItemStringDouble(event, "ts", (double)ts / 1000);
+                    PyDict_SetItemString(event, "args", args);
+                    PyList_Append(trace_events, event);
+                    Py_DECREF(event);
+                    Py_DECREF(args);
+                }
+                Py_DECREF(name);
+                break;
             case VC_HEADER_FILE_INFO:
                 file_info = load_file_info(fptr);
                 if (!file_info){
@@ -252,13 +344,24 @@ load_events_from_file(FILE* fptr)
                 printf("wrong header %d\n", header);
         }
     }
-
 clean_exit:
     Py_DECREF(unicode_X);
     Py_DECREF(unicode_M);
+    Py_DECREF(unicode_i);
     Py_DECREF(unicode_FEE);
+    Py_DECREF(unicode_INSTANT);
     Py_DECREF(unicode_process_name);
     Py_DECREF(unicode_thread_name);
+
+    if (loads_func) {
+        Py_DECREF(loads_func);
+    }
+    if (loads_func_args) {
+        Py_DECREF(loads_func_args);
+    }
+    if (str) {
+        Py_DECREF(str);
+    }
 
     if (PyErr_Occurred()) {
         Py_DECREF(parsed_events);

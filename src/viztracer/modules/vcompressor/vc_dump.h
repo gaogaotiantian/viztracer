@@ -7,6 +7,7 @@
 #define VC_HEADER_FEE 0x01
 #define VC_HEADER_PROCESS_NAME 0x02
 #define VC_HEADER_THREAD_NAME 0x03
+#define VC_HEADER_INSTANT_EVENT 0x04
 #define VC_HEADER_FILE_INFO 0x11
 
 int dump_metadata(FILE* fptr);

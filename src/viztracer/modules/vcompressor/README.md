@@ -12,6 +12,7 @@ A one-byte header indicating the following data type
 0x01 - FEE
 0x02 - Process name
 0x03 - Thread name
+0x04 - Instant event
 0x11 - File info
 
 #### str
@@ -33,6 +34,10 @@ header(header) - pid(pid) - tid(tid) - name(str)
 ### FEE
 
 header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - dur(ts)]*
+
+### Instant event
+
+header(header) - pid(pid) - tid(tid) - name(str) - scopes(str) - count(uint64) - [start(ts)-args(str)]*
 
 ### File info
 
