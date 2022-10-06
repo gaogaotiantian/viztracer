@@ -287,7 +287,7 @@ class TestVCompressorCorrectness(CmdlineTmpl):
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "recovery.json")
 
-            run_script = test_counter_events % (origin_json_path)
+            run_script = test_counter_events % (origin_json_path.replace("\\", "/"))
             self.template(
                 ["python", "cmdline_test.py"], script=run_script, cleanup=False,
                 expected_output_file=origin_json_path
