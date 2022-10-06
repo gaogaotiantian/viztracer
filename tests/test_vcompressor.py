@@ -13,7 +13,6 @@ from shutil import copyfileobj
 from typing import Callable, List, Optional, Tuple, overload
 
 from .cmdline_tmpl import CmdlineTmpl
-from .base_tmpl import BaseTmpl
 from .test_performance import Timer
 from .util import get_tests_data_file_path
 
@@ -258,6 +257,7 @@ tracer.stop()
 tracer.save(output_file='%s')
 """
 
+
 class TestVCompressorCorrectness(CmdlineTmpl):
     def test_file_info(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -289,7 +289,7 @@ class TestVCompressorCorrectness(CmdlineTmpl):
 
             run_script = test_counter_events % (origin_json_path)
             self.template(
-                ["python", "cmdline_test.py"], script=run_script, cleanup=False, 
+                ["python", "cmdline_test.py"], script=run_script, cleanup=False,
                 expected_output_file=origin_json_path
             )
 
@@ -311,6 +311,6 @@ class TestVCompressorCorrectness(CmdlineTmpl):
 
             origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
             dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
-            origin_counter_events.sort(key=lambda i:i["ts"])
-            dup_counter_events.sort(key=lambda i:i["ts"])
+            origin_counter_events.sort(key=lambda i: i["ts"])
+            dup_counter_events.sort(key=lambda i: i["ts"])
             self.assertEqual(origin_counter_events, dup_counter_events)
