@@ -6,12 +6,14 @@ import logging
 import lzma
 import os
 import tempfile
+import json
 from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj
 from typing import Callable, List, Optional, Tuple, overload
 
 from .cmdline_tmpl import CmdlineTmpl
+from .base_tmpl import BaseTmpl
 from .test_performance import Timer
 from .util import get_tests_data_file_path
 
@@ -212,3 +214,103 @@ class TestVCompressorPerformance(CmdlineTmpl):
                 vcompress_result = self._benchmark_vcompressor(path)
                 self._print_result(filename, original_size,
                                    vcompress_result, other_results, subtest_idx=subtest_idx)
+
+
+test_counter_events = """
+import threading
+import time
+import sys
+from viztracer import VizTracer, VizCounter
+
+tracer = VizTracer()
+tracer.start()
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        counter = VizCounter(tracer, 'thread counter ' + str(self.ident))
+        counter.a = sys.maxsize - 1
+        time.sleep(0.01)
+        counter.a = sys.maxsize * 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize + 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize * 2
+
+main_counter = VizCounter(tracer, 'main counter')
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+main_counter.arg1 = 100.01
+main_counter.arg2 = -100.01
+main_counter.arg3 = 0.0
+
+thread1.start()
+thread2.start()
+
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+
+main_counter.arg1 = 200.01
+main_counter.arg2 = -200.01
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+class TestVCompressorCorrectness(CmdlineTmpl):
+    def test_file_info(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "result.json")
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
+                expected_output_file=cvf_path, cleanup=False
+            )
+
+            self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
+                expected_output_file=dup_json_path, cleanup=False
+            )
+
+            with open(get_tests_data_file_path("multithread.json"), "r") as f:
+                origin_json_data = json.load(f)
+
+            with open(dup_json_path, "r") as f:
+                dup_json_data = json.load(f)
+
+            self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
+
+    def test_counter_events(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            origin_json_path = os.path.join(tmpdir, "result.json")
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "recovery.json")
+
+            run_script = test_counter_events % (origin_json_path)
+            self.template(
+                ["python", "cmdline_test.py"], script=run_script, cleanup=False, 
+                expected_output_file=origin_json_path
+            )
+
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", origin_json_path],
+                expected_output_file=cvf_path, cleanup=False
+            )
+
+            self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
+                expected_output_file=dup_json_path, cleanup=False
+            )
+
+            with open(origin_json_path, "r") as f:
+                origin_json_data = json.load(f)
+
+            with open(dup_json_path, "r") as f:
+                dup_json_data = json.load(f)
+
+            origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
+            dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
+            origin_counter_events.sort(key=lambda i:i["ts"])
+            dup_counter_events.sort(key=lambda i:i["ts"])
+            self.assertEqual(origin_counter_events, dup_counter_events)
