@@ -99,6 +99,7 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
     PyObject* process_names = PyDict_GetItemString(trace_events, "process_names");
     PyObject* thread_names  = PyDict_GetItemString(trace_events, "thread_names");
     PyObject* fee_events    = PyDict_GetItemString(trace_events, "fee_events");
+    PyObject* parsed_counter_events = PyDict_GetItemString(trace_events, "counter_events");
     Py_ssize_t ppos = 0;
     PyObject* key   = NULL;
     PyObject* value = NULL;
@@ -146,7 +147,247 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         }
     }
 
+    // Iterate through counter events
+    ppos = 0;
+    while (PyDict_Next(parsed_counter_events, &ppos, &key, &value)) {
+        uint64_t pid = PyLong_AsLong(PyTuple_GetItem(key, 0));
+        uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
+        const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
+        fputc(VC_HEADER_COUNTER_EVENTS, fptr);
+        fwrite(&pid, sizeof(uint64_t), 1, fptr);
+        fwrite(&tid, sizeof(uint64_t), 1, fptr);
+        fwritestr(name, fptr);
+        if (diff_and_write_counter_args(value, fptr) != 0){
+            goto clean_exit;
+        }
+    }
+clean_exit:
+    if (PyErr_Occurred()){
+        return 1;
+    }
+
     return 0;
+}
+
+int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr){
+    // there may be several args in a counter, log them all may take more spaces
+    // so this step is to do diffing between two contiguous timestamp
+    // and finally we only log those changed args
+    PyObject* cached_args_dict = PyDict_New();
+    PyObject* diffed_args = PyDict_New();
+    PyObject* ts_keys = PyDict_Keys(counter_args);
+    PyObject* ts = NULL;
+    PyObject* cur_diffed_arg = NULL;
+    PyObject* cur_counter_arg = NULL;
+    PyObject* arg_name_list = NULL;
+    PyObject* counter_arg_key = NULL;
+    PyObject* counter_arg_value = NULL;
+    PyObject* cached_arg_value = NULL;
+    PyObject* overflowed_num_string = NULL;
+    Py_ssize_t ppos = 0;
+    uint64_t ts_key_count = 0;
+    // sort the args by timestamp so we can diff
+    if (!ts_keys || !PyList_Check(ts_keys)){
+        PyErr_SetString(PyExc_ValueError, "failed to get timestamp list");
+        goto clean_exit;
+    }
+    ts_key_count = PyList_GET_SIZE(ts_keys);
+    if (PyList_Sort(ts_keys) == -1){
+        goto clean_exit;
+    }
+    // do diffing between two timestamps and store the result
+    for (uint64_t i = 0; i < ts_key_count; i++){
+        ts = PyList_GET_ITEM(ts_keys, i);
+        cur_counter_arg = PyDict_GetItem(counter_args, ts);
+        cur_diffed_arg = PyDict_New();
+        ppos = 0;
+        while (PyDict_Next(cur_counter_arg, &ppos, &counter_arg_key, &counter_arg_value)){
+            cached_arg_value = PyDict_GetItem(cached_args_dict, counter_arg_key);
+            if (!cached_arg_value){
+                PyDict_SetItem(cached_args_dict, counter_arg_key, counter_arg_value);
+                PyDict_SetItem(cur_diffed_arg, counter_arg_key, counter_arg_value);
+            } else{
+                int compare_result = PyObject_RichCompareBool(cached_arg_value, counter_arg_value, Py_EQ);
+                if (compare_result == -1){
+                    // compare error 
+                    goto clean_exit;
+                } else if (compare_result == 0){
+                    // if value is not equal in last timestamp, store the newest value
+                    PyDict_SetItem(cached_args_dict, counter_arg_key, counter_arg_value);
+                    PyDict_SetItem(cur_diffed_arg, counter_arg_key, counter_arg_value);
+                }
+            }
+        }
+        PyDict_SetItem(diffed_args, ts, cur_diffed_arg);
+        Py_DECREF(cur_diffed_arg);
+    }
+    // write all the arg keys
+    uint64_t arg_nums = PyDict_Size(cached_args_dict);
+    fwrite(&arg_nums, sizeof(uint64_t), 1, fptr);
+    arg_name_list = PyDict_Keys(cached_args_dict);
+    if (!arg_name_list || !PyList_Check(arg_name_list)){
+        PyErr_SetString(PyExc_ValueError, "failed to get arg name list");
+        goto clean_exit;
+    }
+    for (uint64_t i = 0; i < arg_nums; i++){
+        counter_arg_key = PyList_GetItem(arg_name_list, i);
+        const char * key_name = PyUnicode_AsUTF8(counter_arg_key);
+        fwritestr(key_name, fptr);
+    }
+    // write [timestamp - values] * ts_key_count
+    fwrite(&ts_key_count, sizeof(uint64_t), 1, fptr);
+    for (uint64_t i = 0; i < ts_key_count; i++){
+        ts = PyList_GET_ITEM(ts_keys, i);
+        cur_diffed_arg = PyDict_GetItem(diffed_args, ts);
+        double ts_double = PyFloat_AsDouble(ts);
+        int64_t ts_64 = ts_double * 1000;
+        fwrite(&ts_64, sizeof(int64_t), 1, fptr);
+        for (uint64_t j = 0; j < arg_nums; j++){
+            counter_arg_value = PyDict_GetItem(cur_diffed_arg, PyList_GET_ITEM(arg_name_list, j));
+            if(!counter_arg_value){
+                fputc(VC_HEADER_COUNTER_ARG_NOT_CHANGE, fptr);
+            } else if(PyLong_CheckExact(counter_arg_value)){
+                // PyLongObject may overflow
+                int overflow = 0;
+                int64_t counter_value_int64 = PyLong_AsLongLongAndOverflow(counter_arg_value, &overflow);
+                if (overflow == 0){
+                    fputc(VC_HEADER_COUNTER_ARG_LONG, fptr);
+                    fwrite(&counter_value_int64, sizeof(int64_t), 1, fptr);
+                } else{
+                    fputc(VC_HEADER_COUNTER_ARG_LONG_STRING, fptr);
+                    overflowed_num_string = PyObject_Repr(counter_arg_value);
+                    const char * num_string = PyUnicode_AsUTF8(overflowed_num_string);
+                    fwritestr(num_string, fptr);
+                    Py_DECREF(overflowed_num_string);
+                }
+            } else if(PyFloat_CheckExact(counter_arg_value)){
+                fputc(VC_HEADER_COUNTER_ARG_FLOAT, fptr);
+                double counter_value_double = PyFloat_AsDouble(counter_arg_value);
+                fwrite(&counter_value_double, sizeof(double), 1, fptr);
+            } else{
+                PyErr_SetString(PyExc_ValueError, "Counter can only take numeric values");
+                Py_DECREF(arg_name_list);
+                goto clean_exit;
+            }
+        }
+    }
+    Py_DECREF(arg_name_list);
+
+clean_exit:
+    Py_DECREF(cached_args_dict);
+    Py_DECREF(diffed_args);
+    Py_DECREF(ts_keys);
+
+    if (PyErr_Occurred()){
+        return 1;
+    }
+
+    return 0;
+}
+
+PyObject*
+load_counter_event(FILE* fptr){
+    PyObject* counter_events_list = PyList_New(0);
+    PyObject* counter_event = NULL;
+    PyObject* arg_key_list = PyList_New(0);
+    PyObject* cached_args = PyDict_New();
+    PyObject* current_arg = NULL;
+    PyObject* counter_arg_key = NULL;
+    PyObject* counter_arg_value = NULL;
+    PyObject* counter_name = NULL;
+    PyObject* counter_pid = NULL;
+    PyObject* counter_tid = NULL;
+    PyObject* counter_ph = PyUnicode_FromString("C");
+    uint64_t pid = 0;
+    uint64_t tid = 0;
+    uint64_t arg_key_count = 0;
+    uint64_t counter_event_count = 0;
+    uint64_t ts_64 = 0;
+    uint8_t header = 0;
+    int64_t value_longlong = 0;
+    double value_double = 0;
+    char buffer[STRING_BUFFER_SIZE] = {0};
+    // read pid, tid, name and keys
+    READ_DATA(&pid, uint64_t, fptr);
+    READ_DATA(&tid, uint64_t, fptr);
+    freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+    READ_DATA(&arg_key_count, uint64_t, fptr);
+    counter_name = PyUnicode_FromString(buffer);
+    counter_pid = PyLong_FromUnsignedLongLong(pid);
+    counter_tid = PyLong_FromUnsignedLongLong(tid);
+    for (uint64_t i = 0; i < arg_key_count; i++){
+        freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+        counter_arg_key = PyUnicode_FromString(buffer);
+        PyList_Append(arg_key_list, counter_arg_key);
+        Py_DECREF(counter_arg_key);
+    }
+    // read counter events
+    READ_DATA(&counter_event_count, uint64_t, fptr);
+    for (uint64_t i = 0; i < counter_event_count; i++){
+        current_arg = PyDict_New();
+        READ_DATA(&ts_64, uint64_t, fptr);
+        for (uint64_t j = 0; j < arg_key_count; j++){
+            READ_DATA(&header, uint8_t, fptr);
+            counter_arg_key = PyList_GetItem(arg_key_list, j);
+            switch (header)
+            {
+            case VC_HEADER_COUNTER_ARG_NOT_CHANGE:
+                counter_arg_value = PyDict_GetItem(cached_args, counter_arg_key);
+                if (counter_arg_value){
+                    PyDict_SetItem(current_arg, counter_arg_key, counter_arg_value);
+                }
+                break;
+            case VC_HEADER_COUNTER_ARG_LONG:
+                READ_DATA(&value_longlong, int64_t, fptr);
+                counter_arg_value = PyLong_FromLongLong(value_longlong);
+                PyDict_SetItem(current_arg, counter_arg_key, counter_arg_value);
+                PyDict_SetItem(cached_args, counter_arg_key, counter_arg_value);
+                Py_DECREF(counter_arg_value);
+                break;
+            case VC_HEADER_COUNTER_ARG_FLOAT:
+                READ_DATA(&value_double, int64_t, fptr);
+                counter_arg_value = PyFloat_FromDouble(value_double);
+                PyDict_SetItem(current_arg, counter_arg_key, counter_arg_value);
+                PyDict_SetItem(cached_args, counter_arg_key, counter_arg_value);
+                Py_DECREF(counter_arg_value);
+                break;
+            case VC_HEADER_COUNTER_ARG_LONG_STRING:
+                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+                counter_arg_value = PyLong_FromString(buffer, NULL, 0);
+                PyDict_SetItem(current_arg, counter_arg_key, counter_arg_value);
+                PyDict_SetItem(cached_args, counter_arg_key, counter_arg_value);
+                Py_DECREF(counter_arg_value);
+                break;
+            default:
+                PyErr_SetString(PyExc_ValueError, "counter arg header error!");
+                goto clean_exit;
+            }
+        }
+        counter_event = PyDict_New();
+        PyList_Append(counter_events_list, counter_event);
+        Py_DECREF(counter_event);
+        PyDict_SetItemString(counter_event, "name", counter_name);
+        PyDict_SetItemString(counter_event, "pid", counter_pid);
+        PyDict_SetItemString(counter_event, "tid", counter_tid);
+        PyDict_SetItemString(counter_event, "ph", counter_ph);
+        PyDict_SetItemString(counter_event, "args", current_arg);
+        Py_DECREF(current_arg);
+        PyDict_SetItemStringDouble(counter_event, "ts", (double)ts_64 / 1000);
+    }
+    Py_DECREF(counter_name);
+    Py_DECREF(counter_pid);
+    Py_DECREF(counter_tid);
+    
+clean_exit:
+    Py_DECREF(counter_ph);
+    Py_DECREF(arg_key_list);
+    Py_DECREF(cached_args);
+
+    if (PyErr_Occurred()){
+        return NULL; 
+    }
+
+    return counter_events_list;
 }
 
 PyObject*
@@ -159,6 +400,7 @@ load_events_from_file(FILE* fptr)
     PyObject* file_info = NULL;
     PyObject* name = NULL;
     PyObject* event = NULL;
+    PyObject* counter_events = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
     uint64_t count = 0;
@@ -247,6 +489,17 @@ load_events_from_file(FILE* fptr)
                 }
                 PyDict_SetItemString(parsed_events, "file_info", file_info);
                 Py_DECREF(file_info);
+                break;
+            case VC_HEADER_COUNTER_EVENTS:
+                counter_events = load_counter_event(fptr);
+                if (!counter_events){
+                    goto clean_exit;
+                }
+                PyObject_CallMethod(trace_events, "extend", "O", counter_events);
+                Py_DECREF(counter_events);
+                if (PyErr_Occurred()){
+                    goto clean_exit;
+                }
                 break;
             default:
                 printf("wrong header %d\n", header);
