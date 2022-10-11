@@ -14,6 +14,7 @@ extern LARGE_INTEGER qpc_freq;
 
 void Print_Py(PyObject* o);
 void fprintjson(FILE* fptr, PyObject* obj);
+void write_escape_string(const char *s, FILE *fptr);
 
 // target and prefix has to be NULL-terminated
 inline int startswith(const char* target, const char* prefix)

@@ -26,3 +26,20 @@ void fprintjson(FILE* fptr, PyObject* obj)
     Py_DECREF(call_args);
     Py_DECREF(args_str);
 }
+
+void write_escape_string(const char *s, FILE *fptr)
+{
+    while (*s != 0) {
+        switch (*s) {
+            case '\\': fputc('\\', fptr); fputc(*s, fptr); break;
+            case '"':  fputc('\\', fptr); fputc(*s, fptr); break;
+            case '\b': fputc('\\', fptr); fputc('b', fptr); break;
+            case '\f': fputc('\\', fptr); fputc('f', fptr); break;
+            case '\n': fputc('\\', fptr); fputc('n', fptr); break;
+            case '\r': fputc('\\', fptr); fputc('r', fptr); break;
+            case '\t': fputc('\\', fptr); fputc('t', fptr); break;
+            default: fputc(*s, fptr);
+        }
+        s++;
+    }
+}
