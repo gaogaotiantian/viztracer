@@ -27,7 +27,7 @@ void fprintjson(FILE* fptr, PyObject* obj)
     Py_DECREF(args_str);
 }
 
-void write_escape_string(const char *s, FILE *fptr)
+void fprint_escape(FILE *fptr, const char *s)
 {
     while (*s != 0) {
         switch (*s) {

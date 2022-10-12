@@ -915,7 +915,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     while (metadata_node) {
         fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"thread_name\",\"args\":{\"name\":\"",
                 pid, metadata_node->tid);
-        write_escape_string(PyUnicode_AsUTF8(metadata_node->name), fptr);
+        fprint_escape(fptr, PyUnicode_AsUTF8(metadata_node->name));
         fprintf(fptr, "\"}},");
         metadata_node = metadata_node->next;
     }
@@ -987,7 +987,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             break;
         case INSTANT_NODE:
             fprintf(fptr, "\"ph\":\"i\",\"cat\":\"instant\",\"name\":\"");
-            write_escape_string(PyUnicode_AsUTF8(node->data.instant.name), fptr);
+            fprint_escape(fptr, PyUnicode_AsUTF8(node->data.instant.name));
             if (node->data.instant.args == Py_None) {
                 fprintf(fptr, "\",\"s\":\"%s\"", PyUnicode_AsUTF8(node->data.instant.scope));
             } else {
@@ -997,14 +997,14 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             break;
         case COUNTER_NODE:
             fprintf(fptr, "\"ph\":\"C\",\"name\":\"");
-            write_escape_string(PyUnicode_AsUTF8(node->data.counter.name), fptr);
+            fprint_escape(fptr, PyUnicode_AsUTF8(node->data.counter.name));
             fprintf(fptr, "\",\"args\":");
             fprintjson(fptr, node->data.counter.args);
             break;
         case OBJECT_NODE:
             fprintf(fptr, "\"ph\":\"%s\",\"id\":\"%s\",\"name\":\"",
                     PyUnicode_AsUTF8(node->data.object.ph), PyUnicode_AsUTF8(node->data.object.id));
-            write_escape_string(PyUnicode_AsUTF8(node->data.object.name), fptr);
+            fprint_escape(fptr, PyUnicode_AsUTF8(node->data.object.name));
             fputc('\"', fptr);
             if (!(node->data.object.args == Py_None)) {
                 fprintf(fptr, ",\"args\":");

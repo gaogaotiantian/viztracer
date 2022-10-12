@@ -341,3 +341,49 @@ class TestTimestampDisorder(CmdlineTmpl):
                     curr_time = event["ts"] + event["dur"]
         self.template(["viztracer", "cmdline_test.py"], script=file_timestamp_disorder,
                       expected_output_file="result.json", check_func=check_func)
+
+
+issue285_code = """
+import threading
+from viztracer import get_tracer, VizCounter, VizObject
+
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n - 1) + fib(n - 2)
+
+
+class MyThread(threading.Thread):
+    def run(self):
+        fib(7)
+
+
+tracer = get_tracer()
+
+# test object event name escape with and without args
+obj = VizObject(tracer, "test \\\\ \\\" \\b \\f \\n \\r \\t")
+obj.test = "test \\\\ \\\" \\b \\f \\n \\r \\t"
+
+# test counter event name escape with and without args
+counter = VizCounter(tracer, "test \\\\ \\\" \\b \\f \\n \\r \\t")
+counter.test = 10
+
+# test instant event name escape with and without args
+tracer.log_instant("test \\\\ \\\" \\b \\f \\n \\r \\t")
+tracer.log_instant("test \\\\ \\\" \\b \\f \\n \\r \\t", "test \\\\ \\\" \\b \\f \\n \\r \\t")
+
+# test thread name escape
+test_thread = MyThread(name = "test \\\\ \\\" \\b \\f \\n \\r \\t")
+test_thread.start()
+test_thread.join()
+
+"""
+
+
+class TestEscapeString(CmdlineTmpl):
+    def test_escape_string(self):
+        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=issue285_code,
+                      expected_stdout=".*Total Entries:.*")
