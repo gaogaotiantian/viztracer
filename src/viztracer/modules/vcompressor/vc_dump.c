@@ -240,7 +240,8 @@ int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr){
         ts = PyList_GET_ITEM(ts_keys, i);
         cur_diffed_arg = PyDict_GetItem(diffed_args, ts);
         double ts_double = PyFloat_AsDouble(ts);
-        fwrite(&ts_double, sizeof(double), 1, fptr);
+        int64_t ts_64 = ts_double * 1000;
+        fwrite(&ts_64, sizeof(int64_t), 1, fptr);
         for (uint64_t j = 0; j < arg_nums; j++){
             counter_arg_value = PyDict_GetItem(cur_diffed_arg, PyList_GET_ITEM(arg_name_list, j));
             if(!counter_arg_value){
@@ -301,7 +302,7 @@ load_counter_event(FILE* fptr){
     uint64_t tid = 0;
     uint64_t arg_key_count = 0;
     uint64_t counter_event_count = 0;
-    double ts = 0;
+    uint64_t ts_64 = 0;
     uint8_t header = 0;
     int64_t value_longlong = 0;
     double value_double = 0;
@@ -324,7 +325,7 @@ load_counter_event(FILE* fptr){
     READ_DATA(&counter_event_count, uint64_t, fptr);
     for (uint64_t i = 0; i < counter_event_count; i++){
         current_arg = PyDict_New();
-        READ_DATA(&ts, double, fptr);
+        READ_DATA(&ts_64, uint64_t, fptr);
         for (uint64_t j = 0; j < arg_key_count; j++){
             READ_DATA(&header, uint8_t, fptr);
             counter_arg_key = PyList_GetItem(arg_key_list, j);
@@ -371,7 +372,7 @@ load_counter_event(FILE* fptr){
         PyDict_SetItemString(counter_event, "ph", counter_ph);
         PyDict_SetItemString(counter_event, "args", current_arg);
         Py_DECREF(current_arg);
-        PyDict_SetItemStringDouble(counter_event, "ts", ts);
+        PyDict_SetItemStringDouble(counter_event, "ts", (double)ts_64 / 1000);
     }
     Py_DECREF(counter_name);
     Py_DECREF(counter_pid);
