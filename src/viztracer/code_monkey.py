@@ -287,12 +287,6 @@ class AstTransformer(ast.NodeTransformer):
         return ""
 
 
-if sys.version_info < (3, 7):
-    Match = typing.Match
-else:
-    Match = re.Match
-
-
 class SourceProcessor:
     """
     Pre-process comments like #!viztracer: log_instant("event")
@@ -316,20 +310,20 @@ class SourceProcessor:
 
         return "\n".join(new_lines)
 
-    def line_transform(self, re_match: Match) -> str:
+    def line_transform(self, re_match: re.Match) -> str:
         return f"{re_match.group(1)}__viz_tracer__.{re_match.group(2)}"
 
-    def line_transform_condition(self, re_match: Match) -> str:
+    def line_transform_condition(self, re_match: re.Match) -> str:
         return f"{re_match.group(1)}if {re_match.group(3)}: __viz_tracer__.{re_match.group(2)};"
 
-    def inline_transform(self, re_match: Match) -> str:
+    def inline_transform(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
             val_assigned = stmt[:stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}))"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}')"
 
-    def inline_transform_condition(self, re_match: Match) -> str:
+    def inline_transform_condition(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
             val_assigned = stmt[:stmt.index("=")].strip()

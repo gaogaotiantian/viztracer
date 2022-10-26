@@ -18,10 +18,7 @@ def patch_subprocess(viz_args) -> None:
 
     @functools.wraps(subprocess.Popen.__init__)
     def subprocess_init(self, args: Union[str, Sequence], **kwargs) -> None:
-        if sys.version_info >= (3, 7):
-            from collections.abc import Sequence
-        else:
-            from collections import Sequence
+        from collections.abc import Sequence
 
         new_args: Union[str, Sequence[Any]] = args
         if isinstance(new_args, str):

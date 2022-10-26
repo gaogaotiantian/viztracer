@@ -72,11 +72,11 @@ setuptools.setup(
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: MacOS",
@@ -86,7 +86,7 @@ setuptools.setup(
         "Topic :: Software Development :: Bug Tracking",
         "Topic :: System :: Logging"
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=["objprint>=0.1.3"],
     extras_require={
         "full": ["rich", "orjson"]
