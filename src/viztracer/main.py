@@ -9,7 +9,6 @@ import configparser
 import json
 import multiprocessing.util  # type: ignore
 import os
-import platform
 import shutil
 import signal
 import sys
