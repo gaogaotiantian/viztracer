@@ -224,10 +224,6 @@ class VizUI:
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
 
-        if options.log_async:
-            if int(platform.python_version_tuple()[1]) < 7:
-                return False, "log_async only supports python 3.7+"
-
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
                 "WARNING",
