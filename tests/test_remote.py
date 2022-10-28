@@ -19,6 +19,7 @@ from .cmdline_tmpl import CmdlineTmpl
 from .util import cmd_with_coverage
 
 
+@unittest.skipIf(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
 class TestRemote(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")
     def test_install(self):
@@ -216,6 +217,7 @@ class TestRemote(CmdlineTmpl):
         self.template(["viztracer", "--uninstall", "1234"], success=False)
 
 
+@unittest.skipIf(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
 class TestAttachSanity(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "Can't run attach on Windows")
     def test_basic(self):
@@ -245,6 +247,7 @@ class TestAttachSanity(CmdlineTmpl):
             os.remove("attached_script.py")
 
 
+@unittest.skipIf(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
 class TestAttachScript(CmdlineTmpl):
     def test_attach_script(self):
         # Isolate the attach stuff in a separate process
@@ -275,3 +278,9 @@ class TestAttachScript(CmdlineTmpl):
         if os.path.exists("non_exist.json"):
             os.remove("non_exist.json")
             self.fail("uninstall failed to prevent tracer from saving data")
+
+
+@unittest.skipUnless(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
+class TestMacWarning(CmdlineTmpl):
+    def test_mac_warning(self):
+        self.template(["viztracer", "--attach", "1234"], success=False, expected_stdout=".*Warning.*")

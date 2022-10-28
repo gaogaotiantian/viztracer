@@ -443,6 +443,9 @@ class VizUI:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
 
+        if sys.platform == "darwin" and sys.version_info >= (3, 11):
+            print("Warning: attach may not work on 3.11+ on Mac due to hardened runtime")
+
         if not pid_exists(pid):
             return False, f"pid {pid} does not exist!"
 
