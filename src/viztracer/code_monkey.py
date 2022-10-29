@@ -43,7 +43,7 @@ class AstTransformer(ast.NodeTransformer):
             if sys.version_info >= (3, 8):
                 func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
             else:
-                # python 3.6 and 3.7 does not have posonlyargs
+                # python 3.7 does not have posonlyargs
                 func_args_name = [a.arg for a in args.args + args.kwonlyargs]
             if "vararg" in args._fields and args.vararg:
                 func_args_name.append(args.vararg.arg)
