@@ -431,16 +431,10 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        if sys.version_info >= (3, 7):
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_async,
-                          expected_output_file="result.json",
-                          check_func=check_func)
-        else:
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_async,
-                          expected_output_file="result.json",
-                          success=False)
+        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_async,
+                      expected_output_file="result.json",
+                      check_func=check_func)
 
     @package_matrix(["~trio", "trio"])
     @skipIf(importlib.util.find_spec("trio") is None, reason="Trio-specific test")
@@ -451,22 +445,14 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        if sys.version_info >= (3, 7):
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_trio,
-                          check_func=check_func)
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_async_with_trio,
-                          check_func=check_func)
-        else:
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_trio,
-                          success=False)
-            self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                          script=file_log_async_with_trio,
-                          success=False)
+        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_trio,
+                      check_func=check_func)
+        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+                      script=file_log_async_with_trio,
+                      check_func=check_func)
 
-    @skipIf(sys.platform == "win32" or sys.version_info < (3, 7), "jaxlib does not support Windows")
+    @skipIf(sys.platform == "win32" or sys.version_info >= (3, 11), "jaxlib does not support Windows")
     def test_sanitize_function_name(self):
         self.template(["viztracer", "--sanitize_function_name", "cmdline_test.py"],
                       script=file_sanitize_function_name,

@@ -9,7 +9,6 @@ import configparser
 import json
 import multiprocessing.util  # type: ignore
 import os
-import platform
 import shutil
 import signal
 import sys
@@ -223,10 +222,6 @@ class VizUI:
             output_file = self.ofile  # pragma: no cover
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
-
-        if options.log_async:
-            if int(platform.python_version_tuple()[1]) < 7:
-                return False, "log_async only supports python 3.7+"
 
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
@@ -442,6 +437,9 @@ class VizUI:
 
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
+
+        if sys.platform == "darwin" and sys.version_info >= (3, 11):
+            print("Warning: attach may not work on 3.11+ on Mac due to hardened runtime")
 
         if not pid_exists(pid):
             return False, f"pid {pid} does not exist!"

@@ -412,14 +412,11 @@ def run_python_code_linux(pid, python_code, connect_debugger_tracing=False, show
 #         '--batch-silent',
     ]
 
-    # PY-49617: Skip searching for symbols when starting up gdb and instead load just the required ones.
-    cmd.extend(["--init-eval-command='set auto-solib-add off'"])  # Faster loading.
     cmd.extend(["--eval-command='set scheduler-locking off'"])  # If on we'll deadlock.
 
     # Leave auto by default (it should do the right thing as we're attaching to a process in the
     # current host).
     cmd.extend(["--eval-command='set architecture auto'"])
-    cmd.extend(["--eval-command='sharedlibrary libdl'"])  # For dlopen.
 
     cmd.extend([
         "--eval-command='call (void*)dlopen(\"%s\", 2)'" % target_dll,

@@ -15,6 +15,7 @@
 #include <sys/syscall.h>
 #endif
 
+#include "pythoncapi_compat.h"
 #include "snaptrace.h"
 #include "util.h"
 #include "eventnode.h"
@@ -133,8 +134,8 @@ static inline struct EventNode* get_next_node(TracerObject* self)
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame)
 {
     PyObject* func_arg_dict = PyDict_New();
-    PyCodeObject* code = frame->f_code;
-    PyObject* names = code->co_varnames;
+    PyCodeObject* code = PyFrame_GetCode(frame);
+    PyObject* names = PyCode_GetVarnames(code);
     PyObject* locals = PyEval_GetLocals();
 
     int idx = 0;
@@ -167,6 +168,9 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame)
 
     PyDict_SetItemString(node->args, "func_args", func_arg_dict);
     Py_DECREF(func_arg_dict);
+
+    Py_XDECREF(code);
+    Py_XDECREF(names);
 }
 
 static void verbose_printf(TracerObject* self, int v, const char* fmt, ...)
@@ -251,14 +255,19 @@ int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
+
     if (!self->collecting) {
         PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
         return 0;
     }
+
     if (what == PyTrace_CALL || what == PyTrace_RETURN || 
             (!CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
         struct EventNode* node = NULL;
         struct ThreadInfo* info = get_thread_info(self);
+        PyCodeObject* code = NULL;
+        PyFrameObject* f_back = NULL;
+        PyObject* co_filename = NULL;
 
         int is_call = (what == PyTrace_CALL || what == PyTrace_C_CALL);
         int is_return = (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
@@ -279,12 +288,17 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             }
         }
 
+        // Fast Path Ended, we need some internal data here
+        code = PyFrame_GetCode(frame);
+        f_back = PyFrame_GetBack(frame);
+
+        co_filename = code->co_filename;
+
         // Exclude Self
         if (is_python && is_call && !CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
-            PyObject* file_name = frame->f_code->co_filename;
-            if (self->lib_file_path && startswith(PyUnicode_AsUTF8(file_name), self->lib_file_path)) {
+            if (self->lib_file_path && startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
                 info->ignore_stack_depth += 1;
-                return 0;
+                goto cleanup;
             }
         }
         
@@ -309,13 +323,13 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
             if (is_call) {
                 info->curr_stack_depth += 1;
                 if (info->curr_stack_depth > self->max_stack_depth) {
-                    return 0;
+                    goto cleanup;
                 }
             } else if (is_return) {
                 if (info->curr_stack_depth > 0) {
                     info->curr_stack_depth -= 1;
                     if (info->curr_stack_depth + 1 > self->max_stack_depth) {
-                        return 0;
+                        goto cleanup;
                     }
                 }
             }
@@ -335,36 +349,34 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     record = 1;
                 }
                 Py_ssize_t length = PyList_GET_SIZE(files);
-                PyObject* name = frame->f_code->co_filename;
                 for (int i = 0; i < length; i++) {
                     PyObject* f = PyList_GET_ITEM(files, i);
-                    if (startswith(PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(f))) {
+                    if (startswith(PyUnicode_AsUTF8(co_filename), PyUnicode_AsUTF8(f))) {
                         record = 1 - record;
                         break;
                     }
                 }
                 if (record == 0) {
                     info->ignore_stack_depth += 1;
-                    return 0;
+                    goto cleanup;
                 }
             } else {
-                return 0;
+                goto cleanup;
             }
         }
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN)) {
             if (is_python && is_call) {
-                PyObject* file_name = frame->f_code->co_filename;
-                if (startswith(PyUnicode_AsUTF8(file_name), "<frozen")) {
+                if (startswith(PyUnicode_AsUTF8(co_filename), "<frozen")) {
                     info->ignore_stack_depth += 1;
-                    return 0;
+                    goto cleanup;
                 }
             }
         }
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (info->curr_task == NULL) {
-                if (is_python && is_call && (frame->f_code->co_flags & CO_COROUTINE) != 0) {
+                if (is_python && is_call && (code->co_flags & CO_COROUTINE) != 0) {
                     PyObject* curr_task = Py_None;
                     info->paused = 1;
                     for (size_t i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
@@ -413,9 +425,9 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     node->tid = info->tid;
                     node->data.fee.type = what;
                     if (is_python) {
-                        node->data.fee.co_name = frame->f_code->co_name;
-                        node->data.fee.co_filename = frame->f_code->co_filename;
-                        node->data.fee.co_firstlineno = frame->f_code->co_firstlineno;
+                        node->data.fee.co_name = code->co_name;
+                        node->data.fee.co_filename = code->co_filename;
+                        node->data.fee.co_firstlineno = code->co_firstlineno;
                         Py_INCREF(node->data.fee.co_name);
                         Py_INCREF(node->data.fee.co_filename);
                         if (stack_top->args) {
@@ -426,8 +438,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                             node->data.fee.retval = PyObject_Repr(arg);
                         }
-                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && frame->f_back) {
-                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame->f_back);
+                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && f_back) {
+                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(f_back);
                         } else {
                             node->data.fee.caller_lineno = -1;
                         }
@@ -482,11 +494,19 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                     }
                 }
             }
-            return 0;
+            goto cleanup;
         } else {
             printf("Unexpected event!\n");
         }
+
+cleanup:
+
+        Py_XDECREF(code);
+        Py_XDECREF(f_back);
+
     }
+
+
     return 0;
 }
 
