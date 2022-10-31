@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [37, 38, 39, 310, 311]
-        manylinux-image: [manylinux2010, manylinux2014, manylinux_2_24]
+        manylinux-image: [manylinux2014, manylinux_2_24]
         arch: [auto]
         include:
           - os: ubuntu-latest
@@ -37,10 +37,6 @@ jobs:
             python-version: 311
         exclude:
           # manyliunx image is not a valid variation on MacOS and Windows
-          - os: macos-latest
-            manylinux-image: manylinux2010
-          - os: windows-latest
-            manylinux-image: manylinux2010
           - os: macos-latest
             manylinux-image: manylinux2014
           - os: windows-latest
