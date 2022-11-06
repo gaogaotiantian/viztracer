@@ -50,7 +50,7 @@ header(header) - pid(pid) - tid(tid) - name(str) - key count - [ keys ]* - times
 
 #### variables
 [header - value]*
-the sort of value is the same as variable names.
+the order of variables is corresponding to the order of keys.
 if header means value didn't change compared to last timestamp, value will be null.
 if header means long or float, the value is int64_t or double type
 if header means a long and the value overflows, the value is string type

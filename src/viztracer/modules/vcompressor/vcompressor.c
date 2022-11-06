@@ -19,7 +19,7 @@ static void
 vcompressor_dealloc(VcompressorObject* self)
 {
     Py_TYPE(self)->tp_free((PyObject*) self);
-} 
+}
 
 static PyObject*
 parse_trace_events(PyObject* trace_events)
