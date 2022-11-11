@@ -10,7 +10,7 @@ from typing import Any, Dict, Generator, List, Optional
 class FuncTreeNode:
     name_regex = r"(.*) \((.*?):([0-9]+)\)"
 
-    def __init__(self, event: Optional[Dict[str, Any]] = None):
+    def __init__(self, event: Optional[Dict[str, Any]] = None) -> None:
         self.filename: Optional[str] = None
         self.lineno: Optional[int] = None
         self.caller_lineno: int = -1
@@ -95,7 +95,7 @@ class FuncTreeNode:
 
 
 class FuncTree:  # pragma: no cover
-    def __init__(self, pid: int = 0, tid: int = 0):
+    def __init__(self, pid: int = 0, tid: int = 0) -> None:
         self.root: FuncTreeNode = FuncTreeNode()
         self.curr: FuncTreeNode = self.root
         self.pid: int = pid

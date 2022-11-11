@@ -6,7 +6,7 @@ from .viztracer import VizTracer
 
 
 class VizObject(_EventBase):
-    def __init__(self, tracer: VizTracer, name: str, **kwargs):
+    def __init__(self, tracer: VizTracer, name: str, **kwargs) -> None:
         super().__init__(tracer, name, **kwargs)
         self._viztracer_id = str(id(self))
         if self._viztracer_tracer:
