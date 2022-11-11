@@ -52,7 +52,7 @@ class ExternalProcessorHandler(HttpHandler):
     def __init__(
             self,
             server_thread: "ServerThread",
-            *args, **kwargs):
+            *args, **kwargs) -> None:
         self.server_thread = server_thread
         super().__init__(*args, **kwargs)
 
@@ -68,7 +68,7 @@ class PerfettoHandler(HttpHandler):
     def __init__(
             self,
             server_thread: "ServerThread",
-            *args, **kwargs):
+            *args, **kwargs) -> None:
         self.server_thread = server_thread
         super().__init__(*args, **kwargs)
 
@@ -113,7 +113,7 @@ class PerfettoHandler(HttpHandler):
 
 
 class HtmlHandler(HttpHandler):
-    def __init__(self, server_thread: "ServerThread", *args, **kwargs):
+    def __init__(self, server_thread: "ServerThread", *args, **kwargs) -> None:
         self.server_thread = server_thread
         super().__init__(*args, **kwargs)
 
@@ -127,7 +127,7 @@ class HtmlHandler(HttpHandler):
 
 
 class DirectoryHandler(HttpHandler):
-    def __init__(self, directory_viewer: "DirectoryViewer", *args, **kwargs):
+    def __init__(self, directory_viewer: "DirectoryViewer", *args, **kwargs) -> None:
         self.directory_viewer = directory_viewer
         kwargs["directory"] = directory_viewer.base_path
         super().__init__(*args, **kwargs)
@@ -233,7 +233,7 @@ class DirectoryHandler(HttpHandler):
 class ExternalProcessorProcess:
     trace_processor_path = os.path.join(os.path.dirname(__file__), "web_dist", "trace_processor")
 
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         self.path = path
         self._process = subprocess.Popen(
             [
@@ -278,7 +278,7 @@ class ServerThread(threading.Thread):
             flamegraph: bool = False,
             use_external_processor: bool = False,
             timeout: float = 10,
-            quiet: bool = False):
+            quiet: bool = False) -> None:
         self.path = path
         self.port = port
         self.once = once
@@ -377,7 +377,7 @@ class DirectoryViewer:
             server_only: bool,
             flamegraph: bool,
             timeout: int,
-            use_external_processor: bool):
+            use_external_processor: bool) -> None:
         self.base_path = os.path.abspath(path)
         self.port = port
         self.server_only = server_only

@@ -38,7 +38,7 @@ class ReportBuilder:
             data: Union[Sequence[str], Dict],
             verbose: int = 1,
             align: bool = False,
-            minimize_memory: bool = False):
+            minimize_memory: bool = False) -> None:
         self.data = data
         self.verbose = verbose
         self.combined_json: Dict = {}

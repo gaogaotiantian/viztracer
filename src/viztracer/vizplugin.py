@@ -22,7 +22,7 @@ class VizPluginError(Exception):
 # by VizTracer(plugins=[YourVizPlugin()])
 
 class VizPluginBase:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def support_version(self) -> str:
