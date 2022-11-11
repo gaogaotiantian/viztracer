@@ -61,6 +61,7 @@ class Viewer(unittest.TestCase):
 
         self.process = None
         self.stopped = False
+        self.once = once
         self.use_external_processor = use_external_processor
         self.expect_success = expect_success
         super().__init__()
@@ -75,6 +76,8 @@ class Viewer(unittest.TestCase):
     def run(self):
         self.stopped = False
         self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+        if self.expect_success and not self.once:
+            self._wait_until_stdout_ready()
         self._wait_until_socket_on()
         self.assertIs(self.process.poll(), None)
 
@@ -96,6 +99,12 @@ class Viewer(unittest.TestCase):
                 self.process.stdout.close()
                 self.process.stderr.close()
                 self.stopped = True
+
+    def _wait_until_stdout_ready(self):
+        while True:
+            line = self.process.stdout.readline()
+            if "view your trace" in line:
+                break
 
     def _wait_until_socket_on(self):
         port = self.port
