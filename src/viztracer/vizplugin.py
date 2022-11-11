@@ -112,6 +112,10 @@ class VizPluginManager:
         else:
             self.resolve(support_version, ret)
 
+    @property
+    def has_plugin(self) -> bool:
+        return len(self._plugins) > 0
+
     def event(self, when: str) -> None:
         for plugin in self._plugins:
             self._send_message(plugin, "event", {"when": when})
