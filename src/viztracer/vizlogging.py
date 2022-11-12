@@ -2,15 +2,14 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from logging import Handler, LogRecord
-from typing import Optional
 
 from .viztracer import VizTracer
 
 
 class VizLoggingHandler(Handler):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tracer: Optional[VizTracer] = None
+        self._tracer = None
 
     def emit(self, record: LogRecord) -> None:
         if not self._tracer:

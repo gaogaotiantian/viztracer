@@ -28,7 +28,7 @@ class _VizTracer:
             log_async: bool = False,
             trace_self: bool = False,
             min_duration: float = 0,
-            vdb: bool = False) -> None:
+            vdb: bool = False):
         self.initialized = False
         self.enable = False
         self.parsed = False
@@ -303,7 +303,7 @@ class _VizTracer:
             if event == "instant":
                 self.add_instant(f"{name} = {repr(var)}", scope="p")
             elif event == "counter":
-                if isinstance(var, (int, float)):
+                if isinstance(var, int or type(var) is float):
                     self.add_counter(name, {name: var})
                 else:
                     raise ValueError("{}({}) is not a number".format(name, var))

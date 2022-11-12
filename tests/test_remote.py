@@ -254,17 +254,17 @@ class TestAttachScript(CmdlineTmpl):
         kwargs_non_exist_b64 = base64.urlsafe_b64encode(json.dumps(kwargs_non_exist).encode("ascii")).decode("ascii")
         attach_script = textwrap.dedent(f"""
             import viztracer.attach
-            print(viztracer.attach.attach_status.created_tracer, flush=True)
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
             viztracer.attach.start_attach(\"{kwargs_b64}\")
-            print(viztracer.attach.attach_status.created_tracer, flush=True)
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
             viztracer.attach.start_attach(\"{kwargs_b64}\")
             a = []
             a.append(1)
             viztracer.attach.stop_attach()
-            print(viztracer.attach.attach_status.created_tracer, flush=True)
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
             viztracer.attach.start_attach(\"{kwargs_non_exist_b64}\")
             viztracer.attach.uninstall_attach()
-            print(viztracer.attach.attach_status.created_tracer, flush=True)
+            print(viztracer.attach.attach_status["created_tracer"], flush=True)
         """)
 
         self.template(["python", "cmdline_test.py"],

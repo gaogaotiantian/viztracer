@@ -8,7 +8,7 @@ try:
     class VizTracerMagics(Magics):
         @needs_local_scope
         @cell_magic
-        def viztracer(self, line, cell, local_ns) -> None:
+        def viztracer(self, line, cell, local_ns):
             from .viztracer import VizTracer
             from .viewer import ServerThread
             from IPython.display import display  # type: ignore
@@ -34,7 +34,7 @@ except ImportError:  # pragma: no cover
     pass
 
 
-def load_ipython_extension(ipython) -> None:
+def load_ipython_extension(ipython):
     """
     Use `%load_ext viztracer`
     """

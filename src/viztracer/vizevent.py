@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class VizEvent:
-    def __init__(self, tracer: "VizTracer", event_name: str, file_name: str, lineno: int) -> None:
+    def __init__(self, tracer: "VizTracer", event_name: str, file_name: str, lineno: int):
         self._tracer = tracer
         self.event_name = event_name
         self.file_name = file_name

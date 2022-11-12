@@ -8,7 +8,7 @@ import os
 import re
 import sys
 import textwrap
-from typing import Any, Callable, Dict, List, Sequence, Union, no_type_check
+from typing import Any, Callable, Dict, List, Sequence, Union
 
 from .viztracer import VizTracer
 
@@ -126,9 +126,8 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
     from multiprocessing.spawn import prepare
     import multiprocessing.spawn
 
-    @no_type_check
     @functools.wraps(multiprocessing.spawn._main)
-    def _main_3839(fd, parent_sentinel) -> Any:
+    def _main_3839(fd, parent_sentinel):
         with os.fdopen(fd, 'rb', closefd=True) as from_parent:
             process.current_process()._inheriting = True
             try:
@@ -141,9 +140,8 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
                 del process.current_process()._inheriting
         return self._bootstrap(parent_sentinel)
 
-    @no_type_check
     @functools.wraps(multiprocessing.spawn._main)
-    def _main_3637(fd) -> Any:
+    def _main_3637(fd):
         with os.fdopen(fd, 'rb', closefd=True) as from_parent:
             process.current_process()._inheriting = True
             try:

@@ -37,7 +37,7 @@ VizProcedureResult = Tuple[bool, Optional[str]]
 
 
 class VizUI:
-    def __init__(self) -> None:
+    def __init__(self):
         self.tracer: Optional[VizTracer] = None
         self.parser: argparse.ArgumentParser = self.create_parser()
         self.verbose: int = 1

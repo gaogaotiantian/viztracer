@@ -8,7 +8,7 @@ from .functree import FuncTree, FuncTreeNode
 
 
 class _FlameNode:
-    def __init__(self, parent: Optional["_FlameNode"], name: str) -> None:
+    def __init__(self, parent: Optional["_FlameNode"], name: str):
         self.name: str = name
         self.value: float = 0
         self.count: int = 0
@@ -25,7 +25,7 @@ class _FlameNode:
 
 
 class _FlameTree:
-    def __init__(self, func_tree: FuncTree) -> None:
+    def __init__(self, func_tree: FuncTree):
         self.root: _FlameNode = _FlameNode(None, "__root__")
         self.parse(func_tree)
 
@@ -36,7 +36,7 @@ class _FlameTree:
 
 
 class FlameGraph:
-    def __init__(self, trace_data: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, trace_data: Optional[Dict[str, Any]] = None):
         self.trees: Dict[str, _FlameTree] = {}
         if trace_data:
             self.parse(trace_data)
