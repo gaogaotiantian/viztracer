@@ -7,6 +7,7 @@ import lzma
 import os
 import tempfile
 import json
+import unittest
 from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj
@@ -215,51 +216,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
                                    vcompress_result, other_results, subtest_idx=subtest_idx)
 
 
-test_counter_events = """
-import threading
-import time
-import sys
-from viztracer import VizTracer, VizCounter
-
-tracer = VizTracer()
-tracer.start()
-
-class MyThreadSparse(threading.Thread):
-    def run(self):
-        counter = VizCounter(tracer, 'thread counter ' + str(self.ident))
-        counter.a = sys.maxsize - 1
-        time.sleep(0.01)
-        counter.a = sys.maxsize * 2
-        time.sleep(0.01)
-        counter.a = -sys.maxsize + 2
-        time.sleep(0.01)
-        counter.a = -sys.maxsize * 2
-
-main_counter = VizCounter(tracer, 'main counter')
-thread1 = MyThreadSparse()
-thread2 = MyThreadSparse()
-main_counter.arg1 = 100.01
-main_counter.arg2 = -100.01
-main_counter.arg3 = 0.0
-
-thread1.start()
-thread2.start()
-
-threads = [thread1, thread2]
-
-for thread in threads:
-    thread.join()
-
-main_counter.arg1 = 200.01
-main_counter.arg2 = -200.01
-
-tracer.stop()
-tracer.save(output_file='%s')
-"""
-
-
-class TestVCompressorCorrectness(CmdlineTmpl):
-
+class VCompressorCompare(unittest.TestCase):
     def assertCounterEventsEqual(self, first: list, second: list, ts_margin: float):
         """
         This method is used to assert if two lists of counter events are equal,
@@ -290,6 +247,52 @@ class TestVCompressorCorrectness(CmdlineTmpl):
             else:
                 self.assertEqual(value, second[key], f"{key} is not equal")
 
+
+test_counter_events = """
+import threading
+import time
+import sys
+from viztracer import VizTracer, VizCounter
+
+tracer = VizTracer()
+tracer.start()
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        counter = VizCounter(tracer, 'thread counter ' + str(self.ident))
+        counter.a = sys.maxsize - 1
+        time.sleep(0.01)
+        counter.a = sys.maxsize * 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize + 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize * 2
+
+main_counter = VizCounter(tracer, 'main counter')
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+main_counter.arg1 = 100.01
+main_counter.arg2 = -100.01
+main_counter.arg3 = 0.0
+delattr(main_counter, \"arg3\")
+
+thread1.start()
+thread2.start()
+
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+
+main_counter.arg1 = 200.01
+main_counter.arg2 = -200.01
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
+class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
     def test_file_info(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cvf_path = os.path.join(tmpdir, "result.cvf")

@@ -178,6 +178,11 @@ int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
     *      1.1: {"a": 20, "b": 10}
     *      2.2: {"a": 30, "b": 10}
     *  }
+    *  In this case, "b" value is not changed, so we only need to log
+    *  {
+    *      1.1: {"a": 20, "b": 10}
+    *      2.2: {"a": 30}
+    *  }
     */
     PyObject* cached_args_dict = PyDict_New();
     PyObject* diffed_args = PyDict_New();
@@ -223,6 +228,14 @@ int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
                     PyDict_SetItem(cached_args_dict, counter_arg_key, counter_arg_value);
                     PyDict_SetItem(cur_diffed_arg, counter_arg_key, counter_arg_value);
                 }
+            }
+        }
+        ppos = 0;
+        while (PyDict_Next(cached_args_dict, &ppos, &counter_arg_key, &cached_arg_value)) {
+            counter_arg_value = PyDict_GetItem(cur_counter_arg, counter_arg_key);
+            if (!counter_arg_value && cached_arg_value != Py_None) {
+                PyDict_SetItem(cached_args_dict, counter_arg_key, Py_None);
+                PyDict_SetItem(cur_diffed_arg, counter_arg_key, Py_None);
             }
         }
         PyDict_SetItem(diffed_args, ts, cur_diffed_arg);
@@ -275,6 +288,8 @@ int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
                 double counter_value_double = PyFloat_AsDouble(counter_arg_value);
                 fputc(VC_HEADER_COUNTER_ARG_FLOAT, fptr);
                 fwrite(&counter_value_double, sizeof(double), 1, fptr);
+            } else if(counter_arg_value == Py_None) {
+                fputc(VC_HEADER_COUNTER_ARG_NOT_KNOW, fptr);
             } else{
                 PyErr_SetString(PyExc_ValueError, "Counter can only take numeric values");
                 goto clean_exit;
@@ -352,9 +367,12 @@ load_counter_event(FILE* fptr)
             // so we need to read it from file and save it in cached_args
             switch (header)
             {
+                case VC_HEADER_COUNTER_ARG_NOT_KNOW:
+                    PyDict_SetItem(cached_args, counter_arg_key, Py_None);
+                    break;
                 case VC_HEADER_COUNTER_ARG_NOT_CHANGE:
                     counter_arg_value = PyDict_GetItem(cached_args, counter_arg_key);
-                    if (counter_arg_value) {
+                    if (counter_arg_value && counter_arg_value != Py_None) {
                         PyDict_SetItem(current_arg, counter_arg_key, counter_arg_value);
                     }
                     break;
