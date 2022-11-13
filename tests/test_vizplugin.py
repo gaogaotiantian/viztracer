@@ -78,7 +78,8 @@ class TestVizPlugin(CmdlineTmpl):
         with redirect_stdout(s):
             with VizTracer(plugins=[pl], verbose=0):
                 _ = []
-        self.assertIn("support version is higher", s.getvalue())
+        output = s.getvalue()
+        self.assertEqual(output.count("support version is higher"), 1)
 
     def test_cmdline(self):
         self.template(["viztracer", "--plugin", "tests.modules.dummy_vizplugin", "--", "cmdline_test.py"])
