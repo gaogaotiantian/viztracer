@@ -272,7 +272,7 @@ int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
         PyErr_SetString(PyExc_ValueError, "failed to get arg name list");
         goto clean_exit;
     }
-    // wrting all the name for all arguments appeared
+    // write all the name for all arguments appeared
     for (uint64_t i = 0; i < arg_nums; i++) {
         const char * key_name = NULL;
         counter_arg_key = PyList_GetItem(arg_key_list, i);
