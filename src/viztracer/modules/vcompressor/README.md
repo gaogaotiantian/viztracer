@@ -14,10 +14,11 @@ A one-byte header indicating the following data type
 0x03 - Thread name
 0x04 - count event
 0x11 - File info
-0x21 - counter arg didn't change
-0x22 - counter arg is long type and not overflowed
-0x23 - counter arg is float type
-0x24 - counter arg is long type and overflowed
+0x21 - counter arg unknown
+0x22 - counter arg is the same with last timestamp
+0x23 - counter arg is long type and not overflowed
+0x24 - counter arg is float type
+0x25 - counter arg is long type and overflowed
 
 
 #### str
