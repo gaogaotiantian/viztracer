@@ -6,6 +6,8 @@ import logging
 import lzma
 import os
 import tempfile
+import json
+import unittest
 from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj
@@ -212,3 +214,130 @@ class TestVCompressorPerformance(CmdlineTmpl):
                 vcompress_result = self._benchmark_vcompressor(path)
                 self._print_result(filename, original_size,
                                    vcompress_result, other_results, subtest_idx=subtest_idx)
+
+
+class VCompressorCompare(unittest.TestCase):
+    def assertCounterEventsEqual(self, first: list, second: list, ts_margin: float):
+        """
+        This method is used to assert if two lists of counter events are equal,
+        first and second are the two lists that we compare,
+        ts_margin is the max timestamps diff that we tolerate.
+        The timestamps may changed before/after the compression for more effective compression
+        """
+        self.assertEqual(len(first), len(second),
+                         f"list length not equal, first is {len(first)} \n second is {len(second)}")
+        first.sort(key=lambda i: i["ts"])
+        second.sort(key=lambda i: i["ts"])
+        for i in range(len(first)):
+            self.assertEventEqual(first[i], second[i], ts_margin)
+
+    def assertEventEqual(self, first: dict, second: dict, ts_margin: float):
+        """
+        This method is used to assert if two events are equal,
+        first and second are the two events that we compare,
+        ts_margin is the max timestamps diff that we tolerate.
+        The timestamps may changed before/after the compression for more effective compression
+        """
+        self.assertEqual(len(first), len(second),
+                         f"event length not equal, first is: \n {str(first)} \n second is: \n {str(second)}")
+        for key, value in first.items():
+            if key in ["ts", "dur"]:
+                self.assertGreaterEqual(ts_margin, abs(value - second[key]),
+                                        f"{key} diff is greater than margin")
+            else:
+                self.assertEqual(value, second[key], f"{key} is not equal")
+
+
+test_counter_events = """
+import threading
+import time
+import sys
+from viztracer import VizTracer, VizCounter
+
+tracer = VizTracer()
+tracer.start()
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        counter = VizCounter(tracer, 'thread counter ' + str(self.ident))
+        counter.a = sys.maxsize - 1
+        time.sleep(0.01)
+        counter.a = sys.maxsize * 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize + 2
+        time.sleep(0.01)
+        counter.a = -sys.maxsize * 2
+
+main_counter = VizCounter(tracer, 'main counter')
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+main_counter.arg1 = 100.01
+main_counter.arg2 = -100.01
+main_counter.arg3 = 0.0
+delattr(main_counter, \"arg3\")
+
+thread1.start()
+thread2.start()
+
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+
+main_counter.arg1 = 200.01
+main_counter.arg2 = -200.01
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
+class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
+    def test_file_info(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "result.json")
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
+                expected_output_file=cvf_path, cleanup=False
+            )
+            self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
+                expected_output_file=dup_json_path, cleanup=False
+            )
+
+            with open(get_tests_data_file_path("multithread.json"), "r") as f:
+                origin_json_data = json.load(f)
+            with open(dup_json_path, "r") as f:
+                dup_json_data = json.load(f)
+
+            self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
+
+    def test_counter_events(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            origin_json_path = os.path.join(tmpdir, "result.json")
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "recovery.json")
+            run_script = test_counter_events % (origin_json_path.replace("\\", "/"))
+            self.template(
+                ["python", "cmdline_test.py"], script=run_script, cleanup=False,
+                expected_output_file=origin_json_path
+            )
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", origin_json_path],
+                expected_output_file=cvf_path, cleanup=False
+            )
+            self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
+                expected_output_file=dup_json_path, cleanup=False
+            )
+
+            with open(origin_json_path, "r") as f:
+                origin_json_data = json.load(f)
+            with open(dup_json_path, "r") as f:
+                dup_json_data = json.load(f)
+
+            origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
+            dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
+
+            self.assertCounterEventsEqual(origin_counter_events, dup_counter_events, 0.01)

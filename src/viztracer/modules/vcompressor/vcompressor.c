@@ -26,6 +26,7 @@ parse_trace_events(PyObject* trace_events)
 {
     PyObject* parsed_events = NULL;
     PyObject* fee_events = NULL;
+    PyObject* counter_events = NULL;
     PyObject* process_names = NULL;
     PyObject* thread_names = NULL;
     PyObject* key = NULL;
@@ -37,14 +38,17 @@ parse_trace_events(PyObject* trace_events)
     // Initialize the event holder
     parsed_events = PyDict_New();
     fee_events = PyDict_New();
+    counter_events = PyDict_New();
     process_names = PyDict_New();
     thread_names = PyDict_New();
     PyDict_SetItemString(parsed_events, "fee_events", fee_events);
     PyDict_SetItemString(parsed_events, "process_names", process_names);
     PyDict_SetItemString(parsed_events, "thread_names", thread_names);
+    PyDict_SetItemString(parsed_events, "counter_events", counter_events);
     Py_DECREF(fee_events);
     Py_DECREF(process_names);
     Py_DECREF(thread_names);
+    Py_DECREF(counter_events);
 
     for (Py_ssize_t i = 0; i < PyList_GET_SIZE(trace_events); i++) {
         PyObject* event = PyList_GetItem(trace_events, i);
@@ -55,7 +59,9 @@ parse_trace_events(PyObject* trace_events)
         PyObject* tid = NULL;
         PyObject* ts = NULL;
         PyObject* dur = NULL;
+        PyObject* counter_args = NULL;
         PyObject* event_ts_list = NULL;
+        PyObject* counter_event_dict = NULL;
         if (PyErr_Occurred() || !PyDict_CheckExact(event)) {
             PyErr_SetString(PyExc_ValueError, "event format failure");
             goto clean_exit;
@@ -129,6 +135,40 @@ parse_trace_events(PyObject* trace_events)
                 }
                 Py_DECREF(id_key);
                 break;
+            // Counter Event
+            // {"pid": 852, "tid": 852, "ts": 358802972.1, "ph": "C", "name": "counter name", "args": {"a": 20, "b": 10}}
+            case 'C':
+                name = PyDict_GetItemString(event, "name");
+                pid = PyDict_GetItemString(event, "pid");
+                tid = PyDict_GetItemString(event, "tid");
+                ts = PyDict_GetItemString(event, "ts");
+                if (!ts || !name || !pid || !tid) {
+                    PyErr_SetString(PyExc_ValueError, "event format failure");
+                    goto clean_exit;
+                }
+                counter_args = PyDict_GetItemString(event, "args");
+                PyObject* counter_id_key = PyTuple_New(3);
+                // counter_id_key steals the reference, so we need to call Py_INCREF here
+                Py_INCREF(name);
+                Py_INCREF(pid);
+                Py_INCREF(tid);
+                PyTuple_SetItem(counter_id_key, 0, pid);
+                PyTuple_SetItem(counter_id_key, 1, tid);
+                PyTuple_SetItem(counter_id_key, 2, name);
+                if (!PyDict_Contains(counter_events, counter_id_key)){
+                    counter_event_dict = PyDict_New();
+                    PyDict_SetItem(counter_events, counter_id_key, counter_event_dict);
+                    Py_DECREF(counter_event_dict);
+                } else {
+                    counter_event_dict = PyDict_GetItem(counter_events, counter_id_key);
+                }
+                Py_DECREF(counter_id_key);
+                if (PyDict_Contains(counter_event_dict, ts)){
+                    PyErr_SetString(PyExc_ValueError, "event format failure, reason: same counter event timestamp");
+                    goto clean_exit;
+                }
+                PyDict_SetItem(counter_event_dict, ts, counter_args);
+                break;
         }
     }
 
@@ -186,7 +226,9 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     } 
     Py_INCREF(parsed_events);
 
-    dump_parsed_trace_events(parsed_events, fptr);
+    if (dump_parsed_trace_events(parsed_events, fptr) != 0){
+        goto clean_exit;
+    }
 
     // file_info here is a borrowed reference
     file_info = PyDict_GetItemString(raw_data, "file_info");
