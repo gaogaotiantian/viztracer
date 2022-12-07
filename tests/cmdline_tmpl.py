@@ -124,9 +124,9 @@ class CmdlineTmpl(BaseTmpl):
             if expected_output_file:
                 if type(expected_output_file) is list:
                     for f in expected_output_file:
-                        self.assertTrue(os.path.exists(f))
+                        self.assertFileExists(f)
                 elif type(expected_output_file) is str:
-                    self.assertTrue(os.path.exists(expected_output_file))
+                    self.assertFileExists(expected_output_file)
 
             if expected_entries:
                 assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")

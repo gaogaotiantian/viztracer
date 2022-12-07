@@ -66,13 +66,13 @@ class TestVizTracerBasic(BaseTmpl):
     def test_run(self):
         snap = VizTracer(verbose=0)
         snap.run("import random; random.randrange(10)", output_file="test_run.json")
-        self.assertTrue(os.path.exists("test_run.json"))
+        self.assertFileExists("test_run.json")
         os.remove("test_run.json")
 
     def test_with(self):
         with VizTracer(output_file="test_with.json", verbose=0) as _:
             fib(10)
-        self.assertTrue(os.path.exists("test_with.json"))
+        self.assertFileExists("test_with.json")
         os.remove("test_with.json")
 
         had_exception = False
@@ -81,7 +81,7 @@ class TestVizTracerBasic(BaseTmpl):
                 _ = 1 / 0
         except ZeroDivisionError:
             had_exception = True
-        self.assertTrue(os.path.exists("test_with.json"))
+        self.assertFileExists("test_with.json")
         os.remove("test_with.json")
         self.assertTrue(had_exception)
 
@@ -105,7 +105,7 @@ class TestVizTracerBasic(BaseTmpl):
                 tracer.start()
                 fib(5)
                 tracer.save(path)
-                self.assertTrue(os.path.exists(path))
+                self.assertFileExists(path)
 
 
 class TestInstant(BaseTmpl):
