@@ -28,7 +28,7 @@ class TestRemote(CmdlineTmpl):
         os.kill(os.getpid(), signal.SIGUSR1)
         time.sleep(0.1)
         os.kill(os.getpid(), signal.SIGUSR2)
-        self.assertTrue(os.path.exists("remote.json"))
+        self.assertFileExists("remote.json")
         os.remove("remote.json")
 
     @unittest.skipIf(sys.platform == "win32", "Does not support on Windows")

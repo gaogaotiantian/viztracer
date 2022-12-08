@@ -19,5 +19,5 @@ class TestJupyter(BaseTmpl):
         ip = self.start_ipython()
         ip.magic("load_ext viztracer")
         ip.run_cell_magic(magic_name="viztracer", line="", cell="print(1)")
-        self.assertTrue(os.path.exists("./viztracer_report.json"))
+        self.assertFileExists("./viztracer_report.json")
         os.remove("./viztracer_report.json")
