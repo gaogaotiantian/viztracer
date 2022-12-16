@@ -13,6 +13,7 @@ A one-byte header indicating the following data type
 0x02 - Process name
 0x03 - Thread name
 0x04 - count event
+0x05 - instant event
 0x11 - File info
 0x21 - counter arg unknown
 0x22 - counter arg is the same with last timestamp

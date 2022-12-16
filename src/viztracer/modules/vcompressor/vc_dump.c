@@ -38,6 +38,30 @@
     fputc('\0', fptr);                                                       \
 }
 
+#define GET_JSON_DUMPS_FUNC(func)                                            \
+{                                                                            \
+    if (!json_dumps_func) {                                                  \
+        json_dumps_func = PyObject_GetAttrString(json_module, "dumps");      \
+        func = json_dumps_func;                                              \
+    } else {                                                                 \
+        func = json_dumps_func;                                              \
+        Py_INCREF(func);                                                     \
+    }                                                                        \
+}                                                                            \
+
+
+#define GET_JSON_LOADS_FUNC(func)                                            \
+{                                                                            \
+    if (!json_loads_func) {                                                  \
+        json_loads_func = PyObject_GetAttrString(json_module, "loads");      \
+        func = json_loads_func;                                              \
+    } else {                                                                 \
+        func = json_loads_func;                                              \
+        Py_INCREF(func);                                                     \
+    }                                                                        \
+}                                                                            \
+
+
 #define PEEK_DATA(ptr, type, fptr)                                           \
 {                                                                            \
     size_t s = fread(ptr, sizeof(type), 1, fptr);                            \
@@ -117,6 +141,7 @@ clean_exit:
     return 0;
 }
 
+
 int freadstrn(char* buffer, int n, FILE* fptr) 
 {
     int c;
@@ -179,6 +204,7 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
     PyObject* thread_names   = PyDict_GetItemString(trace_events, "thread_names");
     PyObject* fee_events     = PyDict_GetItemString(trace_events, "fee_events");
     PyObject* counter_events = PyDict_GetItemString(trace_events, "counter_events");
+    PyObject* instant_events = PyDict_GetItemString(trace_events, "instant_events");
     Py_ssize_t ppos = 0;
     PyObject* key   = NULL;
     PyObject* value = NULL;
@@ -255,12 +281,164 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
             goto clean_exit;
         }
     }
+
+    // Iterate through instant events
+    ppos = 0;
+    while (PyDict_Next(instant_events, &ppos, &key, &value)) {
+        uint64_t pid = PyLong_AsLong(PyTuple_GetItem(key, 0));
+        uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
+        const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
+        char scope = PyUnicode_AsUTF8(PyTuple_GetItem(key, 3))[0];
+        fputc(VC_HEADER_INSTANT_EVENTS, fptr);
+        fwrite(&pid, sizeof(uint64_t), 1, fptr);
+        fwrite(&tid, sizeof(uint64_t), 1, fptr);
+        fwritestr(name, fptr);
+        fputc(scope, fptr);
+        if (write_instant_args(value, fptr) != 0) {
+            goto clean_exit;
+        }
+    }
 clean_exit:
     if (PyErr_Occurred()) {
         return 1;
     }
 
     return 0;
+}
+
+int write_instant_args(PyObject* instant_args, FILE* fptr){
+    PyObject * dumps_func = NULL;
+    PyObject * key        = NULL;
+    PyObject * value      = NULL;
+    PyObject * value_str  = NULL;
+    PyObject * dumps_arg  = NULL;
+    Py_ssize_t ppos   = 0;
+    uint64_t ts_count = 0;
+    uint64_t ts_64    = 0;
+
+    dumps_func = PyObject_GetAttrString(json_module, "dumps");
+    if (!dumps_func) {
+        goto clean_exit;
+    }
+    ts_count = PyDict_Size(instant_args);
+    fwrite(&ts_count, sizeof(uint64_t), 1, fptr);
+    while (PyDict_Next(instant_args, &ppos, &key, &value)) {
+        dumps_arg = PyTuple_New(1);
+        PyTuple_SetItem(dumps_arg, 0, value);
+        Py_INCREF(value);
+        value_str = PyObject_CallObject(dumps_func, dumps_arg);
+        Py_DECREF(dumps_arg);
+        if (!value_str) {
+            goto clean_exit;
+        }
+        ts_64 = PyFloat_AsDouble(key) * 1000;
+        fwrite(&ts_64, sizeof(uint64_t), 1, fptr);
+        fwritestr(PyUnicode_AsUTF8(value_str), fptr);
+        Py_DECREF(value_str);
+    }
+
+clean_exit:
+    Py_XDECREF(dumps_func);
+
+    if (PyErr_Occurred()) {
+        return 1;
+    }
+
+    return 0;
+}
+
+PyObject *
+load_instant_event(FILE* fptr) {
+    PyObject* instant_events_list = PyList_New(0);
+    PyObject* instant_cat    = PyUnicode_FromString("INSTANT");
+    PyObject* instant_ph     = PyUnicode_FromString("i");
+    PyObject* scope_t        = PyUnicode_FromString("t");
+    PyObject* scope_p        = PyUnicode_FromString("p");
+    PyObject* scope_g        = PyUnicode_FromString("g");
+    PyObject* instant_scope  = NULL;
+    PyObject* instant_tid    = NULL;
+    PyObject* instant_pid    = NULL;
+    PyObject* instant_name   = NULL;
+    PyObject* instant_arg    = NULL;
+    PyObject* instant_event  = NULL;
+    PyObject* loads_func     = NULL;
+    PyObject* loads_arg      = NULL;
+    uint64_t pid = 0;
+    uint64_t tid = 0;
+    uint64_t arg_count = 0;
+    uint64_t ts_64 = 0;
+    char* name = NULL;
+    char* arg_string = NULL;
+    char scope = 't';
+
+    loads_func = PyObject_GetAttrString(json_module, "loads");
+    if (!loads_func) {
+        goto clean_exit;
+    }
+
+    READ_DATA(&pid, uint64_t, fptr);
+    READ_DATA(&tid, uint64_t, fptr);
+    name = freadstr(fptr);
+    READ_DATA(&scope, char, fptr);
+    instant_name = PyUnicode_FromString(name);
+    instant_pid = PyLong_FromUnsignedLongLong(pid);
+    instant_tid = PyLong_FromUnsignedLongLong(tid); 
+    free(name);
+    switch (scope)
+    {
+        case 't':
+            instant_scope = scope_t;
+            break;
+        case 'p':
+            instant_scope = scope_p;
+            break;
+        case 'g':
+            instant_scope = scope_g;
+            break;
+        default:
+            PyErr_SetString(PyExc_RuntimeError, "invalid scope");
+            goto clean_exit;
+    }
+    READ_DATA(&arg_count, uint64_t, fptr);
+    for (uint64_t i = 0; i < arg_count; i++) {
+        instant_event = PyDict_New();
+        READ_DATA(&ts_64, uint64_t, fptr);
+        PyDict_SetItemStringDouble(instant_event, "ts", (double)ts_64 / 1000);
+        arg_string = freadstr(fptr);
+        loads_arg = PyTuple_New(1);
+        PyTuple_SetItem(loads_arg, 0, PyUnicode_FromString(arg_string));
+        free(arg_string);
+        instant_arg = PyObject_CallObject(loads_func, loads_arg);
+        Py_DECREF(loads_arg);
+        PyDict_SetItemString(instant_event, "s", instant_scope);
+        PyDict_SetItemString(instant_event, "name", instant_name);
+        PyDict_SetItemString(instant_event, "pid", instant_pid);
+        PyDict_SetItemString(instant_event, "tid", instant_tid);
+        PyDict_SetItemString(instant_event, "args", instant_arg);
+        Py_DECREF(instant_arg);
+        PyDict_SetItemString(instant_event, "cat", instant_cat);
+        PyDict_SetItemString(instant_event, "ph", instant_ph);
+        PyList_Append(instant_events_list, instant_event);
+        Py_DECREF(instant_event);
+    }
+
+clean_exit:
+    Py_XDECREF(instant_pid);
+    Py_XDECREF(instant_tid);
+    Py_XDECREF(instant_name);
+    Py_XDECREF(loads_func);
+    Py_DECREF(instant_cat);
+    Py_DECREF(instant_ph);
+    Py_DECREF(scope_t);
+    Py_DECREF(scope_p);
+    Py_DECREF(scope_g);
+
+    if (PyErr_Occurred()) {
+        Py_XDECREF(instant_events_list);
+        return NULL;
+    }
+
+    return instant_events_list;
 }
 
 int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
@@ -568,6 +746,7 @@ load_events_from_file(FILE* fptr)
     PyObject* name = NULL;
     PyObject* event = NULL;
     PyObject* counter_events = NULL;
+    PyObject* instant_events = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
     uint64_t count = 0;
@@ -675,6 +854,17 @@ load_events_from_file(FILE* fptr)
                 }
                 PyObject_CallMethod(trace_events, "extend", "O", counter_events);
                 Py_DECREF(counter_events);
+                if (PyErr_Occurred()) {
+                    goto clean_exit;
+                }
+                break;
+            case VC_HEADER_INSTANT_EVENTS:
+                instant_events = load_instant_event(fptr);
+                if (!instant_events) {
+                    goto clean_exit;
+                }
+                PyObject_CallMethod(trace_events, "extend", "O", instant_events);
+                Py_DECREF(instant_events);
                 if (PyErr_Occurred()) {
                     goto clean_exit;
                 }
