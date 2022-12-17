@@ -535,7 +535,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
             with open(dup_json_path, "r") as f:
                 dup_json_data = json.load(f)
 
-            origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "i"]
-            dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "i"]
+            origin_instant_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "i"]
+            dup_instant_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "i"]
 
-            self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+            self.assertEventsEqual(origin_instant_events, dup_instant_events, 0.01)
