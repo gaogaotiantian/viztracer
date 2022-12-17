@@ -761,6 +761,7 @@ load_file_info(FILE* fptr)
     unsigned char* compression_buffer = NULL;
     uint64_t compression_length = 0;
     uint64_t content_length = 0;
+    size_t read_length = 0;
     PyObject* file_info = NULL;
     PyObject* zlib_ret = NULL;
     PyObject* bytes_data = NULL;
@@ -788,7 +789,11 @@ load_file_info(FILE* fptr)
         PyErr_Format(PyExc_RuntimeError, "Failed to malloc memory size %lld", compression_length);
         goto clean_exit;
     }
-    fread(compression_buffer, sizeof(char), compression_length, fptr);
+    read_length = fread(compression_buffer, sizeof(char), compression_length, fptr);
+    if (read_length != compression_length) {
+        PyErr_SetString(PyExc_ValueError, "file is corrupted");
+        goto clean_exit;
+    }         
     bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
     free(compression_buffer);
     if (!bytes_data) {
