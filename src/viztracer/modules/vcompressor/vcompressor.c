@@ -176,12 +176,13 @@ parse_trace_events(PyObject* trace_events)
                     counter_event_dict = PyDict_GetItem(counter_events, counter_id_key);
                 }
                 Py_DECREF(counter_id_key);
-                if (PyDict_Contains(counter_event_dict, ts)){
+                if (PyDict_Contains(counter_event_dict, ts)) {
                     PyErr_SetString(PyExc_ValueError, "event format failure, reason: same counter event timestamp");
                     goto clean_exit;
                 }
                 PyDict_SetItem(counter_event_dict, ts, counter_args);
                 break;
+            // Instant Event
             // {"pid": 2696, "tid": 2698, "ts": 5749048304.8, "ph": "i", "cat": "INSTANT", "name": "name1", "args": {"a": "test"}, "s": "g"}
             case 'i':
                 scope = PyDict_GetItemString(event, "s");
@@ -211,7 +212,7 @@ parse_trace_events(PyObject* trace_events)
                     instant_event_dict = PyDict_GetItem(instant_events, instant_id_key);
                 }
                 Py_DECREF(instant_id_key);
-                if (PyDict_Contains(instant_event_dict, ts)){
+                if (PyDict_Contains(instant_event_dict, ts)) {
                     PyErr_SetString(PyExc_ValueError, "event format failure, reason: same counter event timestamp");
                     goto clean_exit;
                 }
@@ -274,14 +275,14 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     } 
     Py_INCREF(parsed_events);
 
-    if (dump_parsed_trace_events(parsed_events, fptr) != 0){
+    if (dump_parsed_trace_events(parsed_events, fptr) != 0) {
         goto clean_exit;
     }
 
     // file_info here is a borrowed reference
     file_info = PyDict_GetItemString(raw_data, "file_info");
-    if (file_info != NULL){
-        if (dump_file_info(file_info, fptr) != 0){
+    if (file_info != NULL) {
+        if (dump_file_info(file_info, fptr) != 0) {
             goto clean_exit;
         }
     }
@@ -333,7 +334,7 @@ clean_exit:
             Py_DECREF(parsed_events);
         }
 
-        Py_RETURN_NONE;
+        return NULL;
     }
 
     return parsed_events;

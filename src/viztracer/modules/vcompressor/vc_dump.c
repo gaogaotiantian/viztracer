@@ -306,7 +306,7 @@ clean_exit:
     return 0;
 }
 
-int write_instant_args(PyObject* instant_args, FILE* fptr){
+int write_instant_args(PyObject* instant_args, FILE* fptr) {
     PyObject * dumps_func = NULL;
     PyObject * key        = NULL;
     PyObject * value      = NULL;
@@ -410,12 +410,15 @@ load_instant_event(FILE* fptr) {
         free(arg_string);
         instant_arg = PyObject_CallObject(loads_func, loads_arg);
         Py_DECREF(loads_arg);
+        if (!instant_arg) {
+            goto clean_exit;
+        }
+        PyDict_SetItemString(instant_event, "args", instant_arg);
+        Py_DECREF(instant_arg);
         PyDict_SetItemString(instant_event, "s", instant_scope);
         PyDict_SetItemString(instant_event, "name", instant_name);
         PyDict_SetItemString(instant_event, "pid", instant_pid);
         PyDict_SetItemString(instant_event, "tid", instant_tid);
-        PyDict_SetItemString(instant_event, "args", instant_arg);
-        Py_DECREF(instant_arg);
         PyDict_SetItemString(instant_event, "cat", instant_cat);
         PyDict_SetItemString(instant_event, "ph", instant_ph);
         PyList_Append(instant_events_list, instant_event);
@@ -434,7 +437,7 @@ clean_exit:
     Py_DECREF(scope_g);
 
     if (PyErr_Occurred()) {
-        Py_XDECREF(instant_events_list);
+        Py_DECREF(instant_events_list);
         return NULL;
     }
 
