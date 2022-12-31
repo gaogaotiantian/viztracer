@@ -46,6 +46,10 @@ header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - 
 
 header(header) - compressed size(uint64) - uncompressed size(uint64) - compressed content
 
+### Instant Event
+
+header(header) - pid(pid) - tid(tid) - name(str) - scope(char) - timestamp count - [ts - json dumped value]*
+
 ### Count Event
 
 header(header) - pid(pid) - tid(tid) - name(str) - key count - [ keys ]* - timestamp count -[ts - variables]*
