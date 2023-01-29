@@ -4,6 +4,7 @@
 
 from viztracer import VizTracer
 from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
+from viztracer.util import pid_exists
 import base64
 import json
 import os
@@ -283,4 +284,7 @@ class TestAttachScript(CmdlineTmpl):
 @unittest.skipUnless(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
 class TestMacWarning(CmdlineTmpl):
     def test_mac_warning(self):
-        self.template(["viztracer", "--attach", "1234"], success=False, expected_stdout=".*Warning.*")
+        pid = 12345
+        while pid_exists(pid):
+            pid += 1
+        self.template(["viztracer", "--attach", str(pid)], success=False, expected_stdout=".*Warning.*")
