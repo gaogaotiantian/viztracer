@@ -52,6 +52,7 @@ parse_trace_events(PyObject* trace_events)
     Py_DECREF(process_names);
     Py_DECREF(thread_names);
     Py_DECREF(counter_events);
+    Py_DECREF(instant_events);
 
     for (Py_ssize_t i = 0; i < PyList_GET_SIZE(trace_events); i++) {
         PyObject* event = PyList_GetItem(trace_events, i);
