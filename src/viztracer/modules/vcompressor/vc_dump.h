@@ -15,6 +15,13 @@
 #define VC_HEADER_COUNTER_ARG_FLOAT 0x24
 #define VC_HEADER_COUNTER_ARG_LONG_STRING 0x25
 
+#define TS_6_BIT   0x00
+#define TS_14_BIT  0x40
+#define TS_32_BIT  0x80
+#define TS_64_BIT  0xC0
+
+void dump_delta_timestamp(uint64_t delta_ts, FILE* fptr);
+
 int dump_metadata(FILE* fptr);
 
 int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr);
