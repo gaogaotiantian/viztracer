@@ -170,6 +170,7 @@ if __name__ == "__main__":
 """
 
 file_pool = """
+import gc
 from multiprocessing import Process, Pool
 import os
 import time
@@ -179,6 +180,11 @@ def f(x):
 
 if __name__ == "__main__":
     process_num = 2
+    # gc seems to cause SegFault with multithreading
+    # Pool creates a couple of thread and it's failing the test
+    # https://github.com/python/cpython/issues/101975
+
+    gc.disable()
     with Pool(processes=process_num) as pool:
         print(pool.map(f, range(10)))
 
@@ -193,6 +199,7 @@ if __name__ == "__main__":
 
         multiple_results = [pool.apply_async(os.getpid, ()) for i in range(process_num)]
         print([res.get(timeout=1) for res in multiple_results])
+    gc.enable()
 """
 
 file_loky = """

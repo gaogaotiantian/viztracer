@@ -27,8 +27,8 @@ int snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, P
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
 static PyObject* snaptrace_start(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_stop(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_pause(PyObject* self, PyObject* args);
-static PyObject* snaptrace_resume(PyObject* self, PyObject* args);
+static PyObject* snaptrace_pause(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_resume(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_load(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_dump(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_clear(TracerObject* self, PyObject* args);
@@ -575,9 +575,9 @@ snaptrace_stop(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_pause(PyObject* self, PyObject* args)
+snaptrace_pause(TracerObject* self, PyObject* args)
 {
-    if (curr_tracer->collecting) {
+    if (self->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
         struct ThreadInfo* info = get_thread_info((TracerObject*)self);
 
@@ -597,14 +597,14 @@ snaptrace_pause(PyObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_resume(PyObject* self, PyObject* args)
+snaptrace_resume(TracerObject* self, PyObject* args)
 {
-    if (curr_tracer->collecting) {
+    if (self->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
-        struct ThreadInfo* info = get_thread_info((TracerObject*)self);
+        struct ThreadInfo* info = get_thread_info(self);
 
         if (info->paused) {
-            PyEval_SetProfile(snaptrace_tracefunc, self);
+            PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
             // When we enter this function, viztracer.pause and
             // tracer.pause both have been called but not recorded.
             // It seems like C function tracer.pause's return will not
@@ -823,6 +823,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
         }
         clear_node(node);
         PyList_Append(lst, dict);
+        Py_DECREF(dict);
         curr = curr + 1;
         if (curr == self->buffer + self->buffer_size) {
             curr = self->buffer;
@@ -1003,6 +1004,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             if (arg_dict) {
                 fprintf(fptr, ",\"args\":");
                 fprintjson(fptr, arg_dict);
+                Py_DECREF(arg_dict);
             }
             break;
         case INSTANT_NODE:
@@ -1042,6 +1044,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "tid", py_tid);
             fprintjson(fptr, dict);
             fputc(',', fptr);
+            Py_DECREF(py_pid);
             Py_DECREF(py_tid);
             break;
         default:
@@ -1068,6 +1071,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
                     pid, PyUnicode_AsUTF8(tid_repr), PyUnicode_AsUTF8(value));
             Py_DECREF(tid_repr);
         }
+        Py_DECREF(task_dict);
     }
 
     self->buffer_tail_idx = self->buffer_head_idx;
@@ -1435,7 +1439,7 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 
     // Otherwise, we need to create thread info.
 
-    info = calloc(1, sizeof(struct ThreadInfo));
+    info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
     info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
 
 #if _WIN32  
@@ -1538,6 +1542,7 @@ static void snaptrace_threaddestructor(void* key) {
         info->stack_top = NULL;
         info->curr_task = NULL;
         info->curr_task_frame = NULL;
+        PyMem_FREE(info);
     }
 }
 
@@ -1636,10 +1641,17 @@ Tracer_dealloc(TracerObject* self)
     // This is important to keep REFCNT normal
     if (setprofile != Py_None) {
         PyObject* tuple = PyTuple_New(1);
+        PyObject* result = NULL;
+
         PyTuple_SetItem(tuple, 0, Py_None);
-        if (PyObject_CallObject(setprofile, tuple) == NULL) {
+        Py_INCREF(Py_None);
+
+        result = PyObject_CallObject(setprofile, tuple);
+        if (result == NULL) {
             perror("Failed to call threading.setprofile() properly dealloc");
             exit(-1);
+        } else {
+            Py_DECREF(result);
         }
         Py_DECREF(tuple);
     }
