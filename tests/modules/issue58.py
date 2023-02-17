@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from multiprocessing import Pool
+import gc
 
 
 def pool_worker(item):
@@ -15,4 +16,10 @@ def pool_indexer(path):
             item_count = item_count + 1
 
 
+# gc seems to cause SegFault with multithreading
+# Pool creates a couple of thread and it's failing the test
+# https://github.com/python/cpython/issues/101975
+
+gc.disable()
 pool_indexer(10)
+gc.enable()
