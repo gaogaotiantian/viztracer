@@ -38,6 +38,57 @@
     fputc('\0', fptr);                                                       \
 }
 
+#define READ_ENCODED_INT64(num, fptr)                                        \
+{                                                                            \
+    uint8_t flag = 0;                                                        \
+    READ_DATA(&flag, uint8_t, fptr);                                         \
+    switch (flag & 0xC0)                                                     \
+    {                                                                        \
+    case TS_6_BIT:                                                           \
+        num = flag & 0x3F;                                                   \
+        break;                                                               \
+    case TS_14_BIT:                                                          \
+        uint8_t encoded_int_low;                                             \
+        READ_DATA(&encoded_int_low, uint8_t, fptr);                          \
+        num = ((flag & 0x3F) << 8) | encoded_int_low;                        \
+        break;                                                               \
+    case TS_32_BIT:                                                          \
+        uint32_t encoded_int_32;                                             \
+        READ_DATA(&encoded_int_32, uint32_t, fptr);                          \
+        num = encoded_int_32;;                                               \
+        break;                                                               \
+    case TS_64_BIT:                                                          \
+        uint64_t encoded_int_64;                                             \
+        READ_DATA(&encoded_int_64, uint64_t, fptr);                          \
+        num = encoded_int_64;                                                \
+        break;                                                               \
+    default:                                                                 \
+        printf("shouldn't be here!!!");                                      \
+        break;                                                               \
+    }                                                                        \
+}                                                                            \
+
+#define WRITE_ENDOCED_INT64(dump_int, fptr)                                  \
+{                                                                            \
+    if((dump_int & 0x3F) == dump_int){                                       \
+        uint8_t encoded_ts = TS_6_BIT | dump_int;                            \
+        fputc(encoded_ts, fptr);                                             \
+    } else if ((dump_int & 0x3FFF) == dump_int)                              \
+    {                                                                        \
+        uint8_t encoded_ts_high = TS_14_BIT | (dump_int >> 8);               \
+        uint8_t encoded_ts_low = 0xFF & dump_int;                            \
+        fputc(encoded_ts_high, fptr);                                        \
+        fputc(encoded_ts_low, fptr);                                         \
+    } else if ((dump_int & 0xFFFFFFFF) == dump_int){                         \
+        uint32_t encoded_ts = dump_int;                                      \
+        fputc(TS_32_BIT, fptr);                                              \
+        fwrite(&encoded_ts, sizeof(uint32_t), 1, fptr);                      \
+    } else {                                                                 \
+        fputc(TS_64_BIT, fptr);                                              \
+        fwrite(&dump_int, sizeof(uint64_t), 1, fptr);                        \
+    }                                                                        \
+}                                                                            \
+
 int freadstrn(char* buffer, int n, FILE* fptr) 
 {
     int c;
@@ -93,62 +144,6 @@ int dump_metadata(FILE* fptr)
     return 0;
 }
 
-void dump_encoded_int(uint64_t delta_ts, FILE* fptr){
-    if((delta_ts & 0x3F) == delta_ts){
-        unsigned char encoded_ts = TS_6_BIT | delta_ts;
-        fputc(encoded_ts, fptr);
-        cnt_6_bit_cnt += 1;
-    } else if ((delta_ts & 0x3FFF) == delta_ts)
-    {
-        unsigned char encoded_ts_high = TS_14_BIT | (delta_ts >> 8);
-        unsigned char encoded_ts_low = 0xFF & delta_ts;
-        fputc(encoded_ts_high, fptr);
-        fputc(encoded_ts_low, fptr);
-        cnt_14_bit_cnt += 1;
-    } else if ((delta_ts & 0xFFFFFFFF) == delta_ts){
-        uint32_t encoded_ts = delta_ts;
-        fputc(TS_32_BIT, fptr);
-        fwrite(&encoded_ts, sizeof(uint32_t), 1, fptr);
-        cnt_32_bit_cnt += 1;
-    } else {
-        fputc(TS_64_BIT, fptr);
-        fwrite(&delta_ts, sizeof(uint64_t), 1, fptr);
-        cnt_64_bit_cnt += 1;
-    }
-}
-
-int32_t load_encoded_int(uint64_t * out_encoded_int, FILE* fptr){
-    uint8_t flag = 0;
-    READ_DATA(&flag, uint8_t, fptr);
-    switch (flag & 0xC0)
-    {
-    case TS_6_BIT:
-        (*out_encoded_int) = flag & 0x3F;
-        break;
-    case TS_14_BIT:
-        uint8_t encoded_int_low;
-        READ_DATA(&encoded_int_low, uint8_t, fptr);
-        (*out_encoded_int) = ((flag & 0x3F) << 8) | encoded_int_low;
-        break;
-    case TS_32_BIT:
-        uint32_t encoded_int_32;
-        READ_DATA(&encoded_int_32, uint32_t, fptr);
-        (*out_encoded_int) = encoded_int_32;;
-        break;
-    case TS_64_BIT:
-        uint64_t encoded_int_64;
-        READ_DATA(&encoded_int_64, uint64_t, fptr);
-        (*out_encoded_int) = encoded_int_64;
-        break;
-    default:
-        printf("shouldn't be here!!!");
-        break;
-    }
-    return 0;
-clean_exit:
-    return 1;
-}
-
 int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
 {
     // Dump process and thread names
@@ -191,8 +186,8 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
         const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
         uint64_t ts_size = PyDict_Size(value);
+        uint64_t ts_cache = 0;
         PyObject* ts_keys = PyDict_Keys(value);
-        double ts_cache = 0;
         fputc(VC_HEADER_FEE, fptr);
         fwrite(&pid, sizeof(uint64_t), 1, fptr);
         fwrite(&tid, sizeof(uint64_t), 1, fptr);
@@ -205,17 +200,16 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         if (PyList_Sort(ts_keys) == -1) {
             goto clean_exit;
         }
-        printf("%ld\n", ts_size);
         for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size; idx++) {
             PyObject * ts_obj = PyList_GET_ITEM(ts_keys, idx);
             double ts = PyFloat_AsDouble(ts_obj);
             double dur = PyFloat_AsDouble(PyDict_GetItem(value, ts_obj));
-            double delta_ts = ts - ts_cache;
-            ts_cache = ts;
-            uint64_t ts64 = delta_ts * 1000;
-            uint64_t dur64 = dur * 1000;
-            dump_encoded_int(ts64, fptr);
-            dump_encoded_int(dur64, fptr);
+            uint64_t ts64 = ts * 100;
+            uint64_t dur64 = dur * 100;
+            uint64_t delta_ts = ts64 - ts_cache;
+            ts_cache = ts64;
+            WRITE_ENDOCED_INT64(delta_ts, fptr);
+            WRITE_ENDOCED_INT64(dur64, fptr);
         }
     }
 
@@ -551,6 +545,7 @@ load_events_from_file(FILE* fptr)
     uint64_t count = 0;
     uint64_t ts = 0;
     uint64_t dur = 0;
+    uint64_t ts_cache = 0;
     PyObject* args = NULL;
     PyObject* unicode_X = PyUnicode_FromString("X");
     PyObject* unicode_M = PyUnicode_FromString("M");
@@ -611,17 +606,19 @@ load_events_from_file(FILE* fptr)
                 freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
                 READ_DATA(&count, uint64_t, fptr);
                 name = PyUnicode_FromString(buffer);
-                for (uint64_t i = 0; i < count / 2; i++) {
-                    READ_DATA(&ts, uint64_t, fptr);
-                    READ_DATA(&dur, uint64_t, fptr);
+                ts_cache = 0;
+                for (uint64_t i = 0; i < count; i++) {
+                    READ_ENCODED_INT64(ts, fptr);
+                    READ_ENCODED_INT64(dur, fptr);
                     event = PyDict_New();
                     PyDict_SetItemString(event, "ph", unicode_X);
                     PyDict_SetItemString(event, "name", name);
                     PyDict_SetItemString(event, "cat", unicode_FEE);
                     PyDict_SetItemStringULL(event, "pid", pid);
                     PyDict_SetItemStringULL(event, "tid", tid);
-                    PyDict_SetItemStringDouble(event, "ts", (double)ts / 1000);
-                    PyDict_SetItemStringDouble(event, "dur", (double)dur / 1000);
+                    ts_cache = ts + ts_cache;
+                    PyDict_SetItemStringDouble(event, "ts", (double)ts_cache / 100);
+                    PyDict_SetItemStringDouble(event, "dur", (double)dur / 100);
                     PyList_Append(trace_events, event);
                     Py_DECREF(event);
                 }
