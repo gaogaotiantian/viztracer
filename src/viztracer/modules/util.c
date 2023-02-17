@@ -20,6 +20,7 @@ void fprintjson(FILE* fptr, PyObject* obj)
     PyObject* json_dumps = PyObject_GetAttrString(json_module, "dumps");
     PyObject* call_args = PyTuple_New(1);
     PyTuple_SetItem(call_args, 0, obj);
+    Py_INCREF(obj);
     PyObject* args_str = PyObject_CallObject(json_dumps, call_args);
     fprintf(fptr, "%s", PyUnicode_AsUTF8(args_str));
     Py_DECREF(json_dumps);

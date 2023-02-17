@@ -1004,6 +1004,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             if (arg_dict) {
                 fprintf(fptr, ",\"args\":");
                 fprintjson(fptr, arg_dict);
+                Py_DECREF(arg_dict);
             }
             break;
         case INSTANT_NODE:
@@ -1070,6 +1071,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
                     pid, PyUnicode_AsUTF8(tid_repr), PyUnicode_AsUTF8(value));
             Py_DECREF(tid_repr);
         }
+        Py_DECREF(task_dict);
     }
 
     self->buffer_tail_idx = self->buffer_head_idx;
@@ -1639,10 +1641,17 @@ Tracer_dealloc(TracerObject* self)
     // This is important to keep REFCNT normal
     if (setprofile != Py_None) {
         PyObject* tuple = PyTuple_New(1);
+        PyObject* result = NULL;
+
         PyTuple_SetItem(tuple, 0, Py_None);
-        if (PyObject_CallObject(setprofile, tuple) == NULL) {
+        Py_INCREF(Py_None);
+
+        result = PyObject_CallObject(setprofile, tuple);
+        if (result == NULL) {
             perror("Failed to call threading.setprofile() properly dealloc");
             exit(-1);
+        } else {
+            Py_DECREF(result);
         }
         Py_DECREF(tuple);
     }
