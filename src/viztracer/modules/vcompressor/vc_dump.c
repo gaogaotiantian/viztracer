@@ -44,27 +44,27 @@
     READ_DATA(&flag, uint8_t, fptr);                                         \
     switch (flag & 0xC0)                                                     \
     {                                                                        \
-    case TS_6_BIT:                                                           \
-        num = flag & 0x3F;                                                   \
-        break;                                                               \
-    case TS_14_BIT:                                                          \
-        uint8_t encoded_int_low;                                             \
-        READ_DATA(&encoded_int_low, uint8_t, fptr);                          \
-        num = ((flag & 0x3F) << 8) | encoded_int_low;                        \
-        break;                                                               \
-    case TS_32_BIT:                                                          \
-        uint32_t encoded_int_32;                                             \
-        READ_DATA(&encoded_int_32, uint32_t, fptr);                          \
-        num = encoded_int_32;                                                \
-        break;                                                               \
-    case TS_64_BIT:                                                          \
-        uint64_t encoded_int_64;                                             \
-        READ_DATA(&encoded_int_64, uint64_t, fptr);                          \
-        num = encoded_int_64;                                                \
-        break;                                                               \
-    default:                                                                 \
-        printf("shouldn't be here!!!");                                      \
-        break;                                                               \
+        case TS_6_BIT:                                                       \
+            num = flag & 0x3F;                                               \
+            break;                                                           \
+        case TS_14_BIT:                                                      \
+            uint8_t encoded_int_low;                                         \
+            READ_DATA(&encoded_int_low, uint8_t, fptr);                      \
+            num = ((flag & 0x3F) << 8) | encoded_int_low;                    \
+            break;                                                           \
+        case TS_32_BIT:                                                      \
+            uint32_t encoded_int_32;                                         \
+            READ_DATA(&encoded_int_32, uint32_t, fptr);                      \
+            num = encoded_int_32;                                            \
+            break;                                                           \
+        case TS_64_BIT:                                                      \
+            uint64_t encoded_int_64;                                         \
+            READ_DATA(&encoded_int_64, uint64_t, fptr);                      \
+            num = encoded_int_64;                                            \
+            break;                                                           \
+        default:                                                             \
+            printf("shouldn't be here!!!");                                  \
+            break;                                                           \
     }                                                                        \
 }                                                                            \
 
