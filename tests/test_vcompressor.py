@@ -4,6 +4,7 @@
 
 import logging
 import lzma
+import zlib
 import os
 import tempfile
 import json
@@ -88,6 +89,22 @@ class TestVCompressor(CmdlineTmpl):
             )
             self.assertTrue(os.path.exists(default_decompress_output))
             self.cleanup(output_file=default_decompress_output)
+
+
+test_large_fib = """
+from viztracer import VizTracer
+tracer = VizTracer(tracer_entries=2000000)
+tracer.start()
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+fib(28)
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
 
 
 class TestVCompressorPerformance(CmdlineTmpl):
@@ -199,6 +216,36 @@ class TestVCompressorPerformance(CmdlineTmpl):
             with lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
                 copyfileobj(original_file, compressed_file)
 
+    @_benchmark
+    def _benchmark_zlib(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
+        with open(uncompressed_file_path, "rb") as original_file:
+            compressed_data = zlib.compress(original_file.read())
+        with open(compressed_file_path, "wb") as compressed_file:
+            compressed_file.write(compressed_data)
+
+    @_benchmark
+    def _benchmark_vcompressor_lzma(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
+        tmp_compress_file = uncompressed_file_path + ".tmp"
+        self.template(
+            ["viztracer", "-o", tmp_compress_file, "--compress", uncompressed_file_path],
+            expected_output_file=tmp_compress_file, script=None, cleanup=False
+        )
+        with open(tmp_compress_file, "rb") as tmp_file:
+            with lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
+                copyfileobj(tmp_file, compressed_file)
+
+    @_benchmark
+    def _benchmark_vcompressor_zlib(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
+        tmp_compress_file = uncompressed_file_path + ".tmp"
+        self.template(
+            ["viztracer", "-o", tmp_compress_file, "--compress", uncompressed_file_path],
+            expected_output_file=tmp_compress_file, script=None, cleanup=False
+        )
+        with open(tmp_compress_file, "rb") as tmp_file:
+            compressed_data = zlib.compress(tmp_file.read())
+        with open(compressed_file_path, "wb") as compressed_file:
+            compressed_file.write(compressed_data)
+
     def test_benchmark_basic(self):
         # More testcases can be added here
         testcases_filename = ["vdb_basic.json", "multithread.json"]
@@ -215,11 +262,31 @@ class TestVCompressorPerformance(CmdlineTmpl):
                 self._print_result(filename, original_size,
                                    vcompress_result, other_results, subtest_idx=subtest_idx)
 
+    def test_benchmark_large_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            origin_json_path = os.path.join(tmpdir, "large_fib.json")
+            run_script = test_large_fib % (origin_json_path.replace("\\", "/"))
+            self.template(
+                ["python", "cmdline_test.py"], script=run_script, cleanup=False,
+                expected_output_file=origin_json_path
+            )
+            original_size = os.path.getsize(origin_json_path)
+            other_results = [
+                ("LZMA", self._benchmark_lzma(origin_json_path)),
+                ("ZLIB", self._benchmark_zlib(origin_json_path)),
+                ("VC+LZMA", self._benchmark_vcompressor_lzma(origin_json_path)),
+                ("VC+ZLIB", self._benchmark_vcompressor_zlib(origin_json_path)),
+            ]
+            with self.subTest(testcase="large_fib.json"):
+                vcompress_result = self._benchmark_vcompressor(origin_json_path)
+                self._print_result("large_fib.json", original_size,
+                                   vcompress_result, other_results)
+
 
 class VCompressorCompare(unittest.TestCase):
-    def assertCounterEventsEqual(self, first: list, second: list, ts_margin: float):
+    def assertEventsEqual(self, first: list, second: list, ts_margin: float):
         """
-        This method is used to assert if two lists of counter events are equal,
+        This method is used to assert if two lists of events are equal,
         first and second are the two lists that we compare,
         ts_margin is the max timestamps diff that we tolerate.
         The timestamps may changed before/after the compression for more effective compression
@@ -313,6 +380,29 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
             self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
 
+    def test_fee(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cvf_path = os.path.join(tmpdir, "result.cvf")
+            dup_json_path = os.path.join(tmpdir, "result.json")
+            self.template(
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
+                expected_output_file=cvf_path, cleanup=False
+            )
+            self.template(
+                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
+                expected_output_file=dup_json_path, cleanup=False
+            )
+
+            with open(get_tests_data_file_path("multithread.json"), "r") as f:
+                origin_json_data = json.load(f)
+            with open(dup_json_path, "r") as f:
+                dup_json_data = json.load(f)
+
+            origin_fee_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
+            dup_fee_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
+
+            self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.01)
+
     def test_counter_events(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             origin_json_path = os.path.join(tmpdir, "result.json")
@@ -340,4 +430,4 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
             origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
             dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
 
-            self.assertCounterEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+            self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
