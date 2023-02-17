@@ -55,7 +55,7 @@
     case TS_32_BIT:                                                          \
         uint32_t encoded_int_32;                                             \
         READ_DATA(&encoded_int_32, uint32_t, fptr);                          \
-        num = encoded_int_32;;                                               \
+        num = encoded_int_32;                                                \
         break;                                                               \
     case TS_64_BIT:                                                          \
         uint64_t encoded_int_64;                                             \
