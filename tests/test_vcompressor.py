@@ -360,12 +360,13 @@ tracer.save(output_file='%s')
 
 
 class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
-    def test_file_info(self):
+
+    def _generate_test_data(self, test_file):
         with tempfile.TemporaryDirectory() as tmpdir:
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "result.json")
             self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
+                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path(test_file)],
                 expected_output_file=cvf_path, cleanup=False
             )
             self.template(
@@ -373,42 +374,18 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 expected_output_file=dup_json_path, cleanup=False
             )
 
-            with open(get_tests_data_file_path("multithread.json"), "r") as f:
+            with open(get_tests_data_file_path(test_file), "r") as f:
                 origin_json_data = json.load(f)
             with open(dup_json_path, "r") as f:
                 dup_json_data = json.load(f)
+        return origin_json_data, dup_json_data
 
-            self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
-
-    def test_fee(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            cvf_path = os.path.join(tmpdir, "result.cvf")
-            dup_json_path = os.path.join(tmpdir, "result.json")
-            self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
-                expected_output_file=cvf_path, cleanup=False
-            )
-            self.template(
-                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
-                expected_output_file=dup_json_path, cleanup=False
-            )
-
-            with open(get_tests_data_file_path("multithread.json"), "r") as f:
-                origin_json_data = json.load(f)
-            with open(dup_json_path, "r") as f:
-                dup_json_data = json.load(f)
-
-            origin_fee_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
-            dup_fee_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
-
-            self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.01)
-
-    def test_counter_events(self):
+    def _generate_test_data_by_script(self, run_script):
         with tempfile.TemporaryDirectory() as tmpdir:
             origin_json_path = os.path.join(tmpdir, "result.json")
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "recovery.json")
-            run_script = test_counter_events % (origin_json_path.replace("\\", "/"))
+            run_script = run_script % (origin_json_path.replace("\\", "/"))
             self.template(
                 ["python", "cmdline_test.py"], script=run_script, cleanup=False,
                 expected_output_file=origin_json_path
@@ -421,13 +398,44 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
                 expected_output_file=dup_json_path, cleanup=False
             )
-
             with open(origin_json_path, "r") as f:
                 origin_json_data = json.load(f)
             with open(dup_json_path, "r") as f:
                 dup_json_data = json.load(f)
+        return origin_json_data, dup_json_data
 
-            origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
-            dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
 
-            self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+    def test_file_info(self):
+        origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
+        self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
+
+    def test_fee(self):
+        origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
+        origin_fee_events = {}
+
+        # compare the data seperatly in different thread and process to avoid timestamp conflict
+        for event in origin_json_data["traceEvents"]:
+            if event["ph"] == "X":
+                event_key = (event["pid"], event["tid"])
+                if event_key not in origin_fee_events:
+                    origin_fee_events[event_key] = []
+                origin_fee_events[event_key].append(event)
+        
+        dup_fee_events = {}
+        for event in dup_json_data["traceEvents"]:
+            if event["ph"] == "X":
+                event_key = (event["pid"], event["tid"])
+                if event_key not in dup_fee_events:
+                    self.assertIn(event_key, origin_fee_events, f"thread data {str(event_key)} not in origin data")
+                    dup_fee_events[event_key] = []
+                dup_fee_events[event_key].append(event)
+
+        for key, value in origin_fee_events.items():
+            self.assertIn(key, dup_fee_events, f"thread data {str(key)} not in decompressed data")
+            self.assertEventsEqual(value, dup_fee_events[key], 0.01)
+
+    def test_counter_events(self):
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
+        origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
+        dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
+        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)

@@ -60,7 +60,8 @@ parse_trace_events(PyObject* trace_events)
         PyObject* ts = NULL;
         PyObject* dur = NULL;
         PyObject* counter_args = NULL;
-        PyObject* event_ts_dict = NULL;
+        PyObject* ts_dur_tuple = NULL;
+        PyObject* event_ts_list = NULL;
         PyObject* counter_event_dict = NULL;
         if (PyErr_Occurred() || !PyDict_CheckExact(event)) {
             PyErr_SetString(PyExc_ValueError, "event format failure");
@@ -94,14 +95,21 @@ parse_trace_events(PyObject* trace_events)
                 PyTuple_SetItem(key, 2, name);
 
                 if (!PyDict_Contains(fee_events, key)) {
-                    event_ts_dict = PyDict_New();
-                    PyDict_SetItem(fee_events, key, event_ts_dict);
-                    Py_DECREF(event_ts_dict);
+                    event_ts_list = PyList_New(0);
+                    PyDict_SetItem(fee_events, key, event_ts_list);
+                    Py_DECREF(event_ts_list);
                 } else {
-                    event_ts_dict = PyDict_GetItem(fee_events, key);
+                    event_ts_list = PyDict_GetItem(fee_events, key);
                 }
                 Py_DECREF(key);
-                PyDict_SetItem(event_ts_dict, ts, dur);
+                
+                ts_dur_tuple = PyTuple_New(2);
+                Py_INCREF(ts);
+                Py_INCREF(dur);
+                PyTuple_SetItem(ts_dur_tuple, 0, ts);
+                PyTuple_SetItem(ts_dur_tuple, 1, dur);
+                PyList_Append(event_ts_list, ts_dur_tuple);
+                Py_DECREF(ts_dur_tuple);
                 break;
             case 'M':
                 name = PyDict_GetItemString(event, "name");

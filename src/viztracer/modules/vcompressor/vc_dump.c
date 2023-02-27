@@ -38,56 +38,84 @@
     fputc('\0', fptr);                                                       \
 }
 
-#define READ_ENCODED_INT64(num, fptr)                                        \
+#define PEEK_DATA(ptr, type, fptr)                                           \
 {                                                                            \
-    uint8_t flag = 0;                                                        \
-    uint8_t encoded_int_low = 0;                                             \
-    uint32_t encoded_int_32 = 0;                                             \
-    uint64_t encoded_int_64 = 0;                                             \
-    READ_DATA(&flag, uint8_t, fptr);                                         \
-    switch (flag & 0xC0)                                                     \
-    {                                                                        \
-        case TS_6_BIT:                                                       \
-            num = flag & 0x3F;                                               \
-            break;                                                           \
-        case TS_14_BIT:                                                      \
-            READ_DATA(&encoded_int_low, uint8_t, fptr);                      \
-            num = ((flag & 0x3F) << 8) | encoded_int_low;                    \
-            break;                                                           \
-        case TS_32_BIT:                                                      \
-            READ_DATA(&encoded_int_32, uint32_t, fptr);                      \
-            num = encoded_int_32;                                            \
-            break;                                                           \
-        case TS_64_BIT:                                                      \
-            READ_DATA(&encoded_int_64, uint64_t, fptr);                      \
-            num = encoded_int_64;                                            \
-            break;                                                           \
-        default:                                                             \
-            printf("shouldn't be here!!!");                                  \
-            break;                                                           \
-    }                                                                        \
-}                                                                            \
-
-#define WRITE_ENDOCED_INT64(dump_int, fptr)                                  \
-{                                                                            \
-    if((dump_int & 0x3F) == dump_int){                                       \
-        uint8_t encoded_ts = TS_6_BIT | dump_int;                            \
-        fputc(encoded_ts, fptr);                                             \
-    } else if ((dump_int & 0x3FFF) == dump_int)                              \
-    {                                                                        \
-        uint8_t encoded_ts_high = TS_14_BIT | (dump_int >> 8);               \
-        uint8_t encoded_ts_low = 0xFF & dump_int;                            \
-        fputc(encoded_ts_high, fptr);                                        \
-        fputc(encoded_ts_low, fptr);                                         \
-    } else if ((dump_int & 0xFFFFFFFF) == dump_int){                         \
-        uint32_t encoded_ts = dump_int;                                      \
-        fputc(TS_32_BIT, fptr);                                              \
-        fwrite(&encoded_ts, sizeof(uint32_t), 1, fptr);                      \
+    size_t s = fread(ptr, sizeof(type), 1, fptr);                            \
+    if (s != 1) {                                                            \
+        PyErr_SetString(PyExc_ValueError, "file is corrupted");              \
+        goto clean_exit;                                                     \
     } else {                                                                 \
-        fputc(TS_64_BIT, fptr);                                              \
-        fwrite(&dump_int, sizeof(uint64_t), 1, fptr);                        \
+        fseek(fptr, -sizeof(type), SEEK_CUR);                                \
     }                                                                        \
-}                                                                            \
+}
+
+/*
+ * The write_encoded_int and read_encoded_int functions are used to compress
+ * and decompress timestamp. For a trace file, most of the data are ts and dur.
+ * So we sort the timestamp and only record diff of two between two contiguous
+ * timestamp. 
+ * 
+ * We use a 2-bit flag to indicate how many bytes can uint64_t data be fit in.
+ * For Windows, Mac and most of the Linux, the byte order is little-endian, 
+ * which means if we want to record 0X12345678. The data in file would be:
+ * 78 56 34 12
+ * To make it simple, we just move the data left 2 bits and put the flag at 
+ * the lowest position of the timestamp.
+ * 
+ * And the parsed timestamp is always less than 0x3FFFFFFFFFFFFFFF
+*/
+static inline void write_encoded_int(uint64_t num, FILE* fptr)
+{
+    if (num == (num & 0x3F)) {
+        uint8_t encoded_num = (num << 2) | TS_6_BIT;
+        fwrite(&encoded_num, sizeof(uint8_t), 1, fptr);
+    } else if (num == (num & 0x3FFF)) {
+        uint16_t encoded_num = (num << 2) | TS_14_BIT;
+        fwrite(&encoded_num, sizeof(uint16_t), 1, fptr);
+    } else if (num == (num & 0x3FFFFFFF)) {
+        uint32_t encoded_num = (num << 2) | TS_30_BIT;
+        fwrite(&encoded_num, sizeof(uint32_t), 1, fptr);
+    } else {
+        uint64_t encoded_num = (num << 2) | TS_62_BIT;
+        fwrite(&encoded_num, sizeof(uint64_t), 1, fptr);
+    }
+}
+
+static inline int read_encoded_int(uint64_t *num, FILE* fptr)
+{
+    uint8_t flag;
+    PEEK_DATA(&flag, uint8_t, fptr)
+    switch (flag & 0x03)
+    {
+        case TS_6_BIT:
+            uint8_t encoded_num_8_bit = 0;
+            READ_DATA(&encoded_num_8_bit, uint8_t, fptr)
+            (*num) = encoded_num_8_bit >> 2;
+            break;
+        case TS_14_BIT:
+            uint16_t encoded_num_16_bit = 0;
+            READ_DATA(&encoded_num_16_bit, uint16_t, fptr)
+            (*num) = encoded_num_16_bit >> 2;
+            break;        
+        case TS_30_BIT:
+            uint32_t encoded_num_32_bit = 0;
+            READ_DATA(&encoded_num_32_bit, uint32_t, fptr)
+            (*num) = encoded_num_32_bit >> 2;
+            break;
+        case TS_62_BIT:
+            uint64_t encoded_num_64_bit = 0;
+            READ_DATA(&encoded_num_64_bit, uint64_t, fptr)
+            (*num) = encoded_num_64_bit >> 2;
+            break;
+        default:
+            break;
+    }
+clean_exit:
+    if (PyErr_Occurred()) {
+        return 1;
+    }
+    return 0;
+}
 
 int freadstrn(char* buffer, int n, FILE* fptr) 
 {
@@ -185,31 +213,31 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         uint64_t pid = PyLong_AsLong(PyTuple_GetItem(key, 0));
         uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
         const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
-        uint64_t ts_size = PyDict_Size(value);
-        uint64_t ts_cache = 0;
-        PyObject* ts_keys = PyDict_Keys(value);
+        uint64_t ts_size = PyList_GET_SIZE(value);
+        int64_t last_ts = 0;
         fputc(VC_HEADER_FEE, fptr);
         fwrite(&pid, sizeof(uint64_t), 1, fptr);
         fwrite(&tid, sizeof(uint64_t), 1, fptr);
         fwritestr(name, fptr);
         fwrite(&ts_size, sizeof(uint64_t), 1, fptr);
-        if (!ts_keys || !PyList_Check(ts_keys)) {
-            PyErr_SetString(PyExc_ValueError, "failed to get timestamp list");
-            goto clean_exit;
-        }
-        if (PyList_Sort(ts_keys) == -1) {
+        if (!PyObject_CallMethod(value, "sort", NULL)) {
             goto clean_exit;
         }
         for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size; idx++) {
-            PyObject * ts_obj = PyList_GET_ITEM(ts_keys, idx);
-            double ts = PyFloat_AsDouble(ts_obj);
-            double dur = PyFloat_AsDouble(PyDict_GetItem(value, ts_obj));
-            uint64_t ts64 = ts * 100;
+            PyObject * event_ts_tuple = PyList_GET_ITEM(value, idx);
+            double ts = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 0));
+            double dur = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 1));
+            int64_t ts64 = ts * 100;
             uint64_t dur64 = dur * 100;
-            uint64_t delta_ts = ts64 - ts_cache;
-            ts_cache = ts64;
-            WRITE_ENDOCED_INT64(delta_ts, fptr);
-            WRITE_ENDOCED_INT64(dur64, fptr);
+            uint64_t delta_ts = ts64 - last_ts;
+            last_ts = ts64;
+            if (idx == 0) {
+                // write the first timestamp as int64_t, for timestamp on windows may be negative
+                fwrite(&ts64, sizeof(int64_t), 1, fptr);
+            } else {
+                write_encoded_int(delta_ts, fptr);
+            }
+            write_encoded_int(dur64, fptr);
         }
     }
 
@@ -545,7 +573,7 @@ load_events_from_file(FILE* fptr)
     uint64_t count = 0;
     uint64_t ts = 0;
     uint64_t dur = 0;
-    uint64_t ts_cache = 0;
+    int64_t last_ts = 0;
     PyObject* args = NULL;
     PyObject* unicode_X = PyUnicode_FromString("X");
     PyObject* unicode_M = PyUnicode_FromString("M");
@@ -606,18 +634,26 @@ load_events_from_file(FILE* fptr)
                 freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
                 READ_DATA(&count, uint64_t, fptr);
                 name = PyUnicode_FromString(buffer);
-                ts_cache = 0;
+                last_ts = 0;
                 for (uint64_t i = 0; i < count; i++) {
-                    READ_ENCODED_INT64(ts, fptr);
-                    READ_ENCODED_INT64(dur, fptr);
+                    if (i == 0) {
+                        READ_DATA(&ts, int64_t, fptr);
+                    } else {
+                        if (read_encoded_int(&ts, fptr)!=0) {
+                            goto clean_exit;
+                        }
+                    }
+                    if (read_encoded_int(&dur, fptr)!=0) {
+                        goto clean_exit;
+                    }
                     event = PyDict_New();
                     PyDict_SetItemString(event, "ph", unicode_X);
                     PyDict_SetItemString(event, "name", name);
                     PyDict_SetItemString(event, "cat", unicode_FEE);
                     PyDict_SetItemStringULL(event, "pid", pid);
                     PyDict_SetItemStringULL(event, "tid", tid);
-                    ts_cache = ts + ts_cache;
-                    PyDict_SetItemStringDouble(event, "ts", (double)ts_cache / 100);
+                    last_ts = ts + last_ts;
+                    PyDict_SetItemStringDouble(event, "ts", (double)last_ts / 100);
                     PyDict_SetItemStringDouble(event, "dur", (double)dur / 100);
                     PyList_Append(trace_events, event);
                     Py_DECREF(event);

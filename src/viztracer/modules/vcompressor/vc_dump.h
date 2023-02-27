@@ -16,9 +16,9 @@
 #define VC_HEADER_COUNTER_ARG_LONG_STRING 0x25
 
 #define TS_6_BIT   0x00
-#define TS_14_BIT  0x40
-#define TS_32_BIT  0x80
-#define TS_64_BIT  0xC0
+#define TS_14_BIT  0x01
+#define TS_30_BIT  0x02
+#define TS_62_BIT  0x03
 
 int dump_metadata(FILE* fptr);
 
