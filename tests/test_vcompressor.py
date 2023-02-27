@@ -404,7 +404,6 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 dup_json_data = json.load(f)
         return origin_json_data, dup_json_data
 
-
     def test_file_info(self):
         origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
         self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
@@ -420,7 +419,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 if event_key not in origin_fee_events:
                     origin_fee_events[event_key] = []
                 origin_fee_events[event_key].append(event)
-        
+
         dup_fee_events = {}
         for event in dup_json_data["traceEvents"]:
             if event["ph"] == "X":
