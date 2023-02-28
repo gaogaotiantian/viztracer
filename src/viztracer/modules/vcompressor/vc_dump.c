@@ -84,26 +84,26 @@ static inline void write_encoded_int(uint64_t num, FILE* fptr)
 static inline int read_encoded_int(uint64_t *num, FILE* fptr)
 {
     uint8_t flag;
+    uint8_t encoded_num_8_bit = 0;
+    uint16_t encoded_num_16_bit = 0;
+    uint32_t encoded_num_32_bit = 0;
+    uint64_t encoded_num_64_bit = 0;
     PEEK_DATA(&flag, uint8_t, fptr)
     switch (flag & 0x03)
     {
         case TS_6_BIT:
-            uint8_t encoded_num_8_bit = 0;
             READ_DATA(&encoded_num_8_bit, uint8_t, fptr)
             (*num) = encoded_num_8_bit >> 2;
             break;
         case TS_14_BIT:
-            uint16_t encoded_num_16_bit = 0;
             READ_DATA(&encoded_num_16_bit, uint16_t, fptr)
             (*num) = encoded_num_16_bit >> 2;
             break;        
         case TS_30_BIT:
-            uint32_t encoded_num_32_bit = 0;
             READ_DATA(&encoded_num_32_bit, uint32_t, fptr)
             (*num) = encoded_num_32_bit >> 2;
             break;
         case TS_62_BIT:
-            uint64_t encoded_num_64_bit = 0;
             READ_DATA(&encoded_num_64_bit, uint64_t, fptr)
             (*num) = encoded_num_64_bit >> 2;
             break;
