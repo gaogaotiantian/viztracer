@@ -100,7 +100,7 @@ def fib(n):
     if n < 2:
         return 1
     return fib(n-1) + fib(n-2)
-fib(28)
+fib(27)
 
 tracer.stop()
 tracer.save(output_file='%s')
