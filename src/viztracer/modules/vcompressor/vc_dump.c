@@ -639,11 +639,11 @@ load_events_from_file(FILE* fptr)
                     if (i == 0) {
                         READ_DATA(&ts, int64_t, fptr);
                     } else {
-                        if (read_encoded_int(&ts, fptr)!=0) {
+                        if (read_encoded_int(&ts, fptr) != 0) {
                             goto clean_exit;
                         }
                     }
-                    if (read_encoded_int(&dur, fptr)!=0) {
+                    if (read_encoded_int(&dur, fptr) != 0) {
                         goto clean_exit;
                     }
                     event = PyDict_New();
