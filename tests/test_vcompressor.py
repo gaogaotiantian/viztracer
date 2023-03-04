@@ -359,6 +359,22 @@ tracer.save(output_file='%s')
 """
 
 
+test_duplicated_timestamp = """
+from viztracer import VizTracer
+tracer = VizTracer(tracer_entries=1000000)
+tracer.start()
+
+def call_self(n):
+    if n == 0:
+        return
+    return call_self(n-1)
+call_self(10)
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
 class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
     def _generate_test_data(self, test_file):
@@ -437,4 +453,16 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
         origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
         dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
+        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+
+    def test_duplicated_timestamp(self):
+        # We need to make sure there's no duplicated timestamp in decompressed data.
+        # The test_duplicated_timestamp can generate timestamps with less difference.
+        # So it is used to test if there would be duplicated in decompressed data.
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_duplicated_timestamp)
+        origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
+        dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
+        dup_timestamp_list = [event["ts"] for event in dup_counter_events if event["ph"] == "X"]
+        dup_timestamp_set = set(dup_timestamp_list)
+        self.assertEqual(len(dup_timestamp_list), len(dup_timestamp_set), "There's duplicated timestamp")
         self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
