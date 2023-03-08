@@ -262,6 +262,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
                 self._print_result(filename, original_size,
                                    vcompress_result, other_results, subtest_idx=subtest_idx)
 
+    @unittest.skipUnless(os.getenv("GITHUB_ACTIONS"), "skipped because not in github actions")
     def test_benchmark_large_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             origin_json_path = os.path.join(tmpdir, "large_fib.json")
@@ -368,7 +369,8 @@ def call_self(n):
     if n == 0:
         return
     return call_self(n-1)
-call_self(10)
+for _ in range(10):
+    call_self(1000)
 
 tracer.stop()
 tracer.save(output_file='%s')
