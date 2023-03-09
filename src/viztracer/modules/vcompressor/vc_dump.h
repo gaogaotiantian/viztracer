@@ -15,6 +15,11 @@
 #define VC_HEADER_COUNTER_ARG_FLOAT 0x24
 #define VC_HEADER_COUNTER_ARG_LONG_STRING 0x25
 
+#define TS_6_BIT   0x00
+#define TS_14_BIT  0x01
+#define TS_30_BIT  0x02
+#define TS_62_BIT  0x03
+
 int dump_metadata(FILE* fptr);
 
 int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr);
