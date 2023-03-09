@@ -60,6 +60,7 @@ parse_trace_events(PyObject* trace_events)
         PyObject* ts = NULL;
         PyObject* dur = NULL;
         PyObject* counter_args = NULL;
+        PyObject* ts_dur_tuple = NULL;
         PyObject* event_ts_list = NULL;
         PyObject* counter_event_dict = NULL;
         if (PyErr_Occurred() || !PyDict_CheckExact(event)) {
@@ -101,8 +102,14 @@ parse_trace_events(PyObject* trace_events)
                     event_ts_list = PyDict_GetItem(fee_events, key);
                 }
                 Py_DECREF(key);
-                PyList_Append(event_ts_list, ts);
-                PyList_Append(event_ts_list, dur);
+                
+                ts_dur_tuple = PyTuple_New(2);
+                Py_INCREF(ts);
+                Py_INCREF(dur);
+                PyTuple_SetItem(ts_dur_tuple, 0, ts);
+                PyTuple_SetItem(ts_dur_tuple, 1, dur);
+                PyList_Append(event_ts_list, ts_dur_tuple);
+                Py_DECREF(ts_dur_tuple);
                 break;
             case 'M':
                 name = PyDict_GetItemString(event, "name");
