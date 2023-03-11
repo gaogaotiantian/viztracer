@@ -512,30 +512,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
 
     def test_instant_events(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            origin_json_path = os.path.join(tmpdir, "result.json")
-            cvf_path = os.path.join(tmpdir, "result.cvf")
-            dup_json_path = os.path.join(tmpdir, "recovery.json")
-            run_script = test_counter_events % (origin_json_path.replace("\\", "/"))
-            self.template(
-                ["python", "cmdline_test.py"], script=run_script, cleanup=False,
-                expected_output_file=origin_json_path
-            )
-            self.template(
-                ["viztracer", "-o", cvf_path, "--compress", origin_json_path],
-                expected_output_file=cvf_path, cleanup=False
-            )
-            self.template(
-                ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
-                expected_output_file=dup_json_path, cleanup=False
-            )
-
-            with open(origin_json_path, "r") as f:
-                origin_json_data = json.load(f)
-            with open(dup_json_path, "r") as f:
-                dup_json_data = json.load(f)
-
-            origin_instant_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "i"]
-            dup_instant_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "i"]
-
-            self.assertEventsEqual(origin_instant_events, dup_instant_events, 0.01)
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_instant_events)
+        origin_instant_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "i"]
+        dup_instant_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "i"]
+        self.assertEventsEqual(origin_instant_events, dup_instant_events, 0.01)
