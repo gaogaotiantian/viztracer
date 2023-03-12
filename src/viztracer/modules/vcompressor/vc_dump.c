@@ -600,44 +600,7 @@ clean_exit:
 }
 
 int write_instant_args(PyObject* instant_args, FILE* fptr) {
-    PyObject * dumps_func = NULL;
-    PyObject * key        = NULL;
-    PyObject * value      = NULL;
-    PyObject * value_str  = NULL;
-    PyObject * dumps_arg  = NULL;
-    Py_ssize_t ppos   = 0;
-    uint64_t ts_count = 0;
-    uint64_t ts_64    = 0;
-
-    dumps_func = PyObject_GetAttrString(json_module, "dumps");
-    if (!dumps_func) {
-        goto clean_exit;
-    }
-    ts_count = PyDict_Size(instant_args);
-    fwrite(&ts_count, sizeof(uint64_t), 1, fptr);
-    while (PyDict_Next(instant_args, &ppos, &key, &value)) {
-        dumps_arg = PyTuple_New(1);
-        PyTuple_SetItem(dumps_arg, 0, value);
-        Py_INCREF(value);
-        value_str = PyObject_CallObject(dumps_func, dumps_arg);
-        Py_DECREF(dumps_arg);
-        if (!value_str) {
-            goto clean_exit;
-        }
-        ts_64 = PyFloat_AsDouble(key) * 1000;
-        fwrite(&ts_64, sizeof(uint64_t), 1, fptr);
-        fwritestr(PyUnicode_AsUTF8(value_str), fptr);
-        Py_DECREF(value_str);
-    }
-
-clean_exit:
-    Py_XDECREF(dumps_func);
-
-    if (PyErr_Occurred()) {
-        return 1;
-    }
-
-    return 0;
+    return json_dumps_and_compress_to_file(instant_args, fptr);
 }
 
 PyObject *
@@ -652,22 +615,16 @@ load_instant_event(FILE* fptr) {
     PyObject* instant_tid    = NULL;
     PyObject* instant_pid    = NULL;
     PyObject* instant_name   = NULL;
-    PyObject* instant_arg    = NULL;
+    PyObject* ts_arg_dict    = NULL;
     PyObject* instant_event  = NULL;
-    PyObject* loads_func     = NULL;
-    PyObject* loads_arg      = NULL;
+    PyObject* key            = NULL;
+    PyObject* ts             = NULL;
+    PyObject* value          = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
-    uint64_t arg_count = 0;
-    uint64_t ts_64 = 0;
+    Py_ssize_t ppos = 0;
     char* name = NULL;
-    char* arg_string = NULL;
     char scope = 't';
-
-    loads_func = PyObject_GetAttrString(json_module, "loads");
-    if (!loads_func) {
-        goto clean_exit;
-    }
 
     READ_DATA(&pid, uint64_t, fptr);
     READ_DATA(&tid, uint64_t, fptr);
@@ -692,37 +649,36 @@ load_instant_event(FILE* fptr) {
             PyErr_SetString(PyExc_RuntimeError, "invalid scope");
             goto clean_exit;
     }
-    READ_DATA(&arg_count, uint64_t, fptr);
-    for (uint64_t i = 0; i < arg_count; i++) {
-        instant_event = PyDict_New();
-        READ_DATA(&ts_64, uint64_t, fptr);
-        PyDict_SetItemStringDouble(instant_event, "ts", (double)ts_64 / 1000);
-        arg_string = freadstr(fptr);
-        loads_arg = PyTuple_New(1);
-        PyTuple_SetItem(loads_arg, 0, PyUnicode_FromString(arg_string));
-        free(arg_string);
-        instant_arg = PyObject_CallObject(loads_func, loads_arg);
-        Py_DECREF(loads_arg);
-        if (!instant_arg) {
+    ts_arg_dict = json_loads_and_decompress_from_file(fptr);
+    if (!ts_arg_dict) {
+        goto clean_exit;
+    }
+    while (PyDict_Next(ts_arg_dict, &ppos, &key, &value)) {
+        // Note here
+        // If the type of key in a dict is float or int, json dumps will convert
+        // the key to str type, so make sure the type is the same with before
+        ts = PyFloat_FromString(key);
+        if (!ts) {
             goto clean_exit;
         }
-        PyDict_SetItemString(instant_event, "args", instant_arg);
-        Py_DECREF(instant_arg);
+        instant_event = PyDict_New();
+        PyDict_SetItemString(instant_event, "args", value);
         PyDict_SetItemString(instant_event, "s", instant_scope);
         PyDict_SetItemString(instant_event, "name", instant_name);
         PyDict_SetItemString(instant_event, "pid", instant_pid);
         PyDict_SetItemString(instant_event, "tid", instant_tid);
         PyDict_SetItemString(instant_event, "cat", instant_cat);
         PyDict_SetItemString(instant_event, "ph", instant_ph);
+        PyDict_SetItemString(instant_event, "ts", ts);
         PyList_Append(instant_events_list, instant_event);
         Py_DECREF(instant_event);
     }
+    Py_DECREF(ts_arg_dict);
 
 clean_exit:
     Py_XDECREF(instant_pid);
     Py_XDECREF(instant_tid);
     Py_XDECREF(instant_name);
-    Py_XDECREF(loads_func);
     Py_DECREF(instant_cat);
     Py_DECREF(instant_ph);
     Py_DECREF(scope_t);
