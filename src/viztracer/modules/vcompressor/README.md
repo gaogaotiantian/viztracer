@@ -48,7 +48,7 @@ header(header) - compressed size(uint64) - uncompressed size(uint64) - compresse
 
 ### Instant Event
 
-header(header) - pid(pid) - tid(tid) - name(str) - scope(char) - timestamp count - [ts - json dumped value]*
+header(header) - pid(pid) - tid(tid) - name(str) - scope(char) - dumped args
 
 ### Count Event
 
