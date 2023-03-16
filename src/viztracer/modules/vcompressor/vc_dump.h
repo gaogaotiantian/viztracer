@@ -21,11 +21,6 @@
 #define TS_30_BIT  0x02
 #define TS_62_BIT  0x03
 
-// Not sure if we need to compress the whole file using zlib.
-// Use this flag to control if we need to compress json data.
-// This is for test for now
-#define NEED_COMPRESS_IN_FILE 1
-
 PyObject* decompress_bytes(PyObject* bytes_data);
 PyObject* compress_bytes(PyObject* bytes_data);
 PyObject* json_loads_from_bytes(PyObject* bytes_data);

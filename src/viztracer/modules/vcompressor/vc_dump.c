@@ -7,6 +7,11 @@
 
 #define STRING_BUFFER_SIZE 512
 
+// Not sure if we need to compress the whole file using zlib.
+// Use this flag to control if we need to compress json data.
+// This is for test for now
+#define NEED_COMPRESS_IN_FILE 1
+
 #define READ_DATA(ptr, type, fptr)                                           \
 {                                                                            \
     size_t s = fread(ptr, sizeof(type), 1, fptr);                            \
