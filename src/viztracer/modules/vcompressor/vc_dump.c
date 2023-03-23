@@ -43,30 +43,6 @@
     fputc('\0', fptr);                                                       \
 }
 
-#define GET_JSON_DUMPS_FUNC(func)                                            \
-{                                                                            \
-    if (!json_dumps_func) {                                                  \
-        json_dumps_func = PyObject_GetAttrString(json_module, "dumps");      \
-        func = json_dumps_func;                                              \
-    } else {                                                                 \
-        func = json_dumps_func;                                              \
-        Py_INCREF(func);                                                     \
-    }                                                                        \
-}                                                                            \
-
-
-#define GET_JSON_LOADS_FUNC(func)                                            \
-{                                                                            \
-    if (!json_loads_func) {                                                  \
-        json_loads_func = PyObject_GetAttrString(json_module, "loads");      \
-        func = json_loads_func;                                              \
-    } else {                                                                 \
-        func = json_loads_func;                                              \
-        Py_INCREF(func);                                                     \
-    }                                                                        \
-}                                                                            \
-
-
 #define PEEK_DATA(ptr, type, fptr)                                           \
 {                                                                            \
     size_t s = fread(ptr, sizeof(type), 1, fptr);                            \
