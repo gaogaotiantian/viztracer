@@ -24,12 +24,12 @@ vcompressor_dealloc(VcompressorObject* self)
 static PyObject*
 parse_trace_events(PyObject* trace_events)
 {
-    PyObject* parsed_events = NULL;
-    PyObject* fee_events = NULL;
+    PyObject* parsed_events  = NULL;
+    PyObject* fee_events     = NULL;
     PyObject* counter_events = NULL;
-    PyObject* instant_events = NULL;
-    PyObject* process_names = NULL;
-    PyObject* thread_names = NULL;
+    PyObject* other_events   = NULL;
+    PyObject* process_names  = NULL;
+    PyObject* thread_names   = NULL;
     PyObject* key = NULL;
 
     if (!PyList_CheckExact(trace_events)) {
@@ -42,17 +42,17 @@ parse_trace_events(PyObject* trace_events)
     counter_events = PyDict_New();
     process_names = PyDict_New();
     thread_names = PyDict_New();
-    instant_events = PyDict_New();
+    other_events = PyList_New(0);
     PyDict_SetItemString(parsed_events, "fee_events", fee_events);
     PyDict_SetItemString(parsed_events, "process_names", process_names);
     PyDict_SetItemString(parsed_events, "thread_names", thread_names);
     PyDict_SetItemString(parsed_events, "counter_events", counter_events);
-    PyDict_SetItemString(parsed_events, "instant_events", instant_events);
+    PyDict_SetItemString(parsed_events, "other_events", other_events);
     Py_DECREF(fee_events);
     Py_DECREF(process_names);
     Py_DECREF(thread_names);
     Py_DECREF(counter_events);
-    Py_DECREF(instant_events);
+    Py_DECREF(other_events);
 
     for (Py_ssize_t i = 0; i < PyList_GET_SIZE(trace_events); i++) {
         PyObject* event = PyList_GetItem(trace_events, i);
@@ -63,13 +63,10 @@ parse_trace_events(PyObject* trace_events)
         PyObject* tid = NULL;
         PyObject* ts = NULL;
         PyObject* dur = NULL;
-        PyObject* scope = NULL;
         PyObject* counter_args = NULL;
         PyObject* ts_dur_tuple = NULL;
-        PyObject* instant_args = NULL;
         PyObject* event_ts_list = NULL;
         PyObject* counter_event_dict = NULL;
-        PyObject* instant_event_dict = NULL;
         if (PyErr_Occurred() || !PyDict_CheckExact(event)) {
             PyErr_SetString(PyExc_ValueError, "event format failure");
             goto clean_exit;
@@ -183,41 +180,9 @@ parse_trace_events(PyObject* trace_events)
                 }
                 PyDict_SetItem(counter_event_dict, ts, counter_args);
                 break;
-            // Instant Event
-            // {"pid": 2696, "tid": 2698, "ts": 5749048304.8, "ph": "i", "cat": "INSTANT", "name": "name1", "args": {"a": "test"}, "s": "g"}
-            case 'i':
-                scope = PyDict_GetItemString(event, "s");
-                name = PyDict_GetItemString(event, "name");
-                pid = PyDict_GetItemString(event, "pid");
-                tid = PyDict_GetItemString(event, "tid");
-                ts = PyDict_GetItemString(event, "ts");
-                instant_args = PyDict_GetItemString(event, "args");
-                if (!ts || !name || !pid || !tid || !instant_args || !scope) {
-                    PyErr_SetString(PyExc_ValueError, "event format failure");
-                    goto clean_exit;
-                }
-                PyObject* instant_id_key = PyTuple_New(4);
-                Py_INCREF(name);
-                Py_INCREF(pid);
-                Py_INCREF(tid);
-                Py_INCREF(scope);
-                PyTuple_SetItem(instant_id_key, 0, pid);
-                PyTuple_SetItem(instant_id_key, 1, tid);
-                PyTuple_SetItem(instant_id_key, 2, name);
-                PyTuple_SetItem(instant_id_key, 3, scope);
-                if (!PyDict_Contains(instant_events, instant_id_key)) {
-                    instant_event_dict = PyDict_New();
-                    PyDict_SetItem(instant_events, instant_id_key, instant_event_dict);
-                    Py_DECREF(instant_event_dict);
-                } else {
-                    instant_event_dict = PyDict_GetItem(instant_events, instant_id_key);
-                }
-                Py_DECREF(instant_id_key);
-                if (PyDict_Contains(instant_event_dict, ts)) {
-                    PyErr_SetString(PyExc_ValueError, "event format failure, reason: same counter event timestamp");
-                    goto clean_exit;
-                }
-                PyDict_SetItem(instant_event_dict, ts, instant_args);
+            // Other Events, such as instant events, VizObject and user defined events
+            default:
+                PyList_Append(other_events, event);
                 break;
         }
     }
