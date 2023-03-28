@@ -359,47 +359,6 @@ tracer.stop()
 tracer.save(output_file='%s')
 """
 
-test_instant_events = """
-import threading
-import time
-from viztracer import VizTracer
-
-tracer = VizTracer()
-tracer.start()
-
-class MyThreadSparse(threading.Thread):
-    def run(self):
-        tracer.log_instant("thread id " + str(self.ident))
-        time.sleep(0.01)
-        tracer.log_instant("thread id " + str(self.ident), "test instant string", "t")
-        time.sleep(0.01)
-        tracer.log_instant("thread id " + str(self.ident), {"b":"test"}, "g")
-        time.sleep(0.01)
-        tracer.log_instant("thread id " + str(self.ident), {"b":"test", "c":123}, "p")
-
-thread1 = MyThreadSparse()
-thread2 = MyThreadSparse()
-
-tracer.log_instant("process")
-time.sleep(0.01)
-tracer.log_instant("process", "test instant string", "t")
-time.sleep(0.01)
-tracer.log_instant("process", {"b":"test"}, "g")
-time.sleep(0.01)
-tracer.log_instant("process", {"b":"test", "c":123}, "p")
-
-thread1.start()
-thread2.start()
-
-threads = [thread1, thread2]
-
-for thread in threads:
-    thread.join()
-
-tracer.stop()
-tracer.save(output_file='%s')
-"""
-
 
 test_duplicated_timestamp = """
 from viztracer import VizTracer
@@ -412,6 +371,52 @@ def call_self(n):
     return call_self(n-1)
 for _ in range(10):
     call_self(1000)
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
+test_non_frequent_events = """
+import threading
+from viztracer import VizTracer, VizObject
+
+tracer = VizTracer()
+tracer.start()
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        viz_object = VizObject(tracer, 'thread object ' + str(self.ident))
+        viz_object.a = 'test string 1'
+        viz_object.a = 'test string 2'
+        viz_object.a = {'test': 'string3'}
+        viz_object.a = ['test string 4']
+        tracer.log_instant("thread id " + str(self.ident))
+        tracer.log_instant("thread id " + str(self.ident), "test instant string", "t")
+        tracer.log_instant("thread id " + str(self.ident), {"b":"test"}, "g")
+        tracer.log_instant("thread id " + str(self.ident), {"b":"test", "c":123}, "p")
+
+main_viz_object = VizObject(tracer, 'main viz_object')
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+main_viz_object.arg1 = 100.01
+main_viz_object.arg2 = -100.01
+main_viz_object.arg3 = [100, -100]
+delattr(main_viz_object, 'arg3')
+tracer.log_instant("process")
+tracer.log_instant("process", "test instant string", "t")
+tracer.log_instant("process", {"b":"test"}, "g")
+tracer.log_instant("process", {"b":"test", "c":123}, "p")
+
+thread1.start()
+thread2.start()
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+
+main_viz_object.arg1 = {100: "string1"}
+main_viz_object.arg2 = {100: "string1", -100: "string2"}
 
 tracer.stop()
 tracer.save(output_file='%s')
@@ -511,8 +516,11 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
         self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
 
-    def test_instant_events(self):
-        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_instant_events)
-        origin_instant_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "i"]
-        dup_instant_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "i"]
-        self.assertEventsEqual(origin_instant_events, dup_instant_events, 0.01)
+    def test_non_frequent_events(self):
+        # We still have instant event and VizObject that are not frequently used
+        # This test is a basic coverage
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_non_frequent_events)
+        ph_filter = ["X", "M", "C"]  # these are compressed by other methods
+        origin_events = [i for i in origin_json_data["traceEvents"] if i["ph"] not in ph_filter]
+        dup_events = [i for i in dup_json_data["traceEvents"] if i["ph"] not in ph_filter]
+        self.assertEventsEqual(origin_events, dup_events, 0.01)
