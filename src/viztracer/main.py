@@ -568,6 +568,6 @@ def main():
             print(err_msg)
             sys.exit(1)
     except NameError:
-      print("please use vizviewer ")
+      print("please use vizviewer")
     finally:
         atexit._run_exitfuncs()
