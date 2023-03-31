@@ -339,7 +339,7 @@ class VizUI:
         # The user code may forked, check it because Finalize won't execute
         # if the pid is not the same
         if os.getpid() != self.parent_pid and not options.ignore_multiprocess:
-            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
+            multiprocessing.utilf.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
 
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
@@ -567,7 +567,9 @@ def main():
         if not success:
             print(err_msg)
             sys.exit(1)
-    except NameError:
-      print("please use vizviewer")
+      except NameError:
+        print("waiting open file is json  ")
+        import subprocess
+        subprocess.run(["vizviewer result.json"])
     finally:
         atexit._run_exitfuncs()
