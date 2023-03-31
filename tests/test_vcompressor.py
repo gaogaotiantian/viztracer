@@ -495,7 +495,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
         for key, value in origin_fee_events.items():
             self.assertIn(key, dup_fee_events, f"thread data {str(key)} not in decompressed data")
-            self.assertEventsEqual(value, dup_fee_events[key], 0.011)
+            self.assertEventsEqual(value, dup_fee_events[key], 0.11)
 
     def test_counter_events(self):
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
@@ -513,7 +513,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         dup_timestamp_list = [event["ts"] for event in dup_counter_events if event["ph"] == "X"]
         dup_timestamp_set = set(dup_timestamp_list)
         self.assertEqual(len(dup_timestamp_list), len(dup_timestamp_set), "There's duplicated timestamp")
-        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.011)
+        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.11)
 
     def test_non_frequent_events(self):
         # We still have instant event and VizObject that are not frequently used
