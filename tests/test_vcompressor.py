@@ -495,13 +495,13 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
         for key, value in origin_fee_events.items():
             self.assertIn(key, dup_fee_events, f"thread data {str(key)} not in decompressed data")
-            self.assertEventsEqual(value, dup_fee_events[key], 0.02)
+            self.assertEventsEqual(value, dup_fee_events[key], 0.011)
 
     def test_counter_events(self):
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
         origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
         dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
-        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.02)
+        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.011)
 
     def test_duplicated_timestamp(self):
         # We need to make sure there's no duplicated timestamp in decompressed data.
@@ -513,7 +513,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         dup_timestamp_list = [event["ts"] for event in dup_fee_events if event["ph"] == "X"]
         dup_timestamp_set = set(dup_timestamp_list)
         self.assertEqual(len(dup_timestamp_list), len(dup_timestamp_set), "There's duplicated timestamp")
-        self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.02)
+        self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.011)
 
     def test_non_frequent_events(self):
         # We still have instant event and VizObject that are not frequently used
@@ -522,4 +522,4 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         ph_filter = ["X", "M", "C"]  # these are compressed by other methods
         origin_events = [i for i in origin_json_data["traceEvents"] if i["ph"] not in ph_filter]
         dup_events = [i for i in dup_json_data["traceEvents"] if i["ph"] not in ph_filter]
-        self.assertEventsEqual(origin_events, dup_events, 0.02)
+        self.assertEventsEqual(origin_events, dup_events, 0.011)
