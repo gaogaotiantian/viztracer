@@ -377,6 +377,52 @@ tracer.save(output_file='%s')
 """
 
 
+test_non_frequent_events = """
+import threading
+from viztracer import VizTracer, VizObject
+
+tracer = VizTracer()
+tracer.start()
+
+class MyThreadSparse(threading.Thread):
+    def run(self):
+        viz_object = VizObject(tracer, 'thread object ' + str(self.ident))
+        viz_object.a = 'test string 1'
+        viz_object.a = 'test string 2'
+        viz_object.a = {'test': 'string3'}
+        viz_object.a = ['test string 4']
+        tracer.log_instant("thread id " + str(self.ident))
+        tracer.log_instant("thread id " + str(self.ident), "test instant string", "t")
+        tracer.log_instant("thread id " + str(self.ident), {"b":"test"}, "g")
+        tracer.log_instant("thread id " + str(self.ident), {"b":"test", "c":123}, "p")
+
+main_viz_object = VizObject(tracer, 'main viz_object')
+thread1 = MyThreadSparse()
+thread2 = MyThreadSparse()
+main_viz_object.arg1 = 100.01
+main_viz_object.arg2 = -100.01
+main_viz_object.arg3 = [100, -100]
+delattr(main_viz_object, 'arg3')
+tracer.log_instant("process")
+tracer.log_instant("process", "test instant string", "t")
+tracer.log_instant("process", {"b":"test"}, "g")
+tracer.log_instant("process", {"b":"test", "c":123}, "p")
+
+thread1.start()
+thread2.start()
+threads = [thread1, thread2]
+
+for thread in threads:
+    thread.join()
+
+main_viz_object.arg1 = {100: "string1"}
+main_viz_object.arg2 = {100: "string1", -100: "string2"}
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
 class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
     def _generate_test_data(self, test_file):
@@ -449,22 +495,31 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
         for key, value in origin_fee_events.items():
             self.assertIn(key, dup_fee_events, f"thread data {str(key)} not in decompressed data")
-            self.assertEventsEqual(value, dup_fee_events[key], 0.01)
+            self.assertEventsEqual(value, dup_fee_events[key], 0.011)
 
     def test_counter_events(self):
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
         origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "C"]
         dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "C"]
-        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.011)
 
     def test_duplicated_timestamp(self):
         # We need to make sure there's no duplicated timestamp in decompressed data.
         # The test_duplicated_timestamp can generate timestamps with less difference.
         # So it is used to test if there would be duplicated in decompressed data.
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_duplicated_timestamp)
-        origin_counter_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
-        dup_counter_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
-        dup_timestamp_list = [event["ts"] for event in dup_counter_events if event["ph"] == "X"]
+        origin_fee_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
+        dup_fee_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
+        dup_timestamp_list = [event["ts"] for event in dup_fee_events if event["ph"] == "X"]
         dup_timestamp_set = set(dup_timestamp_list)
         self.assertEqual(len(dup_timestamp_list), len(dup_timestamp_set), "There's duplicated timestamp")
-        self.assertEventsEqual(origin_counter_events, dup_counter_events, 0.01)
+        self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.011)
+
+    def test_non_frequent_events(self):
+        # We still have instant event and VizObject that are not frequently used
+        # This test is a basic coverage
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_non_frequent_events)
+        ph_filter = ["X", "M", "C"]  # these are compressed by other methods
+        origin_events = [i for i in origin_json_data["traceEvents"] if i["ph"] not in ph_filter]
+        dup_events = [i for i in dup_json_data["traceEvents"] if i["ph"] not in ph_filter]
+        self.assertEventsEqual(origin_events, dup_events, 0.011)

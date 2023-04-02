@@ -7,6 +7,11 @@
 
 #define STRING_BUFFER_SIZE 512
 
+// Not sure if we need to compress the whole file using zlib.
+// Use this flag to control if we need to compress json data.
+// This is for test for now
+#define NEED_COMPRESS_IN_FILE 1
+
 #define READ_DATA(ptr, type, fptr)                                           \
 {                                                                            \
     size_t s = fread(ptr, sizeof(type), 1, fptr);                            \
@@ -117,6 +122,7 @@ clean_exit:
     return 0;
 }
 
+
 int freadstrn(char* buffer, int n, FILE* fptr) 
 {
     int c;
@@ -172,6 +178,299 @@ int dump_metadata(FILE* fptr)
     return 0;
 }
 
+
+PyObject* json_dumps_to_bytes(PyObject* json_data)
+{
+    PyObject* json_ret      = NULL;
+    PyObject* json_args     = NULL;
+    PyObject* bytes_data    = NULL;
+    PyObject* dumps_func    = NULL;
+
+    if (!json_data) {
+        PyErr_SetString(PyExc_ValueError, "json_data can not be NULL");
+        goto clean_exit;
+    }
+    dumps_func = PyObject_GetAttrString(json_module, "dumps");
+    if (!dumps_func) {
+        goto clean_exit;
+    }
+
+    // json dumps json_data
+    json_args = PyTuple_New(1);
+    PyTuple_SetItem(json_args, 0, json_data);
+    Py_INCREF(json_data); 
+    json_ret = PyObject_CallObject(dumps_func, json_args);
+    Py_DECREF(json_args);
+    if (!json_ret) {
+        goto clean_exit;
+    }
+
+    // convert string to bytes
+    bytes_data = PyObject_CallMethod(json_ret, "encode", NULL);
+    Py_DECREF(json_ret);
+    if (!bytes_data) {
+        goto clean_exit;
+    }
+    if (!PyBytes_Check(bytes_data)) {
+        // need to release bytes_data here, bytes_data will not release after clean_exit
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "Failed to convert string to bytes");
+        goto clean_exit;
+    }
+
+clean_exit:
+    if (dumps_func) {
+        Py_DECREF(dumps_func);
+    }
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return bytes_data;
+}
+
+
+PyObject* json_loads_from_bytes(PyObject* bytes_data)
+{
+    PyObject* loads_func    = NULL;
+    PyObject* string_data   = NULL;
+    PyObject* json_args     = NULL;
+    PyObject* json_data     = NULL;
+
+    if (!PyBytes_Check(bytes_data)) {
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "expect a bytes object to decode");
+        goto clean_exit;
+    }
+
+    loads_func = PyObject_GetAttrString(json_module, "loads");
+    if (!loads_func) {
+        goto clean_exit;
+    }
+
+    // decode depressed bytes to string
+    string_data = PyObject_CallMethod(bytes_data, "decode", NULL);
+    if (!string_data) {
+        goto clean_exit;
+    }
+
+    // convert string to json
+    json_args = PyTuple_New(1);
+    PyTuple_SetItem(json_args, 0, string_data);
+    json_data = PyObject_CallObject(loads_func, json_args);
+    Py_DECREF(json_args);
+    if (!json_data) {
+        goto clean_exit;
+    }
+
+clean_exit:
+    if (loads_func) {
+        Py_DECREF(loads_func);
+    }
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return json_data;
+}
+
+
+PyObject* compress_bytes(PyObject* bytes_data)
+{
+    PyObject* zlib_args         = NULL;
+    PyObject* compress_func     = NULL;
+    PyObject* compressed_data   = NULL;
+
+    if (!PyBytes_Check(bytes_data)) {
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "expect a bytes object to compress");
+        goto clean_exit;
+    }
+
+    compress_func = PyObject_GetAttrString(zlib_module, "compress");
+    if (!compress_func) {
+        goto clean_exit;
+    }
+
+    zlib_args = PyTuple_New(1);
+    PyTuple_SetItem(zlib_args, 0, bytes_data);
+    Py_INCREF(bytes_data);
+    compressed_data = PyObject_CallObject(compress_func, zlib_args);
+    // zlib_args steals bytes_data, so release zlib_args will release bytes_data
+    Py_DECREF(zlib_args);
+    if (!compressed_data) {
+        goto clean_exit;
+    }
+    if (!PyBytes_Check(compressed_data)) {
+        Py_DECREF(compressed_data);
+        PyErr_SetString(PyExc_ValueError, "zlib.compress() returns a none bytes object");
+        goto clean_exit;
+    }
+
+clean_exit:
+    if (compress_func) {
+        Py_DECREF(compress_func);
+    }
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return compressed_data;
+}
+
+
+PyObject* decompress_bytes(PyObject* bytes_data)
+{
+    // decompress data
+    PyObject* zlib_args = NULL;
+    PyObject* decompressed_data = NULL;
+    PyObject* decompress_func = NULL;
+
+    if (!PyBytes_Check(bytes_data)) {
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "expect a bytes object to decompress");
+        goto clean_exit;
+    }
+
+    decompress_func = PyObject_GetAttrString(zlib_module, "decompress");
+    if (!decompress_func) {
+        goto clean_exit;
+    }
+
+    zlib_args = PyTuple_New(1);
+    PyTuple_SetItem(zlib_args, 0, bytes_data);
+    Py_INCREF(bytes_data);
+    decompressed_data = PyObject_CallObject(decompress_func, zlib_args);
+    Py_DECREF(zlib_args);
+    if (!decompressed_data) {
+        goto clean_exit;
+    }
+    if (!PyBytes_Check(decompressed_data)) {
+        Py_DECREF(decompressed_data);
+        PyErr_SetString(PyExc_ValueError, "zlib.decompress() returns a none bytes object");
+        goto clean_exit;
+    }
+clean_exit:
+    if (decompress_func) {
+        Py_DECREF(decompress_func);
+    }
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return decompressed_data;
+}
+
+
+int json_dumps_and_compress_to_file(PyObject* json_data, FILE* fptr)
+{
+    char* buffer;
+    uint64_t uncompressed_size = 0;
+    uint64_t compressed_size = 0;
+    PyObject* bytes_data = NULL;
+    PyObject* compressed_data = NULL;
+
+    bytes_data = json_dumps_to_bytes(json_data);
+    if (!bytes_data) {
+        goto clean_exit;
+    }
+    uncompressed_size = PyBytes_Size(bytes_data);
+    if (NEED_COMPRESS_IN_FILE) {
+        compressed_data = compress_bytes(bytes_data);
+        if (!compressed_data) {
+            goto clean_exit;
+        }
+        compressed_size = PyBytes_Size(compressed_data);
+        buffer = PyBytes_AsString(compressed_data);
+        fwrite(&uncompressed_size, sizeof(uint64_t), 1, fptr);
+        fwrite(&compressed_size, sizeof(uint64_t), 1, fptr);
+        fwrite(buffer, sizeof(char), compressed_size, fptr);
+        Py_DECREF(compressed_data);
+    } else {
+        buffer = PyBytes_AsString(bytes_data);
+        fwrite(&uncompressed_size, sizeof(uint64_t), 1, fptr);
+        fwrite(buffer, sizeof(char), uncompressed_size, fptr);
+    }
+    
+clean_exit:
+    Py_DECREF(bytes_data);
+    if (PyErr_Occurred()) {
+        return 1;
+    }
+    return 0;
+}
+
+
+PyObject* json_loads_and_decompress_from_file(FILE* fptr)
+{
+    char* buffer = NULL;
+    uint64_t compressed_size = 0;
+    uint64_t uncompressed_size = 0;
+    uint64_t read_length = 0;
+    PyObject* json_data = NULL;
+    PyObject* compressed_data = NULL;
+    PyObject* bytes_data = NULL;
+
+    if (NEED_COMPRESS_IN_FILE) {
+        READ_DATA(&uncompressed_size, uint64_t, fptr)
+        READ_DATA(&compressed_size, uint64_t, fptr)
+        buffer = (char *)malloc(sizeof(char)*compressed_size);
+        if (!buffer) {
+            PyErr_Format(PyExc_RuntimeError, "Failed to malloc memory size %lld", compressed_size);
+            goto clean_exit;
+        }
+        read_length = fread(buffer, sizeof(char), compressed_size, fptr);
+        if (read_length != compressed_size) {
+            PyErr_Format(PyExc_ValueError, "file is corrupted");
+            free(buffer);
+            goto clean_exit;
+        }
+        compressed_data = PyBytes_FromStringAndSize(buffer, compressed_size);
+        free(buffer);
+        if (!compressed_data) {
+            goto clean_exit;
+        }
+        bytes_data = decompress_bytes(compressed_data);
+        Py_DECREF(compressed_data);
+    } else {
+        READ_DATA(&uncompressed_size, uint64_t, fptr)
+        buffer = (char *)malloc(sizeof(char)*uncompressed_size);
+        if (!buffer) {
+            PyErr_Format(PyExc_RuntimeError, "Failed to malloc memory size %lld", uncompressed_size);
+            goto clean_exit;
+        }
+        read_length = fread(buffer, sizeof(char), uncompressed_size, fptr);
+        if (read_length != uncompressed_size) {
+            PyErr_Format(PyExc_ValueError, "file is corrupted");
+            free(buffer);
+            goto clean_exit;
+        }
+        bytes_data = PyBytes_FromStringAndSize(buffer, uncompressed_size);
+        free(buffer);
+    }
+
+    if (!bytes_data) {
+        goto clean_exit;
+    }
+    json_data = json_loads_from_bytes(bytes_data);
+    Py_DECREF(bytes_data);
+    if (!json_data) {
+        goto clean_exit;
+    }
+
+clean_exit:
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    return json_data;
+}
+
+
 int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
 {
     // Dump process and thread names
@@ -179,6 +478,7 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
     PyObject* thread_names   = PyDict_GetItemString(trace_events, "thread_names");
     PyObject* fee_events     = PyDict_GetItemString(trace_events, "fee_events");
     PyObject* counter_events = PyDict_GetItemString(trace_events, "counter_events");
+    PyObject* other_events   = PyDict_GetItemString(trace_events, "other_events");
     Py_ssize_t ppos = 0;
     PyObject* key   = NULL;
     PyObject* value = NULL;
@@ -254,6 +554,12 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
         if (diff_and_write_counter_args(value, fptr) != 0) {
             goto clean_exit;
         }
+    }
+
+    // just write other events
+    fputc(VC_HEADER_OTHER_EVENTS, fptr);
+    if (json_dumps_and_compress_to_file(other_events, fptr) != 0) {
+        goto clean_exit;
     }
 clean_exit:
     if (PyErr_Occurred()) {
@@ -568,6 +874,7 @@ load_events_from_file(FILE* fptr)
     PyObject* name = NULL;
     PyObject* event = NULL;
     PyObject* counter_events = NULL;
+    PyObject* other_events   = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
     uint64_t count = 0;
@@ -679,6 +986,17 @@ load_events_from_file(FILE* fptr)
                     goto clean_exit;
                 }
                 break;
+            case VC_HEADER_OTHER_EVENTS:
+                other_events = json_loads_and_decompress_from_file(fptr);
+                if (!other_events) {
+                    goto clean_exit;
+                }
+                PyObject_CallMethod(trace_events, "extend", "O", other_events);
+                Py_DECREF(other_events);
+                if (PyErr_Occurred()) {
+                    goto clean_exit;
+                }
+                break;
             default:
                 printf("wrong header %d\n", header);
         }
@@ -702,187 +1020,17 @@ clean_exit:
 
 int dump_file_info(PyObject* file_info, FILE* fptr)
 {
-    const char * buffer = NULL;
-    uint64_t content_length = 0;
-    uint64_t compression_length = 0;
-    PyObject* json_ret = NULL;    
-    PyObject* zlib_ret = NULL;
-    PyObject* bytes_data = NULL;
-    PyObject* dumps_func = NULL;
-    PyObject* compress_func = NULL;
-    PyObject* json_args = NULL;
-    PyObject* zlib_args = NULL;
-    
-    dumps_func = PyObject_GetAttrString(json_module, "dumps");
-    if (!dumps_func) {
-        goto clean_exit;
-    }
-
-    compress_func = PyObject_GetAttrString(zlib_module, "compress");
-    if (!compress_func) {
-        goto clean_exit;
-    }
-
-    // json dumps file_info
-    json_args = PyTuple_New(1);
-    // file_info points to the file_info in json object we compress
-    // PyTuple_SetItem steals the reference, but we don't want to release file_info here
-    // So we need to call Py_INCREF here
-    PyTuple_SetItem(json_args, 0, file_info);
-    Py_INCREF(file_info); 
-    json_ret = PyObject_CallObject(dumps_func, json_args);
-    Py_DECREF(json_args);
-    if (!json_ret) {
-        goto clean_exit;
-    }
-
-    // convert string to bytes
-    bytes_data = PyObject_CallMethod(json_ret, "encode", NULL);
-    Py_DECREF(json_ret);
-    if (!bytes_data) {
-        goto clean_exit;
-    }
-    // Make sure that PyBytes_Size succeed
-    if (!PyBytes_Check(bytes_data)) {
-        // need to release bytes_data here, bytes_data will not release after clean_exit
-        Py_DECREF(bytes_data);
-        PyErr_SetString(PyExc_ValueError, "Failed to convert string to bytes");
-        goto clean_exit;
-    }
-
-    // compress bytes data
-    zlib_args = PyTuple_New(1);
-    content_length = PyBytes_Size(bytes_data);
-    PyTuple_SetItem(zlib_args, 0, bytes_data);
-    zlib_ret = PyObject_CallObject(compress_func, zlib_args);
-    // zlib_args steals bytes_data, so release zlib_args will release bytes_data
-    Py_DECREF(zlib_args);
-    if (!zlib_ret) {
-        goto clean_exit;
-    }
-    if (!PyBytes_Check(zlib_ret)) {
-        Py_DECREF(zlib_ret);
-        PyErr_SetString(PyExc_ValueError, "zlib.compress() returns a none bytes object");
-        goto clean_exit;
-    }
-    compression_length = PyBytes_Size(zlib_ret);
-    buffer = PyBytes_AsString(zlib_ret);
-
     // write data
     fputc(VC_HEADER_FILE_INFO, fptr);
-    fwrite(&compression_length, sizeof(uint64_t), 1, fptr);
-    fwrite(&content_length, sizeof(uint64_t), 1, fptr);
-    fwrite(buffer, sizeof(char), compression_length, fptr);
-    // release zlib_ret after write, buffer points to zlib_ret->ob_sval;
-    Py_DECREF(zlib_ret);
-
-clean_exit:
-    if (dumps_func) {
-        Py_DECREF(dumps_func);
-    }
-    if (compress_func) {
-        Py_DECREF(compress_func);
-    }
-
-    if (PyErr_Occurred()) {
+    if (json_dumps_and_compress_to_file(file_info, fptr) == 0){
+        return 0;
+    } else {
         return 1;
     }
-
-    return 0;
 }
 
 PyObject*
 load_file_info(FILE* fptr)
 {
-    unsigned char* compression_buffer = NULL;
-    uint64_t compression_length = 0;
-    uint64_t content_length = 0;
-    size_t read_length = 0;
-    PyObject* file_info = NULL;
-    PyObject* zlib_ret = NULL;
-    PyObject* bytes_data = NULL;
-    PyObject* string_data = NULL;
-    PyObject* loads_func = NULL;
-    PyObject* json_args = NULL;
-    PyObject* decompress_func = NULL;
-    PyObject* zlib_args = NULL;
-    READ_DATA(&compression_length, uint64_t, fptr);
-    READ_DATA(&content_length, uint64_t, fptr);
-
-    decompress_func = PyObject_GetAttrString(zlib_module, "decompress");
-    if (!decompress_func) {
-        goto clean_exit;
-    }
-
-    loads_func = PyObject_GetAttrString(json_module, "loads");
-    if (!loads_func) {
-        goto clean_exit;
-    }
-
-    // read compressed data
-    compression_buffer = (unsigned char*)malloc(sizeof(char) * compression_length);
-    if (compression_buffer == NULL) {
-        PyErr_Format(PyExc_RuntimeError, "Failed to malloc memory size %lld", compression_length);
-        goto clean_exit;
-    }
-    read_length = fread(compression_buffer, sizeof(char), compression_length, fptr);
-    if (read_length != compression_length) {
-        PyErr_SetString(PyExc_ValueError, "file is corrupted");
-        goto clean_exit;
-    }         
-    bytes_data = PyBytes_FromStringAndSize((const char *)compression_buffer, compression_length);
-    free(compression_buffer);
-    if (!bytes_data) {
-        // There's error handling in PyBytes_FromStringAndSize
-        goto clean_exit;
-    }
-
-    // decompress data
-    zlib_args = PyTuple_New(1);
-    PyTuple_SetItem(zlib_args, 0, bytes_data);
-    zlib_ret = PyObject_CallObject(decompress_func, zlib_args);
-    Py_DECREF(zlib_args);
-    if (!zlib_ret) {
-        goto clean_exit;
-    }
-    if (!PyBytes_Check(zlib_ret)) {
-        Py_DECREF(zlib_ret);
-        PyErr_SetString(PyExc_ValueError, "zlib.decompress() returns a none bytes object");
-        goto clean_exit;
-    }
-    if ((uint64_t)PyBytes_Size(zlib_ret) != content_length) {
-        Py_DECREF(zlib_ret);
-        PyErr_SetString(PyExc_ValueError, "Decompressed content length doesn't match, file may be corrupted");
-        goto clean_exit;
-    }
-
-    // decode depressed bytes to string
-    string_data = PyObject_CallMethod(zlib_ret, "decode", NULL);
-    Py_DECREF(zlib_ret);
-    if (!string_data) {
-        goto clean_exit;
-    }
-
-    // convert string to json
-    json_args = PyTuple_New(1);
-    PyTuple_SetItem(json_args, 0, string_data);
-    file_info = PyObject_CallObject(loads_func, json_args);
-    Py_DECREF(json_args);
-    if (!file_info) {
-        goto clean_exit;
-    }
-
-clean_exit:
-    if (loads_func) {
-        Py_DECREF(loads_func);
-    }
-    if (decompress_func) {
-        Py_DECREF(decompress_func);
-    }
-
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-
-    return file_info;
+    return json_loads_and_decompress_from_file(fptr);
 }
