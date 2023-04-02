@@ -24,11 +24,12 @@ vcompressor_dealloc(VcompressorObject* self)
 static PyObject*
 parse_trace_events(PyObject* trace_events)
 {
-    PyObject* parsed_events = NULL;
-    PyObject* fee_events = NULL;
+    PyObject* parsed_events  = NULL;
+    PyObject* fee_events     = NULL;
     PyObject* counter_events = NULL;
-    PyObject* process_names = NULL;
-    PyObject* thread_names = NULL;
+    PyObject* other_events   = NULL;
+    PyObject* process_names  = NULL;
+    PyObject* thread_names   = NULL;
     PyObject* key = NULL;
 
     if (!PyList_CheckExact(trace_events)) {
@@ -41,14 +42,17 @@ parse_trace_events(PyObject* trace_events)
     counter_events = PyDict_New();
     process_names = PyDict_New();
     thread_names = PyDict_New();
+    other_events = PyList_New(0);
     PyDict_SetItemString(parsed_events, "fee_events", fee_events);
     PyDict_SetItemString(parsed_events, "process_names", process_names);
     PyDict_SetItemString(parsed_events, "thread_names", thread_names);
     PyDict_SetItemString(parsed_events, "counter_events", counter_events);
+    PyDict_SetItemString(parsed_events, "other_events", other_events);
     Py_DECREF(fee_events);
     Py_DECREF(process_names);
     Py_DECREF(thread_names);
     Py_DECREF(counter_events);
+    Py_DECREF(other_events);
 
     for (Py_ssize_t i = 0; i < PyList_GET_SIZE(trace_events); i++) {
         PyObject* event = PyList_GetItem(trace_events, i);
@@ -170,11 +174,15 @@ parse_trace_events(PyObject* trace_events)
                     counter_event_dict = PyDict_GetItem(counter_events, counter_id_key);
                 }
                 Py_DECREF(counter_id_key);
-                if (PyDict_Contains(counter_event_dict, ts)){
+                if (PyDict_Contains(counter_event_dict, ts)) {
                     PyErr_SetString(PyExc_ValueError, "event format failure, reason: same counter event timestamp");
                     goto clean_exit;
                 }
                 PyDict_SetItem(counter_event_dict, ts, counter_args);
+                break;
+            // Other Events, such as instant events, VizObject and user defined events
+            default:
+                PyList_Append(other_events, event);
                 break;
         }
     }
@@ -233,14 +241,14 @@ static PyObject* vcompressor_compress(VcompressorObject* self, PyObject* args)
     } 
     Py_INCREF(parsed_events);
 
-    if (dump_parsed_trace_events(parsed_events, fptr) != 0){
+    if (dump_parsed_trace_events(parsed_events, fptr) != 0) {
         goto clean_exit;
     }
 
     // file_info here is a borrowed reference
     file_info = PyDict_GetItemString(raw_data, "file_info");
-    if (file_info != NULL){
-        if (dump_file_info(file_info, fptr) != 0){
+    if (file_info != NULL) {
+        if (dump_file_info(file_info, fptr) != 0) {
             goto clean_exit;
         }
     }
@@ -292,7 +300,7 @@ clean_exit:
             Py_DECREF(parsed_events);
         }
 
-        Py_RETURN_NONE;
+        return NULL;
     }
 
     return parsed_events;

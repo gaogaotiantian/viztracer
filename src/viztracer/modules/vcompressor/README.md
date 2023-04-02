@@ -13,6 +13,7 @@ A one-byte header indicating the following data type
 0x02 - Process name
 0x03 - Thread name
 0x04 - count event
+0x05 - non-frequent event
 0x11 - File info
 0x21 - counter arg unknown
 0x22 - counter arg is the same with last timestamp
@@ -55,3 +56,7 @@ the order of variables is corresponding to the order of keys.
 if header means value didn't change compared to last timestamp, value will be null.
 if header means long or float, the value is int64_t or double type
 if header means a long and the value overflows, the value is string type
+
+### Non-frequent Events
+
+We just directly use json dumps and compress the data because they will be only a very small part of the trace. Except FEE, counter event, thread name, process name, the left events are treated as non-frequent events
