@@ -162,7 +162,7 @@ RAM limits as the browser. This is helpful when you try to open large trace.
 
 .. code-block::
 
-    viztracer --use_external_processor result.json
+    vizviewer --use_external_processor result.json
 
 ``vizviewer`` can also show standalone html report - it just host a simple HTTP server for the file
 
