@@ -63,6 +63,7 @@ parse_trace_events(PyObject* trace_events)
         PyObject* tid = NULL;
         PyObject* ts = NULL;
         PyObject* dur = NULL;
+        PyObject* fee_args = NULL;
         PyObject* counter_args = NULL;
         PyObject* ts_dur_tuple = NULL;
         PyObject* event_ts_list = NULL;
@@ -88,7 +89,7 @@ parse_trace_events(PyObject* trace_events)
                     goto clean_exit;
                 }
                 // Prepare the tuple key
-                key = PyTuple_New(3);
+                key = PyTuple_New(4);
 
                 // PyTuple_SetItem steals reference
                 Py_INCREF(pid);
@@ -97,6 +98,16 @@ parse_trace_events(PyObject* trace_events)
                 PyTuple_SetItem(key, 0, pid);
                 PyTuple_SetItem(key, 1, tid);
                 PyTuple_SetItem(key, 2, name);
+
+                // This indicates that if there's args in fee
+                fee_args = PyDict_GetItemString(event, "args");
+                if (fee_args) {
+                    PyTuple_SetItem(key, 3, Py_True);
+                    Py_INCREF(Py_True);
+                } else {
+                    PyTuple_SetItem(key, 3, Py_False);
+                    Py_INCREF(Py_False);
+                }
 
                 if (!PyDict_Contains(fee_events, key)) {
                     event_ts_list = PyList_New(0);
@@ -107,11 +118,22 @@ parse_trace_events(PyObject* trace_events)
                 }
                 Py_DECREF(key);
                 
-                ts_dur_tuple = PyTuple_New(2);
+                if (fee_args) {
+                    ts_dur_tuple = PyTuple_New(3);
+                } else {
+                    ts_dur_tuple = PyTuple_New(2);
+                }
+                
                 Py_INCREF(ts);
                 Py_INCREF(dur);
                 PyTuple_SetItem(ts_dur_tuple, 0, ts);
                 PyTuple_SetItem(ts_dur_tuple, 1, dur);
+
+                if (fee_args) {
+                    PyTuple_SetItem(ts_dur_tuple, 2, fee_args);
+                    Py_INCREF(fee_args);
+                }
+                
                 PyList_Append(event_ts_list, ts_dur_tuple);
                 Py_DECREF(ts_dur_tuple);
                 break;
