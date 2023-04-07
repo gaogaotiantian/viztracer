@@ -40,7 +40,7 @@ header(header) - pid(pid) - tid(tid) - name(str)
 
 ### FEE
 
-header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - [start(ts) - dur(ts)]*
+header(header) - pid(pid) - tid(tid) - name(str) - count(uint64) - args_flag - args offset(if there's args) - [start(ts) - dur(ts)]* - args list (if there's args)
 
 ### File info
 

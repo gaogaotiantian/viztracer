@@ -634,7 +634,6 @@ PyObject * load_fee_events(FILE* fptr) {
     freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
     READ_DATA(&count, uint64_t, fptr);
     name = PyUnicode_FromString(buffer);
-
     READ_DATA(&flag, uint8_t, fptr);
     switch (flag)
     {
@@ -643,7 +642,7 @@ PyObject * load_fee_events(FILE* fptr) {
             READ_DATA(&args_offset, uint64_t, fptr);
             place_holder_ts = ftell(fptr);
             if (fseek(fptr, args_offset, SEEK_SET) != 0) {
-                PyErr_SetString(PyExc_ValueError, "file is corrupted!");
+                PyErr_SetString(PyExc_ValueError, "seek to args offset failed!");
                 goto clean_exit;
             }
             args_list = json_loads_and_decompress_from_file(fptr);
@@ -652,7 +651,7 @@ PyObject * load_fee_events(FILE* fptr) {
             }
             // There's error checking in PyList_Size
             if (PyList_Size(args_list) != (Py_ssize_t)count) {
-                PyErr_SetString(PyExc_ValueError, "file is corrupted!");
+                PyErr_SetString(PyExc_ValueError, "args length is not equal to count!");
                 goto clean_exit;
             }
             place_holder_end = ftell(fptr);
@@ -661,7 +660,7 @@ PyObject * load_fee_events(FILE* fptr) {
         case FEE_HAS_NO_ARGS:
             break;
         default:
-            PyErr_SetString(PyExc_ValueError, "file is corrupted!");
+            PyErr_SetString(PyExc_ValueError, "invalid args flag!");
             goto clean_exit;
             break;
     }
@@ -692,7 +691,9 @@ PyObject * load_fee_events(FILE* fptr) {
         PyList_Append(fee_events_list, event);
         Py_DECREF(event);
     }
-    fseek(fptr, place_holder_end, SEEK_SET);
+    if (args_list) {
+        fseek(fptr, place_holder_end, SEEK_SET);
+    }
     
 clean_exit:
     Py_XDECREF(name);
