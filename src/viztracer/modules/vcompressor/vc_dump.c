@@ -892,7 +892,7 @@ load_counter_event(FILE* fptr)
     uint64_t tid = 0;
     uint64_t arg_key_count = 0;
     uint64_t counter_event_count = 0;
-    uint64_t ts_64 = 0;
+    int64_t ts_64 = 0;
     uint8_t header = 0;
     int64_t value_longlong = 0;
     double value_double = 0;
@@ -922,7 +922,7 @@ load_counter_event(FILE* fptr)
     READ_DATA(&counter_event_count, uint64_t, fptr);
     for (uint64_t i = 0; i < counter_event_count; i++) {
         current_arg = PyDict_New();
-        READ_DATA(&ts_64, uint64_t, fptr);
+        READ_DATA(&ts_64, int64_t, fptr);
         for (uint64_t j = 0; j < arg_key_count; j++) {
             READ_DATA(&header, uint8_t, fptr);
             counter_arg_key = PyList_GetItem(arg_key_list, j);
