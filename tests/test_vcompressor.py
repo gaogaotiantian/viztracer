@@ -325,7 +325,7 @@ class VCompressorCompare(unittest.TestCase):
         second.sort(key=lambda i: (i["pid"], i["tid"]))
         for i in range(len(first)):
             self.assertEqual(first, second,
-                             f"{first=} and {second} not equal")
+                             f"{first} and {second} not equal")
 
 
 test_counter_events = """
