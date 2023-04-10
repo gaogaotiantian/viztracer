@@ -561,14 +561,11 @@ int write_fee_events(PyObject* fee_key, PyObject* fee_value, FILE* fptr) {
     if (!PyObject_CallMethod(fee_value, "sort", NULL)) {
         goto clean_exit;
     }
+    // write place holder for args offset
+    place_holder = ftell(fptr);
+    fwrite(&args_offset, sizeof(uint64_t), 1, fptr);
     if (PyTuple_GetItem(fee_key, 3) == Py_True) {
-        fputc(FEE_HAS_ARGS, fptr);
-        // write place holder for args offset
-        place_holder = ftell(fptr);
-        fwrite(&args_offset, sizeof(uint64_t), 1, fptr);
         args_list = PyList_New(0);
-    } else {
-        fputc(FEE_HAS_NO_ARGS, fptr);
     }
     for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size; idx++) {
         PyObject * event_ts_tuple = PyList_GET_ITEM(fee_value, idx);
@@ -619,7 +616,6 @@ PyObject * load_fee_events(FILE* fptr) {
     uint64_t args_offset  = 0;
     uint64_t place_holder_ts  = 0;
     uint64_t place_holder_end = 0;
-    uint8_t flag    = 0;
     int64_t last_ts = 0;
     char buffer[STRING_BUFFER_SIZE] = {0};
     PyObject* fee_events_list   = PyList_New(0);
@@ -634,35 +630,25 @@ PyObject * load_fee_events(FILE* fptr) {
     freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
     READ_DATA(&count, uint64_t, fptr);
     name = PyUnicode_FromString(buffer);
-    READ_DATA(&flag, uint8_t, fptr);
-    switch (flag)
-    {
-        case FEE_HAS_ARGS:
-            // read fee args
-            READ_DATA(&args_offset, uint64_t, fptr);
-            place_holder_ts = ftell(fptr);
-            if (fseek(fptr, args_offset, SEEK_SET) != 0) {
-                PyErr_SetString(PyExc_ValueError, "seek to args offset failed!");
-                goto clean_exit;
-            }
-            args_list = json_loads_and_decompress_from_file(fptr);
-            if (!args_list) {
-                goto clean_exit;
-            }
-            // There's error checking in PyList_Size
-            if (PyList_Size(args_list) != (Py_ssize_t)count) {
-                PyErr_SetString(PyExc_ValueError, "args length is not equal to count!");
-                goto clean_exit;
-            }
-            place_holder_end = ftell(fptr);
-            fseek(fptr, place_holder_ts, SEEK_SET);
-            break;
-        case FEE_HAS_NO_ARGS:
-            break;
-        default:
-            PyErr_SetString(PyExc_ValueError, "invalid args flag!");
+    READ_DATA(&args_offset, uint64_t, fptr);
+    if (args_offset != 0) {
+        // read fee args
+        place_holder_ts = ftell(fptr);
+        if (fseek(fptr, args_offset, SEEK_SET) != 0) {
+            PyErr_SetString(PyExc_ValueError, "seek to args offset failed!");
             goto clean_exit;
-            break;
+        }
+        args_list = json_loads_and_decompress_from_file(fptr);
+        if (!args_list) {
+            goto clean_exit;
+        }
+        // There's error checking in PyList_Size
+        if (PyList_Size(args_list) != (Py_ssize_t)count) {
+            PyErr_SetString(PyExc_ValueError, "args length is not equal to count!");
+            goto clean_exit;
+        }
+        place_holder_end = ftell(fptr);
+        fseek(fptr, place_holder_ts, SEEK_SET);
     }
 
     for (uint64_t i = 0; i < count; i++) {

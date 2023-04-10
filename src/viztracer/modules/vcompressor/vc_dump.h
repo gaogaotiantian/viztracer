@@ -21,9 +21,6 @@
 #define TS_30_BIT  0x02
 #define TS_62_BIT  0x03
 
-#define FEE_HAS_ARGS    0x00
-#define FEE_HAS_NO_ARGS 0x01
-
 PyObject* decompress_bytes(PyObject* bytes_data);
 PyObject* compress_bytes(PyObject* bytes_data);
 PyObject* json_loads_from_bytes(PyObject* bytes_data);
