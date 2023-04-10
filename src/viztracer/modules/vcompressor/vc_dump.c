@@ -1014,6 +1014,11 @@ load_events_from_file(FILE* fptr)
     char buffer[STRING_BUFFER_SIZE] = {0};
 
     READ_DATA(&version, uint64_t, fptr);
+    if (version != VCOMPRESSOR_VERSION) {
+        Py_DECREF(trace_events);
+        PyErr_SetString(PyExc_ValueError, "VCompressor does not support this version if file");
+        goto clean_exit;
+    }
 
     PyDict_SetItemString(parsed_events, "traceEvents", trace_events);
     Py_DECREF(trace_events);
