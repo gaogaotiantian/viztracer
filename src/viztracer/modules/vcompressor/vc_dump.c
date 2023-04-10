@@ -1016,7 +1016,7 @@ load_events_from_file(FILE* fptr)
     READ_DATA(&version, uint64_t, fptr);
     if (version != VCOMPRESSOR_VERSION) {
         Py_DECREF(trace_events);
-        PyErr_SetString(PyExc_ValueError, "VCompressor does not support this version if file");
+        PyErr_SetString(PyExc_ValueError, "VCompressor does not support this version of file");
         goto clean_exit;
     }
 
