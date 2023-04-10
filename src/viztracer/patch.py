@@ -3,6 +3,7 @@
 
 
 import functools
+import itertools
 from multiprocessing import Process
 import os
 import re
@@ -21,25 +22,25 @@ def patch_subprocess(viz_args) -> None:
         from collections.abc import Sequence
 
         new_args: Union[str, Sequence[Any]] = args
+        new_viz_args = list(viz_args)
         if isinstance(new_args, str):
             new_args = new_args.split()
         if isinstance(new_args, Sequence):
             new_args = list(new_args)
             if "python" in os.path.basename(new_args[0]):
-                for py_arg in "bBdEhiIOqsSuvVx":
-                    if f"-{py_arg}" in new_args:
-                        new_args.remove(f"-{py_arg}")
+                new_args = list(itertools.dropwhile(
+                    lambda x: re.match("-[bBdEhiIOqsSuvVx]+$", x), new_args[1:]))
                 if "-c" in new_args:
                     # If python use -c mode, we move this to viztracer command
                     idx = new_args.index("-c")
-                    viz_args.append(new_args.pop(idx))
-                    viz_args.append(new_args.pop(idx))
+                    new_viz_args.append(new_args.pop(idx))
+                    new_viz_args.append(new_args.pop(idx))
                 elif "-m" in new_args:
                     # If python use -m mode, we need to use -m mode on viztracer
                     idx = new_args.index("-m")
-                    viz_args.append(new_args.pop(idx))
-                    viz_args.append(new_args.pop(idx))
-                new_args = ["viztracer", "--quiet"] + viz_args + ["--"] + new_args[1:]
+                    new_viz_args.append(new_args.pop(idx))
+                    new_viz_args.append(new_args.pop(idx))
+                new_args = ["viztracer", "--quiet"] + new_viz_args + ["--"] + new_args
             else:
                 new_args = args
 
