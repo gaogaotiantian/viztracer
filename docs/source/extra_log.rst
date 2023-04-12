@@ -97,7 +97,7 @@ You can log audit events introduced since python 3.8. The audit events will be l
 Log Exception
 -------------
 
-You can log raised exception. All raised exceptions, whether caught or not, will be displayed as an Instant Event
+You can log raised exceptions. All raised exceptions, whether caught or not, will be displayed as an Instant Event
 in the report.
 
 .. code-block:: 
@@ -190,7 +190,7 @@ in ``atexit`` or other on-exit hooks.
 Work with ``logging`` module
 ----------------------------
 
-VizTracer can work with python builtin ``logging`` module by adding a handler to it. The report will show logging
+VizTracer can work with python's builtin ``logging`` module by adding a handler to it. The report will show logging
 data as Instant Events.
 
 .. code-block:: python

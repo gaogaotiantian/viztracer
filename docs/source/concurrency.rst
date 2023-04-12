@@ -9,7 +9,7 @@ asyncio
 VizTracer supports ``asyncio`` module natively. However, you can use ``--log_async`` to make the report clearer.
 
 Under the rug, asyncio is a single-thread program that's scheduled by Python built-ins. With ``--log_async``, you can visualize
-different tasks as "threads", which could separate the real work from the underlying structure, and giving you a more intuitive
+different tasks as "threads", which could separate the real work from the underlying structure, and give you a more intuitive
 understanding of how different tasks consume the runtime.
 
 .. code-block::
@@ -111,7 +111,7 @@ combine reports
 ---------------
 
 You can generate json reports from different processes and combine them manually as well. It is recommended to use 
-``--pid_suffix`` so the report will be json file ends with its pid. You can specify your own file name using ``-o`` too. 
+``--pid_suffix`` so the report will be json file ending with its pid. You can specify your own file name using ``-o`` too.
 
 .. code-block::
     
@@ -119,7 +119,7 @@ You can generate json reports from different processes and combine them manually
     # or
     viztracer -o process1.json single_process.py
 
-You can specify the output directory if you want
+You can specify the output directory if you want to
 
 .. code-block::
 
