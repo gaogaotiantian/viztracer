@@ -125,10 +125,10 @@ class TestPatchSpawn(CmdlineTmpl):
         a = self.template(["python", "cmdline_test.py"],
                           expected_output_file=None,
                           script=check_output)
-        b = self.template(["viztracer", "cmdline_test.py"],
+        b = self.template(["viztracer", "--quiet", "cmdline_test.py"],
                           expected_output_file="result.json",
                           script=check_output)
-        self.assertEqual(a.stdout, b.stdout[:len(a.stdout)])
+        self.assertEqual(a.stdout, b.stdout)
 
 
 class TestPatchSideEffect(CmdlineTmpl):
