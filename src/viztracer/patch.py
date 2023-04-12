@@ -73,6 +73,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
         if new_args is None:
             new_args = args
+        assert hasattr(subprocess_init, "__wrapped__")  # for mypy
         subprocess_init.__wrapped__(self, new_args, **kwargs)
 
     # We need to filter the arguments as there are something we may not want
