@@ -246,11 +246,11 @@ VizTracer
     
     .. py:method:: start()
 
-        start tracing 
+        start tracing
 
     .. py:method:: stop()
 
-        start tracing 
+        stop tracing
 
     .. py:method:: clear()
 

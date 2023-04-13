@@ -13,7 +13,7 @@ Instant Event
 -------------
 
 Instant Event is a log at a specific timestamp, showing as an arrow. It's useful
-to log a transient event. You need to give it a ``name`` which is a string and an
+to log a transient event. You need to give it a ``name`` which is a string, and an
 argument ``args``. They will be displayed in the report
 
 ``args`` has to be a jsonifiable object, normally a string, or a combination
@@ -89,7 +89,7 @@ Duration Event
 Duration Event is almost the same as function call event that normally being logged automatically,
 with the only exception that it does not have to be a function.
 
-You can log any piece of code using duration event and it would look like a function call event
+You can log any piece of code using duration event and it will look like a function call event
 in your final report.
 
 .. code-block:: python

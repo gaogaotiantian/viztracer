@@ -56,7 +56,7 @@ you can still get profile data from the other threads.
     tracer.install()
 
 ``tracer.install()`` will basically add handlers for ``SIGUSR1`` and ``SIGUSR2`` which
-are only available on Unix. This also requires the program not using these two signals.
+are only available on Unix. This also requires the program not to use these two signals.
 
 Then when you are running this process, you can attach to it with VizTracer, using it's pid
 
