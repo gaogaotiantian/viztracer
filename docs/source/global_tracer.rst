@@ -6,7 +6,7 @@ Some features in VizTracer require a ``VizTracer`` object so it's helpful to mak
 When you are using command line entry ``viztracer your_script.py``, you don't need to worry about it. The tracer will be
 automatically registered and you can access it from any file. 
 
-When you are using an inline script, after you instantiate the object like ``tracer = VizTracer()``, it will automatically be
+When you instantiate the ``VizTracer`` object like ``tracer = VizTracer()`` in your script, it will be automatically
 registered globally. It is *not* recommended to have multiple tracer objects in a single script. However, you can turn off
 the global register by ``tracer = VizTracer(register_global=False)``
 

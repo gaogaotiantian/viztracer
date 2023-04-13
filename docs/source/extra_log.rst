@@ -190,7 +190,7 @@ in ``atexit`` or other on-exit hooks.
 Work with ``logging`` module
 ----------------------------
 
-VizTracer can work with python's builtin ``logging`` module by adding a handler to it. The report will show logging
+VizTracer can work with python builtin ``logging`` module by adding a handler to it. The report will show logging
 data as Instant Events.
 
 .. code-block:: python

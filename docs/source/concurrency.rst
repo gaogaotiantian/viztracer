@@ -110,8 +110,8 @@ And you are good to go. The main process should collect the data from sub-proces
 combine reports
 ---------------
 
-You can generate json reports from different processes and combine them manually as well. It is recommended to use 
-``--pid_suffix`` so the report will be json file ending with its pid. You can specify your own file name using ``-o`` too.
+You can generate json reports from different processes and combine them manually as well. It is recommended to use
+``--pid_suffix`` so the report will be saved as a json file ending with the pid of the process. You can specify your own file name using ``-o`` too.
 
 .. code-block::
     

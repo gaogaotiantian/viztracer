@@ -158,7 +158,7 @@ You can also show flamegraph of the result
     vizviewer --flamegraph result.json
 
 You can use the external trace processor with ``--use_external_processor``, which does not have the
-RAM limits as the browser. This is helpful when you try to open a large trace.
+RAM limits as the browser. This is helpful when you try to open a large trace file.
 
 .. code-block::
 
