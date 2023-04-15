@@ -510,34 +510,8 @@ int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
     // Iterate through fee events
     ppos = 0;
     while (PyDict_Next(fee_events, &ppos, &key, &value)) {
-        uint64_t pid = PyLong_AsLong(PyTuple_GetItem(key, 0));
-        uint64_t tid = PyLong_AsLong(PyTuple_GetItem(key, 1));
-        const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(key, 2));
-        uint64_t ts_size = PyList_GET_SIZE(value);
-        int64_t last_ts = 0;
-        fputc(VC_HEADER_FEE, fptr);
-        fwrite(&pid, sizeof(uint64_t), 1, fptr);
-        fwrite(&tid, sizeof(uint64_t), 1, fptr);
-        fwritestr(name, fptr);
-        fwrite(&ts_size, sizeof(uint64_t), 1, fptr);
-        if (!PyObject_CallMethod(value, "sort", NULL)) {
+        if (write_fee_events(key, value, fptr) != 0){
             goto clean_exit;
-        }
-        for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size; idx++) {
-            PyObject * event_ts_tuple = PyList_GET_ITEM(value, idx);
-            double ts = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 0));
-            double dur = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 1));
-            int64_t ts64 = ts * 100;
-            uint64_t dur64 = dur * 100;
-            uint64_t delta_ts = ts64 - last_ts;
-            last_ts = ts64;
-            if (idx == 0) {
-                // write the first timestamp as int64_t, for timestamp on windows may be negative
-                fwrite(&ts64, sizeof(int64_t), 1, fptr);
-            } else {
-                write_encoded_int(delta_ts, fptr);
-            }
-            write_encoded_int(dur64, fptr);
         }
     }
 
@@ -568,6 +542,158 @@ clean_exit:
 
     return 0;
 }
+
+
+int write_fee_events(PyObject* fee_key, PyObject* fee_value, FILE* fptr) {
+    PyObject* args_list = NULL;
+    uint64_t pid = PyLong_AsLong(PyTuple_GetItem(fee_key, 0));
+    uint64_t tid = PyLong_AsLong(PyTuple_GetItem(fee_key, 1));
+    uint64_t ts_size = PyList_GET_SIZE(fee_value);
+    uint64_t args_offset = 0;
+    int64_t last_ts = 0;
+    const char* name = PyUnicode_AsUTF8(PyTuple_GetItem(fee_key, 2));
+    int place_holder = 0;
+    fputc(VC_HEADER_FEE, fptr);
+    fwrite(&pid, sizeof(uint64_t), 1, fptr);
+    fwrite(&tid, sizeof(uint64_t), 1, fptr);
+    fwritestr(name, fptr);
+    fwrite(&ts_size, sizeof(uint64_t), 1, fptr);
+    if (!PyObject_CallMethod(fee_value, "sort", NULL)) {
+        goto clean_exit;
+    }
+    // write place holder for args offset
+    place_holder = ftell(fptr);
+    fwrite(&args_offset, sizeof(uint64_t), 1, fptr);
+    if (PyTuple_GetItem(fee_key, 3) == Py_True) {
+        args_list = PyList_New(0);
+    }
+    for (Py_ssize_t idx = 0; idx < (Py_ssize_t)ts_size; idx++) {
+        PyObject * event_ts_tuple = PyList_GET_ITEM(fee_value, idx);
+        double ts = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 0));
+        double dur = PyFloat_AsDouble(PyTuple_GET_ITEM(event_ts_tuple, 1));
+        int64_t ts64 = ts * 100;
+        uint64_t dur64 = dur * 100;
+        uint64_t delta_ts = ts64 - last_ts;
+        last_ts = ts64;
+        if (idx == 0) {
+            // write the first timestamp as int64_t, for timestamp on windows may be negative
+            fwrite(&ts64, sizeof(int64_t), 1, fptr);
+        } else {
+            write_encoded_int(delta_ts, fptr);
+        }
+        write_encoded_int(dur64, fptr);
+        if (args_list) {
+            PyList_Append(args_list, PyTuple_GET_ITEM(event_ts_tuple, 2));
+        }
+    }
+
+    if (args_list) {
+        args_offset = ftell(fptr);
+        fseek(fptr, place_holder, SEEK_SET);
+        fwrite(&args_offset, sizeof(args_offset), 1, fptr);
+        fseek(fptr, args_offset, SEEK_SET);
+        if (json_dumps_and_compress_to_file(args_list, fptr) != 0) {
+            goto clean_exit;
+        }
+    }
+
+clean_exit:
+    Py_XDECREF(args_list);
+
+    if (PyErr_Occurred()) {
+        return 1;
+    }
+    return 0;
+}
+
+
+PyObject * load_fee_events(FILE* fptr) {
+    uint64_t pid    = 0;
+    uint64_t tid    = 0;
+    uint64_t count  = 0;
+    uint64_t dur    = 0;
+    uint64_t delta_ts     = 0;
+    uint64_t args_offset  = 0;
+    uint64_t place_holder_ts  = 0;
+    uint64_t place_holder_end = 0;
+    int64_t last_ts = 0;
+    char buffer[STRING_BUFFER_SIZE] = {0};
+    PyObject* fee_events_list   = PyList_New(0);
+    PyObject* event             = NULL;
+    PyObject* name              = NULL;
+    PyObject* args_list         = NULL;
+    PyObject* unicode_X         = PyUnicode_FromString("X");
+    PyObject* unicode_FEE       = PyUnicode_FromString("FEE");
+
+    READ_DATA(&pid, uint64_t, fptr);
+    READ_DATA(&tid, uint64_t, fptr);
+    freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
+    READ_DATA(&count, uint64_t, fptr);
+    name = PyUnicode_FromString(buffer);
+    READ_DATA(&args_offset, uint64_t, fptr);
+    if (args_offset != 0) {
+        // read fee args
+        place_holder_ts = ftell(fptr);
+        if (fseek(fptr, args_offset, SEEK_SET) != 0) {
+            PyErr_SetString(PyExc_ValueError, "seek to args offset failed!");
+            goto clean_exit;
+        }
+        args_list = json_loads_and_decompress_from_file(fptr);
+        if (!args_list) {
+            goto clean_exit;
+        }
+        // There's error checking in PyList_Size
+        if (PyList_Size(args_list) != (Py_ssize_t)count) {
+            PyErr_SetString(PyExc_ValueError, "args length is not equal to count!");
+            goto clean_exit;
+        }
+        place_holder_end = ftell(fptr);
+        fseek(fptr, place_holder_ts, SEEK_SET);
+    }
+
+    for (uint64_t i = 0; i < count; i++) {
+        if (i == 0) {
+            READ_DATA(&last_ts, int64_t, fptr);
+        } else {
+            if (read_encoded_int(&delta_ts, fptr) != 0) {
+                goto clean_exit;
+            }
+        }
+        if (read_encoded_int(&dur, fptr) != 0) {
+            goto clean_exit;
+        }
+        event = PyDict_New();
+        PyDict_SetItemString(event, "ph", unicode_X);
+        PyDict_SetItemString(event, "name", name);
+        PyDict_SetItemString(event, "cat", unicode_FEE);
+        PyDict_SetItemStringULL(event, "pid", pid);
+        PyDict_SetItemStringULL(event, "tid", tid);
+        last_ts = delta_ts + last_ts;
+        PyDict_SetItemStringDouble(event, "ts", (double)last_ts / 100);
+        PyDict_SetItemStringDouble(event, "dur", (double)dur / 100);
+        if (args_list) {
+            PyDict_SetItemString(event, "args", PyList_GET_ITEM(args_list, i));
+        }
+        PyList_Append(fee_events_list, event);
+        Py_DECREF(event);
+    }
+    if (args_list) {
+        fseek(fptr, place_holder_end, SEEK_SET);
+    }
+    
+clean_exit:
+    Py_XDECREF(name);
+    Py_XDECREF(args_list);
+    Py_DECREF(unicode_X);
+    Py_DECREF(unicode_FEE);
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return fee_events_list;
+}
+
 
 int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
     /* there may be several args in a counter, log them all may take more spaces
@@ -752,7 +878,7 @@ load_counter_event(FILE* fptr)
     uint64_t tid = 0;
     uint64_t arg_key_count = 0;
     uint64_t counter_event_count = 0;
-    uint64_t ts_64 = 0;
+    int64_t ts_64 = 0;
     uint8_t header = 0;
     int64_t value_longlong = 0;
     double value_double = 0;
@@ -782,7 +908,7 @@ load_counter_event(FILE* fptr)
     READ_DATA(&counter_event_count, uint64_t, fptr);
     for (uint64_t i = 0; i < counter_event_count; i++) {
         current_arg = PyDict_New();
-        READ_DATA(&ts_64, uint64_t, fptr);
+        READ_DATA(&ts_64, int64_t, fptr);
         for (uint64_t j = 0; j < arg_key_count; j++) {
             READ_DATA(&header, uint8_t, fptr);
             counter_arg_key = PyList_GetItem(arg_key_list, j);
@@ -874,13 +1000,10 @@ load_events_from_file(FILE* fptr)
     PyObject* name = NULL;
     PyObject* event = NULL;
     PyObject* counter_events = NULL;
+    PyObject* fee_events     = NULL;
     PyObject* other_events   = NULL;
     uint64_t pid = 0;
     uint64_t tid = 0;
-    uint64_t count = 0;
-    uint64_t ts = 0;
-    uint64_t dur = 0;
-    int64_t last_ts = 0;
     PyObject* args = NULL;
     PyObject* unicode_X = PyUnicode_FromString("X");
     PyObject* unicode_M = PyUnicode_FromString("M");
@@ -891,6 +1014,11 @@ load_events_from_file(FILE* fptr)
     char buffer[STRING_BUFFER_SIZE] = {0};
 
     READ_DATA(&version, uint64_t, fptr);
+    if (version != VCOMPRESSOR_VERSION) {
+        Py_DECREF(trace_events);
+        PyErr_SetString(PyExc_ValueError, "VCompressor does not support this version of file");
+        goto clean_exit;
+    }
 
     PyDict_SetItemString(parsed_events, "traceEvents", trace_events);
     Py_DECREF(trace_events);
@@ -936,36 +1064,15 @@ load_events_from_file(FILE* fptr)
                 Py_DECREF(args);
                 break;
             case VC_HEADER_FEE:
-                READ_DATA(&pid, uint64_t, fptr);
-                READ_DATA(&tid, uint64_t, fptr);
-                freadstrn(buffer, STRING_BUFFER_SIZE - 1, fptr);
-                READ_DATA(&count, uint64_t, fptr);
-                name = PyUnicode_FromString(buffer);
-                last_ts = 0;
-                for (uint64_t i = 0; i < count; i++) {
-                    if (i == 0) {
-                        READ_DATA(&ts, int64_t, fptr);
-                    } else {
-                        if (read_encoded_int(&ts, fptr) != 0) {
-                            goto clean_exit;
-                        }
-                    }
-                    if (read_encoded_int(&dur, fptr) != 0) {
-                        goto clean_exit;
-                    }
-                    event = PyDict_New();
-                    PyDict_SetItemString(event, "ph", unicode_X);
-                    PyDict_SetItemString(event, "name", name);
-                    PyDict_SetItemString(event, "cat", unicode_FEE);
-                    PyDict_SetItemStringULL(event, "pid", pid);
-                    PyDict_SetItemStringULL(event, "tid", tid);
-                    last_ts = ts + last_ts;
-                    PyDict_SetItemStringDouble(event, "ts", (double)last_ts / 100);
-                    PyDict_SetItemStringDouble(event, "dur", (double)dur / 100);
-                    PyList_Append(trace_events, event);
-                    Py_DECREF(event);
+                fee_events = load_fee_events(fptr);
+                if (!fee_events) {
+                    goto clean_exit;
                 }
-                Py_DECREF(name);
+                PyObject_CallMethod(trace_events, "extend", "O", fee_events);
+                Py_DECREF(fee_events);
+                if (PyErr_Occurred()) {
+                    goto clean_exit;
+                }
                 break;
             case VC_HEADER_FILE_INFO:
                 file_info = load_file_info(fptr);

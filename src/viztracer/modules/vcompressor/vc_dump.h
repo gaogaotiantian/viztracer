@@ -36,10 +36,14 @@ int dump_file_info(PyObject* file_info, FILE* fptr);
 
 int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr);
 
+int write_fee_events(PyObject* fee_key, PyObject* fee_value, FILE* fptr);
+
 PyObject* load_events_from_file(FILE* fptr);
 
 PyObject* load_file_info(FILE* fptr);
 
 PyObject* load_counter_event(FILE* fptr);
+
+PyObject * load_fee_events(FILE* fptr);
 
 #endif
