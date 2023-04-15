@@ -315,6 +315,18 @@ class VCompressorCompare(unittest.TestCase):
             else:
                 self.assertEqual(value, second[key], f"{key} is not equal")
 
+    def assertThreadOrProcessEqual(self, first: list, second: list):
+        """
+        This method is used to assert if two lists of thread names are equal
+        """
+        self.assertEqual(len(first), len(second),
+                         f"list length not equal, first is {len(first)} \n second is {len(second)}")
+        first.sort(key=lambda i: (i["pid"], i["tid"]))
+        second.sort(key=lambda i: (i["pid"], i["tid"]))
+        for i in range(len(first)):
+            self.assertEqual(first, second,
+                             f"{first} and {second} not equal")
+
 
 test_counter_events = """
 import threading
@@ -423,6 +435,25 @@ tracer.save(output_file='%s')
 """
 
 
+test_fee_args = """
+from viztracer import VizTracer
+tracer = VizTracer(log_func_args=True, log_func_retval=True)
+tracer.start()
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+fib(10)
+tracer.log_func_args = False
+tracer.log_func_retval = False
+fib(10)
+
+tracer.stop()
+tracer.save(output_file='%s')
+"""
+
+
 class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
 
     def _generate_test_data(self, test_file):
@@ -472,6 +503,18 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
         self.assertEqual(origin_json_data["file_info"], dup_json_data["file_info"])
 
+    def test_process_name(self):
+        origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
+        origin_names = [i for i in origin_json_data["traceEvents"] if i["ph"] == "M" and i["name"] == "process_name"]
+        dup_names = [i for i in dup_json_data["traceEvents"] if i["ph"] == "M" and i["name"] == "process_name"]
+        self.assertThreadOrProcessEqual(origin_names, dup_names)
+
+    def test_thread_name(self):
+        origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
+        origin_names = [i for i in origin_json_data["traceEvents"] if i["ph"] == "M" and i["name"] == "thread_name"]
+        dup_names = [i for i in dup_json_data["traceEvents"] if i["ph"] == "M" and i["name"] == "thread_name"]
+        self.assertThreadOrProcessEqual(origin_names, dup_names)
+
     def test_fee(self):
         origin_json_data, dup_json_data = self._generate_test_data("multithread.json")
         origin_fee_events = {}
@@ -496,6 +539,12 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         for key, value in origin_fee_events.items():
             self.assertIn(key, dup_fee_events, f"thread data {str(key)} not in decompressed data")
             self.assertEventsEqual(value, dup_fee_events[key], 0.011)
+
+    def test_fee_with_args(self):
+        origin_json_data, dup_json_data = self._generate_test_data_by_script(test_fee_args)
+        origin_fee_events = [i for i in origin_json_data["traceEvents"] if i["ph"] == "X"]
+        dup_fee_events = [i for i in dup_json_data["traceEvents"] if i["ph"] == "X"]
+        self.assertEventsEqual(origin_fee_events, dup_fee_events, 0.011)
 
     def test_counter_events(self):
         origin_json_data, dup_json_data = self._generate_test_data_by_script(test_counter_events)
