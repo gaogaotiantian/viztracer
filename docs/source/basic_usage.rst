@@ -254,3 +254,19 @@ interact with it. Even better, you can **go back in time** because you know what
     vdb <your_json_report>
 
 For detailed commands, please refer to :doc:`virtual_debug`
+
+Compress Your Report
+--------------------
+
+VizTracer supports compressing your json report. This could save you a lot of disk space. 
+You can compress your report with ``--compress``.
+
+.. code-block:: 
+
+    viztracer -o result.cvf --compress result.json
+
+You can also decompress your report with ``--decompress``
+
+.. code-block:: 
+
+    viztracer -o result.json --decompress result.cvf
