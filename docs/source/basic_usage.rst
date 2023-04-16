@@ -258,7 +258,8 @@ For detailed commands, please refer to :doc:`virtual_debug`
 Compress Your Report
 --------------------
 
-VizTracer supports compressing your json report. This could save you a lot of disk space. 
+VizTracer supports compressing your json report. The compress rate is better than commonly used compression methods like ``zlib`` and ``lzma``.
+
 You can compress your report with ``--compress``.
 
 .. code-block:: 
