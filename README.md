@@ -39,7 +39,7 @@ python3 my_script.py arg1 arg2
 
 You can simply use VizTracer by
 
-```
+```sh
 viztracer my_script.py arg1 arg2
 ```
 
@@ -104,7 +104,7 @@ Or add <code>--open</code> to open the reports right after tracing
 </summary>
 
 ```sh
-viztracer --open my_scripy.py arg1 arg2
+viztracer --open my_script.py arg1 arg2
 viztracer -o result.html --open my_script.py arg1 arg2
 ```
 
@@ -116,11 +116,11 @@ viztracer -o result.html --open my_script.py arg1 arg2
 modules and console scripts(like <code>flask</code>) are supported as well
 </summary>
 
-```
+```sh
 viztracer -m your_module
 ```
 
-```
+```sh
 viztracer flask run
 ```
 
