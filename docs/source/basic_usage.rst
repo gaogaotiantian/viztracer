@@ -258,7 +258,7 @@ For detailed commands, please refer to :doc:`virtual_debug`
 Compress Your Report
 --------------------
 
-VizTracer supports compressing your json report. The compress rate is better than commonly used compression methods like ``zlib`` and ``lzma``.
+VizTracer supports compressing your json report. The general compress ratio is about 1% - 3% for a large report.
 
 You can compress your report with ``--compress``.
 
