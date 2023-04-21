@@ -254,3 +254,20 @@ interact with it. Even better, you can **go back in time** because you know what
     vdb <your_json_report>
 
 For detailed commands, please refer to :doc:`virtual_debug`
+
+Compress Your Report
+--------------------
+
+VizTracer supports compressing your json report. The general compression ratio is about 50:1 to 100:1 for a large report.
+
+You can compress your report with ``--compress``.
+
+.. code-block:: 
+
+    viztracer --compress result.json -o result.cvf 
+
+You can also decompress your report with ``--decompress``
+
+.. code-block:: 
+
+    viztracer --decompress result.cvf -o result.json 
