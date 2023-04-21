@@ -258,16 +258,16 @@ For detailed commands, please refer to :doc:`virtual_debug`
 Compress Your Report
 --------------------
 
-VizTracer supports compressing your json report. The general compression ratio is about 50:1 for a large report.
+VizTracer supports compressing your json report. The general compress ratio is about 1% - 3% for a large report.
 
 You can compress your report with ``--compress``.
 
 .. code-block:: 
 
-    viztracer --compress result.json -o result.cvf
+    viztracer -o result.cvf --compress result.json
 
 You can also decompress your report with ``--decompress``
 
 .. code-block:: 
 
-    viztracer --decompress result.cvf -o result.json
+    viztracer -o result.json --decompress result.cvf
