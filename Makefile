@@ -36,3 +36,6 @@ clean:
 	rm -rf viztracer.egg-info
 	rm -rf src/viztracer.egg-info
 	pip uninstall -y viztracer
+
+echo:
+	@ehco "viztracer @ GaoTian"
