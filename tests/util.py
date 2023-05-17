@@ -38,7 +38,7 @@ def adapt_json_file(filename):
         f.write(json.dumps(data))
 
 
-def get_json_file_path(filename):
+def get_tests_data_file_path(filename):
     return os.path.join(os.path.dirname(__file__), "data", filename)
 
 

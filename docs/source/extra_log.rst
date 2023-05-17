@@ -97,7 +97,7 @@ You can log audit events introduced since python 3.8. The audit events will be l
 Log Exception
 -------------
 
-You can log raised exception. All raised exceptions, whether caught or not, will be displayed as an Instant Event
+You can log raised exceptions. All raised exceptions, whether caught or not, will be displayed as an Instant Event
 in the report.
 
 .. code-block:: 

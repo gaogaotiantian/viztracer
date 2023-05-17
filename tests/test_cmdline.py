@@ -244,6 +244,8 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.html")
         self.template(["python", "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json")
+        self.template(["python", "-m", "viztracer", "--output_file", "result with space.json", "cmdline_test.py"],
+                      expected_output_file="result with space.json")
         self.template(["python", "-m", "viztracer", "--output_file", "result.json.gz", "cmdline_test.py"],
                       expected_output_file="result.json.gz")
         self.template(["viztracer", "-o", "result.html", "cmdline_test.py"], expected_output_file="result.html")

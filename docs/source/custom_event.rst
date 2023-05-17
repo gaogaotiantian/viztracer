@@ -14,7 +14,7 @@ Custom Event
 
         an object of ``VizTracer``
         
-        ``tracer`` can be set to ``None`` so the logging operation will be ``NOP``. You program will
+        ``tracer`` can be set to ``None`` so the logging operation will be ``NOP``. Your program will
         run normally with the instrumented code even when you are not using viztracer. 
     
     .. py:attribute:: name

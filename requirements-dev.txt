@@ -9,6 +9,6 @@ mypy
 coverage
 
 # 3rd party packages for test
-ipywidgets==8.0.4  # This is temporary and should be unfreezed as long as ipywidgets is fixed
+ipywidgets>8.0.5
 loky>=3.0.0
 jaxlib; sys_platform != 'win32' and python_version < '3.11'

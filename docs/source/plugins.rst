@@ -1,7 +1,7 @@
 Plugins
 =======
 
-VizTracer supports third party plugins that complies to the specification of VizTracer.
+VizTracer supports third party plugins that comply to the specification of VizTracer.
 
 To use a plugin, you need to install the plugin first. For example, if you want to use
 a plugin named ``vizplugins``
@@ -16,8 +16,8 @@ Then you need to pass the plugin to ``viztracer`` using ``--plugins``
 
     viztracer --plugins vizplugins -- my_script.py
 
-There could be multiple plugins to use in a package, which is differentiate by modules.
-You can specify the module that plugin lives(you should refer to the plugin's doc for
+There could be multiple plugins to use in a package, which are differentiate by modules.
+You can specify the module where plugin lives(you should refer to the plugin's doc for
 detailed usage)
 
 .. code-block::

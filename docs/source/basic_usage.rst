@@ -78,7 +78,7 @@ First of all, you need to import ``VizTracer`` class from the package
 
     from viztracer import VizTracer
 
-You can trace code with ``with`` statement
+You can trace code with the ``with`` statement
 
 .. code-block:: python
     
@@ -139,7 +139,7 @@ only host an HTTP server on ``localhost:9001``, which you can access through you
     vizviewer --server_only result.json
 
 If you do not want to host the HTTP server forever, you can use ``--once`` so the server will shut down
-after serve the trace file
+after serving the trace file
 
 .. code-block::
 
@@ -158,11 +158,11 @@ You can also show flamegraph of the result
     vizviewer --flamegraph result.json
 
 You can use the external trace processor with ``--use_external_processor``, which does not have the
-RAM limits as the browser. This is helpful when you try to open large trace.
+RAM limits as the browser. This is helpful when you try to open a large trace file.
 
 .. code-block::
 
-    viztracer --use_external_processor result.json
+    vizviewer --use_external_processor result.json
 
 ``vizviewer`` can also show standalone html report - it just host a simple HTTP server for the file
 
@@ -180,10 +180,10 @@ Or, you can use ``--open`` for ``viztracer``, it will then open the report after
 Circular Buffer Size
 --------------------
 
-VizTracer used circular buffer to store the entries. When there are too many entries, it will only store the latest ones so you know what happened
-recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB disk space. You can specify this when you instantiate ``VizTracer`` object
+VizTracer uses a circular buffer to store the entries. When there are too many entries, it will only store the latest ones so you know what happened
+recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB disk space. You can specify this when you instantiate a ``VizTracer`` object
 
-Notice it also takes significant amount of RAM when VizTracer is tracing the program.
+Notice it also takes a significant amount of RAM when VizTracer is tracing the program.
 
 VizTracer will preallocate about ``tracer_entries * 100B`` RAM for circular buffer. It also requires about ``1-2MB`` per 10k entries to
 dump the json file.
@@ -216,7 +216,7 @@ built in ``configparser``.
     output_file = vizreport.json
     max_stack_depth = 10
 
-``[default]`` can't be omitted and all the arguments should be in a key-value pair format, where key is the argument name(without ``--``) and val is the
+``[default]`` can't be omitted and all the arguments should be in a key-value pair format, where the key is the argument name(without ``--``) and the val is the
 value you need to pass in. Please notice that there are some arguments in ``viztracer`` that do not take parameters(like `--ignore_c_function``), you
 need to pass ``True`` in the config file to make the config parser happy. If you need to pass multiple parameters to an argument(like ``log_var``), just
 use space to separate the parameters like you do in cmdline interface.
@@ -254,3 +254,20 @@ interact with it. Even better, you can **go back in time** because you know what
     vdb <your_json_report>
 
 For detailed commands, please refer to :doc:`virtual_debug`
+
+Compress Your Report
+--------------------
+
+VizTracer supports compressing your json report. The general compression ratio is about 50:1 to 100:1 for a large report.
+
+You can compress your report with ``--compress``.
+
+.. code-block:: 
+
+    viztracer --compress result.json -o result.cvf 
+
+You can also decompress your report with ``--decompress``
+
+.. code-block:: 
+
+    viztracer --decompress result.cvf -o result.json 

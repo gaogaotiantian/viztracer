@@ -1,8 +1,8 @@
 Filter
 ======
 
-Sometimes, you will have too many data entries and you want to filter some of them out to either improve the performance or make the report clearer. 
-VizTracer provides multiple filters to your need.
+Sometimes, you may have too many data entries and you want to filter some of them out to either improve the performance or make the report clearer.
+VizTracer provides multiple filters for your needs.
 
 Min Duration
 ------------

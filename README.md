@@ -1,6 +1,6 @@
 # VizTracer
 
-[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![flake8](https://github.com/gaogaotiantian/viztracer/workflows/lint/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3ALint)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)  [![twitter](https://img.shields.io/twitter/follow/viztracer?label=viztracer&style=flat&logo=twitter)](https://twitter.com/viztracer)
+[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![flake8](https://github.com/gaogaotiantian/viztracer/workflows/lint/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3ALint)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)  [![sponsor](https://img.shields.io/badge/%E2%9D%A4-Sponsor%20me-%23c96198?style=flat&logo=GitHub)](https://github.com/sponsors/gaogaotiantian)
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
@@ -39,7 +39,7 @@ python3 my_script.py arg1 arg2
 
 You can simply use VizTracer by
 
-```
+```sh
 viztracer my_script.py arg1 arg2
 ```
 
@@ -104,7 +104,7 @@ Or add <code>--open</code> to open the reports right after tracing
 </summary>
 
 ```sh
-viztracer --open my_scripy.py arg1 arg2
+viztracer --open my_script.py arg1 arg2
 viztracer -o result.html --open my_script.py arg1 arg2
 ```
 
@@ -116,11 +116,11 @@ viztracer -o result.html --open my_script.py arg1 arg2
 modules and console scripts(like <code>flask</code>) are supported as well
 </summary>
 
-```
+```sh
 viztracer -m your_module
 ```
 
-```
+```sh
 viztracer flask run
 ```
 
