@@ -21,8 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from viztracer.vcompressor import VCompressor
 
 from . import __version__
-from .attach_process.add_code_to_python_process import \
-    run_python_code  # type: ignore
+from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
