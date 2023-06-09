@@ -210,6 +210,6 @@ class ReportBuilder:
                     report_abspath = os.path.abspath(msg_args["output_file"])
                     print("Use the following command to open the report:")
                     if " " in report_abspath:
-                        color_print("OKGREEN", "vizviewer \"{}\"".format(report_abspath))
+                        color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
                     else:
-                        color_print("OKGREEN", "vizviewer {}".format(report_abspath))
+                        color_print("OKGREEN", f"vizviewer {report_abspath}")

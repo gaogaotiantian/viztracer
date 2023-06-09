@@ -44,7 +44,7 @@ class FlameGraph:
     def parse(self, trace_data: Dict[str, Any]) -> None:
         func_trees: Dict[str, FuncTree] = {}
         for data in trace_data["traceEvents"]:
-            key = "p{}_t{}".format(data["pid"], data["tid"])
+            key = f"p{data['pid']}_t{data['tid']}"
             if key in func_trees:
                 tree = func_trees[key]
             else:

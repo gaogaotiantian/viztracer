@@ -30,7 +30,7 @@ def adapt_json_file(filename):
                 try:
                     m = name_regex.match(event["name"])
                     if m and py_filename in event["name"]:
-                        event["name"] = "{} ({}:{})".format(m.group(1), py_path, m.group(3))
+                        event["name"] = f"{m.group(1)} ({py_path}:{m.group(3)})"
                 except ValueError:
                     pass
 

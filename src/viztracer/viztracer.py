@@ -96,7 +96,7 @@ class VizTracer(_VizTracer):
         if type(pid_suffix) is bool:
             self.__pid_suffix = pid_suffix
         else:
-            raise ValueError("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
+            raise ValueError(f"pid_suffix needs to be a boolean, not {pid_suffix}")
 
     @property
     def init_kwargs(self) -> Dict:

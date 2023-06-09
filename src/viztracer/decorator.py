@@ -45,7 +45,7 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
             tracer.stop()
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
-            file_name = os.path.join(output_dir, "result_{}_{}.json".format(func.__name__, int(100000 * time.time())))
+            file_name = os.path.join(output_dir, f"result_{func.__name__}_{int(100000 * time.time())}.json")
             tracer.fork_save(file_name)
             tracer.cleanup()
             return ret

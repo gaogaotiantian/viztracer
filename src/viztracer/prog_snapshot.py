@@ -234,7 +234,7 @@ class ProgSnapshot:
         elif ph == "M":
             return
         else:
-            print("Unsupported event type: {}".format(ph))
+            print(f"Unsupported event type: {ph}")
             return
 
     def check_version(self, version):
@@ -436,9 +436,9 @@ class ProgSnapshot:
         forest = self.func_trees[curr_tree.pid]
         for tid in forest:
             if tid == curr_tree.tid:
-                self.p("> {}".format(tid))
+                self.p(f"> {tid}")
             else:
-                self.p("  {}".format(tid))
+                self.p(f"  {tid}")
 
         return True, None
 
@@ -446,9 +446,9 @@ class ProgSnapshot:
         curr_tree = self.curr_tree
         for pid in self.func_trees:
             if pid == curr_tree.pid:
-                self.p("> {}".format(pid))
+                self.p(f"> {pid}")
             else:
-                self.p("  {}".format(pid))
+                self.p(f"  {pid}")
 
         return True, None
 

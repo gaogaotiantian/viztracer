@@ -20,8 +20,7 @@ def load_lib_and_attach(debugger, command, result, internal_dict):
 
     print(dll)
     target = debugger.GetSelectedTarget()
-    res = target.EvaluateExpression("(void*)dlopen(\"%s\", 2);" % (
-        dll), options)
+    res = target.EvaluateExpression(f"(void*)dlopen(\"{dll}\", 2);", options)
     error = res.GetError()
     if error:
         print(error)

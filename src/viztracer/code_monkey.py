@@ -173,11 +173,11 @@ class AstTransformer(ast.NodeTransformer):
         elif self.inst_type == "log_func_entry":
             return self.get_add_variable_node(
                 name=f"{trigger} - {name}",
-                var_node=ast.Constant(value="{} is called".format(name)),
+                var_node=ast.Constant(value=f"{name} is called"),
                 event="instant"
             )
         else:
-            raise ValueError("{} is not supported".format(name))
+            raise ValueError(f"{name} is not supported")
 
     def get_instrument_node_by_node(self, trigger: str, node: Optional[ast.expr]) -> ast.Expr:
         var_node: ast.expr
@@ -248,25 +248,25 @@ class AstTransformer(ast.NodeTransformer):
             return node.id
         elif isinstance(node, ast.Constant):
             if isinstance(node.value, str):
-                return "'{}'".format(node.value)
+                return f"'{node.value}'"
             else:
-                return "{}".format(node.value)
+                return f"{node.value}"
         elif isinstance(node, ast.Num):
-            return "{}".format(node.n)
+            return f"{node.n}"
         elif isinstance(node, ast.Str):
-            return "'{}'".format(node.s)
+            return f"'{node.s}'"
         elif isinstance(node, ast.Attribute):
-            return "{}.{}".format(self.get_string_of_expr(node.value), node.attr)
+            return f"{self.get_string_of_expr(node.value)}.{node.attr}"
         elif isinstance(node, ast.Subscript):
-            return "{}[{}]".format(self.get_string_of_expr(node.value), self.get_string_of_expr(node.slice))
+            return f"{self.get_string_of_expr(node.value)}[{self.get_string_of_expr(node.slice)}]"
         elif isinstance(node, ast.Call):
-            return "{}()".format(self.get_string_of_expr(node.func))
+            return f"{self.get_string_of_expr(node.func)}()"
         elif isinstance(node, ast.Starred):
-            return "*{}".format(self.get_string_of_expr(node.value))
+            return f"*{self.get_string_of_expr(node.value)}"
         elif isinstance(node, ast.Tuple):
-            return "({})".format(",".join([self.get_string_of_expr(elt) for elt in node.elts]))
+            return f"({','.join([self.get_string_of_expr(elt) for elt in node.elts])})"
         elif isinstance(node, ast.List):
-            return "[{}]".format(",".join([self.get_string_of_expr(elt) for elt in node.elts]))
+            return f"[{','.join([self.get_string_of_expr(elt) for elt in node.elts])}]"
         elif sys.version_info < (3, 9) and isinstance(node, ast.Index):
             return self.get_string_of_expr(node.value)
         elif isinstance(node, ast.Slice):
@@ -274,11 +274,11 @@ class AstTransformer(ast.NodeTransformer):
             upper = self.get_string_of_expr(node.upper) if "upper" in node._fields and node.upper else ""
             step = self.get_string_of_expr(node.step) if "step" in node._fields and node.step else ""
             if step:
-                return "{}:{}:{}".format(lower, upper, step)
+                return f"{lower}:{upper}:{step}"
             elif upper:
-                return "{}:{}".format(lower, upper)
+                return f"{lower}:{upper}"
             else:
-                return "{}:".format(lower)
+                return f"{lower}:"
         elif sys.version_info < (3, 9) and isinstance(node, ast.ExtSlice):
             return ",".join([self.get_string_of_expr(dim) for dim in node.dims])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \

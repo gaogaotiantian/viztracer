@@ -71,7 +71,7 @@ class SimInterface:
                 self.sim_process.stdout.close()
                 self.sim_process.stdin.close()
                 if self.sim_process.returncode != 0:
-                    raise Exception("error code {}".format(self.sim_process.returncode))
+                    raise Exception(f"error code {self.sim_process.returncode}")
             except subprocess.TimeoutExpired:
                 self.sim_process.terminate()
 

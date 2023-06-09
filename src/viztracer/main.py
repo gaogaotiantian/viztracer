@@ -393,7 +393,7 @@ class VizUI:
         file_name = command[0]
         search_result = self.search_file(file_name)
         if not search_result:
-            return False, "No such file as {}".format(file_name)
+            return False, f"No such file as {file_name}"
         file_name = search_result
         with open(file_name, "rb") as f:
             code_string = f.read()
@@ -517,7 +517,7 @@ class VizUI:
             return False, f"Failed to inject code [err {retcode}]"
 
         print("Use the following command to open the report:")
-        color_print("OKGREEN", "vizviewer {}".format(self.init_kwargs["output_file"]))
+        color_print("OKGREEN", f"vizviewer {self.init_kwargs['output_file']}")
 
         return True, None
 

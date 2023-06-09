@@ -7,7 +7,7 @@ def fib(n):
     if n < 2:
         logging.warn("Base case, return 1")
         return 1
-    logging.info("Recursive, working on {}".format(n))
+    logging.info(f"Recursive, working on {n}")
     return fib(n - 1) + fib(n - 2)
 
 

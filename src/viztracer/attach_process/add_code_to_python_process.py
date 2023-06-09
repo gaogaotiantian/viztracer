@@ -200,7 +200,7 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
         try:
             found = [name for name in os.listdir(libdir) if name.startswith('attach_') and name.endswith(extension)]
         except:
-            print('Error listing dir: %s' % (libdir,))
+            print(f'Error listing dir: {libdir}')
             traceback.print_exc()
             return None
 
@@ -235,7 +235,7 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
             )
             return None
 
-        print('Using %s in arch: %s.' % (filename, arch))
+        print(f'Using {filename} in arch: {arch}.')
 
     else:
         if is_target_process_64:
@@ -250,13 +250,13 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
             elif IS_LINUX:
                 prefix = 'attach_linux_'  # historically it has a different name
             else:
-                print('Unable to attach to process in platform: %s' % (sys.platform,))
+                print(f'Unable to attach to process in platform: {sys.platform}')
                 return None
 
-        filename = os.path.join(libdir, '%s%s%s' % (prefix, suffix, extension))
+        filename = os.path.join(libdir, f'{prefix}{suffix}{extension}')
 
     if not os.path.exists(filename):
-        print('Expected: %s to exist.' % (filename,))
+        print(f'Expected: {filename} to exist.')
         return None
 
     return filename
@@ -279,7 +279,7 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
     #     "Target 64 bits: %s\n"
     #     "Current Python 64 bits: %s" % (is_target_process_64, is_python_64bit()))
 
-    with _acquire_mutex('_pydevd_pid_attach_mutex_%s' % (pid,), 10):
+    with _acquire_mutex(f'_pydevd_pid_attach_mutex_{pid}', 10):
         # print('--- Connecting to %s bits target (current process is: %s) ---' % (bits, 64 if is_python_64bit() else 32))
 
         with _win_write_to_shared_named_memory(python_code, pid):
@@ -302,7 +302,7 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
             if not target_dll_run_on_dllmain:
                 raise RuntimeError('Could not find expected .dll in attach to process.')
 
-            with _create_win_event('_pydevd_pid_event_%s' % (pid,)) as event:
+            with _create_win_event(f'_pydevd_pid_event_{pid}') as event:
                 # print('\n--- Injecting run code dll: %s into pid: %s ---' % (os.path.basename(target_dll_run_on_dllmain), pid))
                 args = [target_executable, str(pid), target_dll_run_on_dllmain]
                 subprocess.check_call(args)
@@ -359,7 +359,7 @@ def _win_write_to_shared_named_memory(python_code, pid):
     assert isinstance(python_code, bytes)
     assert len(python_code) > 0, 'Python code must not be empty.'
     # Note: -1 so that we're sure we'll add a \0 to the end.
-    assert len(python_code) < BUFSIZE - 1, 'Python code must have at most %s bytes (found: %s)' % (BUFSIZE - 1, len(python_code))
+    assert len(python_code) < BUFSIZE - 1, f'Python code must have at most {BUFSIZE - 1} bytes (found: {len(python_code)})'
 
     python_code += b'\0' * (BUFSIZE - len(python_code))
     assert python_code.endswith(b'\0')
@@ -368,10 +368,10 @@ def _win_write_to_shared_named_memory(python_code, pid):
     PAGE_READWRITE = 0x4
     FILE_MAP_WRITE = 0x2
     filemap = CreateFileMapping(
-        INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, BUFSIZE, u"__pydevd_pid_code_to_run__%s" % (pid,))
+        INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, BUFSIZE, f"__pydevd_pid_code_to_run__{pid}")
 
     if filemap == INVALID_HANDLE_VALUE or filemap is None:
-        raise Exception("Failed to create named file mapping (ctypes: CreateFileMapping): %s" % (filemap,))
+        raise Exception(f"Failed to create named file mapping (ctypes: CreateFileMapping): {filemap}")
     try:
         view = MapViewOfFile(filemap, FILE_MAP_WRITE, 0, 0, 0)
         if not view:
@@ -416,8 +416,8 @@ def run_python_code_linux(pid, python_code, connect_debugger_tracing=False, show
     cmd.extend(["--eval-command='set architecture auto'"])
 
     cmd.extend([
-        "--eval-command='call (void*)dlopen(\"%s\", 2)'" % target_dll,
-        "--eval-command='sharedlibrary %s'" % target_dll_name,
+        f"--eval-command='call (void*)dlopen(\"{target_dll}\", 2)'",
+        f"--eval-command='sharedlibrary {target_dll_name}'",
         "--eval-command='call (int)DoAttach(%s, \"%s\", %s)'" % (
             is_debug, python_code, show_debug_info)
     ])
@@ -448,7 +448,7 @@ def find_helper_script(filedir, script_name):
     target_filename = os.path.join(filedir, 'linux_and_mac', script_name)
     target_filename = os.path.normpath(target_filename)
     if not os.path.exists(target_filename):
-        raise RuntimeError('Could not find helper script: %s' % target_filename)
+        raise RuntimeError(f'Could not find helper script: {target_filename}')
 
     return target_filename
 
@@ -480,7 +480,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
 
     cmd.extend([
         "-o 'process attach --pid %d'" % pid,
-        "-o 'command script import \"%s\"'" % (lldb_prepare_file,),
+        f"-o 'command script import \"{lldb_prepare_file}\"'",
         "-o 'load_lib_and_attach \"%s\" %s \"%s\" %s'" % (target_dll,
             is_debug, python_code, show_debug_info),
     ])
@@ -528,7 +528,7 @@ sys.path.append(os.path.dirname(__file__))
 
 
 def test():
-    print('Running with: %s' % (sys.executable,))
+    print(f'Running with: {sys.executable}')
     code = '''
 import os, time, sys
 print(os.getpid())
