@@ -102,7 +102,7 @@ def _create_win_event(name):
     if not event:
         raise ctypes.WinError()
 
-    class _WinEvent(object):
+    class _WinEvent():
 
         def wait_for_event_set(self, timeout=None):
             '''

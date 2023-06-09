@@ -190,7 +190,7 @@ class TestPerformance(BaseTmpl):
     def test_float(self):
         from math import cos, sin, sqrt
 
-        class Point(object):
+        class Point():
             __slots__ = ('x', 'y', 'z')
 
             def __init__(self, i):
