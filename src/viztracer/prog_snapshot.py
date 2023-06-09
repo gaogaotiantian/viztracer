@@ -109,7 +109,7 @@ class CounterEvents:
         args.update(event["args"])
         self._events.append({
             "ts": event["ts"],
-            "args": args
+            "args": args,
         })
 
     def normalize(self, first_ts):
@@ -135,7 +135,7 @@ class ObjectEvents:
                 "id": event["id"],
                 "name": event["name"],
                 "snapshots": [
-                ]
+                ],
             }
             self._objects[event["id"]] = entry
 
@@ -144,12 +144,12 @@ class ObjectEvents:
         if event["ph"] in ["N", "D"]:
             entry["snapshots"].append({
                 "ts": event["ts"],
-                "args": None
+                "args": None,
             })
         elif event["ph"] == "O":
             entry["snapshots"].append({
                 "ts": event["ts"],
-                "args": event["args"]["snapshot"]
+                "args": event["args"]["snapshot"],
             })
         else:  # pragma: no cover
             raise ValueError("Unexpected type for object event")

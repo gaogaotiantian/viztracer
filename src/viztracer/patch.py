@@ -107,9 +107,9 @@ def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
     # For spawn process
     @functools.wraps(multiprocessing.spawn.get_command_line)
     def get_command_line(**kwds) -> List[str]:
-        '''
+        """
         Returns prefix of command line used for spawning a child process
-        '''
+        """
         if getattr(sys, 'frozen', False):  # pragma: no cover
             return ([sys.executable, '--multiprocessing-fork']
                     + ['%s=%r' % item for item in kwds.items()])

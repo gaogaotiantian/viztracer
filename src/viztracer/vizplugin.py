@@ -74,7 +74,7 @@ class VizPluginManager:
         module = args[0]
         try:
             package = __import__(module)
-        except (ImportError, ModuleNotFoundError):
+        except (ImportError):
             print(f"There's no module named {module}, maybe you need to install it")
             sys.exit(1)
 

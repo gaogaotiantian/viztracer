@@ -18,7 +18,7 @@ if __name__ == "__main__":
         "mcts_game": ["--log_gc"],
         "logging_integration": ["--include_files", os.path.dirname(__file__)],
         "multi_process_pool": ["--log_multiprocess"],
-        "async_simple": ["--log_async"]
+        "async_simple": ["--log_async"],
     }
     for script in os.listdir(os.path.join(os.path.dirname(__file__), "src")):
         if script.split(".")[0] in vt_options:

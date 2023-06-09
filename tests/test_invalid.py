@@ -23,7 +23,7 @@ class TestInvalidArgs(BaseTmpl):
             "vdb": ["hello", 1, "True"],
             "min_duration": ["0.1.0", "12", "3us"],
             "ignore_frozen": ["hello", 1, "True"],
-            "log_async": ["hello", 1, "True"]
+            "log_async": ["hello", 1, "True"],
         }
         tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():

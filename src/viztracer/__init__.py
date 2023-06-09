@@ -27,5 +27,5 @@ __all__ = [
     "VizCounter",
     "VizObject",
     "VizLoggingHandler",
-    "load_ipython_extension"
+    "load_ipython_extension",
 ]

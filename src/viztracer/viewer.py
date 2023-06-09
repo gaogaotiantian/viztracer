@@ -76,7 +76,7 @@ class PerfettoHandler(HttpHandler):
         self.server_thread.notify_active()
         if self.path.endswith("vizviewer_info"):
             info = {
-                "is_flamegraph": self.server_thread.flamegraph
+                "is_flamegraph": self.server_thread.flamegraph,
             }
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -239,9 +239,9 @@ class ExternalProcessorProcess:
                 sys.executable,
                 self.trace_processor_path,
                 self.path,
-                "-D"
+                "-D",
             ],
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
         atexit.register(self.stop)
         self._wait_start()
@@ -360,12 +360,9 @@ class ServerThread(threading.Thread):
 
     def is_port_in_use(self) -> bool:
         with contextlib.closing(
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
         ) as sock:
-            if sock.connect_ex(('127.0.0.1', self.port)) == 0:
-                return True
-            else:
-                return False
+            return sock.connect_ex(('127.0.0.1', self.port)) == 0
 
 
 class DirectoryViewer:
@@ -500,7 +497,7 @@ def viewer_main() -> int:
                 server_only=options.server_only,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout,
-                use_external_processor=options.use_external_processor
+                use_external_processor=options.use_external_processor,
             )
             directory_viewer.run()
         finally:
@@ -515,7 +512,7 @@ def viewer_main() -> int:
                 once=options.once,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout,
-                use_external_processor=options.use_external_processor
+                use_external_processor=options.use_external_processor,
             )
             server.start()
             server.ready.wait()

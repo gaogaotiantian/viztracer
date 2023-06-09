@@ -1,6 +1,6 @@
 # type: ignore
 
-r'''
+r"""
 Copyright: Brainwy Software Ltda.
 
 License: EPL.
@@ -66,7 +66,7 @@ Other references:
 To build the dlls needed on windows, visual studio express 13 was used (see compile_dll.bat)
 
 See: attach_pydevd.py to attach the pydev debugger to a running python process.
-'''
+"""
 
 # Note: to work with nasm compiling asm to code and decompiling to see asm with shellcode:
 # x:\nasm\nasm-2.07-win32\nasm-2.07\nasm.exe
@@ -105,9 +105,9 @@ def _create_win_event(name):
     class _WinEvent():
 
         def wait_for_event_set(self, timeout=None):
-            '''
+            """
             :param timeout: in seconds
-            '''
+            """
             if timeout is None:
                 timeout = 0xFFFFFFFF
             else:
@@ -230,8 +230,8 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
         if filename is None:
             print(
                 'Unable to attach to process in arch: %s (did not find %s in %s).' % (
-                    arch, expected_name, libdir
-                )
+                    arch, expected_name, libdir,
+                ),
             )
             return None
 
@@ -316,10 +316,10 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
 
 @contextmanager
 def _acquire_mutex(mutex_name, timeout):
-    '''
+    """
     Only one process may be attaching to a pid, so, create a system mutex
     to make sure this holds in practice.
-    '''
+    """
     from winappdbg.win32.defines import ERROR_ALREADY_EXISTS
     from winappdbg.win32.kernel32 import CloseHandle, CreateMutex, GetLastError
 
@@ -419,7 +419,7 @@ def run_python_code_linux(pid, python_code, connect_debugger_tracing=False, show
         f"--eval-command='call (void*)dlopen(\"{target_dll}\", 2)'",
         f"--eval-command='sharedlibrary {target_dll_name}'",
         "--eval-command='call (int)DoAttach(%s, \"%s\", %s)'" % (
-            is_debug, python_code, show_debug_info)
+            is_debug, python_code, show_debug_info),
     ])
 
     # print ' '.join(cmd)
@@ -474,7 +474,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         # '--arch',
         # arch,
         '--script-language',
-        'Python'
+        'Python',
         #         '--batch-silent',
     ]
 
@@ -482,7 +482,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         "-o 'process attach --pid %d'" % pid,
         f"-o 'command script import \"{lldb_prepare_file}\"'",
         "-o 'load_lib_and_attach \"%s\" %s \"%s\" %s'" % (target_dll,
-            is_debug, python_code, show_debug_info),
+                                                          is_debug, python_code, show_debug_info),
     ])
 
     cmd.extend([
@@ -504,7 +504,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        )
+    )
     # print('Running lldb in target process.')
     out, err = p.communicate()
     # print('stdout: %s' % (out,))

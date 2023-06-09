@@ -265,7 +265,7 @@ class VizUI:
             "min_duration": min_duration,
             "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
-            "minimize_memory": options.minimize_memory
+            "minimize_memory": options.minimize_memory,
         }
 
         return True, None
@@ -370,7 +370,7 @@ class VizUI:
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
             "run_module": runpy.run_module,
-            "modname": self.options.module
+            "modname": self.options.module,
         }
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
@@ -501,7 +501,7 @@ class VizUI:
             "file_info": True,
             "register_global": True,
             "dump_raw": False,
-            "verbose": 1 if self.verbose != 0 else 0
+            "verbose": 1 if self.verbose != 0 else 0,
         })
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
         start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"

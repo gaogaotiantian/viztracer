@@ -162,19 +162,19 @@ class AstTransformer(ast.NodeTransformer):
             return self.get_add_variable_node(
                 name=f"{trigger} - {name}",
                 var_node=ast.Name(id=name, ctx=ast.Load()),
-                event=event
+                event=event,
             )
         elif self.inst_type == "log_func_exec":
             return self.get_add_func_exec_node(
                 name=f"{name}",
                 val=ast.Name(id=name, ctx=ast.Load()),
-                lineno=self.curr_lineno
+                lineno=self.curr_lineno,
             )
         elif self.inst_type == "log_func_entry":
             return self.get_add_variable_node(
                 name=f"{trigger} - {name}",
                 var_node=ast.Constant(value=f"{name} is called"),
-                event="instant"
+                event="instant",
             )
         else:
             raise ValueError(f"{name} is not supported")
@@ -190,7 +190,7 @@ class AstTransformer(ast.NodeTransformer):
         return self.get_add_variable_node(
             name=name,
             var_node=var_node,
-            event="instant"
+            event="instant",
         )
 
     def get_add_variable_node(self, name: str, var_node: ast.AST, event: str) -> ast.Expr:
@@ -199,15 +199,15 @@ class AstTransformer(ast.NodeTransformer):
                 func=ast.Attribute(
                     value=ast.Name(id="__viz_tracer__", ctx=ast.Load()),
                     attr="add_variable",
-                    ctx=ast.Load()
+                    ctx=ast.Load(),
                 ),
                 args=[
                     ast.Constant(value=name),
                     var_node,
-                    ast.Constant(value=event)
+                    ast.Constant(value=event),
                 ],
-                keywords=[]
-            )
+                keywords=[],
+            ),
         )
         return node_instrument
 
@@ -217,15 +217,15 @@ class AstTransformer(ast.NodeTransformer):
                 func=ast.Attribute(
                     value=ast.Name(id="__viz_tracer__", ctx=ast.Load()),
                     attr="add_func_exec",
-                    ctx=ast.Load()
+                    ctx=ast.Load(),
                 ),
                 args=[
                     ast.Constant(value=name),
                     ast.Name(id=name, ctx=ast.Load()),
-                    ast.Constant(value=lineno)
+                    ast.Constant(value=lineno),
                 ],
-                keywords=[]
-            )
+                keywords=[],
+            ),
         )
         return node_instrument
 
@@ -290,6 +290,7 @@ class SourceProcessor:
     """
     Pre-process comments like #!viztracer: log_instant("event")
     """
+
     def process(self, source: Any):
         if isinstance(source, bytes):
             source = source.decode("utf-8")
@@ -337,7 +338,7 @@ class SourceProcessor:
         # !viztracer: log_var("var", var) if var > 3
         (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"), line_transform_condition),
         # a = 3  # !viztracer: log if a != 3
-        (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), inline_transform_condition)
+        (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), inline_transform_condition),
     ]
 
 

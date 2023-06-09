@@ -59,7 +59,7 @@ class VizTracer(_VizTracer):
             log_func_args=log_func_args,
             log_async=log_async,
             trace_self=trace_self,
-            min_duration=min_duration
+            min_duration=min_duration,
         )
         self._tracer: Any
         self.verbose = verbose
@@ -120,7 +120,7 @@ class VizTracer(_VizTracer):
             "pid_suffix": self.pid_suffix,
             "min_duration": self.min_duration,
             "dump_raw": self.dump_raw,
-            "minimize_memory": self.minimize_memory
+            "minimize_memory": self.minimize_memory,
         }
 
     def __enter__(self) -> "VizTracer":

@@ -28,23 +28,23 @@ package_data = {
         "web_dist/*/*/*",
         "attach_process/__init__.py",
         "attach_process/add_code_to_python_process.py",
-        "attach_process/LICENSE"
-    ]
+        "attach_process/LICENSE",
+    ],
 }
 
 if sys.platform == "darwin":
     package_data["viztracer"].extend([
         "attach_process/attach_x86_64.dylib",
-        "attach_process/linux_and_mac/lldb_prepare.py"
+        "attach_process/linux_and_mac/lldb_prepare.py",
     ])
 elif sys.platform in ("linux", "linux2"):
     if platform.machine() == "i686":
         package_data["viztracer"].extend([
-            "attach_process/attach_linux_x86.so"
+            "attach_process/attach_linux_x86.so",
         ])
     elif platform.machine() == "x86_64":
         package_data["viztracer"].extend([
-            "attach_process/attach_linux_amd64.so"
+            "attach_process/attach_linux_amd64.so",
         ])
 
 setuptools.setup(
@@ -65,19 +65,19 @@ setuptools.setup(
             sources=[
                 "src/viztracer/modules/util.c",
                 "src/viztracer/modules/eventnode.c",
-                "src/viztracer/modules/snaptrace.c"
+                "src/viztracer/modules/snaptrace.c",
             ],
             extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"]),
-            extra_link_args={"win32": []}.get(sys.platform, ["-lpthread"])
+            extra_link_args={"win32": []}.get(sys.platform, ["-lpthread"]),
         ),
         setuptools.Extension(
             "viztracer.vcompressor",
             sources=[
                 "src/viztracer/modules/vcompressor/vcompressor.c",
-                "src/viztracer/modules/vcompressor/vc_dump.c"
+                "src/viztracer/modules/vcompressor/vc_dump.c",
             ],
-            extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"])
-        )
+            extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"]),
+        ),
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -93,18 +93,18 @@ setuptools.setup(
         "Operating System :: Microsoft :: Windows",
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: Software Development :: Bug Tracking",
-        "Topic :: System :: Logging"
+        "Topic :: System :: Logging",
     ],
     python_requires=">=3.7",
     install_requires=["objprint>=0.1.3"],
     extras_require={
-        "full": ["rich", "orjson"]
+        "full": ["rich", "orjson"],
     },
     entry_points={
         "console_scripts": [
             "viztracer = viztracer:main",
             "vizviewer = viztracer:viewer_main",
-            "vdb = viztracer:sim_main"
-        ]
+            "vdb = viztracer:sim_main",
+        ],
     },
 )

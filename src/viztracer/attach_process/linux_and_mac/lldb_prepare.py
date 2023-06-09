@@ -32,6 +32,7 @@ def load_lib_and_attach(debugger, command, result, internal_dict):
     if error:
         print(error)
 
+
 def __lldb_init_module(debugger, internal_dict):
     import lldb
 
@@ -47,4 +48,4 @@ def __lldb_init_module(debugger, internal_dict):
                     internal_dict['_thread_%d' % thread.GetThreadID()] = True
                     # thread.Suspend()
     except:
-        import traceback;traceback.print_exc()
+        import traceback; traceback.print_exc()

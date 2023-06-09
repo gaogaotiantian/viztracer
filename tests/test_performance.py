@@ -47,7 +47,7 @@ class BenchmarkTimer:
             end_time = time.perf_counter()
             data = {
                 "dur": end_time - start_time,
-                "section": section
+                "section": section,
             }
             if baseline:
                 self.timer_baseline = data

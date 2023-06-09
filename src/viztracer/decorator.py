@@ -95,7 +95,7 @@ def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callabl
                 "name": f"{code.co_name} ({code.co_filename}:{code.co_firstlineno})",
                 "ts": start,
                 "dur": dur,
-                "cat": "FEE"
+                "cat": "FEE",
             }
             tracer.add_raw(raw_data)
             return ret

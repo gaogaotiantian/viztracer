@@ -15,7 +15,7 @@ class _EventBase:
         self._viztracer_config: Dict = {
             "trigger_on_change": True,
             "include_attributes": [],
-            "exclude_attributes": []
+            "exclude_attributes": [],
         }
 
         for key in kwargs:

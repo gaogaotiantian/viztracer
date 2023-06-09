@@ -29,12 +29,11 @@ class MyPlugin(VizPluginBase):
         if m_type == "event" and payload["when"] == "pre-save":
             return {
                 "action": "handle_data",
-                "handler": f
+                "handler": f,
             }
 
-        if m_type == "command":
-            if payload["cmd_type"] == "terminate":
-                return {"success": self.terminate_well}
+        if m_type == "command" and payload["cmd_type"] == "terminate":
+            return {"success": self.terminate_well}
         return {}
 
 

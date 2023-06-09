@@ -251,7 +251,7 @@ class _VizTracer:
             "log_func_args": self.log_func_args,
             "log_async": self.log_async,
             "trace_self": self.trace_self,
-            "min_duration": self.min_duration
+            "min_duration": self.min_duration,
         }
 
         self._tracer.config(**cfg)
@@ -332,7 +332,7 @@ class _VizTracer:
                 args = {
                     "collecting": 1,
                     "collected": 0,
-                    "uncollectable": 0
+                    "uncollectable": 0,
                 }
                 self.add_counter("garbage collection", args)
                 self.gc_start_args = args
@@ -343,7 +343,7 @@ class _VizTracer:
                 self.add_counter("garbage collection", {
                     "collecting": 0,
                     "collected": 0,
-                    "uncollectable": 0
+                    "uncollectable": 0,
                 })
 
     def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
@@ -370,8 +370,8 @@ class _VizTracer:
                 "traceEvents": self._tracer.load(),
                 "viztracer_metadata": {
                     "version": __version__,
-                    "overflow": False
-                }
+                    "overflow": False,
+                },
             }
             metadata_count = 0
             for d in self.data["traceEvents"]:

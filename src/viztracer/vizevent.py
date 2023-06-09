@@ -26,6 +26,6 @@ class VizEvent:
             "name": f"{self.event_name} ({self.file_name}:{self.lineno})",
             "ts": self.start,
             "dur": dur,
-            "cat": "FEE"
+            "cat": "FEE",
         }
         self._tracer.add_raw(raw_data)
