@@ -1,6 +1,6 @@
 # type: ignore
 
-r"""
+r'''
 Copyright: Brainwy Software Ltda.
 
 License: EPL.
@@ -66,20 +66,20 @@ Other references:
 To build the dlls needed on windows, visual studio express 13 was used (see compile_dll.bat)
 
 See: attach_pydevd.py to attach the pydev debugger to a running python process.
-"""
+'''
 
 # Note: to work with nasm compiling asm to code and decompiling to see asm with shellcode:
 # x:\nasm\nasm-2.07-win32\nasm-2.07\nasm.exe
 # nasm.asm&x:\nasm\nasm-2.07-win32\nasm-2.07\ndisasm.exe -b arch nasm
 import ctypes
 import os
-import platform
 import struct
 import subprocess
 import sys
 import time
-import traceback
 from contextlib import contextmanager
+import platform
+import traceback
 
 try:
     TimeoutError = TimeoutError  # @ReservedAssignment
@@ -91,8 +91,7 @@ except NameError:
 
 @contextmanager
 def _create_win_event(name):
-    from winappdbg.win32.kernel32 import (CloseHandle, CreateEventA,
-                                          WaitForSingleObject)
+    from winappdbg.win32.kernel32 import CreateEventA, WaitForSingleObject, CloseHandle
 
     manual_reset = False  # i.e.: after someone waits it, automatically set to False.
     initial_state = False
@@ -102,12 +101,12 @@ def _create_win_event(name):
     if not event:
         raise ctypes.WinError()
 
-    class _WinEvent():
+    class _WinEvent(object):
 
         def wait_for_event_set(self, timeout=None):
-            """
+            '''
             :param timeout: in seconds
-            """
+            '''
             if timeout is None:
                 timeout = 0xFFFFFFFF
             else:
@@ -200,7 +199,7 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
         try:
             found = [name for name in os.listdir(libdir) if name.startswith('attach_') and name.endswith(extension)]
         except:
-            print(f'Error listing dir: {libdir}')
+            print('Error listing dir: %s' % (libdir,))
             traceback.print_exc()
             return None
 
@@ -230,12 +229,12 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
         if filename is None:
             print(
                 'Unable to attach to process in arch: %s (did not find %s in %s).' % (
-                    arch, expected_name, libdir,
-                ),
+                    arch, expected_name, libdir
+                )
             )
             return None
 
-        print(f'Using {filename} in arch: {arch}.')
+        print('Using %s in arch: %s.' % (filename, arch))
 
     else:
         if is_target_process_64:
@@ -250,13 +249,13 @@ def get_target_filename(is_target_process_64=None, prefix=None, extension=None):
             elif IS_LINUX:
                 prefix = 'attach_linux_'  # historically it has a different name
             else:
-                print(f'Unable to attach to process in platform: {sys.platform}')
+                print('Unable to attach to process in platform: %s' % (sys.platform,))
                 return None
 
-        filename = os.path.join(libdir, f'{prefix}{suffix}{extension}')
+        filename = os.path.join(libdir, '%s%s%s' % (prefix, suffix, extension))
 
     if not os.path.exists(filename):
-        print(f'Expected: {filename} to exist.')
+        print('Expected: %s to exist.' % (filename,))
         return None
 
     return filename
@@ -279,7 +278,7 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
     #     "Target 64 bits: %s\n"
     #     "Current Python 64 bits: %s" % (is_target_process_64, is_python_64bit()))
 
-    with _acquire_mutex(f'_pydevd_pid_attach_mutex_{pid}', 10):
+    with _acquire_mutex('_pydevd_pid_attach_mutex_%s' % (pid,), 10):
         # print('--- Connecting to %s bits target (current process is: %s) ---' % (bits, 64 if is_python_64bit() else 32))
 
         with _win_write_to_shared_named_memory(python_code, pid):
@@ -302,7 +301,7 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
             if not target_dll_run_on_dllmain:
                 raise RuntimeError('Could not find expected .dll in attach to process.')
 
-            with _create_win_event(f'_pydevd_pid_event_{pid}') as event:
+            with _create_win_event('_pydevd_pid_event_%s' % (pid,)) as event:
                 # print('\n--- Injecting run code dll: %s into pid: %s ---' % (os.path.basename(target_dll_run_on_dllmain), pid))
                 args = [target_executable, str(pid), target_dll_run_on_dllmain]
                 subprocess.check_call(args)
@@ -316,12 +315,12 @@ def run_python_code_windows(pid, python_code, connect_debugger_tracing=False, sh
 
 @contextmanager
 def _acquire_mutex(mutex_name, timeout):
-    """
+    '''
     Only one process may be attaching to a pid, so, create a system mutex
     to make sure this holds in practice.
-    """
+    '''
+    from winappdbg.win32.kernel32 import CreateMutex, GetLastError, CloseHandle
     from winappdbg.win32.defines import ERROR_ALREADY_EXISTS
-    from winappdbg.win32.kernel32 import CloseHandle, CreateMutex, GetLastError
 
     initial_time = time.time()
     while True:
@@ -343,8 +342,12 @@ def _acquire_mutex(mutex_name, timeout):
 def _win_write_to_shared_named_memory(python_code, pid):
     # Use the definitions from winappdbg when possible.
     from winappdbg.win32 import defines
-    from winappdbg.win32.kernel32 import (CloseHandle, CreateFileMapping,
-                                          MapViewOfFile, UnmapViewOfFile)
+    from winappdbg.win32.kernel32 import (
+        CreateFileMapping,
+        MapViewOfFile,
+        CloseHandle,
+        UnmapViewOfFile,
+    )
 
     memmove = ctypes.cdll.msvcrt.memmove
     memmove.argtypes = [
@@ -359,7 +362,7 @@ def _win_write_to_shared_named_memory(python_code, pid):
     assert isinstance(python_code, bytes)
     assert len(python_code) > 0, 'Python code must not be empty.'
     # Note: -1 so that we're sure we'll add a \0 to the end.
-    assert len(python_code) < BUFSIZE - 1, f'Python code must have at most {BUFSIZE - 1} bytes (found: {len(python_code)})'
+    assert len(python_code) < BUFSIZE - 1, 'Python code must have at most %s bytes (found: %s)' % (BUFSIZE - 1, len(python_code))
 
     python_code += b'\0' * (BUFSIZE - len(python_code))
     assert python_code.endswith(b'\0')
@@ -368,10 +371,10 @@ def _win_write_to_shared_named_memory(python_code, pid):
     PAGE_READWRITE = 0x4
     FILE_MAP_WRITE = 0x2
     filemap = CreateFileMapping(
-        INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, BUFSIZE, f"__pydevd_pid_code_to_run__{pid}")
+        INVALID_HANDLE_VALUE, 0, PAGE_READWRITE, 0, BUFSIZE, u"__pydevd_pid_code_to_run__%s" % (pid,))
 
     if filemap == INVALID_HANDLE_VALUE or filemap is None:
-        raise Exception(f"Failed to create named file mapping (ctypes: CreateFileMapping): {filemap}")
+        raise Exception("Failed to create named file mapping (ctypes: CreateFileMapping): %s" % (filemap,))
     try:
         view = MapViewOfFile(filemap, FILE_MAP_WRITE, 0, 0, 0)
         if not view:
@@ -416,10 +419,10 @@ def run_python_code_linux(pid, python_code, connect_debugger_tracing=False, show
     cmd.extend(["--eval-command='set architecture auto'"])
 
     cmd.extend([
-        f"--eval-command='call (void*)dlopen(\"{target_dll}\", 2)'",
-        f"--eval-command='sharedlibrary {target_dll_name}'",
+        "--eval-command='call (void*)dlopen(\"%s\", 2)'" % target_dll,
+        "--eval-command='sharedlibrary %s'" % target_dll_name,
         "--eval-command='call (int)DoAttach(%s, \"%s\", %s)'" % (
-            is_debug, python_code, show_debug_info),
+            is_debug, python_code, show_debug_info)
     ])
 
     # print ' '.join(cmd)
@@ -448,7 +451,7 @@ def find_helper_script(filedir, script_name):
     target_filename = os.path.join(filedir, 'linux_and_mac', script_name)
     target_filename = os.path.normpath(target_filename)
     if not os.path.exists(target_filename):
-        raise RuntimeError(f'Could not find helper script: {target_filename}')
+        raise RuntimeError('Could not find helper script: %s' % target_filename)
 
     return target_filename
 
@@ -474,15 +477,15 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         # '--arch',
         # arch,
         '--script-language',
-        'Python',
+        'Python'
         #         '--batch-silent',
     ]
 
     cmd.extend([
         "-o 'process attach --pid %d'" % pid,
-        f"-o 'command script import \"{lldb_prepare_file}\"'",
+        "-o 'command script import \"%s\"'" % (lldb_prepare_file,),
         "-o 'load_lib_and_attach \"%s\" %s \"%s\" %s'" % (target_dll,
-                                                          is_debug, python_code, show_debug_info),
+            is_debug, python_code, show_debug_info),
     ])
 
     cmd.extend([
@@ -504,7 +507,7 @@ def run_python_code_mac(pid, python_code, connect_debugger_tracing=False, show_d
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-    )
+        )
     # print('Running lldb in target process.')
     out, err = p.communicate()
     # print('stdout: %s' % (out,))
@@ -528,7 +531,7 @@ sys.path.append(os.path.dirname(__file__))
 
 
 def test():
-    print(f'Running with: {sys.executable}')
+    print('Running with: %s' % (sys.executable,))
     code = '''
 import os, time, sys
 print(os.getpid())
@@ -576,3 +579,4 @@ if __name__ == '__main__':
             test()
         else:
             main(args)
+

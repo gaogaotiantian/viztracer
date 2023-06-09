@@ -20,7 +20,8 @@ def load_lib_and_attach(debugger, command, result, internal_dict):
 
     print(dll)
     target = debugger.GetSelectedTarget()
-    res = target.EvaluateExpression(f"(void*)dlopen(\"{dll}\", 2);", options)
+    res = target.EvaluateExpression("(void*)dlopen(\"%s\", 2);" % (
+        dll), options)
     error = res.GetError()
     if error:
         print(error)
@@ -31,7 +32,6 @@ def load_lib_and_attach(debugger, command, result, internal_dict):
     error = res.GetError()
     if error:
         print(error)
-
 
 def __lldb_init_module(debugger, internal_dict):
     import lldb
@@ -48,4 +48,7 @@ def __lldb_init_module(debugger, internal_dict):
                     internal_dict['_thread_%d' % thread.GetThreadID()] = True
                     # thread.Suspend()
     except:
-        import traceback; traceback.print_exc()
+        import traceback;traceback.print_exc()
+
+
+
