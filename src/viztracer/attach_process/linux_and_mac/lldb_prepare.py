@@ -48,6 +48,3 @@ def __lldb_init_module(debugger, internal_dict):
                     # thread.Suspend()
     except:
         import traceback;traceback.print_exc()
-
-
-
