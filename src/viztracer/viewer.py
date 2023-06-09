@@ -541,4 +541,4 @@ def viewer_main() -> int:
 
 
 if __name__ == "__main__":
-    exit(viewer_main())
+    sys.exit(viewer_main())
