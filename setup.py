@@ -15,7 +15,7 @@ with open("./src/viztracer/__init__.py") as f:
             break
     else:
         print("Can't find version! Stop Here!")
-        exit(1)
+        sys.exit(1)
 
 # Determine which attach binary to take into package
 package_data = {
