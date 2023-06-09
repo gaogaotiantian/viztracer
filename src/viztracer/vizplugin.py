@@ -3,11 +3,10 @@
 
 
 import sys
-from typing import Dict, Optional, Sequence, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 from . import __version__
-from .util import compare_version, color_print
-
+from .util import color_print, compare_version
 
 if TYPE_CHECKING:
     from .viztracer import VizTracer  # pragma: no cover

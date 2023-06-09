@@ -1,6 +1,7 @@
-import setuptools
-import sys
 import platform
+import sys
+
+import setuptools
 
 with open("README.md") as f:
     long_description = f.read()

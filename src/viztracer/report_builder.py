@@ -5,15 +5,16 @@ try:
     import orjson  # type: ignore
 except ImportError:
     import json
+
 import gzip
 import os
 import re
-from string import Template
 import sys
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, TextIO
+from string import Template
+from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
-from .util import color_print, same_line_print
 from . import __version__
+from .util import color_print, same_line_print
 
 
 def get_json(data: Union[Dict, str]) -> Dict[str, Any]:

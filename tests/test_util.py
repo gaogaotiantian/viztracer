@@ -4,7 +4,9 @@
 import os
 import sys
 import unittest
+
 import viztracer.util
+
 from .base_tmpl import BaseTmpl
 
 

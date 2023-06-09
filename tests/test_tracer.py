@@ -4,8 +4,10 @@
 import io
 import os
 import time
-from viztracer.tracer import _VizTracer
+
 from viztracer import VizTracer
+from viztracer.tracer import _VizTracer
+
 from .base_tmpl import BaseTmpl
 
 

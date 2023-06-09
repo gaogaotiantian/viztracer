@@ -18,16 +18,16 @@ import time
 import types
 from typing import Any, Dict, List, Optional, Tuple
 
+from viztracer.vcompressor import VCompressor
+
 from . import __version__
-from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
+from .attach_process.add_code_to_python_process import \
+    run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
-from .util import time_str_to_us, color_print, same_line_print, pid_exists
+from .util import color_print, pid_exists, same_line_print, time_str_to_us
 from .viztracer import VizTracer
-
-from viztracer.vcompressor import VCompressor
-
 
 # For all the procedures in VizUI, return a tuple as the result
 # The first element bool indicates whether the procedure succeeds

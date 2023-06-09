@@ -9,7 +9,9 @@ import os
 import random
 import tempfile
 import time
+
 from viztracer import VizTracer
+
 from .base_tmpl import BaseTmpl
 
 
@@ -186,7 +188,7 @@ class TestPerformance(BaseTmpl):
         self.do_one_function(list_operation)
 
     def test_float(self):
-        from math import sin, cos, sqrt
+        from math import cos, sin, sqrt
 
         class Point(object):
             __slots__ = ('x', 'y', 'z')

@@ -4,7 +4,6 @@
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from .viztracer import VizTracer  # pragma: no cover
 

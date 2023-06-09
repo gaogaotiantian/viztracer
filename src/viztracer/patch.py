@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import functools
-from multiprocessing import Process
 import os
 import re
 import sys
 import textwrap
+from multiprocessing import Process
 from typing import Any, Callable, Dict, List, Sequence, Union, no_type_check
 
 from .viztracer import VizTracer
@@ -99,8 +99,8 @@ def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
-    from multiprocessing.util import register_after_fork  # type: ignore
     import multiprocessing.spawn
+    from multiprocessing.util import register_after_fork  # type: ignore
 
     register_after_fork(tracer, func_after_fork)
 
@@ -155,9 +155,9 @@ class SpawnProcess:
 
 
 def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[str]):
-    from multiprocessing import reduction, process  # type: ignore
-    from multiprocessing.spawn import prepare
     import multiprocessing.spawn
+    from multiprocessing import process, reduction  # type: ignore
+    from multiprocessing.spawn import prepare
 
     @no_type_check
     @functools.wraps(multiprocessing.spawn._main)

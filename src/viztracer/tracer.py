@@ -3,10 +3,11 @@
 
 import builtins
 import gc
-from io import StringIO
 import os
 import sys
+from io import StringIO
 from typing import Any, Dict, Optional, Sequence, Union
+
 import viztracer.snaptrace as snaptrace  # type: ignore
 
 from . import __version__

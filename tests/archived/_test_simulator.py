@@ -2,13 +2,12 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
-import sys
 import subprocess
+import sys
 
-from .package_env import package_matrix
-from .util import get_json_file_path, adapt_json_file, generate_json
 from .base_tmpl import BaseTmpl
-
+from .package_env import package_matrix
+from .util import adapt_json_file, generate_json, get_json_file_path
 
 adapt_json_file("vdb_basic.json")
 vdb_basic = get_json_file_path("vdb_basic.json")

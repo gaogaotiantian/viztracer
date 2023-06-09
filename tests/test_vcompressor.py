@@ -2,13 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import json
 import logging
 import lzma
-import zlib
 import os
 import tempfile
-import json
 import unittest
+import zlib
 from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj

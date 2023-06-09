@@ -2,9 +2,10 @@
 
 import math
 import os
-import numpy
-from viztracer import VizTracer, VizCounter
 
+import numpy
+
+from viztracer import VizCounter, VizTracer
 
 # List of input, output pairs
 train_data = (

@@ -8,8 +8,10 @@ import subprocess
 import sys
 import tempfile
 import time
+
+from viztracer import VizTracer, get_tracer, ignore_function, trace_and_save
 from viztracer.tracer import _VizTracer
-from viztracer import VizTracer, ignore_function, trace_and_save, get_tracer
+
 from .base_tmpl import BaseTmpl
 
 

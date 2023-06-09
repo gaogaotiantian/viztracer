@@ -3,9 +3,9 @@
 
 import ast
 import copy
-from functools import reduce
 import re
 import sys
+from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from .util import color_print

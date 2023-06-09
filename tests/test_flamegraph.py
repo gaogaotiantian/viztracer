@@ -2,8 +2,10 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import json
-from viztracer.flamegraph import FlameGraph
 import os
+
+from viztracer.flamegraph import FlameGraph
+
 from .base_tmpl import BaseTmpl
 
 

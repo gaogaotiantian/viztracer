@@ -8,8 +8,8 @@ import shutil
 import subprocess
 import sys
 import time
-from .base_tmpl import BaseTmpl
 
+from .base_tmpl import BaseTmpl
 
 file_fib = """
 def fib(n):

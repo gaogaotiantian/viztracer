@@ -73,13 +73,13 @@ See: attach_pydevd.py to attach the pydev debugger to a running python process.
 # nasm.asm&x:\nasm\nasm-2.07-win32\nasm-2.07\ndisasm.exe -b arch nasm
 import ctypes
 import os
+import platform
 import struct
 import subprocess
 import sys
 import time
-from contextlib import contextmanager
-import platform
 import traceback
+from contextlib import contextmanager
 
 try:
     TimeoutError = TimeoutError  # @ReservedAssignment
@@ -91,7 +91,8 @@ except NameError:
 
 @contextmanager
 def _create_win_event(name):
-    from winappdbg.win32.kernel32 import CreateEventA, WaitForSingleObject, CloseHandle
+    from winappdbg.win32.kernel32 import (CloseHandle, CreateEventA,
+                                          WaitForSingleObject)
 
     manual_reset = False  # i.e.: after someone waits it, automatically set to False.
     initial_state = False
@@ -319,8 +320,8 @@ def _acquire_mutex(mutex_name, timeout):
     Only one process may be attaching to a pid, so, create a system mutex
     to make sure this holds in practice.
     '''
-    from winappdbg.win32.kernel32 import CreateMutex, GetLastError, CloseHandle
     from winappdbg.win32.defines import ERROR_ALREADY_EXISTS
+    from winappdbg.win32.kernel32 import CloseHandle, CreateMutex, GetLastError
 
     initial_time = time.time()
     while True:
@@ -342,12 +343,8 @@ def _acquire_mutex(mutex_name, timeout):
 def _win_write_to_shared_named_memory(python_code, pid):
     # Use the definitions from winappdbg when possible.
     from winappdbg.win32 import defines
-    from winappdbg.win32.kernel32 import (
-        CreateFileMapping,
-        MapViewOfFile,
-        CloseHandle,
-        UnmapViewOfFile,
-    )
+    from winappdbg.win32.kernel32 import (CloseHandle, CreateFileMapping,
+                                          MapViewOfFile, UnmapViewOfFile)
 
     memmove = ctypes.cdll.msvcrt.memmove
     memmove.argtypes = [

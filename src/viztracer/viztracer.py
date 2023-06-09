@@ -3,11 +3,12 @@
 
 import builtins
 import multiprocessing
-import objprint  # type: ignore
 import os
 import signal
 import sys
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+
+import objprint  # type: ignore
 
 from .report_builder import ReportBuilder
 from .tracer import _VizTracer

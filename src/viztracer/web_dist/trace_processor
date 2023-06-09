@@ -121,7 +121,9 @@ def get_perfetto_prebuilt(tool_name, soft_fail=False, arch=None):
   # ~/.perfetto/prebuilts/$tool_name. On subsequent invocations it just runs the
   # cached version.
   def download_or_get_cached(file_name, url, sha256):
-    import os, hashlib, subprocess
+    import hashlib
+    import os
+    import subprocess
     dir = os.path.join(
         os.path.expanduser('~'), '.local', 'share', 'perfetto', 'prebuilts')
     os.makedirs(dir, exist_ok=True)
@@ -155,7 +157,9 @@ def get_perfetto_prebuilt(tool_name, soft_fail=False, arch=None):
     # --- end of download_or_get_cached() ---
 
   # --- get_perfetto_prebuilt() function starts here. ---
-  import os, platform, sys
+  import os
+  import platform
+  import sys
   plat = sys.platform.lower()
   machine = platform.machine().lower()
   manifest_entry = None
@@ -185,7 +189,8 @@ def get_perfetto_prebuilt(tool_name, soft_fail=False, arch=None):
 # END_SECTION_GENERATED_BY(roll-prebuilts)
 
 if __name__ == '__main__':
-  import sys, os
+  import os
+  import sys
   bin_path = get_perfetto_prebuilt(TOOL_NAME)
   os.execv(bin_path, [bin_path] + sys.argv[1:])
 

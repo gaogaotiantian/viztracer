@@ -12,8 +12,8 @@ import unittest
 import viztracer
 from viztracer import VizTracer, ignore_function
 
-from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class TestIssue1(BaseTmpl):

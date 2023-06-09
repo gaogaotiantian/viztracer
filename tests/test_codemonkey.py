@@ -3,7 +3,9 @@
 
 import ast
 import textwrap
-from viztracer.code_monkey import CodeMonkey, AstTransformer
+
+from viztracer.code_monkey import AstTransformer, CodeMonkey
+
 from .base_tmpl import BaseTmpl
 from .cmdline_tmpl import CmdlineTmpl
 

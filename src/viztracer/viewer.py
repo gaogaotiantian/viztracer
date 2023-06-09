@@ -6,7 +6,6 @@ import atexit
 import contextlib
 import functools
 import html
-from http import HTTPStatus
 import http.server
 import io
 import json
@@ -17,11 +16,11 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional
 import urllib.parse
+from http import HTTPStatus
+from typing import Any, Callable, Dict, List, Optional
 
 from .flamegraph import FlameGraph
-
 
 dir_lock = threading.Lock()
 
