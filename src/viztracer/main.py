@@ -213,7 +213,7 @@ class VizUI:
         if options.output_file:
             self.ofile = options.output_file
         elif options.pid_suffix:
-            self.ofile = "result.json"
+            self.ofile = f"result_{os.getpid()}.json"
 
         if options.output_dir:
             if not os.path.exists(options.output_dir):
