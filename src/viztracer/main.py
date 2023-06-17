@@ -580,7 +580,6 @@ class VizUI:
             ofile = prefix_pid + suffix
         else:
             ofile = self.ofile
-        print("ofile", ofile)
 
         self.wait_children_finish()
         builder = ReportBuilder(
