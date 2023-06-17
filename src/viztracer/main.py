@@ -213,7 +213,7 @@ class VizUI:
         if options.output_file:
             self.ofile = options.output_file
         elif options.pid_suffix:
-            self.ofile = f"result_{os.getpid()}.json"
+            self.ofile = "result.json"
 
         if options.output_dir:
             if not os.path.exists(options.output_dir):
@@ -574,6 +574,13 @@ class VizUI:
         # This function will only be called from main process
         options = self.options
         ofile = self.ofile
+        if options.pid_suffix:
+            prefix, suffix = os.path.splitext(self.ofile)
+            prefix_pid = f"{prefix}_{os.getpid()}"
+            ofile = prefix_pid + suffix
+        else:
+            ofile = self.ofile
+        print("ofile", ofile)
 
         self.wait_children_finish()
         builder = ReportBuilder(

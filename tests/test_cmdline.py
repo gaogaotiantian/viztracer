@@ -348,6 +348,15 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.assertFileExists(os.path.join("./suffix_tmp", f"result_{pid}.json"))
         self.cleanup(output_file="./suffix_tmp")
 
+    def test_pid_suffix_and_output(self):
+        result = self.template(
+            ["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "-o", "test.json",
+             "cmdline_test.py"], expected_output_file="./suffix_tmp", script=file_pid_suffix, cleanup=False
+        )
+        pid = result.stdout.decode("utf-8").split()[0]
+        self.assertFileExists(os.path.join("./suffix_tmp", f"test_{pid}.json"))
+        self.cleanup(output_file="./suffix_tmp")
+
     def test_path_finding(self):
         if sys.platform in ["linux", "linux2", "darwin"]:
             # path finding only works on Unix
