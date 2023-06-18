@@ -574,6 +574,12 @@ class VizUI:
         # This function will only be called from main process
         options = self.options
         ofile = self.ofile
+        if options.pid_suffix:
+            prefix, suffix = os.path.splitext(self.ofile)
+            prefix_pid = f"{prefix}_{os.getpid()}"
+            ofile = prefix_pid + suffix
+        else:
+            ofile = self.ofile
 
         self.wait_children_finish()
         builder = ReportBuilder(

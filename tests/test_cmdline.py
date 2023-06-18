@@ -204,6 +204,11 @@ import jaxlib.mlir.dialects.chlo
 import jaxlib.mlir.dialects.mhlo
 """
 
+file_pid_suffix = """
+import os
+print(os.getpid())
+"""
+
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
@@ -335,8 +340,22 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["python", "-m", "viztracer", "--min_duration", "0.0.3s", "cmdline_test.py"], success=False)
 
     def test_pid_suffix(self):
-        self.template(["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"],
-                      expected_output_file="./suffix_tmp")
+        result = self.template(
+            ["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"],
+            expected_output_file="./suffix_tmp", script=file_pid_suffix, cleanup=False
+        )
+        pid = result.stdout.decode("utf-8").split()[0]
+        self.assertFileExists(os.path.join("./suffix_tmp", f"result_{pid}.json"))
+        self.cleanup(output_file="./suffix_tmp")
+
+    def test_pid_suffix_and_output(self):
+        result = self.template(
+            ["python", "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "-o", "test.json",
+             "cmdline_test.py"], expected_output_file="./suffix_tmp", script=file_pid_suffix, cleanup=False
+        )
+        pid = result.stdout.decode("utf-8").split()[0]
+        self.assertFileExists(os.path.join("./suffix_tmp", f"test_{pid}.json"))
+        self.cleanup(output_file="./suffix_tmp")
 
     def test_path_finding(self):
         if sys.platform in ["linux", "linux2", "darwin"]:
