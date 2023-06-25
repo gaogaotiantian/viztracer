@@ -14,8 +14,7 @@ import time
 import unittest
 
 from viztracer import VizTracer
-from viztracer.attach_process.add_code_to_python_process import \
-    run_python_code  # type: ignore
+from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from viztracer.util import pid_exists
 
 from .cmdline_tmpl import CmdlineTmpl
