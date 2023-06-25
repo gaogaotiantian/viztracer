@@ -1,8 +1,9 @@
 # https://github.com/TheAlgorithms/Python
 
 
-import random
 import os
+import random
+
 from viztracer import VizTracer
 
 

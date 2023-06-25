@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 from viztracer import VizTracer
+
 from .base_tmpl import BaseTmpl
 
 

@@ -4,10 +4,11 @@
 
 import base64
 import builtins
-from dataclasses import dataclass
 import gc
 import json
 import sys
+from dataclasses import dataclass
+
 from .viztracer import VizTracer, get_tracer
 
 

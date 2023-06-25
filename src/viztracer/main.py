@@ -18,16 +18,15 @@ import time
 import types
 from typing import Any, Dict, List, Optional, Tuple
 
+from viztracer.vcompressor import VCompressor
+
 from . import __version__
 from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
-from .util import time_str_to_us, color_print, same_line_print, pid_exists
+from .util import color_print, pid_exists, same_line_print, time_str_to_us
 from .viztracer import VizTracer
-
-from viztracer.vcompressor import VCompressor
-
 
 # For all the procedures in VizUI, return a tuple as the result
 # The first element bool indicates whether the procedure succeeds
@@ -265,7 +264,7 @@ class VizUI:
             "min_duration": min_duration,
             "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
-            "minimize_memory": options.minimize_memory
+            "minimize_memory": options.minimize_memory,
         }
 
         return True, None
@@ -370,7 +369,7 @@ class VizUI:
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
             "run_module": runpy.run_module,
-            "modname": self.options.module
+            "modname": self.options.module,
         }
         sys.argv = [self.options.module] + self.command[:]
         sys.path.insert(0, os.getcwd())
@@ -393,7 +392,7 @@ class VizUI:
         file_name = command[0]
         search_result = self.search_file(file_name)
         if not search_result:
-            return False, "No such file as {}".format(file_name)
+            return False, f"No such file as {file_name}"
         file_name = search_result
         with open(file_name, "rb") as f:
             code_string = f.read()
@@ -501,7 +500,7 @@ class VizUI:
             "file_info": True,
             "register_global": True,
             "dump_raw": False,
-            "verbose": 1 if self.verbose != 0 else 0
+            "verbose": 1 if self.verbose != 0 else 0,
         })
         b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
         start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
@@ -517,7 +516,7 @@ class VizUI:
             return False, f"Failed to inject code [err {retcode}]"
 
         print("Use the following command to open the report:")
-        color_print("OKGREEN", "vizviewer {}".format(self.init_kwargs["output_file"]))
+        color_print("OKGREEN", f"vizviewer {self.init_kwargs['output_file']}")
 
         return True, None
 

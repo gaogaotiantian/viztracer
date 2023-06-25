@@ -3,11 +3,10 @@
 
 
 import sys
-from typing import Dict, Optional, Sequence, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 from . import __version__
-from .util import compare_version, color_print
-
+from .util import color_print, compare_version
 
 if TYPE_CHECKING:
     from .viztracer import VizTracer  # pragma: no cover
@@ -75,7 +74,7 @@ class VizPluginManager:
         module = args[0]
         try:
             package = __import__(module)
-        except (ImportError, ModuleNotFoundError):
+        except (ImportError):
             print(f"There's no module named {module}, maybe you need to install it")
             sys.exit(1)
 

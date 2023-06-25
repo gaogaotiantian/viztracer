@@ -44,7 +44,7 @@ class FlameGraph:
     def parse(self, trace_data: Dict[str, Any]) -> None:
         func_trees: Dict[str, FuncTree] = {}
         for data in trace_data["traceEvents"]:
-            key = "p{}_t{}".format(data["pid"], data["tid"])
+            key = f"p{data['pid']}_t{data['tid']}"
             if key in func_trees:
                 tree = func_trees[key]
             else:
@@ -59,7 +59,7 @@ class FlameGraph:
 
     def dump_to_perfetto(self) -> List[Dict[str, Any]]:
         """
-        reformat data to what perfetto likes
+        Reformat data to what perfetto likes
         private _functionProfileDetails?: FunctionProfileDetails[]
         export interface FunctionProfileDetails {
           name?: string;
@@ -101,7 +101,7 @@ class FlameGraph:
                     "selfSize": node.value - sum((n.value for n in node.children.values())),
                     "mapping": f"{node.count}",
                     "merged": False,
-                    "highlighted": False
+                    "highlighted": False,
                 })
                 for n in node.children.values():
                     q.put((n, idx, depth + 1))
@@ -109,7 +109,7 @@ class FlameGraph:
 
             detail = {
                 "name": name,
-                "flamegraph": flamegraph
+                "flamegraph": flamegraph,
             }
             ret.append(detail)
         return ret

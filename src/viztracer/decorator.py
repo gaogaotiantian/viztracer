@@ -45,7 +45,7 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
             tracer.stop()
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
-            file_name = os.path.join(output_dir, "result_{}_{}.json".format(func.__name__, int(100000 * time.time())))
+            file_name = os.path.join(output_dir, f"result_{func.__name__}_{int(100000 * time.time())}.json")
             tracer.fork_save(file_name)
             tracer.cleanup()
             return ret
@@ -95,7 +95,7 @@ def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callabl
                 "name": f"{code.co_name} ({code.co_filename}:{code.co_firstlineno})",
                 "ts": start,
                 "dur": dur,
-                "cat": "FEE"
+                "cat": "FEE",
             }
             tracer.add_raw(raw_data)
             return ret

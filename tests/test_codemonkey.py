@@ -3,7 +3,9 @@
 
 import ast
 import textwrap
-from viztracer.code_monkey import CodeMonkey, AstTransformer
+
+from viztracer.code_monkey import AstTransformer, CodeMonkey
+
 from .base_tmpl import BaseTmpl
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -22,8 +24,7 @@ class TestCodeMonkey(BaseTmpl):
                 a = 3 / 0
             except Exception as e:
                 raise
-            """
-        )
+            """)
         monkey = CodeMonkey("test.py")
         monkey.add_instrument("log_exception", {})
         _compile = monkey.compile

@@ -2,11 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from contextlib import redirect_stdout
 import io
-from .cmdline_tmpl import CmdlineTmpl
+from contextlib import redirect_stdout
+
 from viztracer import VizTracer
 from viztracer.vizplugin import VizPluginBase, VizPluginError
+
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class MyPlugin(VizPluginBase):
@@ -27,7 +29,7 @@ class MyPlugin(VizPluginBase):
         if m_type == "event" and payload["when"] == "pre-save":
             return {
                 "action": "handle_data",
-                "handler": f
+                "handler": f,
             }
 
         if m_type == "command":

@@ -3,7 +3,9 @@
 
 
 import json
+
 from viztracer.functree import FuncTree
+
 from .base_tmpl import BaseTmpl
 
 

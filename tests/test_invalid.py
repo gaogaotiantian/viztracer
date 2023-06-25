@@ -1,8 +1,9 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-from viztracer.event_base import _EventBase
 from viztracer import VizTracer
+from viztracer.event_base import _EventBase
+
 from .base_tmpl import BaseTmpl
 
 
@@ -22,7 +23,7 @@ class TestInvalidArgs(BaseTmpl):
             "vdb": ["hello", 1, "True"],
             "min_duration": ["0.1.0", "12", "3us"],
             "ignore_frozen": ["hello", 1, "True"],
-            "log_async": ["hello", 1, "True"]
+            "log_async": ["hello", 1, "True"],
         }
         tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():

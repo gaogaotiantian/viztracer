@@ -12,8 +12,8 @@ import unittest
 import viztracer
 from viztracer import VizTracer, ignore_function
 
-from .cmdline_tmpl import CmdlineTmpl
 from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class TestIssue1(BaseTmpl):
@@ -209,8 +209,7 @@ class TestIssue119(CmdlineTmpl):
                     self.template(
                         ["viztracer", "-o", "result.json", "cmdline_test.py", script_dir],
                         script=issue119_code,
-                        expected_output_file=filepath
-                    )
+                        expected_output_file=filepath)
                 finally:
                     os.chdir(cwd)
 
@@ -234,11 +233,9 @@ class TestIssue121(CmdlineTmpl):
             fib_count = sum(["fib" in event["name"] for event in data["traceEvents"]])
             self.assertEqual(fib_count, 15)
 
-        self.template(
-            ["viztracer", "cmdline_test.py", "--log_exit"],
-            script=issue121_code,
-            check_func=check_func
-        )
+        self.template(["viztracer", "cmdline_test.py", "--log_exit"],
+                      script=issue121_code,
+                      check_func=check_func)
 
 
 issue141_code = """

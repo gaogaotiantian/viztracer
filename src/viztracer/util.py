@@ -12,9 +12,9 @@ from typing import Union
 def size_fmt(num: Union[int, float], suffix: str = 'B') -> str:
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
+            return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
-    return "%.1f%s%s" % (num, 'Ti', suffix)
+    return f"{num:.1f}{'Ti'}{suffix}"
 
 
 class _bcolors:

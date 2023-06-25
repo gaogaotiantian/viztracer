@@ -1,6 +1,4 @@
-# import wthell
-from viztracer import VizCounter, VizTracer, VizObject
-# from wthell import wth
+from viztracer import VizCounter, VizObject, VizTracer
 
 
 def h(a):
@@ -12,15 +10,12 @@ def h(a):
 def g(a, b):
     a += h(a)
     b += 3
-    # raise Exception("lol")
 
 
 def f(a, b):
-    # wthell.wth()
     a = a + 2
     ob.s = str(b)
     g(a + 1, b * 2)
-    # wthell.wth()
     h(36)
 
 

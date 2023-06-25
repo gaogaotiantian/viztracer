@@ -2,12 +2,12 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import os
-import sys
 import subprocess
+import sys
 
-from .package_env import package_matrix
-from .util import get_json_file_path, adapt_json_file, generate_json
 from .base_tmpl import BaseTmpl
+from .package_env import package_matrix
+from .util import adapt_json_file, generate_json, get_json_file_path
 
 
 adapt_json_file("vdb_basic.json")
@@ -72,7 +72,7 @@ class SimInterface:
                 self.sim_process.stdout.close()
                 self.sim_process.stdin.close()
                 if self.sim_process.returncode != 0:
-                    raise Exception("error code {}".format(self.sim_process.returncode))
+                    raise Exception(f"error code {self.sim_process.returncode}")
             except subprocess.TimeoutExpired:
                 self.sim_process.terminate()
 
