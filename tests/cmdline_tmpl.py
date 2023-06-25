@@ -11,6 +11,7 @@ import time
 
 from .base_tmpl import BaseTmpl
 
+
 file_fib = """
 def fib(n):
     if n < 2:

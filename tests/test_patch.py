@@ -13,6 +13,7 @@ from string import Template
 
 from .cmdline_tmpl import CmdlineTmpl
 
+
 file_spawn_tmpl = Template("""
 import multiprocessing
 import io

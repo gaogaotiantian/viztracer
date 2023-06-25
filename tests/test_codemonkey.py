@@ -24,8 +24,7 @@ class TestCodeMonkey(BaseTmpl):
                 a = 3 / 0
             except Exception as e:
                 raise
-            """,
-        )
+            """)
         monkey = CodeMonkey("test.py")
         monkey.add_instrument("log_exception", {})
         _compile = monkey.compile

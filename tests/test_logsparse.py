@@ -6,6 +6,7 @@ import os
 
 from .cmdline_tmpl import CmdlineTmpl
 
+
 file_basic = """
 from viztracer import log_sparse
 

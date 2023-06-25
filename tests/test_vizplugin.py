@@ -32,8 +32,9 @@ class MyPlugin(VizPluginBase):
                 "handler": f,
             }
 
-        if m_type == "command" and payload["cmd_type"] == "terminate":
-            return {"success": self.terminate_well}
+        if m_type == "command":
+            if payload["cmd_type"] == "terminate":
+                return {"success": self.terminate_well}
         return {}
 
 

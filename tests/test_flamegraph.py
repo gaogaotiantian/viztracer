@@ -22,8 +22,7 @@ class TestFlameGraph(BaseTmpl):
 
         # Test if FlameGraph can handle empty tree
         sample_data["traceEvents"].append(
-            {"ph": "M", "pid": 1, "tid": 1, "name": "thread_name", "args": {"name": "MainThread"}},
-        )
+            {"ph": "M", "pid": 1, "tid": 1, "name": "thread_name", "args": {"name": "MainThread"}})
         fg = FlameGraph(sample_data)
         self.assertEqual(len(fg.trees), 6)
         data = fg.dump_to_perfetto()

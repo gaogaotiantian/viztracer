@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from .flamegraph import FlameGraph
 
+
 dir_lock = threading.Lock()
 
 
@@ -360,8 +361,8 @@ class ServerThread(threading.Thread):
 
     def is_port_in_use(self) -> bool:
         with contextlib.closing(
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
-        ) as sock:
+                socket.socket(socket.AF_INET,
+                              socket.SOCK_STREAM)) as sock:
             return sock.connect_ex(('127.0.0.1', self.port)) == 0
 
 

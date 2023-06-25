@@ -134,8 +134,7 @@ class ObjectEvents:
             entry = {
                 "id": event["id"],
                 "name": event["name"],
-                "snapshots": [
-                ],
+                "snapshots": [],
             }
             self._objects[event["id"]] = entry
 

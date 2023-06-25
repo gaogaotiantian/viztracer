@@ -9,6 +9,7 @@ from .base_tmpl import BaseTmpl
 from .package_env import package_matrix
 from .util import adapt_json_file, generate_json, get_json_file_path
 
+
 adapt_json_file("vdb_basic.json")
 vdb_basic = get_json_file_path("vdb_basic.json")
 adapt_json_file("fib.json")
