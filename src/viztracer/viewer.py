@@ -6,7 +6,6 @@ import atexit
 import contextlib
 import functools
 import html
-from http import HTTPStatus
 import http.server
 import io
 import json
@@ -17,11 +16,11 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional
 import urllib.parse
+from http import HTTPStatus
+from typing import Any, Callable, Dict, List, Optional
 
 from .flamegraph import FlameGraph
-
 
 dir_lock = threading.Lock()
 
@@ -77,7 +76,7 @@ class PerfettoHandler(HttpHandler):
         self.server_thread.notify_active()
         if self.path.endswith("vizviewer_info"):
             info = {
-                "is_flamegraph": self.server_thread.flamegraph
+                "is_flamegraph": self.server_thread.flamegraph,
             }
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -185,14 +184,14 @@ class DirectoryHandler(HttpHandler):
             displaypath = urllib.parse.unquote(path)
         displaypath = html.escape(displaypath, quote=False)
         enc = sys.getfilesystemencoding()
-        title = 'Directory listing for %s' % displaypath
+        title = f'Directory listing for {displaypath}'
         r.append('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
                  '"http://www.w3.org/TR/html4/strict.dtd">')
         r.append('<html>\n<head>')
         r.append('<meta http-equiv="Content-Type" '
                  'content="text/html; charset=%s">' % enc)
-        r.append('<title>%s</title>\n</head>' % title)
-        r.append('<body>\n<h1>%s</h1>' % title)
+        r.append(f'<title>{title}</title>\n</head>')
+        r.append(f'<body>\n<h1>{title}</h1>')
         r.append('<hr>\n<ul>')
         for name in list:
             fullname = os.path.join(path, name)
@@ -224,7 +223,7 @@ class DirectoryHandler(HttpHandler):
         f.write(encoded)
         f.seek(0)
         self.send_response(HTTPStatus.OK)
-        self.send_header("Content-type", "text/html; charset=%s" % enc)
+        self.send_header("Content-type", f"text/html; charset={enc}")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         return f
@@ -240,9 +239,9 @@ class ExternalProcessorProcess:
                 sys.executable,
                 self.trace_processor_path,
                 self.path,
-                "-D"
+                "-D",
             ],
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
         atexit.register(self.stop)
         self._wait_start()
@@ -361,12 +360,9 @@ class ServerThread(threading.Thread):
 
     def is_port_in_use(self) -> bool:
         with contextlib.closing(
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
         ) as sock:
-            if sock.connect_ex(('127.0.0.1', self.port)) == 0:
-                return True
-            else:
-                return False
+            return sock.connect_ex(('127.0.0.1', self.port)) == 0
 
 
 class DirectoryViewer:
@@ -501,7 +497,7 @@ def viewer_main() -> int:
                 server_only=options.server_only,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout,
-                use_external_processor=options.use_external_processor
+                use_external_processor=options.use_external_processor,
             )
             directory_viewer.run()
         finally:
@@ -516,7 +512,7 @@ def viewer_main() -> int:
                 once=options.once,
                 flamegraph=options.flamegraph,
                 timeout=options.timeout,
-                use_external_processor=options.use_external_processor
+                use_external_processor=options.use_external_processor,
             )
             server.start()
             server.ready.wait()
@@ -542,4 +538,4 @@ def viewer_main() -> int:
 
 
 if __name__ == "__main__":
-    exit(viewer_main())
+    sys.exit(viewer_main())

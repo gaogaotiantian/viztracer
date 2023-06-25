@@ -3,6 +3,7 @@
 
 
 import os
+
 from .base_tmpl import BaseTmpl
 
 
@@ -10,7 +11,8 @@ class TestJupyter(BaseTmpl):
     def setUp(self):
         super().setUp()
         try:
-            from IPython.terminal.interactiveshell import TerminalInteractiveShell
+            from IPython.terminal.interactiveshell import \
+                TerminalInteractiveShell
             self.ip = TerminalInteractiveShell.instance()
         except ImportError:
             self.skipTest("No Jupyter, skip Jupyter test")

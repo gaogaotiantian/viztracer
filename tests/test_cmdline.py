@@ -3,15 +3,15 @@
 
 import configparser
 import importlib.util
-from contextlib import contextmanager
 import os
+import re
 import signal
 import sys
-import re
+from contextlib import contextmanager
 from unittest.case import skipIf
+
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
-
 
 file_c_function = """
 lst = []

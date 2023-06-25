@@ -1,6 +1,7 @@
 import threading
-from viztracer import VizTracer, ignore_function
 import time
+
+from viztracer import VizTracer, ignore_function
 
 
 @ignore_function

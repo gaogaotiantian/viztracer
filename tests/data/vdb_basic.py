@@ -1,5 +1,6 @@
 # import wthell
-from viztracer import VizCounter, VizTracer, VizObject
+from viztracer import VizCounter, VizObject, VizTracer
+
 # from wthell import wth
 
 

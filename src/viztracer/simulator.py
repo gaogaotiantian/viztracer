@@ -120,7 +120,7 @@ class Simulator:
         elif args[0] in ["quit", "exit", "q"]:
             sys.exit(0)
         else:
-            print("Invalid command: {}".format(cmd))
+            print(f"Invalid command: {cmd}")
             return
 
         if success:

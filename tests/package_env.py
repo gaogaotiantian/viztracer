@@ -1,12 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-from contextlib import contextmanager
 import inspect
-from itertools import product
 import os
 import subprocess
 import sys
+from contextlib import contextmanager
+from itertools import product
 from unittest import SkipTest
 
 

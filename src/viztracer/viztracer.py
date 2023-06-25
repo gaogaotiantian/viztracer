@@ -3,11 +3,12 @@
 
 import builtins
 import multiprocessing
-import objprint  # type: ignore
 import os
 import signal
 import sys
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+
+import objprint  # type: ignore
 
 from .report_builder import ReportBuilder
 from .tracer import _VizTracer
@@ -58,7 +59,7 @@ class VizTracer(_VizTracer):
             log_func_args=log_func_args,
             log_async=log_async,
             trace_self=trace_self,
-            min_duration=min_duration
+            min_duration=min_duration,
         )
         self._tracer: Any
         self.verbose = verbose
@@ -95,7 +96,7 @@ class VizTracer(_VizTracer):
         if type(pid_suffix) is bool:
             self.__pid_suffix = pid_suffix
         else:
-            raise ValueError("pid_suffix needs to be a boolean, not {}".format(pid_suffix))
+            raise ValueError(f"pid_suffix needs to be a boolean, not {pid_suffix}")
 
     @property
     def init_kwargs(self) -> Dict:
@@ -119,7 +120,7 @@ class VizTracer(_VizTracer):
             "pid_suffix": self.pid_suffix,
             "min_duration": self.min_duration,
             "dump_raw": self.dump_raw,
-            "minimize_memory": self.minimize_memory
+            "minimize_memory": self.minimize_memory,
         }
 
     def __enter__(self) -> "VizTracer":

@@ -1,10 +1,10 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import os
 import json
-import subprocess
+import os
 import re
+import subprocess
 
 
 def generate_json(filename):
@@ -30,7 +30,7 @@ def adapt_json_file(filename):
                 try:
                     m = name_regex.match(event["name"])
                     if m and py_filename in event["name"]:
-                        event["name"] = "{} ({}:{})".format(m.group(1), py_path, m.group(3))
+                        event["name"] = f"{m.group(1)} ({py_path}:{m.group(3)})"
                 except ValueError:
                     pass
 

@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from .cmdline_tmpl import CmdlineTmpl
 import os
 import re
 import shutil
@@ -12,6 +11,7 @@ import tempfile
 import unittest
 from string import Template
 
+from .cmdline_tmpl import CmdlineTmpl
 
 file_spawn_tmpl = Template("""
 import multiprocessing

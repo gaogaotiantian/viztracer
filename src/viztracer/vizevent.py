@@ -4,7 +4,6 @@
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from .viztracer import VizTracer  # pragma: no cover
 
@@ -27,6 +26,6 @@ class VizEvent:
             "name": f"{self.event_name} ({self.file_name}:{self.lineno})",
             "ts": self.start,
             "dur": dur,
-            "cat": "FEE"
+            "cat": "FEE",
         }
         self._tracer.add_raw(raw_data)

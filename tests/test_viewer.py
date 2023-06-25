@@ -2,22 +2,24 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import shutil
-from .cmdline_tmpl import CmdlineTmpl
 import json
 import multiprocessing
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
 import sys
-import time
 import tempfile
+import time
 import unittest.mock
 import urllib.request
-from viztracer.viewer import viewer_main
 import webbrowser
+
+from viztracer.viewer import viewer_main
+
+from .cmdline_tmpl import CmdlineTmpl
 
 
 class Viewer(unittest.TestCase):

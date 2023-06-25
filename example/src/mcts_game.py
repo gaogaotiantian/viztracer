@@ -1,10 +1,11 @@
 
 from __future__ import division
 
-from copy import deepcopy
-from mcts import mcts
-from functools import reduce
 import operator
+from copy import deepcopy
+from functools import reduce
+
+from mcts import mcts
 
 
 class NaughtsAndCrossesState():

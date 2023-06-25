@@ -15,7 +15,7 @@ class _EventBase:
         self._viztracer_config: Dict = {
             "trigger_on_change": True,
             "include_attributes": [],
-            "exclude_attributes": []
+            "exclude_attributes": [],
         }
 
         for key in kwargs:
@@ -46,7 +46,7 @@ class _EventBase:
 
     def _viztracer_set_config(self, key: str, value: Any) -> None:
         if key not in self._viztracer_config:
-            raise ValueError("No config named {}".format(key))
+            raise ValueError(f"No config named {key}")
         self._viztracer_config[key] = value
 
     def config(self, key: str, value: Any) -> None:
@@ -61,7 +61,7 @@ class _EventBase:
     @staticmethod
     def triggerlog(method: Optional[Callable] = None, when: str = "after") -> Callable:
         if when not in ["after", "before", "both"]:
-            raise ValueError("when has to be one of 'after', 'before' or 'both', not {}".format(when))
+            raise ValueError(f"when has to be one of 'after', 'before' or 'both', not {when}")
 
         def inner(func: Callable) -> Callable:
 

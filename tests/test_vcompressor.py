@@ -2,13 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import json
 import logging
 import lzma
-import zlib
 import os
 import tempfile
-import json
 import unittest
+import zlib
 from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj
@@ -26,12 +26,12 @@ class TestVCompressor(CmdlineTmpl):
             dup_json_path = os.path.join(tmpdir, "result.json")
             self.template(
                 ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
-                expected_output_file=cvf_path, cleanup=False
+                expected_output_file=cvf_path, cleanup=False,
             )
 
             self.template(
                 ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
-                expected_output_file=dup_json_path
+                expected_output_file=dup_json_path,
             )
 
     def test_compress_invalid(self):
@@ -40,13 +40,13 @@ class TestVCompressor(CmdlineTmpl):
             not_exist_path = os.path.join(tmpdir, "do_not_exist.json")
             result = self.template(
                 ["viztracer", "-o", cvf_path, "--compress", not_exist_path],
-                expected_output_file=None, success=False
+                expected_output_file=None, success=False,
             )
             self.assertIn("Unable to find file", result.stdout.decode("utf8"))
 
             result = self.template(
                 ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("fib.py")],
-                expected_output_file=None, success=False
+                expected_output_file=None, success=False,
             )
             self.assertIn("Only support compressing json report", result.stdout.decode("utf8"))
 
@@ -54,13 +54,13 @@ class TestVCompressor(CmdlineTmpl):
         default_compress_output = "result.cvf"
         self.template(
             ["viztracer", "--compress", get_tests_data_file_path("multithread.json")],
-            expected_output_file=default_compress_output, cleanup=False
+            expected_output_file=default_compress_output, cleanup=False,
         )
         self.assertTrue(os.path.exists(default_compress_output))
 
         self.template(
             ["viztracer", "-o", "result.json", "--decompress", default_compress_output],
-            expected_output_file="result.json"
+            expected_output_file="result.json",
         )
         self.cleanup(output_file=default_compress_output)
 
@@ -70,7 +70,7 @@ class TestVCompressor(CmdlineTmpl):
             dup_json_path = os.path.join(tmpdir, "result.json")
             result = self.template(
                 ["viztracer", "-o", dup_json_path, "--decompress", not_exist_path],
-                expected_output_file=dup_json_path, success=False
+                expected_output_file=dup_json_path, success=False,
             )
             self.assertIn("Unable to find file", result.stdout.decode("utf8"))
 
@@ -80,12 +80,12 @@ class TestVCompressor(CmdlineTmpl):
             default_decompress_output = "result.json"
             self.template(
                 ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path("multithread.json")],
-                expected_output_file=cvf_path, cleanup=False
+                expected_output_file=cvf_path, cleanup=False,
             )
 
             self.template(
                 ["viztracer", "--decompress", cvf_path],
-                expected_output_file=default_decompress_output, cleanup=False
+                expected_output_file=default_decompress_output, cleanup=False,
             )
             self.assertTrue(os.path.exists(default_decompress_output))
             self.cleanup(output_file=default_decompress_output)
@@ -167,7 +167,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         original_size: int,
         vcompress_result: BenchmarkResult,
         other_results: List[Tuple[str, BenchmarkResult]],  # [(compressor_name, BenchmarkResult)]
-        subtest_idx: Optional[int] = None
+        subtest_idx: Optional[int] = None,
     ):
         if subtest_idx is None:
             logging.info(f"On file \"{filename}\":")
@@ -200,14 +200,14 @@ class TestVCompressorPerformance(CmdlineTmpl):
             logging.info("      {}{:9.3f}s({:.3f})".format(
                 name + ":" + " " * max(15 - len(name), 0),
                 result.elapsed_time,
-                result.elapsed_time / vcompress_result.elapsed_time
+                result.elapsed_time / vcompress_result.elapsed_time,
             ))
 
     @_benchmark
     def _benchmark_vcompressor(self, uncompressed_file_path: str, compressed_file_path: str) -> None:
         self.template(
             ["viztracer", "-o", compressed_file_path, "--compress", uncompressed_file_path],
-            expected_output_file=compressed_file_path, script=None, cleanup=False
+            expected_output_file=compressed_file_path, script=None, cleanup=False,
         )
 
     @_benchmark
@@ -228,7 +228,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         tmp_compress_file = uncompressed_file_path + ".tmp"
         self.template(
             ["viztracer", "-o", tmp_compress_file, "--compress", uncompressed_file_path],
-            expected_output_file=tmp_compress_file, script=None, cleanup=False
+            expected_output_file=tmp_compress_file, script=None, cleanup=False,
         )
         with open(tmp_compress_file, "rb") as tmp_file:
             with lzma.open(compressed_file_path, "wb", preset=lzma.PRESET_DEFAULT) as compressed_file:
@@ -239,7 +239,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
         tmp_compress_file = uncompressed_file_path + ".tmp"
         self.template(
             ["viztracer", "-o", tmp_compress_file, "--compress", uncompressed_file_path],
-            expected_output_file=tmp_compress_file, script=None, cleanup=False
+            expected_output_file=tmp_compress_file, script=None, cleanup=False,
         )
         with open(tmp_compress_file, "rb") as tmp_file:
             compressed_data = zlib.compress(tmp_file.read())
@@ -269,7 +269,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
             run_script = test_large_fib % (origin_json_path.replace("\\", "/"))
             self.template(
                 ["python", "cmdline_test.py"], script=run_script, cleanup=False,
-                expected_output_file=origin_json_path
+                expected_output_file=origin_json_path,
             )
             original_size = os.path.getsize(origin_json_path)
             other_results = [
@@ -323,7 +323,7 @@ class VCompressorCompare(unittest.TestCase):
                          f"list length not equal, first is {len(first)} \n second is {len(second)}")
         first.sort(key=lambda i: (i["pid"], i["tid"]))
         second.sort(key=lambda i: (i["pid"], i["tid"]))
-        for i in range(len(first)):
+        for _ in range(len(first)):
             self.assertEqual(first, second,
                              f"{first} and {second} not equal")
 
@@ -462,11 +462,11 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
             dup_json_path = os.path.join(tmpdir, "result.json")
             self.template(
                 ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path(test_file)],
-                expected_output_file=cvf_path, cleanup=False
+                expected_output_file=cvf_path, cleanup=False,
             )
             self.template(
                 ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
-                expected_output_file=dup_json_path, cleanup=False
+                expected_output_file=dup_json_path, cleanup=False,
             )
 
             with open(get_tests_data_file_path(test_file), "r") as f:
@@ -483,15 +483,15 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
             run_script = run_script % (origin_json_path.replace("\\", "/"))
             self.template(
                 ["python", "cmdline_test.py"], script=run_script, cleanup=False,
-                expected_output_file=origin_json_path
+                expected_output_file=origin_json_path,
             )
             self.template(
                 ["viztracer", "-o", cvf_path, "--compress", origin_json_path],
-                expected_output_file=cvf_path, cleanup=False
+                expected_output_file=cvf_path, cleanup=False,
             )
             self.template(
                 ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
-                expected_output_file=dup_json_path, cleanup=False
+                expected_output_file=dup_json_path, cleanup=False,
             )
             with open(origin_json_path, "r") as f:
                 origin_json_data = json.load(f)
