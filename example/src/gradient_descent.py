@@ -28,7 +28,7 @@ def _error(example_no, data_set="train"):
     :return: error in example pointed by example number.
     """
     return calculate_hypothesis_value(example_no, data_set) - \
-            output(example_no, data_set)
+        output(example_no, data_set)
 
 
 def _hypothesis_value(data_input_tuple):
