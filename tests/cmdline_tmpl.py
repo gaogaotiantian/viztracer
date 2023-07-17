@@ -118,20 +118,21 @@ class CmdlineTmpl(BaseTmpl):
                 logging.error(f"stdout: {e.stdout}")
                 logging.error(f"stderr: {e.stderr}")
                 raise e
-        if not (success ^ (result.returncode != 0)):
+        expected = (success ^ (result.returncode != 0))
+        if not expected:
             logging.error(f"return code: {result.returncode}")
             logging.error(f"stdout:\n{result.stdout.decode('utf-8')}")
             logging.error(f"stderr:\n{result.stderr.decode('utf-8')}")
-        self.assertTrue(success ^ (result.returncode != 0))
-        if success:
-            if expected_output_file:
+        self.assertTrue(expected)
+        if expected:
+            if success and expected_output_file:
                 if type(expected_output_file) is list:
                     for f in expected_output_file:
                         self.assertFileExists(f)
                 elif type(expected_output_file) is str:
                     self.assertFileExists(expected_output_file)
 
-            if expected_entries:
+            if success and expected_entries:
                 assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
                 with open(expected_output_file) as f:
                     data = json.load(f)
