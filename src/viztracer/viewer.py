@@ -303,7 +303,7 @@ class ServerThread(threading.Thread):
             self.retcode = self.view()
         except Exception as e:
             self.retcode = 1
-            traceback.print_exception(e)
+            traceback.print_exc()
         finally:
             # If it returns from view(), also set ready
             self.ready.set()
