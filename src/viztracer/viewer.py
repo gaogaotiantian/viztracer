@@ -301,7 +301,7 @@ class ServerThread(threading.Thread):
     def run(self) -> None:
         try:
             self.retcode = self.view()
-        except Exception as e:
+        except Exception:
             self.retcode = 1
             traceback.print_exc()
         finally:
