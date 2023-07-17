@@ -458,7 +458,9 @@ class TestViewer(CmdlineTmpl):
             shutil.rmtree(tmp_dir)
 
     def test_exception(self):
-        self.template(["vizviewer", "--port", "-3", "cmdline_test.json"], success=False, expected_output_file=None)
+        test_data_dir = os.path.join(os.path.dirname(__file__), "data")
+        self.template(["vizviewer", "--port", "-3", os.path.join(test_data_dir, "fib.json")],
+                      success=False, expected_output_file=None, expected_stderr=".*Traceback.*")
 
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
