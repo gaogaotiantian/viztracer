@@ -457,6 +457,9 @@ class TestViewer(CmdlineTmpl):
         finally:
             shutil.rmtree(tmp_dir)
 
+    def test_exception(self):
+        self.template(["vizviewer", "--port", "-3", "cmdline_test.json"], success=False, expected_output_file=None)
+
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
         self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)

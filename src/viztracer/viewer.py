@@ -14,6 +14,7 @@ import socket
 import socketserver
 import subprocess
 import sys
+import traceback
 import threading
 import time
 import urllib.parse
@@ -298,9 +299,14 @@ class ServerThread(threading.Thread):
         super().__init__(daemon=True)
 
     def run(self) -> None:
-        self.retcode = self.view()
-        # If it returns from view(), also set ready
-        self.ready.set()
+        try:
+            self.retcode = self.view()
+        except Exception as e:
+            self.retcode = 1
+            traceback.print_exception(e)
+        finally:
+            # If it returns from view(), also set ready
+            self.ready.set()
 
     def view(self) -> int:
         # Get file data
