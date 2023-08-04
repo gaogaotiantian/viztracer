@@ -58,16 +58,13 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
 
 
 def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callable:
-    tracer = get_tracer()
-    if tracer is None or not tracer.log_sparse:
-        if func is None:
-            return lambda f: f
-        return func
-
     if func is None:
         def inner(dec_func: Callable) -> Callable:
             @functools.wraps(dec_func)
             def wrapper(*args, **kwargs) -> Any:
+                tracer = get_tracer()
+                if tracer is None or not tracer.log_sparse:
+                    return dec_func(*args, **kwargs)
                 assert isinstance(tracer, VizTracer)
                 if not tracer.enable:
                     orig_max_stack_depth = tracer.max_stack_depth
@@ -84,6 +81,9 @@ def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0) -> Callabl
     else:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
+            tracer = get_tracer()
+            if tracer is None or not tracer.log_sparse:
+                return func(*args, **kwargs)
             assert callable(func)
             assert isinstance(tracer, VizTracer)
             start = tracer.getts()
