@@ -464,8 +464,9 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
         with tempfile.TemporaryDirectory() as tmpdir:
             cvf_path = os.path.join(tmpdir, "result.cvf")
             dup_json_path = os.path.join(tmpdir, "result.json")
+            origin_json_path = get_tests_data_file_path(test_file)
             self.template(
-                ["viztracer", "-o", cvf_path, "--compress", get_tests_data_file_path(test_file)],
+                ["viztracer", "-o", cvf_path, "--compress", origin_json_path],
                 expected_output_file=cvf_path,
                 cleanup=False)
             self.template(
@@ -473,7 +474,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 expected_output_file=dup_json_path,
                 cleanup=False)
 
-            with open(get_tests_data_file_path(test_file), "r") as f:
+            with open(origin_json_path, "r") as f:
                 origin_json_data = json.load(f)
             with open(dup_json_path, "r") as f:
                 dup_json_data = json.load(f)
