@@ -124,11 +124,13 @@ class VizTracer(_VizTracer):
         }
 
     def __enter__(self) -> "VizTracer":
-        self.start()
+        if not self.log_sparse:
+            self.start()
         return self
 
     def __exit__(self, type, value, trace) -> None:
-        self.stop()
+        if not self.log_sparse:
+            self.stop()
         self.save()
         self.terminate()
 
