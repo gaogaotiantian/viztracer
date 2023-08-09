@@ -71,9 +71,7 @@ def _log_sparse_wrapper(func: Optional[Callable] = None, stack_depth: int = 0,
             local_tracer = get_tracer() if dynamic_tracer_check else tracer
 
             if local_tracer is None or not local_tracer.log_sparse:
-                if func is None:
-                    return lambda f: f
-                return func
+                return func(*args, **kwargs)
 
             assert isinstance(local_tracer, VizTracer)
             if not local_tracer.enable:
@@ -93,9 +91,7 @@ def _log_sparse_wrapper(func: Optional[Callable] = None, stack_depth: int = 0,
             local_tracer = get_tracer() if dynamic_tracer_check else tracer
 
             if local_tracer is None or not local_tracer.log_sparse:
-                if func is None:
-                    return lambda f: f
-                return func
+                return func(*args, **kwargs)
 
             assert callable(func)
             assert isinstance(local_tracer, VizTracer)
