@@ -110,6 +110,12 @@ If you are using Jupyter, you can use viztracer cell magics.
     %%viztracer
     # Your code after
 
+.. code-block:: python
+
+    # you can define arguments of VizTracer in magic
+    %%viztracer port=8888
+    # Your code after
+
 A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
 
 Display Report

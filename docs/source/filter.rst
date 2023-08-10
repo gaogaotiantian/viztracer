@@ -149,6 +149,14 @@ First, you need to add decorator ``@log_sparse`` on the function you want to log
     def function_you_want_to_log():
         # function body
 
+    # Use dynamic_tracer_check=True if you use tracer as a context manager (or with %%viztracer).
+    @log_sparse(dynamic_tracer_check=True)
+    def function_you_want_to_log():
+        # function body
+
+    with VizTracer(log_sparse=True):
+        function_you_want_to_log()
+
 Then just call viztracer with ``--log_sparse``
 
 .. code-block::
