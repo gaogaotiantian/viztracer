@@ -49,21 +49,25 @@ try:
                     continue
                 name, value = item.split('=')
                 if name == 'output_file':
+                    value = value.strip(' ').strip('\'"')
                     tracer_kwargs['output_file'] = value
                     viewer_kwargs['path'] = value
-                elif name in viewer_signature.parameters:
-                    annotation = viewer_signature.parameters[name].annotation
-                    kwargs = viewer_kwargs
-                elif name in tracer_signature.parameters:
-                    annotation = tracer_signature.parameters[name].annotation
-                    kwargs = tracer_kwargs
                 else:
-                    raise ValueError(f'{name} is not a parameter of VizTracer or ServerThread')
+                    if name in viewer_signature.parameters:
+                        annotation = viewer_signature.parameters[name].annotation
+                        kwargs = viewer_kwargs
+                    elif name in tracer_signature.parameters:
+                        annotation = tracer_signature.parameters[name].annotation
+                        kwargs = tracer_kwargs
+                    else:
+                        raise ValueError(f'{name} is not a parameter of VizTracer or ServerThread')
 
-                if value == 'None':
-                    kwargs[name] = None
-                else:
-                    kwargs[name] = annotation(value)
+                    if value == 'None':
+                        kwargs[name] = None
+                    elif annotation is str:
+                        kwargs[name] = value.strip(' ').strip('\'"')
+                    else:
+                        kwargs[name] = annotation(value)
             return tracer_kwargs, viewer_kwargs
 
 except ImportError:  # pragma: no cover
