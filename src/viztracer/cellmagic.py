@@ -1,14 +1,38 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
-import re
-import inspect
 
 try:
     from IPython.core.magic import (Magics, cell_magic,  # type: ignore
                                     magics_class, needs_local_scope)
+    from IPython.core.magic_arguments import (argument, magic_arguments, parse_argstring)
 
     @magics_class
     class VizTracerMagics(Magics):
+        @magic_arguments()
+        @argument("--port", "-p", default=9001, type=int,
+                  help="specify the port vizviewer will use")
+        @argument("--output_file", default="./viztracer_report.json",
+                  help="output file path. End with .json or .html or .gz")
+        @argument("--max_stack_depth", type=int, default=-1,
+                  help="maximum stack depth you want to trace.")
+        @argument("--verbose", "-v", default=0, type=int,
+                  help="verbosity level")
+        @argument("--ignore_c_function", action="store_true", default=False,
+                  help="ignore all c functions including most builtin functions and libraries")
+        @argument("--ignore_frozen", action="store_true", default=False,
+                  help="ignore all functions that are frozen(like import)")
+        @argument("--log_exit", action="store_true", default=False,
+                  help="log functions in exit functions like atexit")
+        @argument("--log_func_args", action="store_true", default=False,
+                  help="log all function arguments, this will introduce large overhead")
+        @argument("--log_print", action="store_true", default=False,
+                  help="replace all print() function to adding an event to the result")
+        @argument("--log_sparse", action="store_true", default=False,
+                  help="log only selected functions with @log_sparse")
+        @argument("--log_func_entry", nargs="*", default=None,
+                  help="log entry of the function with specified names")
+        @argument("--log_exception", action="store_true", default=False,
+                  help="log all exception when it's raised")
         @needs_local_scope
         @cell_magic
         def viztracer(self, line, cell, local_ns) -> None:
@@ -17,15 +41,27 @@ try:
 
             from .viewer import ServerThread
             from .viztracer import VizTracer
-            tracer_kwargs, viewer_kwargs = self.make_kwargs(
-                line, inspect.signature(VizTracer), inspect.signature(ServerThread)
-            )
+            options = parse_argstring(self.viztracer, line)
             code = self.shell.transform_cell(cell)
+            file_path = options.output_file
+            tracer_kwargs = {
+                "output_file": file_path,
+                "verbose": options.verbose,
+                "max_stack_depth": options.max_stack_depth,
+                "ignore_c_function": options.ignore_c_function,
+                "log_exit": options.log_exit,
+                "ignore_frozen": options.ignore_frozen,
+                "log_func_args": options.log_func_args,
+                "log_print": options.log_print,
+                "log_sparse": options.log_sparse,
+                "log_func_entry": options.log_func_entry,
+                "log_exception": options.log_exception
+            }
             with VizTracer(**tracer_kwargs):
                 exec(code, local_ns, local_ns)
 
             def view():  # pragma: no cover
-                server = ServerThread(**viewer_kwargs)
+                server = ServerThread(file_path, port=options.port, once=True)
                 server.start()
                 server.ready.wait()
                 import webbrowser
@@ -35,40 +71,6 @@ try:
             button.on_click(lambda b: view())
 
             display(button)
-
-        def make_kwargs(self, line, tracer_signature, viewer_signature):
-            line = line.split('#')[0]
-            pattern = r'(\w+=\w+)\s'
-            default_path = "./viztracer_report.json"
-
-            tracer_kwargs = {'verbose': 0, 'output_file': default_path}
-            viewer_kwargs = {'path': default_path, 'once': True}
-
-            for item in re.split(pattern, line):
-                if item == '':
-                    continue
-                name, value = item.split('=')
-                if name == 'output_file':
-                    value = value.strip(' ').strip('\'"')
-                    tracer_kwargs['output_file'] = value
-                    viewer_kwargs['path'] = value
-                else:
-                    if name in viewer_signature.parameters:
-                        annotation = viewer_signature.parameters[name].annotation
-                        kwargs = viewer_kwargs
-                    elif name in tracer_signature.parameters:
-                        annotation = tracer_signature.parameters[name].annotation
-                        kwargs = tracer_kwargs
-                    else:
-                        raise ValueError(f'{name} is not a parameter of VizTracer or ServerThread')
-
-                    if value == 'None':
-                        kwargs[name] = None
-                    elif annotation is str:
-                        kwargs[name] = value.strip(' ').strip('\'"')
-                    else:
-                        kwargs[name] = annotation(value)
-            return tracer_kwargs, viewer_kwargs
 
 except ImportError:  # pragma: no cover
     pass

@@ -113,7 +113,7 @@ If you are using Jupyter, you can use viztracer cell magics.
 .. code-block:: python
 
     # you can define arguments of VizTracer in magic
-    %%viztracer port=8888
+    %%viztracer -p 8888
     # Your code after
 
 A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
