@@ -43,6 +43,7 @@ static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* args);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
@@ -218,6 +219,7 @@ static PyMethodDef Tracer_methods[] = {
     {"setcurrstack", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
+    {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_VARARGS, "reset ignore stack depth"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -301,7 +303,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                 goto cleanup;
             }
         }
-        
+
         // IMPORTANT: the C function will always be called from our python methods, 
         // so this check is redundant. However, the user should never be allowed 
         // to call our C methods directly! Otherwise C functions will be recorded.
@@ -1412,6 +1414,24 @@ snaptrace_addraw(TracerObject* self, PyObject* args)
     Py_INCREF(raw);
 
     Py_RETURN_NONE;
+}
+
+static PyObject*
+snaptrace_setignorestackcounter(TracerObject* self, PyObject* args)
+{
+    int value = 0;
+    int current_value = 0;
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!PyArg_ParseTuple(args, "i", &value)) {
+        printf("Error when parsing arguments!\n");
+        exit(1);
+    }
+
+    current_value = info->ignore_stack_depth;
+    info->ignore_stack_depth = value;
+
+    return Py_BuildValue("i", current_value);
 }
 
 static PyObject*

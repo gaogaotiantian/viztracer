@@ -75,6 +75,79 @@ if __name__ == "__main__":
         time.sleep(0.1)
 """
 
+file_context_manager = """
+from viztracer import VizTracer, log_sparse
+
+@log_sparse(dynamic_tracer_check=True)
+def f():
+    return 1
+
+def g():
+    return f()
+
+@log_sparse
+def h():
+    return 2
+
+@log_sparse(dynamic_tracer_check=True, stack_depth=1)
+def q():
+    return 3
+
+if __name__ == "__main__":
+    with VizTracer(output_file="result.json"):
+        assert g() == 1
+        assert h() == 2
+        assert q() == 3
+"""
+
+file_context_manager_logsparse = """
+from viztracer import VizTracer, log_sparse
+
+@log_sparse(dynamic_tracer_check=True)
+def f():
+    return 1
+
+def g():
+    return f()
+
+@log_sparse
+def h():
+    return 2
+
+@log_sparse(dynamic_tracer_check=True, stack_depth=1)
+def q():
+    return 3
+
+if __name__ == "__main__":
+    with VizTracer(output_file="result.json", log_sparse=True):
+        assert g() == 1
+        assert h() == 2
+        assert q() == 3
+"""
+
+file_context_manager_logsparse_stack = """
+from viztracer import VizTracer, log_sparse
+
+@log_sparse(dynamic_tracer_check=True)
+def f():
+    return 1
+
+@log_sparse(dynamic_tracer_check=True, stack_depth=1)
+def g():
+    return f()
+
+@log_sparse(dynamic_tracer_check=True)
+def h():
+    return 2
+
+if __name__ == "__main__":
+    assert g() == 1
+    assert h() == 2
+
+    with VizTracer(output_file="result.json", log_sparse=True):
+        assert g() == 1
+        assert h() == 2
+"""
 
 class TestLogSparse(CmdlineTmpl):
     def test_basic(self):
@@ -118,3 +191,13 @@ class TestLogSparse(CmdlineTmpl):
                 # coveragepy has some issue with multiprocess pool
                 if not os.getenv("COVERAGE_RUN"):
                     raise e
+
+    def test_context_manager(self):
+        self.template(["python", "cmdline_test.py"], script=file_context_manager,
+                      expected_output_file="result.json", expected_entries=4)
+
+        self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse,
+                      expected_output_file="result.json", expected_entries=2)
+
+        self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse_stack,
+                      expected_output_file="result.json", expected_entries=2)

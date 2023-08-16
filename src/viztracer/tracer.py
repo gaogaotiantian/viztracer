@@ -292,6 +292,9 @@ class _VizTracer:
     def getts(self) -> float:
         return self._tracer.getts()
 
+    def setignorestackcounter(self, value) -> int:
+        return self._tracer.setignorestackcounter(value)
+
     def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
         if self.enable:
             if scope not in ["g", "p", "t"]:
