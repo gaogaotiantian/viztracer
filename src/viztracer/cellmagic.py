@@ -21,18 +21,12 @@ try:
                   help="ignore all c functions including most builtin functions and libraries")
         @argument("--ignore_frozen", action="store_true", default=False,
                   help="ignore all functions that are frozen(like import)")
-        @argument("--log_exit", action="store_true", default=False,
-                  help="log functions in exit functions like atexit")
         @argument("--log_func_args", action="store_true", default=False,
                   help="log all function arguments, this will introduce large overhead")
         @argument("--log_print", action="store_true", default=False,
                   help="replace all print() function to adding an event to the result")
         @argument("--log_sparse", action="store_true", default=False,
                   help="log only selected functions with @log_sparse")
-        @argument("--log_func_entry", nargs="*", default=None,
-                  help="log entry of the function with specified names")
-        @argument("--log_exception", action="store_true", default=False,
-                  help="log all exception when it's raised")
         @needs_local_scope
         @cell_magic
         def viztracer(self, line, cell, local_ns) -> None:
@@ -49,13 +43,10 @@ try:
                 "verbose": options.verbose,
                 "max_stack_depth": options.max_stack_depth,
                 "ignore_c_function": options.ignore_c_function,
-                "log_exit": options.log_exit,
                 "ignore_frozen": options.ignore_frozen,
                 "log_func_args": options.log_func_args,
                 "log_print": options.log_print,
-                "log_sparse": options.log_sparse,
-                "log_func_entry": options.log_func_entry,
-                "log_exception": options.log_exception
+                "log_sparse": options.log_sparse
             }
             with VizTracer(**tracer_kwargs):
                 exec(code, local_ns, local_ns)
