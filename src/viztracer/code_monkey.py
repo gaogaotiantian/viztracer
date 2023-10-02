@@ -251,10 +251,6 @@ class AstTransformer(ast.NodeTransformer):
                 return f"'{node.value}'"
             else:
                 return f"{node.value}"
-        elif isinstance(node, ast.Num):
-            return f"{node.n}"
-        elif isinstance(node, ast.Str):
-            return f"'{node.s}'"
         elif isinstance(node, ast.Attribute):
             return f"{self.get_string_of_expr(node.value)}.{node.attr}"
         elif isinstance(node, ast.Subscript):
