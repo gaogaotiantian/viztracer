@@ -1519,6 +1519,7 @@ static void snaptrace_threaddestructor(void* key) {
     struct ThreadInfo* info = key;
     struct FunctionNode* tmp = NULL;
     if (info) {
+        PyGILState_STATE state = PyGILState_Ensure();
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
@@ -1527,7 +1528,6 @@ static void snaptrace_threaddestructor(void* key) {
             while (info->stack_top->prev) {
                 info->stack_top = info->stack_top->prev;
             }
-            PyGILState_STATE state = PyGILState_Ensure();
             while (info->stack_top) {
                 tmp = info->stack_top;
                 if (tmp->args) {
@@ -1537,12 +1537,12 @@ static void snaptrace_threaddestructor(void* key) {
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }
-            PyGILState_Release(state);
         }
         info->stack_top = NULL;
         info->curr_task = NULL;
         info->curr_task_frame = NULL;
         PyMem_FREE(info);
+        PyGILState_Release(state);
     }
 }
 
