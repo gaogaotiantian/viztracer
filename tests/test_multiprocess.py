@@ -7,7 +7,6 @@ import signal
 import sys
 import tempfile
 import unittest
-from unittest.case import skipIf
 
 from .cmdline_tmpl import CmdlineTmpl
 
