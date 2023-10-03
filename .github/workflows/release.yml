@@ -11,14 +11,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [37, 38, 39, 310, 311]
+        python-version: [38, 39, 310, 311]
         manylinux-image: [manylinux2014, manylinux_2_24]
         arch: [auto]
         include:
-          - os: ubuntu-latest
-            manylinux-image: manylinux2014
-            arch: aarch64
-            python-version: 37
           - os: ubuntu-latest
             manylinux-image: manylinux2014
             arch: aarch64
