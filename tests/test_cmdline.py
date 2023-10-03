@@ -406,7 +406,6 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_entries=7)
 
-    @skipIf(sys.version_info < (3, 8), "sys.addaudithook does not exist on 3.8-")
     def test_log_audit(self):
         def check_func(include_names, exclude_names=[]):
             def inner(data):
