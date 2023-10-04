@@ -6,7 +6,7 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
   <link rel="shortcut icon" id="favicon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
 </head>
-<body data-perfetto_version='{"stable":"v25.0-cca3e0ce7"}'>
+<body data-perfetto_version='{"stable":"v37.0-c4417a6dd"}'>
   <!--
     Don't add any content here. The whole <body> is replaced by
     frontend/index.ts when bootstrapping. This is only used for very early
@@ -33,12 +33,9 @@ Please file a bug (details below) and try these remediation steps:
 * Force-reload the page with Ctrl+Shift+R (Mac: Meta+Shift+R) or
   Shift + click on the refresh button.
 
-* <a href="javascript:clearAllCaches();">Click here</a> to clear all the site storage and caches and reload the page.
+* <a href="javascript:clearAllCaches();">Clear all the site storage and caches</a> and reload the page.
 
 * Clear the site data and caches from devtools, following <a target="_blank" href="https://developers.google.com/web/tools/chrome-devtools/storage/cache#deletecache">these instructions</a>.
-
-* If neither of these work, you can use an old fallback instance hosted at
-  <a target="_blank" href="https://staging-dot-perfetto-ui.appspot.com">staging-dot-perfetto-ui.appspot.com</a>
 
 In any case, **FILE A BUG** attaching logs and screenshots from devtools.
   Googlers:      <a href="http://go/perfetto-ui-bug" target="_blank">go/perfetto-ui-bug</a>
@@ -76,20 +73,28 @@ Technical Information:
       }
 
       // For the 'Click here to clear all caches'.
-      window.clearAllCaches = () => {
+      window.clearAllCaches = async () => {
         if (window.localStorage) window.localStorage.clear();
         if (window.sessionStorage) window.sessionStorage.clear();
         const promises = [];
         if (window.caches) {
-          window.caches.keys().then(
-            keys => keys.forEach(k => promises.push(window.caches.delete(k))));
+          try {
+            const keys = await window.caches.keys();
+            keys.forEach(k => promises.push(window.caches.delete(k)));
+          } catch (_) {
+            // TODO(288483453)
+          }
         }
         if (navigator.serviceWorker) {
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            regs.forEach(reg => promises.push(reg.unregister()));
-          });
+          const regs = await navigator.serviceWorker.getRegistrations();
+          regs.forEach(reg => promises.push(reg.unregister()));
         }
-        Promise.all(promises).then(() => window.location.reload());
+        try {
+          await Promise.all(promises);
+        } catch (_) {
+          // TODO(288483453)
+        }
+        window.location.reload();
       }
 
       // If the frontend doesn't come up, make the error page above visible.
