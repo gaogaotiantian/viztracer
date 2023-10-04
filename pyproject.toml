@@ -32,12 +32,11 @@ HomePage = "https://github.com/gaogaotiantian/viztracer"
 Documentation = "https://viztracer.readthedocs.io"
 
 [project.optional-dependencies]
-full = ["rich", "orjson"]
+full = ["orjson"]
 
 [project.scripts]
 viztracer = "viztracer:main"
 vizviewer = "viztracer:viewer_main"
-vdb = "viztracer:sim_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "viztracer.__version__"}

@@ -31,7 +31,6 @@ struct FEEData {
         };
     };
     int type;
-    int caller_lineno;
     double dur;
     PyObject* asyncio_task;
 };
