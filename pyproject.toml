@@ -9,6 +9,7 @@ description = "A debugging and profiling tool that can trace and visualize pytho
 dependencies = ["objprint>0.1.3"]
 readme = "README.md"
 requires-python = ">=3.8"
+license = {file = "LICENSE"}
 dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -28,7 +29,7 @@ classifiers = [
 ]
 
 [project.urls]
-HomePage = "https://github.com/gaogaotiantian/viztracer"
+Homepage = "https://github.com/gaogaotiantian/viztracer"
 Documentation = "https://viztracer.readthedocs.io"
 
 [project.optional-dependencies]
