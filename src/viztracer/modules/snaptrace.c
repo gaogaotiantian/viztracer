@@ -1220,7 +1220,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 
     if (kw_trace_self == 1) {
         SET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
-    } else if (kw_log_async == 0) {
+    } else if (kw_trace_self == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
     }
 
