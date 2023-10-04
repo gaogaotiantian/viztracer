@@ -76,20 +76,6 @@ class TestPerformance(BaseTmpl):
         with bm_timer.time("baseline", "baseline", baseline=True):
             func()
 
-        # With viztracer + c tracer + vdb
-        tracer = VizTracer(verbose=0, vdb=True)
-        tracer.start()
-        with bm_timer.time("c+vdb", "c+vdb"):
-            func()
-        tracer.stop()
-        with bm_timer.time("c+vdb", "parse"):
-            tracer.parse()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ofile = os.path.join(tmpdir, "result.json")
-            with bm_timer.time("c+vdb", "save"):
-                tracer.save(output_file=ofile)
-        tracer.clear()
-
         # With viztracer + c tracer
         tracer = VizTracer(verbose=0)
         tracer.start()

@@ -28,8 +28,7 @@ class _VizTracer:
             log_gc: bool = False,
             log_async: bool = False,
             trace_self: bool = False,
-            min_duration: float = 0,
-            vdb: bool = False) -> None:
+            min_duration: float = 0) -> None:
         self.initialized = False
         self.enable = False
         self.parsed = False
@@ -47,7 +46,6 @@ class _VizTracer:
         self.log_func_args = log_func_args
         self.log_async = log_async
         self.min_duration = min_duration
-        self.vdb = vdb
         self.log_print = log_print
         self.log_gc = log_gc
         self.trace_self = trace_self
@@ -194,18 +192,6 @@ class _VizTracer:
             raise ValueError(f"log_gc needs to be True or False, not {log_gc}")
 
     @property
-    def vdb(self) -> bool:
-        return self.__vdb
-
-    @vdb.setter
-    def vdb(self, vdb: bool) -> None:
-        if isinstance(vdb, bool):
-            self.__vdb = vdb
-        else:
-            raise ValueError(f"vdb needs to be True or False, not {vdb}")
-        self.config()
-
-    @property
     def verbose(self) -> int:
         return self.__verbose
 
@@ -247,7 +233,6 @@ class _VizTracer:
             "ignore_c_function": self.ignore_c_function,
             "ignore_frozen": self.ignore_frozen,
             "log_func_retval": self.log_func_retval,
-            "vdb": self.vdb,
             "log_func_args": self.log_func_args,
             "log_async": self.log_async,
             "trace_self": self.trace_self,

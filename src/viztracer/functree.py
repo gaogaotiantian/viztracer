@@ -13,7 +13,6 @@ class FuncTreeNode:
     def __init__(self, event: Optional[Dict[str, Any]] = None) -> None:
         self.filename: Optional[str] = None
         self.lineno: Optional[int] = None
-        self.caller_lineno: int = -1
         self.is_python: Optional[bool] = False
         self.funcname: Optional[str] = None
         self.parent: Optional[FuncTreeNode] = None
@@ -35,8 +34,6 @@ class FuncTreeNode:
                 self.funcname = m.group(1)
                 self.filename = m.group(2)
                 self.lineno = int(m.group(3))
-            if "caller_lineno" in self.event:
-                self.caller_lineno = self.event["caller_lineno"]
 
     def is_ancestor(self, other: "FuncTreeNode") -> bool:
         return self.start < other.start and self.end > other.end
