@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install twine flake8 setuptools wheel
+          pip install build twine flake8 setuptools wheel
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel -U
@@ -97,10 +97,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install twine flake8 setuptools wheel
+          pip install build twine flake8 setuptools wheel
       - name: Build source tar
         run: |
-          python setup.py sdist
+          python -m build
       - name: Publish wheels to PyPI
         continue-on-error: true
         env:
