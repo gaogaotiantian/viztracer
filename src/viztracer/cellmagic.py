@@ -15,6 +15,7 @@ try:
 
             from .viewer import ServerThread
             from .viztracer import VizTracer
+            assert self.shell is not None
             code = self.shell.transform_cell(cell)
             file_path = "./viztracer_report.json"
             with VizTracer(verbose=0, output_file=file_path):
