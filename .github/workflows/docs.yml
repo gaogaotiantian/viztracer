@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  lint:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,6 +15,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependency
-        run: pip install docs/requirements.txt
+        run: pip install -r docs/requirements.txt
       - name: Build documentation
         run: sphinx-build -b html docs/source/ docs/build/
