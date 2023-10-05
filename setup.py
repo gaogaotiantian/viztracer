@@ -18,10 +18,18 @@ package_data = {
     ],
 }
 
+if sys.platform == "win32":
+    package_data["viztracer"].extend([
+        "attach_process/attach_x86.dll",
+        "attach_process/attach_x86_64.dll",
+        "attach_process/inject_dll.exe",
+        "attach_process/inject_dll_amd64.exe",
+        "attach_process/run_code_on_dllmain_amd64.dll",
+        "attach_process/run_code_on_dllmain_x86.dll",
+    ])
 if sys.platform == "darwin":
     package_data["viztracer"].extend([
         "attach_process/attach_x86_64.dylib",
-        "attach_process/linux_and_mac/lldb_prepare.py",
     ])
 elif sys.platform in ("linux", "linux2"):
     if platform.machine() == "i686":
