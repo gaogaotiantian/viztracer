@@ -38,7 +38,6 @@ VizTracer can display every function executed and the corresponding entry/exit t
    viztracer
    custom_event
    decorator
-   virtual_debug 
    viz_plugin
 
 .. toctree::
