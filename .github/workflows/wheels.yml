@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-latest, windows-latest]
+        os: [ubuntu-18.04, macos-latest, windows-latest]
         python-version: [38, 39, 310, 311, 312]
         manylinux-image: [manylinux_2_28]
         arch: [auto]
@@ -44,6 +44,8 @@ jobs:
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
           CIBW_SKIP: '*musllinux*'
+          CIBW_BUILD_FRONTEND: 'build'
+          CIBW_REPAIR_WHEEL_COMMAND: 'auditwheel -v repair -w {dest_dir} {wheel}'
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
