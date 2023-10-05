@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-wheels:
-    name: Deploy wheels on ${{ matrix.os }} for ${{ matrix.arch }}
+    name: Build wheels on ${{ matrix.os }} for ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
