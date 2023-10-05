@@ -7,14 +7,35 @@ on:
 
 jobs:
   build-wheels:
-    name: Build wheels on ${{ matrix.os }} for ${{ matrix.arch }}
+    name: Deploy wheels on ${{ matrix.os }} for ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [38, 39, 310, 311, 312]
-        manylinux-image: [manylinux_2_28]
+        manylinux-image: [manylinux2014, manylinux_2_24]
         arch: [auto]
+        include:
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 38
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 39
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 310
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 311
+          - os: ubuntu-latest
+            manylinux-image: manylinux2014
+            arch: aarch64
+            python-version: 312
         exclude:
           # manyliunx image is not a valid variation on MacOS and Windows
           - os: macos-latest
@@ -44,8 +65,6 @@ jobs:
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
           CIBW_SKIP: '*musllinux*'
-          CIBW_BUILD_FRONTEND: 'build'
-          CIBW_REPAIR_WHEEL_COMMAND: 'auditwheel -v repair -w {dest_dir} {wheel}'
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
