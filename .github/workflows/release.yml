@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [38, 39, 310, 311, 312]
-        manylinux-image: [manylinux2014, manylinux_2_24]
+        manylinux-image: [manylinux2014, manylinux_2_28]
         arch: [auto]
         include:
           - os: ubuntu-latest
