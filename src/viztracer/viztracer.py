@@ -14,6 +14,7 @@ from .report_builder import ReportBuilder
 from .tracer import _VizTracer
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
+from .vizshield import VizShield
 
 
 # This is the interface of the package. Almost all user should use this
@@ -166,6 +167,9 @@ class VizTracer(_VizTracer):
     def log_event(self, event_name: str) -> VizEvent:
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
+
+    def shield_ignore(self):
+        return VizShield(self)
 
     def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback

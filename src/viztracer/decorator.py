@@ -7,6 +7,7 @@ import time
 from typing import Any, Callable, Optional
 
 from .viztracer import VizTracer, get_tracer
+from .vizshield import VizShield
 
 
 def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTracer] = None) -> Callable:
@@ -64,17 +65,16 @@ def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
         if tracer is None or not tracer.log_sparse:
             return func
 
-    if stack_depth > 0:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            local_tracer = get_tracer() if dynamic_tracer_check else tracer
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        local_tracer = get_tracer() if dynamic_tracer_check else tracer
 
-            if local_tracer is None:
-                return func(*args, **kwargs)
-            assert isinstance(local_tracer, VizTracer)
+        if local_tracer is None:
+            return func(*args, **kwargs)
+        assert isinstance(local_tracer, VizTracer)
 
-            if (not dynamic_tracer_check and not local_tracer.enable) or \
-                (dynamic_tracer_check and not local_tracer.enable and local_tracer.log_sparse):
+        if local_tracer.log_sparse and not local_tracer.enable:
+            if stack_depth > 0:
                 orig_max_stack_depth = local_tracer.max_stack_depth
                 local_tracer.max_stack_depth = stack_depth
                 local_tracer.start()
@@ -82,30 +82,7 @@ def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
                 local_tracer.stop()
                 local_tracer.max_stack_depth = orig_max_stack_depth
                 return ret
-            elif dynamic_tracer_check and local_tracer.enable and not local_tracer.log_sparse:
-                # The call is made from the module inside, so if `trace_self=False` it will be ignored.
-                # To avoid this behavior, we need to reset the counter `ignore_stack_depth`` and then
-                # recover it
-                prev_ignore_stack = local_tracer.setignorestackcounter(0)
-                ret = func(*args, **kwargs)
-                local_tracer.setignorestackcounter(prev_ignore_stack)
-                return ret
             else:
-                return func(*args, **kwargs)
-
-        return wrapper
-    else:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            local_tracer = get_tracer() if dynamic_tracer_check else tracer
-
-            if local_tracer is None:
-                return func(*args, **kwargs)
-
-            assert isinstance(local_tracer, VizTracer)
-
-            if (not dynamic_tracer_check and not local_tracer.enable) or \
-                (dynamic_tracer_check and not local_tracer.enable and local_tracer.log_sparse):
                 start = local_tracer.getts()
                 ret = func(*args, **kwargs)
                 dur = local_tracer.getts() - start
@@ -119,18 +96,14 @@ def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
                 }
                 local_tracer.add_raw(raw_data)
                 return ret
-            elif dynamic_tracer_check and local_tracer.enable and not local_tracer.log_sparse:
+        else:
+            with local_tracer.shield_ignore():
                 # The call is made from the module inside, so if `trace_self=False` it will be ignored.
                 # To avoid this behavior, we need to reset the counter `ignore_stack_depth`` and then
                 # recover it
-                prev_ignore_stack = local_tracer.setignorestackcounter(0)
-                ret = func(*args, **kwargs)
-                local_tracer.setignorestackcounter(prev_ignore_stack)
-                return ret
-            else:
                 return func(*args, **kwargs)
 
-        return wrapper
+    return wrapper
 
 
 def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0, dynamic_tracer_check: bool = False) -> Callable:
