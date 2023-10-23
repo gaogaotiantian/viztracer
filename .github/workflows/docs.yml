@@ -1,0 +1,20 @@
+name: docs
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependency
+        run: pip install -r docs/requirements.txt
+      - name: Build documentation
+        run: sphinx-build -b html docs/source/ docs/build/

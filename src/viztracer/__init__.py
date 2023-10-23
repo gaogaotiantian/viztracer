@@ -1,13 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-__version__ = "0.15.6"
+__version__ = "0.16.0"
 
 
 from .cellmagic import load_ipython_extension
 from .decorator import ignore_function, log_sparse, trace_and_save
 from .main import main
-from .simulator import main as sim_main
 from .viewer import viewer_main
 from .vizcounter import VizCounter
 from .vizlogging import VizLoggingHandler

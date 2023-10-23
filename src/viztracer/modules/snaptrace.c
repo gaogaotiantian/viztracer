@@ -440,11 +440,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                             node->data.fee.retval = PyObject_Repr(arg);
                         }
-                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB) && f_back) {
-                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(f_back);
-                        } else {
-                            node->data.fee.caller_lineno = -1;
-                        }
                     } else if (is_c) {
                         PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
                         node->data.fee.ml_name = cfunc->m_ml->ml_name;
@@ -462,11 +457,6 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
                                 // It's a static method, does not have __self__
                                 node->data.fee.tp_name = NULL;
                             }
-                        }
-                        if (!CHECK_FLAG(self->check_flags, SNAPTRACE_NOVDB)) {
-                            node->data.fee.caller_lineno = PyFrame_GetLineNumber(frame);
-                        } else {
-                            node->data.fee.caller_lineno = -1;
                         }
                     } 
 
@@ -761,12 +751,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
 
-            if (node->data.fee.caller_lineno >= 0) {
-                PyObject* caller_lineno = PyLong_FromLong(node->data.fee.caller_lineno);
-                PyDict_SetItemString(dict, "caller_lineno", caller_lineno);
-                Py_DECREF(caller_lineno);
-            }
-
             PyObject* arg_dict = NULL;
             if (node->data.fee.args) {
                 arg_dict = node->data.fee.args;
@@ -988,10 +972,6 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             fprintfeename(fptr, node, sanitize_function_name);
             fputc('\"', fptr);
 
-            if (node->data.fee.caller_lineno >= 0) {
-                fprintf(fptr, ",\"caller_lineno\":%d", node->data.fee.caller_lineno);
-            }
-
             PyObject* arg_dict = NULL;
             if (node->data.fee.args) {
                 arg_dict = node->data.fee.args;
@@ -1159,7 +1139,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 {
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
-            "log_func_retval", "vdb", "log_func_args", "log_async", "trace_self",
+            "log_func_retval", "log_func_args", "log_async", "trace_self",
             "min_duration",
             NULL};
     int kw_verbose = -1;
@@ -1170,12 +1150,11 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_ignore_c_function = -1;
     int kw_ignore_frozen = -1;
     int kw_log_func_retval = -1;
-    int kw_vdb = -1;
     int kw_log_func_args = -1;
     int kw_log_async = -1;
     int kw_trace_self = -1;
     double kw_min_duration = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOpppppppd", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppd", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -1184,7 +1163,6 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_ignore_c_function,
             &kw_ignore_frozen,
             &kw_log_func_retval,
-            &kw_vdb,
             &kw_log_func_args,
             &kw_log_async,
             &kw_trace_self,
@@ -1230,12 +1208,6 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
     }
 
-    if (kw_vdb == 0) {
-        SET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
-    } else if (kw_vdb == 1) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_NOVDB);
-    }
-
     if (kw_log_func_args == 1) {
         SET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
     } else if (kw_log_func_args == 0) {
@@ -1250,7 +1222,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 
     if (kw_trace_self == 1) {
         SET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
-    } else if (kw_log_async == 0) {
+    } else if (kw_trace_self == 0) {
         UNSET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
     }
 
@@ -1539,6 +1511,7 @@ static void snaptrace_threaddestructor(void* key) {
     struct ThreadInfo* info = key;
     struct FunctionNode* tmp = NULL;
     if (info) {
+        PyGILState_STATE state = PyGILState_Ensure();
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
@@ -1547,7 +1520,6 @@ static void snaptrace_threaddestructor(void* key) {
             while (info->stack_top->prev) {
                 info->stack_top = info->stack_top->prev;
             }
-            PyGILState_STATE state = PyGILState_Ensure();
             while (info->stack_top) {
                 tmp = info->stack_top;
                 if (tmp->args) {
@@ -1557,12 +1529,12 @@ static void snaptrace_threaddestructor(void* key) {
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }
-            PyGILState_Release(state);
         }
         info->stack_top = NULL;
         info->curr_task = NULL;
         info->curr_task_frame = NULL;
         PyMem_FREE(info);
+        PyGILState_Release(state);
     }
 }
 

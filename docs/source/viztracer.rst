@@ -14,7 +14,6 @@ VizTracer
                  log_print=False,\
                  log_gc=False,\
                  log_async=False,\
-                 vdb=False,\
                  pid_suffix=False,\
                  register_global=True,\
                  min_duration=0,\
@@ -190,18 +189,6 @@ VizTracer
 
             viztracer --log_async
     
-    .. py:attribute:: vdb
-        :type: boolean
-        :value: False
-
-        whether make viztracer instrument for vdb, which would affect the overhead and the file size a bit
-
-        Setting it to ``True`` is equivalent to 
-
-        .. code-block::
-
-            viztracer --vdb
-
     .. py:attribute:: register_global
         :type: boolean
         :value: True

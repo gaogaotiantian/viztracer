@@ -161,7 +161,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
 
     @no_type_check
     @functools.wraps(multiprocessing.spawn._main)
-    def _main_3839(fd, parent_sentinel) -> Any:
+    def _main(fd, parent_sentinel) -> Any:
         with os.fdopen(fd, 'rb', closefd=True) as from_parent:
             process.current_process()._inheriting = True
             try:
@@ -174,25 +174,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
                 del process.current_process()._inheriting
         return self._bootstrap(parent_sentinel)
 
-    @no_type_check
-    @functools.wraps(multiprocessing.spawn._main)
-    def _main_3637(fd) -> Any:
-        with os.fdopen(fd, 'rb', closefd=True) as from_parent:
-            process.current_process()._inheriting = True
-            try:
-                preparation_data = reduction.pickle.load(from_parent)
-                prepare(preparation_data)
-                self: Process = reduction.pickle.load(from_parent)
-                sp = SpawnProcess(viztracer_kwargs, self.run, self._target, self._args, self._kwargs, cmdline_args)
-                self.run = sp.run
-            finally:
-                del process.current_process()._inheriting
-        return self._bootstrap()
-
-    if sys.version_info >= (3, 8):
-        multiprocessing.spawn._main = _main_3839  # type: ignore
-    else:
-        multiprocessing.spawn._main = _main_3637  # type: ignore
+    multiprocessing.spawn._main = _main  # type: ignore
 
 
 def install_all_hooks(

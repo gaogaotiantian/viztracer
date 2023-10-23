@@ -40,11 +40,7 @@ class AstTransformer(ast.NodeTransformer):
         elif self.inst_type in ("log_var", "log_number"):
             instrumented_nodes: List[ast.stmt] = []
             args = node.args
-            if sys.version_info >= (3, 8):
-                func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
-            else:
-                # python 3.7 does not have posonlyargs
-                func_args_name = [a.arg for a in args.args + args.kwonlyargs]
+            func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
             if "vararg" in args._fields and args.vararg:
                 func_args_name.append(args.vararg.arg)
             if "kwarg" in args._fields and args.kwarg:
@@ -251,10 +247,6 @@ class AstTransformer(ast.NodeTransformer):
                 return f"'{node.value}'"
             else:
                 return f"{node.value}"
-        elif isinstance(node, ast.Num):
-            return f"{node.n}"
-        elif isinstance(node, ast.Str):
-            return f"'{node.s}'"
         elif isinstance(node, ast.Attribute):
             return f"{self.get_string_of_expr(node.value)}.{node.attr}"
         elif isinstance(node, ast.Subscript):

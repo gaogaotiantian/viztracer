@@ -126,8 +126,6 @@ class VizUI:
                             help="Process VizTracer specific comments")
         parser.add_argument("--minimize_memory", action="store_true", default=False,
                             help="Use json.dump to dump chunks to file to save memory")
-        parser.add_argument("--vdb", action="store_true", default=False,
-                            help="Instrument for vdb, will increase the overhead")
         parser.add_argument("--pid_suffix", action="store_true", default=False,
                             help=("append pid to file name. "
                                   "This should be used when you try to trace multi process programs. "
@@ -255,7 +253,6 @@ class VizUI:
             "log_sparse": options.log_sparse,
             "log_async": options.log_async,
             "log_audit": options.log_audit,
-            "vdb": options.vdb,
             "pid_suffix": True,
             "file_info": False,
             "register_global": True,

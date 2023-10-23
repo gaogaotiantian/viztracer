@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "viztracer"
+authors = [{name = "Tian Gao", email = "gaogaotiantian@hotmail.com"}]
+description = "A debugging and profiling tool that can trace and visualize python code execution"
+dependencies = ["objprint>0.1.3"]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Bug Tracking",
+    "Topic :: System :: Logging",
+]
+
+[project.urls]
+Homepage = "https://github.com/gaogaotiantian/viztracer"
+Documentation = "https://viztracer.readthedocs.io"
+
+[project.optional-dependencies]
+full = ["orjson"]
+
+[project.scripts]
+viztracer = "viztracer:main"
+vizviewer = "viztracer:viewer_main"
+
+[tool.setuptools.dynamic]
+version = {attr = "viztracer.__version__"}

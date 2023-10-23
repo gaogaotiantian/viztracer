@@ -248,17 +248,6 @@ Refer to [remote attach docs](https://viztracer.readthedocs.io/en/stable/remote_
 
 VizTracer needs to dump the internal data to json format. It is recommended for the users to install ```orjson```, which is much faster than the builtin ```json``` library. VizTracer will try to import ```orjson``` and fall back to the builtin ```json``` library if ```orjson``` does not exist.
 
-## Virtual Debug
-
-You can virtually debug your program with you saved json report. The interface is very similar to ```pdb```. Even better, you can **go back in time**
-because VizTracer has all the info recorded for you.
-
-```sh
-vdb <your_json_report>
-```
-
-Refer to the [docs](https://viztracer.readthedocs.io/en/stable/virtual_debug.html) for detailed commands
-
 ## Performance
 
 VizTracer will introduce 2x to 3x overhead in the worst case. The overhead is much better if there are less function calls or if filters are applied correctly.
@@ -306,6 +295,6 @@ Please send bug reports and feature requests through [github issue tracker](http
 
 ## License
 
-Copyright Tian Gao, 2020.
+Copyright 2020-2023 Tian Gao.
 
 Distributed under the terms of the  [Apache 2.0 license](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE).

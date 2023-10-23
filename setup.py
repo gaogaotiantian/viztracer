@@ -3,20 +3,6 @@ import sys
 
 import setuptools
 
-with open("README.md") as f:
-    long_description = f.read()
-
-with open("./src/viztracer/__init__.py") as f:
-    for line in f.readlines():
-        if line.startswith("__version__"):
-            # __version__ = "0.9"
-            delim = '"' if '"' in line else "'"
-            version = line.split(delim)[1]
-            break
-    else:
-        print("Can't find version! Stop Here!")
-        sys.exit(1)
-
 # Determine which attach binary to take into package
 package_data = {
     "viztracer": [
@@ -32,10 +18,18 @@ package_data = {
     ],
 }
 
+if sys.platform == "win32":
+    package_data["viztracer"].extend([
+        "attach_process/attach_x86.dll",
+        "attach_process/attach_x86_64.dll",
+        "attach_process/inject_dll.exe",
+        "attach_process/inject_dll_amd64.exe",
+        "attach_process/run_code_on_dllmain_amd64.dll",
+        "attach_process/run_code_on_dllmain_x86.dll",
+    ])
 if sys.platform == "darwin":
     package_data["viztracer"].extend([
         "attach_process/attach_x86_64.dylib",
-        "attach_process/linux_and_mac/lldb_prepare.py",
     ])
 elif sys.platform in ("linux", "linux2"):
     if platform.machine() == "i686":
@@ -48,15 +42,7 @@ elif sys.platform in ("linux", "linux2"):
         ])
 
 setuptools.setup(
-    name="viztracer",
-    version=version,
-    author="Tian Gao",
-    author_email="gaogaotiantian@hotmail.com",
-    description="A debugging and profiling tool that can trace and visualize python code execution",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/gaogaotiantian/viztracer",
-    packages=setuptools.find_packages("src"),
+    packages=setuptools.find_namespace_packages("src"),
     package_dir={"": "src"},
     package_data=package_data,
     ext_modules=[
@@ -79,32 +65,4 @@ setuptools.setup(
             extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"]),
         ),
     ],
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: MacOS",
-        "Operating System :: POSIX :: Linux",
-        "Operating System :: Microsoft :: Windows",
-        "Topic :: Software Development :: Quality Assurance",
-        "Topic :: Software Development :: Bug Tracking",
-        "Topic :: System :: Logging",
-    ],
-    python_requires=">=3.7",
-    install_requires=["objprint>=0.1.3"],
-    extras_require={
-        "full": ["rich", "orjson"],
-    },
-    entry_points={
-        "console_scripts": [
-            "viztracer = viztracer:main",
-            "vizviewer = viztracer:viewer_main",
-            "vdb = viztracer:sim_main",
-        ],
-    },
 )

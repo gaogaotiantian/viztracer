@@ -36,6 +36,7 @@ try:
             from .viewer import ServerThread
             from .viztracer import VizTracer
             options = parse_argstring(self.viztracer, line)
+            assert self.shell is not None
             code = self.shell.transform_cell(cell)
             file_path = options.output_file
             tracer_kwargs = {

@@ -3,14 +3,14 @@
 refresh: clean build install lint
 
 build:
-	python setup.py build
+	python -m build
 
 install:
-	python setup.py install
+	pip install .
 
 build_dist:
 	make clean
-	python setup.py sdist bdist_wheel
+	python -m build
 	pip install dist/*.whl
 	make test
 

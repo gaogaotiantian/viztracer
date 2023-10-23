@@ -294,9 +294,6 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_log_func_retval(self):
         self.template(["python", "-m", "viztracer", "--log_func_retval", "cmdline_test.py"], script=file_c_function)
 
-    def test_vdb(self):
-        self.template(["python", "-m", "viztracer", "--vdb", "cmdline_test.py"])
-
     def test_log_func_args(self):
         self.template(["python", "-m", "viztracer", "--log_func_args", "cmdline_test.py"])
 
@@ -358,11 +355,6 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.assertFileExists(os.path.join("./suffix_tmp", f"test_{pid}.json"))
         self.cleanup(output_file="./suffix_tmp")
 
-    def test_path_finding(self):
-        if sys.platform in ["linux", "linux2", "darwin"]:
-            # path finding only works on Unix
-            self.template(["viztracer", "vdb"], success=False)
-
     def test_module(self):
         self.template(["viztracer", "-m", "numbers"])
 
@@ -406,7 +398,6 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_entries=7)
 
-    @skipIf(sys.version_info < (3, 8), "sys.addaudithook does not exist on 3.8-")
     def test_log_audit(self):
         def check_func(include_names, exclude_names=[]):
             def inner(data):

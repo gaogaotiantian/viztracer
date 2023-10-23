@@ -1,9 +1,9 @@
 include LICENSE
-include NOTICE
+include NOTICE.txt
 include README.md
 include setup.py
 
 recursive-include src/viztracer/html *.css *.js
 recursive-include src/viztracer/modules *.c *.h
 recursive-include src/viztracer/web_dist *
-recursive-include src/viztracer/attach_process *
+recursive-include src/viztracer/attach_process *.py

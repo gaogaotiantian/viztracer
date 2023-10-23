@@ -121,7 +121,7 @@ class Viewer(unittest.TestCase):
         self.fail(f"Can't connect to 127.0.0.1:{port}")
 
     def url(self, offset: int = 0) -> str:
-        return f'http://127.0.0.1:{self.port+offset}'
+        return f'http://127.0.0.1:{self.port + offset}'
 
 
 class MockOpen(unittest.TestCase):
@@ -143,7 +143,9 @@ class MockOpen(unittest.TestCase):
             os.kill(self.int_pid, signal.SIGINT)
 
     def __call__(self, url):
-        self.p = multiprocessing.Process(target=self.get_and_check, args=(url, self.file_content))
+        # fork in a multi-threaded program could result in dead lock
+        ctx = multiprocessing.get_context("spawn")
+        self.p = ctx.Process(target=self.get_and_check, args=(url, self.file_content))
         self.p.start()
 
 
