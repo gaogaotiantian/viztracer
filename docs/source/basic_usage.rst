@@ -116,7 +116,18 @@ If you are using Jupyter, you can use viztracer cell magics.
     %%viztracer -p 8888
     # Your code after
 
-A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results
+A ``Show VizTracer Report`` button will appear after the cell and you can click it to view the results.
+
+Cell magic ``%%viztracer`` supports some of the command line arguments:
+
+* ``--port``
+* ``--output_file``
+* ``--max_stack_depth``
+* ``--ignore_c_function``
+* ``--ignore_frozen``
+* ``--log_func_args``
+* ``--log_print``
+* ``--log_sparse``
 
 Display Report
 --------------
