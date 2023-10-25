@@ -67,7 +67,7 @@ if pid > 0:
     time.sleep(0.1)
     print("parent")
 else:
-    time.sleep(2.5)
+    time.sleep(4.5)
     print("child")
 """
 
@@ -307,7 +307,7 @@ class TestMultiprocessing(CmdlineTmpl):
         self.assertIn("Wait for child process", result.stdout.decode())
 
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                               send_sig=(signal.SIGINT, 2), expected_output_file="result.json", script=file_fork_wait,
+                               send_sig=(signal.SIGINT, 3.5), expected_output_file="result.json", script=file_fork_wait,
                                check_func=check_func_wrapper(1))
 
     def test_multiprosessing(self):
