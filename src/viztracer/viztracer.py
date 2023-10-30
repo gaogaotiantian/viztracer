@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
+from contextlib import contextmanager
 import multiprocessing
 import os
 import signal
@@ -14,7 +15,6 @@ from .report_builder import ReportBuilder
 from .tracer import _VizTracer
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
-from .vizshield import VizShield
 
 
 # This is the interface of the package. Almost all user should use this
@@ -165,8 +165,13 @@ class VizTracer(_VizTracer):
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
+    @contextmanager
     def shield_ignore(self):
-        return VizShield(self)
+        prev_ignore_stack = self.setignorestackcounter(0)
+        try:
+            yield
+        finally:
+            self.setignorestackcounter(prev_ignore_stack)
 
     def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback

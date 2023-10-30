@@ -149,6 +149,7 @@ if __name__ == "__main__":
         assert h() == 2
 """
 
+
 class TestLogSparse(CmdlineTmpl):
     def test_basic(self):
         def check_func(data):

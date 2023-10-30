@@ -7,7 +7,6 @@ import time
 from typing import Any, Callable, Optional
 
 from .viztracer import VizTracer, get_tracer
-from .vizshield import VizShield
 
 
 def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTracer] = None) -> Callable:
@@ -96,12 +95,14 @@ def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
                 }
                 local_tracer.add_raw(raw_data)
                 return ret
-        else:
+        elif local_tracer.enable and not local_tracer.log_sparse:
+            # The call is made from the module inside, so if `trace_self=False` it will be ignored.
+            # To avoid this behavior, we need to reset the counter `ignore_stack_depth`` and then
+            # recover it
             with local_tracer.shield_ignore():
-                # The call is made from the module inside, so if `trace_self=False` it will be ignored.
-                # To avoid this behavior, we need to reset the counter `ignore_stack_depth`` and then
-                # recover it
                 return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
 
     return wrapper
 
