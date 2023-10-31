@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
-from contextlib import contextmanager
 import multiprocessing
 import os
 import signal
@@ -165,13 +164,20 @@ class VizTracer(_VizTracer):
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
-    @contextmanager
     def shield_ignore(self):
-        prev_ignore_stack = self.setignorestackcounter(0)
-        try:
-            yield
-        finally:
-            self.setignorestackcounter(prev_ignore_stack)
+        class _VizShield:
+            def __init__(self, tracer):
+                self.tracer = tracer
+                self.prev_ignore_stack = None
+
+            def __enter__(self):
+                # 1 is to compensate for the call of the __enter__
+                self.prev_ignore_stack = self.tracer.setignorestackcounter(1)
+
+            def __exit__(self, type, value, trace):
+                self.tracer.setignorestackcounter(self.prev_ignore_stack)
+
+        return _VizShield(self)
 
     def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback
