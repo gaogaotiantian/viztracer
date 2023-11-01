@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import functools
 import multiprocessing
 import os
 
@@ -151,30 +152,34 @@ if __name__ == "__main__":
 
 
 class TestLogSparse(CmdlineTmpl):
-    def test_basic(self):
-        def check_func(data):
-            for entry in data["traceEvents"]:
-                self.assertNotEqual(entry["name"], "f")
+    def check_func(self, data, target):
+        names = [entry["name"] for entry in data["traceEvents"]]
+        function_names = [name.split(' ')[0] for name in names if name not in ['process_name', 'thread_name']]
 
+        self.assertEqual(function_names, target)
+
+    def test_basic(self):
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
                       script=file_basic,
                       expected_output_file="result.json",
-                      expected_entries=1)
+                      expected_entries=1,
+                      check_func=functools.partial(self.check_func, target=['f']))
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       script=file_basic,
-                      expected_output_file="result.json",
-                      check_func=check_func)
+                      expected_output_file="result.json")
 
     def test_stack(self):
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
                       script=file_stack,
                       expected_output_file="result.json",
-                      expected_entries=4)
+                      expected_entries=4,
+                      check_func=functools.partial(self.check_func, target=['f', 'g', 'f', 'g']))
 
         self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
                       script=file_stack_nested,
                       expected_output_file="result.json",
-                      expected_entries=4)
+                      expected_entries=4,
+                      check_func=functools.partial(self.check_func, target=['f', 'g', 'f', 'g']))
 
     def test_without_tracer(self):
         self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)
@@ -187,6 +192,7 @@ class TestLogSparse(CmdlineTmpl):
                               script=file_multiprocess,
                               expected_output_file="result.json",
                               expected_entries=3,
+                              check_func=functools.partial(self.check_func, target=['f', 'f', 'f']),
                               concurrency="multiprocessing")
             except Exception as e:
                 # coveragepy has some issue with multiprocess pool
@@ -195,10 +201,13 @@ class TestLogSparse(CmdlineTmpl):
 
     def test_context_manager(self):
         self.template(["python", "cmdline_test.py"], script=file_context_manager,
-                      expected_output_file="result.json", expected_entries=4)
+                      expected_output_file="result.json", expected_entries=4,
+                      check_func=functools.partial(self.check_func, target=['f', 'g', 'h', 'q']))
 
         self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse,
-                      expected_output_file="result.json", expected_entries=2)
+                      expected_output_file="result.json", expected_entries=2,
+                      check_func=functools.partial(self.check_func, target=['f', 'q']))
 
         self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse_stack,
-                      expected_output_file="result.json", expected_entries=2)
+                      expected_output_file="result.json", expected_entries=2,
+                      check_func=functools.partial(self.check_func, target=['g', 'h']))

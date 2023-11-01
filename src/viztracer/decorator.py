@@ -99,8 +99,7 @@ def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
             # The call is made from the module inside, so if `trace_self=False` it will be ignored.
             # To avoid this behavior, we need to reset the counter `ignore_stack_depth`` and then
             # recover it
-            with local_tracer.shield_ignore():
-                return func(*args, **kwargs)
+            return local_tracer.shield_ignore(func, *args, **kwargs)
         else:
             return func(*args, **kwargs)
 

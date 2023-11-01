@@ -164,20 +164,11 @@ class VizTracer(_VizTracer):
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
-    def shield_ignore(self):
-        class _VizShield:
-            def __init__(self, tracer):
-                self.tracer = tracer
-                self.prev_ignore_stack = None
-
-            def __enter__(self):
-                # 1 is to compensate for the call of the __enter__
-                self.prev_ignore_stack = self.tracer.setignorestackcounter(1)
-
-            def __exit__(self, type, value, trace):
-                self.tracer.setignorestackcounter(self.prev_ignore_stack)
-
-        return _VizShield(self)
+    def shield_ignore(self, func, *args, **kwargs):
+        prev_ignore_stack = self.setignorestackcounter(0)
+        res = func(*args, **kwargs)
+        self.setignorestackcounter(prev_ignore_stack)
+        return res
 
     def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback
