@@ -4,7 +4,7 @@
 try:
     from IPython.core.magic import (Magics, cell_magic,  # type: ignore
                                     magics_class, needs_local_scope)
-    from IPython.core.magic_arguments import (argument, magic_arguments, parse_argstring)
+    from IPython.core.magic_arguments import (argument, magic_arguments, parse_argstring)  # type: ignore
 
     @magics_class
     class VizTracerMagics(Magics):

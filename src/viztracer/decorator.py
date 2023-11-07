@@ -57,7 +57,7 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
     return inner
 
 
-def _log_sparse_wrapper(func: Optional[Callable], stack_depth: int = 0,
+def _log_sparse_wrapper(func: Callable, stack_depth: int = 0,
                         dynamic_tracer_check: bool = False) -> Callable:
     if not dynamic_tracer_check:
         tracer = get_tracer()
