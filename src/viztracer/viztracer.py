@@ -121,11 +121,13 @@ class VizTracer(_VizTracer):
         }
 
     def __enter__(self) -> "VizTracer":
-        self.start()
+        if not self.log_sparse:
+            self.start()
         return self
 
     def __exit__(self, type, value, trace) -> None:
-        self.stop()
+        if not self.log_sparse:
+            self.stop()
         self.save()
         self.terminate()
 
@@ -161,6 +163,12 @@ class VizTracer(_VizTracer):
     def log_event(self, event_name: str) -> VizEvent:
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
+
+    def shield_ignore(self, func, *args, **kwargs):
+        prev_ignore_stack = self.setignorestackcounter(0)
+        res = func(*args, **kwargs)
+        self.setignorestackcounter(prev_ignore_stack)
+        return res
 
     def set_afterfork(self, callback: Callable, *args, **kwargs) -> None:
         self._afterfork_cb = callback
