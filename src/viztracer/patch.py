@@ -50,15 +50,17 @@ def patch_subprocess(viz_args: list[str]) -> None:
                         py_args.append(f"-{cm_py_args}")
                     mode = [f"-{cm}"]
                     # -m mod | -mmod
-                    script = cm_arg or next(args_iter, None)
+                    mode.append(cm_arg or next(args_iter, None))
                 break
 
             # -pyopts
             py_args.append(arg)
 
-        if script is None:
-            return None
-        return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, script, *args_iter]
+        if script:
+            return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, "--", script, *args_iter]
+        elif mode and mode[-1] is not None:
+            return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, "--", *args_iter]
+        return None
 
     @functools.wraps(subprocess.Popen.__init__)
     def subprocess_init(self: subprocess.Popen[Any], args: Union[str, Sequence[Any], Any], **kwargs: Any) -> None:

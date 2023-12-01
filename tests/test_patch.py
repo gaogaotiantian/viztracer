@@ -81,6 +81,8 @@ print(subprocess.check_output(["python", "-c", r"import sys; sys.stdout.buffer.w
 print(subprocess.check_output(["python", "-", "foo"], input=b"import sys; print(sys.argv)"))
 print(subprocess.check_output(["python"], input=b"import sys; print(sys.argv)"))
 print(subprocess.check_output(["python", "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output(["python", "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output(["python", "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]))
 
 os.remove("check_output_echo.py")
 """
