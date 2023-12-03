@@ -73,6 +73,10 @@ vizviewer ./
 vizviewer --use_external_processor result.json
 ```
 
+A [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=gaogaotiantian.viztracer-vscode)
+is available to make your life even easier. You can open the corresponding source file in
+VS Code from the trace report with the extension.
+
 <details>
 
 <summary>
