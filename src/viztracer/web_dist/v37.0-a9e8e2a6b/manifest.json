@@ -41,7 +41,7 @@
     "assets/scheduling_latency.png": "sha256-B5t/L/QvRS9hk856dejJJvA157w3Lk9nCTJfE9O1mXw=",
     "assets/vscode-icon.png": "sha256-gnDKIFtMec1sbVIFhIz6CLCas3ddURGjUzZ8QC8iBrk=",
     "engine_bundle.js": "sha256-fJh6K/Awr+uiG9DYH8guGN4GAolmOIsgegw0x9GNsFs=",
-    "frontend_bundle.js": "sha256-sC71Y4sMzYxNsPRWwEpd3CeDoOX7+/PPsuS/QsAPmuQ=",
+    "frontend_bundle.js": "sha256-Ingdpdyg7s/gEB3QBlIf7ZumpN+JwLg/SsCkRgfdj3k=",
     "perfetto.css": "sha256-wt6m8eOTQraicmSbDvOML9rHKtvOlv1ZgirBZ5tWk0U=",
     "trace_processor.wasm": "sha256-t8HHNrPJmFfQ9pFA166tXseXceDNK+aiU38LQppimzE=",
     "traceconv.wasm": "sha256-Cwcc4DTt1FzJtNx2QFvGGciL0Yk+ssJnpKBog+Thevo=",
