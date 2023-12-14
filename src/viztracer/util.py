@@ -109,9 +109,7 @@ def get_subprocess_pid_recursive(pid: int) -> set:
         def get_subprocess_pid(pid: int) -> set:
             if sys.platform == "win32":
                 cmdline = f"wmic process where (ParentProcessId={pid}) get ProcessId"
-            elif sys.platform in ("linux", "linux2"):
-                cmdline = f"pgrep -P {pid}"
-            elif sys.platform == "darwin":
+            else:
                 cmdline = f"ps -o pid,ppid -ax | awk \'{{ if ( $2 == {pid} ) {{ print $1 }} }}'"
             result = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1)
             lines = result.stdout.decode("utf-8").splitlines()
