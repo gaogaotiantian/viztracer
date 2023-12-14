@@ -106,11 +106,25 @@ def get_subprocess_pid_recursive(pid: int) -> set:
     if "psutil" in sys.modules:
         return set(psutil.Process(pid).children(recursive=True))
     else:
+        def get_subprocess_pid_linux(pid: int) -> set:
+            children = []
+            try:
+                for tid in os.listdir(f'/proc/{pid}/task'):
+                    with open(f'/proc/{pid}/task/{tid}/children', 'r') as f:
+                        children += [int(sub_pid) for sub_pid in f.read().split()]
+            except FileNotFoundError:
+                pass  # Process has already terminated
+            return set(children)
+
         def get_subprocess_pid(pid: int) -> set:
-            if sys.platform == "win32":
+            if sys.platform in ("linux", "linux2"):
+                return get_subprocess_pid_linux(pid)
+            elif sys.platform == "win32":
                 cmdline = f"wmic process where (ParentProcessId={pid}) get ProcessId"
-            else:
+            elif sys.platform == "darwin":
                 cmdline = f"ps -o pid,ppid -ax | awk \'{{ if ( $2 == {pid} ) {{ print $1 }} }}'"
+            else:
+                raise NotImplementedError(f"Unsupported platform: {sys.platform}")
             result = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1)
             lines = result.stdout.decode("utf-8").splitlines()
             sub_pids = set()
