@@ -380,7 +380,52 @@ test_thread.join()
 
 class TestEscapeString(CmdlineTmpl):
     def test_escape_string(self):
-        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+        self.template(["viztracer", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=issue285_code,
                       expected_stdout=".*Total Entries:.*")
+
+
+issue_364_code_1 = """
+import time
+import multiprocessing
+
+def target():
+    time.sleep(3)
+
+if __name__ == '__main__':
+    p = multiprocessing.Process(target=target)
+    p.start()
+    multiprocessing.process._children = set()
+    time.sleep(1)
+"""
+
+
+issue_364_code_2 = """
+import time
+import os
+import signal
+import multiprocessing
+
+def target():
+    time.sleep(3)
+    os.kill(os.getpid(), signal.SIGTERM)
+
+if __name__ == '__main__':
+    p = multiprocessing.Process(target=target)
+    p.start()
+    multiprocessing.process._children = set()
+    time.sleep(1)
+"""
+
+
+class TestWaitForChild(CmdlineTmpl):
+    def test_child_process_exits_normally(self):
+        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+                      expected_output_file="result.json", expected_stdout=r"Wait",
+                      script=issue_364_code_1)
+
+    def test_child_process_exits_abnormally(self):
+        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+                      expected_output_file="result.json", expected_stdout=r"Wait",
+                      script=issue_364_code_2)

@@ -4,10 +4,26 @@
 import os
 import sys
 import unittest
+import time
+from multiprocessing import Process, Queue
 
 import viztracer.util
 
 from .base_tmpl import BaseTmpl
+from .package_env import package_matrix
+
+
+def gen_subprocess_get_pid(result_queue):
+    subprocesses = []
+    subprocess_pids = []
+    for i in range(5):
+        p = Process(target=time.sleep, args=(5,))
+        p.start()
+        subprocesses.append(p)
+        subprocess_pids.append(p.pid)
+    for p in subprocesses:
+        p.join()
+    result_queue.put(subprocess_pids)
 
 
 class TestUtil(BaseTmpl):
@@ -42,3 +58,16 @@ class TestUtil(BaseTmpl):
         self.assertTrue(pid_exists(os.getpid()))
         with self.assertRaises(ValueError):
             pid_exists(0)
+
+    @package_matrix(["~psutil", "psutil"])
+    def test_get_subprocess_pid_recursive(self):
+        q = Queue()
+        all_generated_pids = []
+        process_generator = Process(target=gen_subprocess_get_pid, args=(q,))
+        process_generator.start()
+        all_generated_pids.append(process_generator.pid)
+        time.sleep(1)
+        util_subprocess_pids = viztracer.util.get_subprocess_pid_recursive(os.getpid())
+        all_generated_pids.extend(q.get())
+        for pid in all_generated_pids:
+            self.assertIn(pid, util_subprocess_pids)

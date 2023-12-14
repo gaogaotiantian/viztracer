@@ -5,6 +5,7 @@
 import io
 import json
 import os
+import shutil
 import tempfile
 
 import viztracer
@@ -69,6 +70,14 @@ class TestReportBuilder(BaseTmpl):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
+
+    def test_corrupted_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            corrupted_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
+            corrupted_json_file = shutil.copy(corrupted_json_path, os.path.join(tmpdir, "corrupted.json"))
+            valid_json_file = shutil.copy(valid_json_path, os.path.join(tmpdir, "valid.json"))
+            ReportBuilder([corrupted_json_file, valid_json_file], verbose=1)
 
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:

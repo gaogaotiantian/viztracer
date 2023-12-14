@@ -67,10 +67,16 @@ class ReportBuilder:
                 self.jsons = [get_json(self.data)]
             elif isinstance(self.data, (list, tuple)):
                 self.jsons = []
+                corrupted_jsons = []
                 for idx, j in enumerate(self.data):
                     if self.verbose > 0:
                         same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
-                    self.jsons.append(get_json(j))
+                    try:
+                        self.jsons.append(get_json(j))
+                    except json.JSONDecodeError:
+                        corrupted_jsons.append(j)
+                if len(corrupted_jsons) > 0:
+                    self.final_messages.append(("corrupted_json", {"paths": corrupted_jsons}))
 
     def combine_json(self) -> None:
         if self.verbose > 0:
@@ -213,3 +219,10 @@ class ReportBuilder:
                         color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
                     else:
                         color_print("OKGREEN", f"vizviewer {report_abspath}")
+                elif msg_type == "corrupted_json":
+                    print("")
+                    color_print("WARNING", "Found and ignored corrupted json file, you may lost some process data.")
+                    color_print("WARNING", "Corrupted json file:")
+                    for msg in msg_args["paths"]:
+                        color_print("WARNING", f"    {msg}")
+                    print("")

@@ -1,6 +1,10 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+try:
+    import psutil  # type: ignore
+except ImportError:
+    import subprocess
 
 import errno
 import os
@@ -96,6 +100,41 @@ def time_str_to_us(t_s: str) -> float:
         return val
     else:
         raise ValueError(f"Can't convert {t_s} to time")
+
+
+def get_subprocess_pid_recursive(pid: int) -> set:
+    if "psutil" in sys.modules:
+        return set(psutil.Process(pid).children(recursive=True))
+    else:
+        def get_subprocess_pid(pid: int) -> set:
+            if sys.platform == "win32":
+                cmdline = f"wmic process where (ParentProcessId={pid}) get ProcessId"
+            elif sys.platform in ("linux", "linux2"):
+                cmdline = f"pgrep -P {pid}"
+            elif sys.platform == "darwin":
+                cmdline = f"ps -o pid,ppid -ax | awk \'{{ if ( $2 == {pid} ) {{ print $1 }} }}'"
+            result = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1)
+            lines = result.stdout.decode("utf-8").splitlines()
+            sub_pids = set()
+            for line in lines:
+                try:
+                    sub_pids.add(int(line.strip()))
+                except ValueError:
+                    pass
+            return sub_pids
+
+        quried_pids = set()
+        subprocess_pids = set()
+        stack = [pid]
+        while stack:
+            pid = stack.pop()
+            if pid in quried_pids:
+                continue
+            quried_pids.add(pid)
+            for sub_pid in get_subprocess_pid(pid):
+                stack.append(sub_pid)
+                subprocess_pids.add(sub_pid)
+        return subprocess_pids
 
 
 # https://github.com/giampaolo/psutil
