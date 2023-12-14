@@ -115,7 +115,7 @@ def get_subprocess_pid_recursive(pid: int) -> set:
             except FileNotFoundError:
                 pass  # Process has already terminated
             return set(children)
-        
+
         def get_subprocess_pid_windows(pid: int) -> set:
             cmdline = f"wmic process where (ParentProcessId={pid}) get ProcessId"
             result = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1)
