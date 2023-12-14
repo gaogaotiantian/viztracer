@@ -593,6 +593,9 @@ class VizUI:
                 while True:
                     remain_viztmp = list(f for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".viztmp"))
                     if len(remain_viztmp) > 0:
+                        if sys.platform == "darwin":
+                            time.sleep(0.5)
+                            continue
                         remain_children_pid = list(int(f[7:-12]) for f in remain_viztmp)
                         alive_children = get_subprocess_pid_recursive(os.getpid())
                         for pid in remain_children_pid:

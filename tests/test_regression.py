@@ -425,6 +425,7 @@ class TestWaitForChild(CmdlineTmpl):
                       expected_output_file="result.json", expected_stdout=r"Wait",
                       script=issue_364_code_1)
 
+    @unittest.skipIf(sys.platform == "darwin", "get_subprocess_pid_recursive does not work on mac")
     def test_child_process_exits_abnormally(self):
         self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",

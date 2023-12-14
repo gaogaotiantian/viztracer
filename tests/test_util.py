@@ -59,6 +59,7 @@ class TestUtil(BaseTmpl):
         with self.assertRaises(ValueError):
             pid_exists(0)
 
+    @unittest.skipIf(sys.platform == "darwin", "get_subprocess_pid_recursive does not work on mac")
     @package_matrix(["~psutil", "psutil"])
     def test_get_subprocess_pid_recursive(self):
         q = Queue()
