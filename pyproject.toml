@@ -33,7 +33,7 @@ Homepage = "https://github.com/gaogaotiantian/viztracer"
 Documentation = "https://viztracer.readthedocs.io"
 
 [project.optional-dependencies]
-full = ["orjson"]
+full = ["orjson", "psutil"]
 
 [project.scripts]
 viztracer = "viztracer:main"
