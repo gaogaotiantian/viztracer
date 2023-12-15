@@ -78,11 +78,11 @@ class TestUtil(BaseTmpl):
 
 
 class TestUtilCmd(CmdlineTmpl):
+    @package_matrix(["~psutil", "psutil"])
     @unittest.skipIf(sys.platform == "darwin", "get_subprocess_pid_recursive does not work on mac")
-    @package_matrix(["psutil", "~psutil"])
     def test_get_subprocess_pid_recursive(self):
         self.template(
-            cmd_list=[sys.executable, "cmdline_test.py"],
+            cmd_list=["python", "cmdline_test.py"],
             script=test_get_subprocess_pid_recursive_script,
             success=True,
             expected_output_file=None,
