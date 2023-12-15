@@ -77,7 +77,9 @@ class TestReportBuilder(BaseTmpl):
             valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
             corrupted_json_file = shutil.copy(corrupted_json_path, os.path.join(tmpdir, "corrupted.json"))
             valid_json_file = shutil.copy(valid_json_path, os.path.join(tmpdir, "valid.json"))
-            ReportBuilder([corrupted_json_file, valid_json_file], verbose=1)
+            rb = ReportBuilder([corrupted_json_file, valid_json_file], verbose=1)
+            with io.StringIO() as s:
+                rb.save(s)
 
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -104,7 +104,7 @@ def time_str_to_us(t_s: str) -> float:
 
 def get_subprocess_pid_recursive(pid: int) -> set:
     if "psutil" in sys.modules:
-        return set(psutil.Process(pid).children(recursive=True))
+        return set(p.pid for p in psutil.Process(pid).children(recursive=True))
     else:
         def get_subprocess_pid_linux(pid: int) -> set:
             children = []
@@ -112,7 +112,7 @@ def get_subprocess_pid_recursive(pid: int) -> set:
                 for tid in os.listdir(f'/proc/{pid}/task'):
                     with open(f'/proc/{pid}/task/{tid}/children', 'r') as f:
                         children += [int(sub_pid) for sub_pid in f.read().split()]
-            except FileNotFoundError:
+            except FileNotFoundError:   # pragma: no cover
                 pass  # Process has already terminated
             return set(children)
 
@@ -133,7 +133,7 @@ def get_subprocess_pid_recursive(pid: int) -> set:
                 return get_subprocess_pid_linux(pid)
             elif sys.platform == "win32":
                 return get_subprocess_pid_windows(pid)
-            else:
+            else:   # pragma: no cover
                 raise NotImplementedError(f"Unsupported platform: {sys.platform}")
 
         quried_pids = set()
@@ -142,7 +142,7 @@ def get_subprocess_pid_recursive(pid: int) -> set:
         while stack:
             pid = stack.pop()
             if pid in quried_pids:
-                continue
+                continue    # pragma: no cover
             quried_pids.add(pid)
             for sub_pid in get_subprocess_pid(pid):
                 stack.append(sub_pid)

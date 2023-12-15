@@ -4,14 +4,18 @@
 import os
 import sys
 import unittest
-import time
-from multiprocessing import Process, Queue
 
 import viztracer.util
 
 from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
 
+test_get_subprocess_pid_recursive_script = """
+import os
+import time
+import viztracer.util
+from multiprocessing import Process, Queue
 
 def gen_subprocess_get_pid(result_queue):
     subprocesses = []
@@ -24,6 +28,19 @@ def gen_subprocess_get_pid(result_queue):
     for p in subprocesses:
         p.join()
     result_queue.put(subprocess_pids)
+
+if __name__ == '__main__':
+    q = Queue()
+    all_generated_pids = []
+    process_generator = Process(target=gen_subprocess_get_pid, args=(q,))
+    process_generator.start()
+    all_generated_pids.append(process_generator.pid)
+    time.sleep(1)
+    util_subprocess_pids = viztracer.util.get_subprocess_pid_recursive(os.getpid())
+    all_generated_pids.extend(q.get())
+    for pid in all_generated_pids:
+        assert pid in util_subprocess_pids, "pid not in util_subprocess_pids"
+"""
 
 
 class TestUtil(BaseTmpl):
@@ -59,16 +76,14 @@ class TestUtil(BaseTmpl):
         with self.assertRaises(ValueError):
             pid_exists(0)
 
+
+class TestUtilCmd(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "darwin", "get_subprocess_pid_recursive does not work on mac")
-    @package_matrix(["~psutil", "psutil"])
+    @package_matrix(["psutil"])
     def test_get_subprocess_pid_recursive(self):
-        q = Queue()
-        all_generated_pids = []
-        process_generator = Process(target=gen_subprocess_get_pid, args=(q,))
-        process_generator.start()
-        all_generated_pids.append(process_generator.pid)
-        time.sleep(1)
-        util_subprocess_pids = viztracer.util.get_subprocess_pid_recursive(os.getpid())
-        all_generated_pids.extend(q.get())
-        for pid in all_generated_pids:
-            self.assertIn(pid, util_subprocess_pids)
+        self.template(
+            cmd_list=[sys.executable, "cmdline_test.py"],
+            script=test_get_subprocess_pid_recursive_script,
+            success=True,
+            expected_output_file=None,
+        )
