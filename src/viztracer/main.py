@@ -25,7 +25,7 @@ from .attach_process.add_code_to_python_process import run_python_code  # type: 
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
-from .util import color_print, pid_exists, same_line_print, time_str_to_us, get_subprocess_pid_recursive
+from .util import color_print, pid_exists, same_line_print, time_str_to_us
 from .viztracer import VizTracer
 
 # For all the procedures in VizUI, return a tuple as the result
@@ -590,22 +590,8 @@ class VizUI:
         try:
             if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                 same_line_print("Wait for child processes to finish, Ctrl+C to skip")
-                while True:
-                    remain_viztmp = list(f for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".viztmp"))
-                    if len(remain_viztmp) > 0:
-                        if sys.platform == "darwin":
-                            time.sleep(0.5)
-                            continue
-                        remain_children_pid = list(int(f[7:-12]) for f in remain_viztmp)
-                        alive_children = get_subprocess_pid_recursive(os.getpid())
-                        for pid in remain_children_pid:
-                            if pid in alive_children:
-                                time.sleep(0.5)
-                                break
-                        else:
-                            break
-                    else:
-                        break
+                while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                    time.sleep(0.5)
         except KeyboardInterrupt:
             pass
 
