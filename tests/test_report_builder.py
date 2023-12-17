@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import tempfile
+from unittest.mock import patch
 
 import viztracer
 from viztracer.report_builder import ReportBuilder
@@ -71,7 +72,8 @@ class TestReportBuilder(BaseTmpl):
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
 
-    def test_corrupted_json(self):
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_corrupted_json(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
             corrupted_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
             valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
@@ -80,6 +82,19 @@ class TestReportBuilder(BaseTmpl):
             rb = ReportBuilder([corrupted_json_file, valid_json_file], verbose=1)
             with io.StringIO() as s:
                 rb.save(s)
+            self.assertIn("Corrupted json file", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_all_corrupted_json(self, mock_stdout):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            corrupted_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            corrupted_json_file = shutil.copy(corrupted_json_path, os.path.join(tmpdir, "corrupted.json"))
+            rb = ReportBuilder([corrupted_json_file], verbose=1)
+            with self.assertRaises(Exception) as context:
+                with io.StringIO() as s:
+                    rb.save(s)
+            self.assertEqual(str(context.exception), "All json files are corrupted")
+            self.assertIn("Corrupted json file", mock_stdout.getvalue())
 
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:

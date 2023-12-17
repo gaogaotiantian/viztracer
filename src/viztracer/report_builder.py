@@ -47,6 +47,7 @@ class ReportBuilder:
         self.align = align
         self.minimize_memory = minimize_memory
         self.jsons: List[Dict] = []
+        self.invalid_json_paths: List[str] = []
         self.json_loaded = False
         self.final_messages: List[Tuple[str, Dict]] = []
         if not isinstance(data, (dict, list, tuple)):
@@ -67,24 +68,28 @@ class ReportBuilder:
                 self.jsons = [get_json(self.data)]
             elif isinstance(self.data, (list, tuple)):
                 self.jsons = []
-                corrupted_jsons = []
+                self.invalid_json_paths = []
                 for idx, j in enumerate(self.data):
                     if self.verbose > 0:
                         same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
                     try:
                         self.jsons.append(get_json(j))
                     except json.JSONDecodeError:
-                        corrupted_jsons.append(j)
-                if len(corrupted_jsons) > 0:
-                    self.final_messages.append(("corrupted_json", {"paths": corrupted_jsons}))
+                        self.invalid_json_paths.append(j)
+                if len(self.invalid_json_paths) > 0:
+                    self.final_messages.append(("corrupted_json", {"paths": self.invalid_json_paths}))
 
     def combine_json(self) -> None:
         if self.verbose > 0:
             same_line_print("Combining trace data")
         if self.combined_json:
             return
-        if not self.jsons:
+        if not self.jsons and not self.invalid_json_paths:
             raise ValueError("Can't get report of nothing")
+        elif not self.jsons:
+            # print corrupted json files
+            self.print_messages()
+            raise ValueError("All json files are corrupted")
         if self.align:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
