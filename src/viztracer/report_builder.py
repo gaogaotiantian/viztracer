@@ -77,7 +77,7 @@ class ReportBuilder:
                     except json.JSONDecodeError:
                         self.invalid_json_paths.append(j)
                 if len(self.invalid_json_paths) > 0:
-                    self.final_messages.append(("corrupted_json", {"paths": self.invalid_json_paths}))
+                    self.final_messages.append(("invalid_json", {"paths": self.invalid_json_paths}))
 
     def combine_json(self) -> None:
         if self.verbose > 0:
@@ -87,9 +87,7 @@ class ReportBuilder:
         if not self.jsons and not self.invalid_json_paths:
             raise ValueError("Can't get report of nothing")
         elif not self.jsons:
-            # print corrupted json files
-            self.print_messages()
-            raise ValueError("All json files are corrupted")
+            raise ValueError("No valid json files found")
         if self.align:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
@@ -224,10 +222,10 @@ class ReportBuilder:
                         color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
                     else:
                         color_print("OKGREEN", f"vizviewer {report_abspath}")
-                elif msg_type == "corrupted_json":
+                elif msg_type == "invalid_json":
                     print("")
-                    color_print("WARNING", "Found and ignored corrupted json file, you may lost some process data.")
-                    color_print("WARNING", "Corrupted json file:")
+                    color_print("WARNING", "Found and ignored invalid json file, you may lost some process data.")
+                    color_print("WARNING", "Invalid json file:")
                     for msg in msg_args["paths"]:
                         color_print("WARNING", f"    {msg}")
                     print("")

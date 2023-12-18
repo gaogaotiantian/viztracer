@@ -73,28 +73,27 @@ class TestReportBuilder(BaseTmpl):
             ReportBuilder([invalid_json_path], verbose=1)
 
     @patch('sys.stdout', new_callable=io.StringIO)
-    def test_corrupted_json(self, mock_stdout):
+    def test_invalid_json_file(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
-            corrupted_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
             valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
-            corrupted_json_file = shutil.copy(corrupted_json_path, os.path.join(tmpdir, "corrupted.json"))
+            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
             valid_json_file = shutil.copy(valid_json_path, os.path.join(tmpdir, "valid.json"))
-            rb = ReportBuilder([corrupted_json_file, valid_json_file], verbose=1)
+            rb = ReportBuilder([invalid_json_file, valid_json_file], verbose=1)
             with io.StringIO() as s:
                 rb.save(s)
-            self.assertIn("Corrupted json file", mock_stdout.getvalue())
+            self.assertIn("Invalid json file", mock_stdout.getvalue())
 
     @patch('sys.stdout', new_callable=io.StringIO)
-    def test_all_corrupted_json(self, mock_stdout):
+    def test_all_invalid_json(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
-            corrupted_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
-            corrupted_json_file = shutil.copy(corrupted_json_path, os.path.join(tmpdir, "corrupted.json"))
-            rb = ReportBuilder([corrupted_json_file], verbose=1)
+            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
+            rb = ReportBuilder([invalid_json_file], verbose=1)
             with self.assertRaises(Exception) as context:
                 with io.StringIO() as s:
                     rb.save(s)
-            self.assertEqual(str(context.exception), "All json files are corrupted")
-            self.assertIn("Corrupted json file", mock_stdout.getvalue())
+            self.assertEqual(str(context.exception), "No valid json files found")
 
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:
