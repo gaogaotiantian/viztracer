@@ -5,7 +5,9 @@
 import io
 import json
 import os
+import shutil
 import tempfile
+from unittest.mock import patch
 
 import viztracer
 from viztracer.report_builder import ReportBuilder
@@ -69,6 +71,29 @@ class TestReportBuilder(BaseTmpl):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
+
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_invalid_json_file(self, mock_stdout):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
+            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
+            valid_json_file = shutil.copy(valid_json_path, os.path.join(tmpdir, "valid.json"))
+            rb = ReportBuilder([invalid_json_file, valid_json_file], verbose=1)
+            with io.StringIO() as s:
+                rb.save(s)
+            self.assertIn("Invalid json file", mock_stdout.getvalue())
+
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_all_invalid_json(self, mock_stdout):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
+            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
+            rb = ReportBuilder([invalid_json_file], verbose=1)
+            with self.assertRaises(Exception) as context:
+                with io.StringIO() as s:
+                    rb.save(s)
+            self.assertEqual(str(context.exception), "No valid json files found")
 
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:

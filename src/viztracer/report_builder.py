@@ -47,6 +47,7 @@ class ReportBuilder:
         self.align = align
         self.minimize_memory = minimize_memory
         self.jsons: List[Dict] = []
+        self.invalid_json_paths: List[str] = []
         self.json_loaded = False
         self.final_messages: List[Tuple[str, Dict]] = []
         if not isinstance(data, (dict, list, tuple)):
@@ -67,10 +68,16 @@ class ReportBuilder:
                 self.jsons = [get_json(self.data)]
             elif isinstance(self.data, (list, tuple)):
                 self.jsons = []
+                self.invalid_json_paths = []
                 for idx, j in enumerate(self.data):
                     if self.verbose > 0:
                         same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
-                    self.jsons.append(get_json(j))
+                    try:
+                        self.jsons.append(get_json(j))
+                    except json.JSONDecodeError:
+                        self.invalid_json_paths.append(j)
+                if len(self.invalid_json_paths) > 0:
+                    self.final_messages.append(("invalid_json", {"paths": self.invalid_json_paths}))
 
     def combine_json(self) -> None:
         if self.verbose > 0:
@@ -78,7 +85,10 @@ class ReportBuilder:
         if self.combined_json:
             return
         if not self.jsons:
-            raise ValueError("Can't get report of nothing")
+            if self.invalid_json_paths:
+                raise ValueError("No valid json files found")
+            else:
+                raise ValueError("Can't get report of nothing")
         if self.align:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
@@ -213,3 +223,10 @@ class ReportBuilder:
                         color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
                     else:
                         color_print("OKGREEN", f"vizviewer {report_abspath}")
+                elif msg_type == "invalid_json":
+                    print("")
+                    color_print("WARNING", "Found and ignored invalid json file, you may lost some process data.")
+                    color_print("WARNING", "Invalid json file:")
+                    for msg in msg_args["paths"]:
+                        color_print("WARNING", f"    {msg}")
+                    print("")
