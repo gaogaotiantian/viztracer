@@ -1,6 +1,6 @@
 # VizTracer
 
-[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![flake8](https://github.com/gaogaotiantian/viztracer/workflows/lint/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3ALint)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)  [![sponsor](https://img.shields.io/badge/%E2%9D%A4-Sponsor%20me-%23c96198?style=flat&logo=GitHub)](https://github.com/sponsors/gaogaotiantian)
+[![build](https://github.com/gaogaotiantian/viztracer/workflows/build/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3Abuild)  [![flake8](https://github.com/gaogaotiantian/viztracer/workflows/lint/badge.svg)](https://github.com/gaogaotiantian/viztracer/actions?query=workflow%3ALint)  [![readthedocs](https://img.shields.io/readthedocs/viztracer)](https://viztracer.readthedocs.io/en/stable/)  [![coverage](https://img.shields.io/codecov/c/github/gaogaotiantian/viztracer)](https://codecov.io/gh/gaogaotiantian/viztracer)  [![pypi](https://img.shields.io/pypi/v/viztracer.svg)](https://pypi.org/project/viztracer/)  [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/gaogaotiantian.viztracer-vscode?logo=visual-studio)](https://marketplace.visualstudio.com/items?itemName=gaogaotiantian.viztracer-vscode)  [![support-version](https://img.shields.io/pypi/pyversions/viztracer)](https://img.shields.io/pypi/pyversions/viztracer)  [![license](https://img.shields.io/github/license/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE)  [![commit](https://img.shields.io/github/last-commit/gaogaotiantian/viztracer)](https://github.com/gaogaotiantian/viztracer/commits/master)  [![sponsor](https://img.shields.io/badge/%E2%9D%A4-Sponsor%20me-%23c96198?style=flat&logo=GitHub)](https://github.com/sponsors/gaogaotiantian)
 
 VizTracer is a low-overhead logging/debugging/profiling tool that can trace and visualize your python code execution.
 
@@ -15,7 +15,6 @@ More help can be found in "Support - Controls".
 * Detailed function entry/exit information on timeline with source code
 * Super easy to use, no source code change for most features, no package dependency
 * Supports threading, multiprocessing, subprocess and async
-* Logs arbitrary function/variable using RegEx without code change
 * Powerful front-end, able to render GB-level trace smoothly
 * Works on Linux/MacOS/Windows
 
@@ -74,37 +73,16 @@ vizviewer --use_external_processor result.json
 ```
 
 A [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=gaogaotiantian.viztracer-vscode)
-is available to make your life even easier. You can open the corresponding source file in
-VS Code from the trace report with the extension.
+is available to make your life even easier.
+
+<p align="center">
+    <img src="https://github.com/gaogaotiantian/viztracer-vscode/raw/master/assets/demo.gif" />
+</p>
 
 <details>
 
 <summary>
-You can also generate standalone <code>html</code> file
-</summary>
-
-```sh
-viztracer -o result.html my_script.py arg1 arg2
-```
-
-The standalone HTML file is powered by [catapult](https://github.com/catapult-project/catapult) trace viewer which is an old tool Google made and is being replaced by [Perfetto](https://perfetto.dev/) gradually.
-
-Catapult trace viewer is sluggish with larger traces and is not actively maintained. It is recommended to use Perfetto instead.
-
-However, if you really need a standalone HTML file, this is the only option. Perfetto does not support standalone files.
-
-You can use vizviewer to open the html file as well, just to make the interface consistent
-
-```sh
-vizviewer result.html
-```
-
-</details>
-
-<details>
-
-<summary>
-Or add <code>--open</code> to open the reports right after tracing
+Add <code>--open</code> to open the reports right after tracing
 </summary>
 
 ```sh
@@ -207,7 +185,7 @@ VizTracer supports inserting custom events while the program is running. This wo
 
 VizTracer supports python native ```threading``` module without the need to do any modification to your code. Just start ```VizTracer``` before you create threads and it will just work.
 
-For other multi-thread scenarios, you can use ``enable_thread_tracing()`` to let VizTracer know about the thread to trace it.
+For other multi-thread scenarios, you can use ``enable_thread_tracing()`` to notice VizTracer about the thread to trace it.
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/multithread_example.png)
 
