@@ -84,10 +84,11 @@ class ReportBuilder:
             same_line_print("Combining trace data")
         if self.combined_json:
             return
-        if not self.jsons and not self.invalid_json_paths:
-            raise ValueError("Can't get report of nothing")
-        elif not self.jsons:
-            raise ValueError("No valid json files found")
+        if not self.jsons:
+            if self.invalid_json_paths:
+                raise ValueError("No valid json files found")
+            else:
+                raise ValueError("Can't get report of nothing")
         if self.align:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
