@@ -6,7 +6,13 @@ import errno
 import os
 import re
 import sys
+import ctypes
 from typing import Union
+
+# Windows macros
+STILL_ACTIVE = 0x103
+ERROR_ACCESS_DENIED = 0x5
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
 def size_fmt(num: Union[int, float], suffix: str = 'B') -> str:
@@ -101,7 +107,6 @@ def time_str_to_us(t_s: str) -> float:
 # https://github.com/giampaolo/psutil
 def pid_exists(pid):
     """Check whether pid exists in the current process table.
-    UNIX only.
     """
     if pid < 0:
         return False
@@ -110,19 +115,58 @@ def pid_exists(pid):
         # in the process group of the calling process.
         # On certain systems 0 is a valid PID but we have no way
         # to know that in a portable fashion.
+        # On Windows, 0 is an idle process buw we don't need to
+        # check it here
         raise ValueError('invalid PID 0')
-    try:
-        os.kill(pid, 0)
-    except OSError as err:
-        if err.errno == errno.ESRCH:
-            # ESRCH == No such process
-            return False
-        elif err.errno == errno.EPERM:
-            # EPERM clearly means there's a process to deny access to
+    # UNIX
+    if sys.platform != "win32":
+        try:
+            os.kill(pid, 0)
+        except OSError as err:
+            if err.errno == errno.ESRCH:
+                # ESRCH == No such process
+                return False
+            elif err.errno == errno.EPERM:
+                # EPERM clearly means there's a process to deny access to
+                return True
+            else:  # pragma: no cover
+                # According to "man 2 kill" possible error values are
+                # (EINVAL, EPERM, ESRCH)
+                raise
+        else:
             return True
-        else:  # pragma: no cover
-            # According to "man 2 kill" possible error values are
-            # (EINVAL, EPERM, ESRCH)
-            raise
+    # Windows
     else:
-        return True
+        kernel32 = ctypes.windll.kernel32
+
+        process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+        if not process:
+            if kernel32.GetLastError() == ERROR_ACCESS_DENIED:
+                # Access is denied, which means there's a process.
+                # Usually it's impossible to run here in viztracer.
+                return True     # pragma: no cover
+            else:
+                return False
+
+        exit_code = ctypes.c_ulong()
+        out = kernel32.GetExitCodeProcess(process, ctypes.byref(exit_code))
+        kernel32.CloseHandle(process)
+        # nonzero return value means the funtion succeeds
+        if out:
+            if exit_code.value == STILL_ACTIVE:
+                # According to documents of GetExitCodeProcess.
+                # If a thread returns STILL_ACTIVE (259) as an error code,
+                # then applications that test for that value could interpret
+                # it to mean that the thread is still running, and continue
+                # to test for the completion of the thread after the thread
+                # has terminated, which could put the application into an
+                # infinite loop.
+                return True
+            else:
+                return False
+        else:   # pragma: no cover
+            if kernel32.GetLastError() == ERROR_ACCESS_DENIED:
+                # Access is denied, which means there's a process.
+                # Usually it's impossible to run here in viztracer.
+                return True
+        return False    # pragma: no cover
