@@ -332,6 +332,8 @@ class VizUI:
 
         if options.subprocess_child:
             tracer.label_file_to_write()
+            current_process = multiprocessing.current_process()
+            current_process.name = "subprocess"
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
         else:
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
