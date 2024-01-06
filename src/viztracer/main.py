@@ -330,6 +330,7 @@ class VizUI:
         signal.signal(signal.SIGTERM, term_handler)
 
         if options.subprocess_child:
+            tracer.label_file_to_write()
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
         else:
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
