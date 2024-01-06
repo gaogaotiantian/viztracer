@@ -118,25 +118,8 @@ def pid_exists(pid):
         # On Windows, 0 is an idle process buw we don't need to
         # check it here
         raise ValueError('invalid PID 0')
-    # UNIX
-    if sys.platform != "win32":
-        try:
-            os.kill(pid, 0)
-        except OSError as err:
-            if err.errno == errno.ESRCH:
-                # ESRCH == No such process
-                return False
-            elif err.errno == errno.EPERM:
-                # EPERM clearly means there's a process to deny access to
-                return True
-            else:  # pragma: no cover
-                # According to "man 2 kill" possible error values are
-                # (EINVAL, EPERM, ESRCH)
-                raise
-        else:
-            return True
     # Windows
-    else:
+    if sys.platform == "win32":
         kernel32 = ctypes.windll.kernel32
 
         process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
@@ -170,3 +153,20 @@ def pid_exists(pid):
                 # Usually it's impossible to run here in viztracer.
                 return True
         return False    # pragma: no cover
+    # UNIX
+    else:
+        try:
+            os.kill(pid, 0)
+        except OSError as err:
+            if err.errno == errno.ESRCH:
+                # ESRCH == No such process
+                return False
+            elif err.errno == errno.EPERM:
+                # EPERM clearly means there's a process to deny access to
+                return True
+            else:  # pragma: no cover
+                # According to "man 2 kill" possible error values are
+                # (EINVAL, EPERM, ESRCH)
+                raise
+        else:
+            return True

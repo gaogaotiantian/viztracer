@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import types
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from viztracer.vcompressor import VCompressor
@@ -592,12 +593,14 @@ class VizUI:
                 same_line_print("Wait for child processes to finish, Ctrl+C to skip")
                 while True:
                     remain_viztmp = [f for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".viztmp")]
-                    if not remain_viztmp:
-                        break
-                    remain_children = list(int(f[7:-12]) for f in remain_viztmp)
-                    for pid in remain_children:
-                        if pid_exists(pid):
-                            break
+                    for viztmp_file in remain_viztmp:
+                        match = re.search(r'result_(\d+).json.viztmp', viztmp_file)
+                        if match:
+                            pid = int(match.group(1))
+                            if pid_exists(pid):
+                                break
+                        else:   # pragma: no cover
+                            color_print("WARNING", f"Can't parse {viztmp_file}, skip")
                     else:
                         break
                     time.sleep(0.5)

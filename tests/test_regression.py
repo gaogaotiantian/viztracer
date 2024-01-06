@@ -396,6 +396,9 @@ def target():
 if __name__ == '__main__':
     p = multiprocessing.Process(target=target)
     p.start()
+    # The main process will join the child in multiprocessing.process._children.
+    # This is a hack to make sure the main process won't join the child process,
+    # so we can test the wait_children_finish function
     multiprocessing.process._children = set()
     time.sleep(1)
 """
@@ -413,6 +416,9 @@ def target():
 if __name__ == '__main__':
     p = multiprocessing.Process(target=target)
     p.start()
+    # The main process will join the child in multiprocessing.process._children.
+    # This is a hack to make sure the main process won't join the child process,
+    # so we can test the wait_children_finish function
     multiprocessing.process._children = set()
     time.sleep(1)
 """
@@ -420,11 +426,11 @@ if __name__ == '__main__':
 
 class TestWaitForChild(CmdlineTmpl):
     def test_child_process_exits_normally(self):
-        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",
                       script=wait_for_child)
 
     def test_child_process_exits_abnormally(self):
-        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",
                       script=wait_for_terminated_child)
