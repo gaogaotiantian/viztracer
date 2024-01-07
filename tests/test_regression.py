@@ -398,7 +398,7 @@ if __name__ == '__main__':
     p.start()
     # The main process will join the child in multiprocessing.process._children.
     # This is a hack to make sure the main process won't join the child process,
-    # so we can test the wait_children_finish function
+    # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
     time.sleep(1)
 """
@@ -418,7 +418,7 @@ if __name__ == '__main__':
     p.start()
     # The main process will join the child in multiprocessing.process._children.
     # This is a hack to make sure the main process won't join the child process,
-    # so we can test the wait_children_finish function
+    # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
     time.sleep(1)
 """

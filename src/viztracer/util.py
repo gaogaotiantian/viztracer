@@ -118,8 +118,8 @@ def pid_exists(pid):
         # On Windows, 0 is an idle process buw we don't need to
         # check it here
         raise ValueError('invalid PID 0')
-    # Windows
     if sys.platform == "win32":
+        # Windows
         kernel32 = ctypes.windll.kernel32
 
         process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
@@ -153,8 +153,8 @@ def pid_exists(pid):
                 # Usually it's impossible to run here in viztracer.
                 return True
         return False    # pragma: no cover
-    # UNIX
     else:
+        # UNIX
         try:
             os.kill(pid, 0)
         except OSError as err:

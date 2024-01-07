@@ -600,7 +600,7 @@ class VizUI:
                             if pid_exists(pid):
                                 break
                         else:   # pragma: no cover
-                            color_print("WARNING", f"Can't parse {viztmp_file}, skip")
+                            color_print("WARNING", f"Unknown viztmp file {viztmp_file}")
                     else:
                         break
                     time.sleep(0.5)
