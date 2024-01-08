@@ -3,11 +3,16 @@
 
 import os
 import sys
-import unittest
+import time
+from multiprocessing import Process
 
 import viztracer.util
 
 from .base_tmpl import BaseTmpl
+
+
+def target_child():
+    time.sleep(1)
 
 
 class TestUtil(BaseTmpl):
@@ -34,11 +39,23 @@ class TestUtil(BaseTmpl):
         self.assertRaises(ValueError, time_str_to_us, "0.0.0")
         self.assertRaises(ValueError, time_str_to_us, "invalid")
 
-    @unittest.skipIf(sys.platform == "win32", "pid_exists only works on Unix")
     def test_pid_exists(self):
         pid_exists = viztracer.util.pid_exists
         self.assertFalse(pid_exists(-1))
-        self.assertTrue(pid_exists(1))
+        if sys.platform != "win32":
+            self.assertTrue(pid_exists(1))
         self.assertTrue(pid_exists(os.getpid()))
         with self.assertRaises(ValueError):
             pid_exists(0)
+
+        # test child
+        p = Process(target=target_child)
+        p.start()
+        self.assertTrue(pid_exists(p.pid))
+        p.join()
+        self.assertFalse(pid_exists(p.pid))
+
+        # test a process that doesn't exist
+        # Windows pid starts from 4
+        if sys.platform == "win32":
+            self.assertFalse(pid_exists(2))

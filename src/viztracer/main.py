@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import types
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from viztracer.vcompressor import VCompressor
@@ -591,7 +592,18 @@ class VizUI:
         try:
             if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
                 same_line_print("Wait for child processes to finish, Ctrl+C to skip")
-                while any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
+                while True:
+                    remain_viztmp = [f for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".viztmp")]
+                    for viztmp_file in remain_viztmp:
+                        match = re.search(r'result_(\d+).json.viztmp', viztmp_file)
+                        if match:
+                            pid = int(match.group(1))
+                            if pid_exists(pid):
+                                break
+                        else:   # pragma: no cover
+                            color_print("WARNING", f"Unknown viztmp file {viztmp_file}")
+                    else:
+                        break
                     time.sleep(0.5)
         except KeyboardInterrupt:
             pass
