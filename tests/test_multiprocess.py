@@ -251,7 +251,7 @@ class TestSubprocess(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_stdout=".*100 loops.*",
                       script=file_subprocess_module)
-        
+
     def test_code(self):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
