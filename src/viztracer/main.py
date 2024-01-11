@@ -153,6 +153,8 @@ class VizUI:
                             help="pid of Python process with VizTracer to be uninstalled")
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
+        parser.add_argument("--process_name", nargs="?", default="",
+                            help="process name of the current process in dumped result")
         return parser
 
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
@@ -263,6 +265,7 @@ class VizUI:
             "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
             "minimize_memory": options.minimize_memory,
+            "process_name": options.process_name,
         }
 
         return True, None
@@ -332,8 +335,6 @@ class VizUI:
 
         if options.subprocess_child:
             tracer.label_file_to_write()
-            current_process = multiprocessing.current_process()
-            current_process.name = sys.argv[0]
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
         else:
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)

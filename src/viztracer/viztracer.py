@@ -43,7 +43,8 @@ class VizTracer(_VizTracer):
                  dump_raw: bool = False,
                  sanitize_function_name: bool = False,
                  output_file: str = "result.json",
-                 plugins: Sequence[Union[VizPluginBase, str]] = []) -> None:
+                 plugins: Sequence[Union[VizPluginBase, str]] = [],
+                 process_name: str = "") -> None:
         super().__init__(
             tracer_entries=tracer_entries,
             max_stack_depth=max_stack_depth,
@@ -58,6 +59,7 @@ class VizTracer(_VizTracer):
             log_async=log_async,
             trace_self=trace_self,
             min_duration=min_duration,
+            process_name=process_name,
         )
         self._tracer: Any
         self.verbose = verbose
