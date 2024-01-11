@@ -44,6 +44,11 @@ import subprocess
 print(subprocess.call(["python", "-m", "timeit", "-n", "100", "'1+1'"]))
 """
 
+file_subprocess_code = """
+import subprocess
+p = subprocess.Popen(["python", "-c", "print('test')"])
+"""
+
 file_fork = """
 import os
 import time
@@ -246,6 +251,11 @@ class TestSubprocess(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_stdout=".*100 loops.*",
                       script=file_subprocess_module)
+        
+    def test_code(self):
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_subprocess_code)
 
     def test_nested(self):
         def check_func(data):
