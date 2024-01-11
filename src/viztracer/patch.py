@@ -60,7 +60,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
             viz_args.extend(["--process_name", script])
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, "--", script, *args_iter]
         elif mode and mode[-1] is not None:
-            if mode == ["-c"]:
+            if mode[0] == "-c":
                 viz_args.extend(["--process_name", "python -c"])
                 return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, args[-1]]
             else:
