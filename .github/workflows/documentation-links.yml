@@ -1,0 +1,21 @@
+name: Documentation preview of Read the docs in PR
+
+on:
+  pull_request_target:
+    types:
+      - opened
+    paths:
+      - "docs/**"
+      - ".github/workflows/documentation-links.yml"
+
+permissions:
+  pull-requests: write
+
+jobs:
+  documentation-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: readthedocs/actions/preview@v1
+        with:
+          project-slug: "viztracer-preview"
+          single-version: "true"

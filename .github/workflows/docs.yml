@@ -3,7 +3,9 @@ name: docs
 on:
   push:
     branches: [ master ]
-  pull_request:
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
 
 jobs:
   docs:
