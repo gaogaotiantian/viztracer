@@ -8,10 +8,12 @@ on:
     branches: [ master ]
     paths:
       - "src/viztracer/**"
+      - "tests/**"
       - ".github/workflows/python-package.yml"
   pull_request:
     paths:
       - "src/viztracer/**"
+      - "tests/**"
       - ".github/workflows/python-package.yml"
 
 jobs:
