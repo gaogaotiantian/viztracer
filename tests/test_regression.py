@@ -391,7 +391,7 @@ import time
 import multiprocessing
 
 def target():
-    time.sleep(3)
+    time.sleep(%s)
 
 if __name__ == '__main__':
     p = multiprocessing.Process(target=target)
@@ -400,7 +400,7 @@ if __name__ == '__main__':
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    time.sleep(1)
+    time.sleep(%s)
 """
 
 wait_for_terminated_child = """
@@ -410,7 +410,7 @@ import signal
 import multiprocessing
 
 def target():
-    time.sleep(3)
+    time.sleep(%s)
     os.kill(os.getpid(), signal.SIGTERM)
 
 if __name__ == '__main__':
@@ -420,17 +420,25 @@ if __name__ == '__main__':
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    time.sleep(1)
+    time.sleep(%s)
 """
 
 
 class TestWaitForChild(CmdlineTmpl):
     def test_child_process_exits_normally(self):
+        if os.getenv("GITHUB_ACTIONS"):
+            wait_for_child_script = wait_for_child % (9, 3)
+        else:
+            wait_for_child_script = wait_for_child % (3, 1)
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",
-                      script=wait_for_child)
+                      script=wait_for_child_script)
 
     def test_child_process_exits_abnormally(self):
+        if os.getenv("GITHUB_ACTIONS"):
+            wait_for_terminated_child_script = wait_for_terminated_child % (9, 3)
+        else:
+            wait_for_terminated_child_script = wait_for_terminated_child % (3, 1)
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",
-                      script=wait_for_terminated_child)
+                      script=wait_for_terminated_child_script)
