@@ -57,15 +57,9 @@ def patch_subprocess(viz_args: list[str]) -> None:
             py_args.append(arg)
 
         if script:
-            viz_args.extend(["--process_name", script])
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, "--", script, *args_iter]
         elif mode and mode[-1] is not None:
-            if mode[0] == "-c":
-                viz_args.extend(["--process_name", "python -c"])
-                return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, args[-1]]
-            else:
-                viz_args.extend(["--process_name", mode[-1]])
-                return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, "--", *args_iter]
+            return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, "--", *args_iter]
         return None
 
     @functools.wraps(subprocess.Popen.__init__)

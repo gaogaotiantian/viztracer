@@ -652,9 +652,9 @@ snaptrace_load(TracerObject* self, PyObject* args)
         PyObject* process_name_string = PyUnicode_FromString("process_name");
         PyObject* process_name = NULL;
 
-        if (self->process_name){
+        if (self->process_name) {
             process_name = PyUnicode_FromString(self->process_name);
-        }else{
+        } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
                 perror("Failed to access multiprocessing.current_process()");
@@ -905,9 +905,9 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     //    Process Name
     {
         PyObject* process_name = NULL;
-        if (self->process_name){
+        if (self->process_name) {
             process_name = PyUnicode_FromString(self->process_name);
-        }else{
+        } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
                 perror("Failed to access multiprocessing.current_process()");
@@ -923,8 +923,10 @@ snaptrace_dump(TracerObject* self, PyObject* args)
             Py_DECREF(current_process);
         }
 
-        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"%s\"}},",
-                pid, pid, PyUnicode_AsUTF8(process_name));
+        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"",
+                pid, pid);
+        fprint_escape(fptr, PyUnicode_AsUTF8(process_name));
+        fprintf(fptr, "\"}},");
         Py_DECREF(process_name);
     }
 
@@ -1214,7 +1216,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
                 exit(1);
             }
             strcpy(self->process_name, kw_process_name);
-        }else{
+        } else {
             self->process_name = NULL;
         }
     }
