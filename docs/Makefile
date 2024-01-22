@@ -12,15 +12,7 @@ BUILDDIR      = build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-pdf:
-	@$(SPHINXBUILD) -M latex "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	cd $(BUILDDIR)/latex
-	$(MAKE) clean
-	$(MAKE) all-pdf
-	echo
-	echo see $(BUILDDIR)/latex/viztracer.pdf
-
-.PHONY: help pdf Makefile
+.PHONY: help Makefile
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
