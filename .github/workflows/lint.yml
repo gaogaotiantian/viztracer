@@ -3,19 +3,7 @@ name: lint
 on:
   push:
     branches: [ master ]
-    paths:
-      - "src/viztracer/**"
-      - "!src/viztracer/attach_process/**"
-      - "tests/**"
-      - "example/**"
-      - ".github/workflows/lint.yml"
   pull_request:
-    paths:
-      - "src/viztracer/**"
-      - "!src/viztracer/attach_process/**"
-      - "tests/**"
-      - "example/**"
-      - ".github/workflows/lint.yml"
 
 jobs:
   lint:
