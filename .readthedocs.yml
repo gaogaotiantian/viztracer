@@ -19,6 +19,10 @@ sphinx:
 #mkdocs:
 #  configuration: mkdocs.yml
 
+# Enable pdf download on readthedocs
+formats:
+  - pdf
+
 # Optionally set the version of Python and requirements required to build your docs
 python:
   install:
