@@ -19,7 +19,7 @@ sphinx:
 #mkdocs:
 #  configuration: mkdocs.yml
 
-# Optionally build your docs in additional formats such as PDF and ePub
+# Enable pdf download on readthedocs
 formats:
   - pdf
 
