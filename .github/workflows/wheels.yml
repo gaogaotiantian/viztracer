@@ -3,7 +3,13 @@ name: wheels
 on:
   push:
     branches: [ master ]
+    paths:
+      - "src/viztracer/**"
+      - ".github/workflows/wheels.yml"
   pull_request:
+    paths:
+      - "src/viztracer/**"
+      - ".github/workflows/wheels.yml"
 
 jobs:
   build-wheels-linux:
