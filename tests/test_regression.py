@@ -387,11 +387,15 @@ class TestEscapeString(CmdlineTmpl):
 
 
 wait_for_child = """
+import os
 import time
 import multiprocessing
 
 def target():
-    time.sleep(3)
+    if os.getenv("GITHUB_ACTIONS"):
+        time.sleep(9)
+    else:
+        time.sleep(3)
 
 if __name__ == '__main__':
     p = multiprocessing.Process(target=target)
@@ -400,7 +404,10 @@ if __name__ == '__main__':
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    time.sleep(1)
+    if os.getenv("GITHUB_ACTIONS"):
+        time.sleep(3)
+    else:
+        time.sleep(1)
 """
 
 wait_for_terminated_child = """
@@ -410,7 +417,10 @@ import signal
 import multiprocessing
 
 def target():
-    time.sleep(3)
+    if os.getenv("GITHUB_ACTIONS"):
+        time.sleep(9)
+    else:
+        time.sleep(3)
     os.kill(os.getpid(), signal.SIGTERM)
 
 if __name__ == '__main__':
@@ -420,7 +430,10 @@ if __name__ == '__main__':
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    time.sleep(1)
+    if os.getenv("GITHUB_ACTIONS"):
+        time.sleep(3)
+    else:
+        time.sleep(1)
 """
 
 
