@@ -29,7 +29,7 @@ class _VizTracer:
             log_async: bool = False,
             trace_self: bool = False,
             min_duration: float = 0,
-            process_name: str = "") -> None:
+            process_name: Optional[str] = None) -> None:
         self.initialized = False
         self.enable = False
         self.parsed = False

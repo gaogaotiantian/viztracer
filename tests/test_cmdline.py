@@ -7,7 +7,6 @@ import os
 import re
 import signal
 import sys
-import json
 from contextlib import contextmanager
 from unittest.case import skipIf
 
@@ -525,18 +524,6 @@ class TestCommandLineBasic(CmdlineTmpl):
                           script=file_log_var,
                           expected_output_file="result.json",
                           expected_entries=27)
-
-    def test_process_name(self):
-        self.template(["python", "-m", "viztracer", "--process_name", "test_process_name", "cmdline_test.py"],
-                      expected_output_file="result.json", cleanup=False)
-        with open("result.json") as f:
-            trace_data = json.load(f)
-        for trace_event in trace_data["traceEvents"]:
-            if trace_event['name'] == "process_name":
-                self.assertEqual(trace_event['args']['name'], "test_process_name")
-                break
-        else:
-            self.fail("process_name event not found")
 
 
 class TestPossibleFailures(CmdlineTmpl):

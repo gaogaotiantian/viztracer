@@ -7,6 +7,7 @@ import signal
 import sys
 import tempfile
 import unittest
+import json
 
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -245,6 +246,14 @@ class TestSubprocess(CmdlineTmpl):
             self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
                           expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+                trace_events = json.load(f)["traceEvents"]
+                for entry in trace_events:
+                    if entry["name"] == "process_name":
+                        self.assertNotEqual(entry["args"]["name"], "MainProcess")
+                        break
+                else:
+                    self.fail("no process_name event found")
 
     def test_module(self):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],

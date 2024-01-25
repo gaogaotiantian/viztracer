@@ -153,8 +153,6 @@ class VizUI:
                             help="pid of Python process with VizTracer to be uninstalled")
         parser.add_argument("-t", type=float, nargs="?", default=-1,
                             help="time you want to trace the process")
-        parser.add_argument("--process_name", nargs="?", default="",
-                            help="process name of the current process in dumped result")
         return parser
 
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
@@ -226,13 +224,9 @@ class VizUI:
             # It's not practical to cover this line as it requires coverage
             # instrumentation on subprocess.
             output_file = self.ofile  # pragma: no cover
-            if options.process_name:
-                process_name = options.process_name
-            else:
-                process_name = sys.argv[0]
+            process_name = sys.argv[0]
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
-            process_name = options.process_name
 
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(

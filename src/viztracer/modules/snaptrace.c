@@ -653,7 +653,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
         PyObject* process_name = NULL;
 
         if (self->process_name) {
-            process_name = PyUnicode_FromString(self->process_name);
+            process_name = self->process_name;
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -906,7 +906,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     {
         PyObject* process_name = NULL;
         if (self->process_name) {
-            process_name = PyUnicode_FromString(self->process_name);
+            process_name = self->process_name;
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -1158,7 +1158,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
     char* kw_lib_file_path = NULL;
-    char* kw_process_name = NULL;
+    PyObject* kw_process_name = NULL;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
@@ -1168,7 +1168,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_log_async = -1;
     int kw_trace_self = -1;
     double kw_min_duration = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppds", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppdO", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -1205,20 +1205,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         strcpy(self->lib_file_path, kw_lib_file_path);
     }
 
-    if (kw_process_name) {
+    if (kw_process_name && kw_process_name != Py_None) {
         if (self->process_name) {
-            PyMem_FREE(self->process_name);
+            Py_DECREF(self->process_name);
         }
-        if (strlen(kw_process_name) != 0) {
-            self->process_name = PyMem_Calloc((strlen(kw_process_name) + 1), sizeof(char));
-            if (!self->process_name) {
-                printf("Out of memory!\n");
-                exit(1);
-            }
-            strcpy(self->process_name, kw_process_name);
-        } else {
-            self->process_name = NULL;
-        }
+        self->process_name = kw_process_name;
+        Py_INCREF(self->process_name);
     }
 
     if (kw_ignore_c_function == 1) {
