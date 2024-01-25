@@ -227,6 +227,7 @@ class VizUI:
             process_name = sys.argv[0]
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
+            process_name = None
 
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
