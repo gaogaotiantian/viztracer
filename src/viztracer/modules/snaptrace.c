@@ -654,6 +654,7 @@ snaptrace_load(TracerObject* self, PyObject* args)
 
         if (self->process_name) {
             process_name = self->process_name;
+            Py_INCREF(process_name);
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -907,6 +908,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
         PyObject* process_name = NULL;
         if (self->process_name) {
             process_name = self->process_name;
+            Py_INCREF(process_name);
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -1205,12 +1207,13 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
         strcpy(self->lib_file_path, kw_lib_file_path);
     }
 
-    if (kw_process_name && kw_process_name != Py_None) {
-        if (self->process_name) {
-            Py_DECREF(self->process_name);
+    if (kw_process_name && !Py_IsNone(kw_process_name)) {
+        if (!PyUnicode_CheckExact(kw_process_name)) {
+            PyErr_SetString(PyExc_TypeError, "process_name must be a string");
+            return NULL;
         }
-        self->process_name = kw_process_name;
-        Py_INCREF(self->process_name);
+        Py_INCREF(kw_process_name);
+        Py_XSETREF(self->process_name, kw_process_name); 
     }
 
     if (kw_ignore_c_function == 1) {
