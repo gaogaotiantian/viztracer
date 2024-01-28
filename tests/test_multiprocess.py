@@ -48,6 +48,7 @@ print(subprocess.call(["python", "-m", "timeit", "-n", "100", "'1+1'"]))
 file_subprocess_code = """
 import subprocess
 p = subprocess.Popen(["python", "-c", "print('test')"])
+p.wait()
 """
 
 file_fork = """
@@ -250,21 +251,39 @@ class TestSubprocess(CmdlineTmpl):
                 trace_events = json.load(f)["traceEvents"]
                 for entry in trace_events:
                     if entry["name"] == "process_name":
-                        self.assertNotEqual(entry["args"]["name"], "MainProcess")
+                        self.assertEqual(entry["args"]["name"], "python")
                         break
                 else:
                     self.fail("no process_name event found")
 
     def test_module(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      expected_stdout=".*100 loops.*",
-                      script=file_subprocess_module)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_file, "cmdline_test.py"],
+                          expected_output_file=output_file,
+                          expected_stdout=".*100 loops.*",
+                          script=file_subprocess_module, cleanup=False)
+            with open(output_file) as f:
+                trace_events = json.load(f)["traceEvents"]
+                for entry in trace_events:
+                    if entry["name"] == "process_name" and entry["args"]["name"] == "timeit":
+                        break
+                else:
+                    self.fail("no valid child process_name event found")
 
     def test_code(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_subprocess_code)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_file, "cmdline_test.py"],
+                          expected_output_file=output_file,
+                          script=file_subprocess_code, cleanup=False)
+            with open(output_file) as f:
+                trace_events = json.load(f)["traceEvents"]
+                for entry in trace_events:
+                    if entry["name"] == "process_name" and entry["args"]["name"] == "python -c":
+                        break
+                else:
+                    self.fail("no valid child process_name event found")
 
     def test_nested(self):
         def check_func(data):
