@@ -251,7 +251,7 @@ class TestSubprocess(CmdlineTmpl):
                 trace_events = json.load(f)["traceEvents"]
                 for entry in trace_events:
                     if entry["name"] == "process_name":
-                        self.assertEqual(entry["args"]["name"], "python")
+                        self.assertNotEqual(entry["args"]["name"], "MainProcess")
                         break
                 else:
                     self.fail("no process_name event found")
@@ -280,7 +280,7 @@ class TestSubprocess(CmdlineTmpl):
             with open(output_file) as f:
                 trace_events = json.load(f)["traceEvents"]
                 for entry in trace_events:
-                    if entry["name"] == "process_name" and entry["args"]["name"] == "python -c":
+                    if entry["name"] == "process_name" and entry["args"]["name"] == "-c":
                         break
                 else:
                     self.fail("no valid child process_name event found")

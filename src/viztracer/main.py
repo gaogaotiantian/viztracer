@@ -218,19 +218,12 @@ class VizUI:
                 os.mkdir(options.output_dir)
             self.ofile = os.path.join(options.output_dir, self.ofile)
 
-        process_name = None
         if options.subprocess_child:
             # If it's a subprocess, we need to store the FEE data to the
             # directory from the parent process.
             # It's not practical to cover this line as it requires coverage
             # instrumentation on subprocess.
             output_file = self.ofile  # pragma: no cover
-            if options.cmd_string is not None:
-                process_name = "python -c"
-            elif options.module:
-                process_name = options.module
-            elif command:
-                process_name = "python"
         else:
             output_file = os.path.join(self.multiprocess_output_dir, "result.json")
 
@@ -270,7 +263,7 @@ class VizUI:
             "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
             "minimize_memory": options.minimize_memory,
-            "process_name": process_name,
+            "process_name": None,
         }
 
         return True, None
@@ -325,6 +318,9 @@ class VizUI:
     def run_code(self, code: Any, global_dict: Dict[str, Any]) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
+
+        if options.subprocess_child:
+            self.init_kwargs["process_name"] = sys.argv[0]
 
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
