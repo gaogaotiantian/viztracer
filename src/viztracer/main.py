@@ -484,7 +484,7 @@ class VizUI:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
 
-        if sys.platform == "darwin" and platform.processor() == "arm":
+        if sys.platform == "darwin" and "arm" in platform.processor():
             return False, "VizTracer does not support this feature on Apple Silicon"
 
         if sys.platform == "darwin" and sys.version_info >= (3, 11):

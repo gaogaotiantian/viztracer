@@ -216,7 +216,7 @@ class TestRemoteFail(CmdlineTmpl):
     @unittest.skipUnless(sys.platform == "win32"
                          or (sys.platform == "darwin" and "arm" in platform.processor()),
                          "Only test unavailable platform")
-    def test_windows(self):
+    def test_unsupported(self):
         tracer = VizTracer(output_file="remote.json")
         with self.assertRaises(SystemExit):
             tracer.install()
