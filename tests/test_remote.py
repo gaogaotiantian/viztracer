@@ -288,7 +288,9 @@ class TestAttachScript(CmdlineTmpl):
             self.fail("uninstall failed to prevent tracer from saving data")
 
 
-@unittest.skipUnless(sys.platform == "darwin" and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
+@unittest.skipUnless(sys.platform == "darwin"
+                     and "arm" not in platform.processor()
+                     and sys.version_info >= (3, 11), "Does not support 3.11+ on Mac")
 class TestMacWarning(CmdlineTmpl):
     def test_mac_warning(self):
         pid = 12345
