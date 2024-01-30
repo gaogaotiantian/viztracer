@@ -9,6 +9,7 @@ import configparser
 import json
 import multiprocessing.util  # type: ignore
 import os
+import platform
 import shutil
 import signal
 import sys
@@ -479,15 +480,26 @@ class VizUI:
         print(__version__)
         return True, None
 
+    def _check_attach_availability(self) -> Tuple[bool, Optional[str]]:
+        if sys.platform == "win32":
+            return False, "VizTracer does not support this feature on Windows"
+
+        if sys.platform == "darwin" and platform.processor() == "arm":
+            return False, "VizTracer does not support this feature on Apple Silicon"
+
+        if sys.platform == "darwin" and sys.version_info >= (3, 11):
+            color_print("WARNING", "Warning: attach may not work on 3.11+ on Mac due to hardened runtime")
+
+        return True, None
+
     def attach(self) -> VizProcedureResult:
         pid = self.options.attach
         interval = self.options.t
 
-        if sys.platform == "win32":
-            return False, "VizTracer does not support this feature on Windows"
+        success, err_msg = self._check_attach_availability()
 
-        if sys.platform == "darwin" and sys.version_info >= (3, 11):
-            print("Warning: attach may not work on 3.11+ on Mac due to hardened runtime")
+        if not success:
+            return False, err_msg
 
         if not pid_exists(pid):
             return False, f"pid {pid} does not exist!"
@@ -522,8 +534,10 @@ class VizUI:
     def uninstall(self) -> VizProcedureResult:
         pid = self.options.uninstall
 
-        if sys.platform == "win32":
-            return False, "VizTracer does not support this feature on Windows"
+        success, err_msg = self._check_attach_availability()
+
+        if not success:
+            return False, err_msg
 
         if not pid_exists(pid):
             return False, f"pid {pid} does not exist!"
@@ -537,8 +551,11 @@ class VizUI:
         return True, None
 
     def attach_installed(self) -> VizProcedureResult:
-        if sys.platform == "win32":
-            return False, "VizTracer does not support this feature on Windows"
+        success, err_msg = self._check_attach_availability()
+
+        if not success:
+            return False, err_msg
+
         pid = self.options.attach_installed
         interval = self.options.t
         try:
