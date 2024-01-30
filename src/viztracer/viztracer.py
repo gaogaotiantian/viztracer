@@ -4,6 +4,7 @@
 import builtins
 import multiprocessing
 import os
+import platform
 import signal
 import sys
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
@@ -135,8 +136,9 @@ class VizTracer(_VizTracer):
         builtins.__dict__["__viz_tracer__"] = self
 
     def install(self) -> None:
-        if sys.platform == "win32":
-            print("remote install is not supported on Windows!")
+        if (sys.platform == "win32"
+                or (sys.platform == "darwin" and "arm" in platform.processor())):
+            print("remote install is not supported on this platform!")
             sys.exit(1)
 
         def signal_start(signum, frame):
