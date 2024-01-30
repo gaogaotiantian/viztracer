@@ -320,7 +320,10 @@ class VizUI:
         self.parent_pid = os.getpid()
 
         if options.subprocess_child:
-            self.init_kwargs["process_name"] = sys.argv[0]
+            if options.cmd_string is not None:
+                self.init_kwargs["process_name"] = "python -c"
+            else:
+                self.init_kwargs["process_name"] = sys.argv[0]
 
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer

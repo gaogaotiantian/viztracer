@@ -280,7 +280,7 @@ class TestSubprocess(CmdlineTmpl):
             with open(output_file) as f:
                 trace_events = json.load(f)["traceEvents"]
                 for entry in trace_events:
-                    if entry["name"] == "process_name" and entry["args"]["name"] == "-c":
+                    if entry["name"] == "process_name" and entry["args"]["name"] == "python -c":
                         break
                 else:
                     self.fail("no valid child process_name event found")
