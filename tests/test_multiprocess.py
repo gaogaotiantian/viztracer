@@ -45,12 +45,6 @@ import subprocess
 print(subprocess.call(["python", "-m", "timeit", "-n", "100", "'1+1'"]))
 """
 
-file_subprocess_code = """
-import subprocess
-p = subprocess.Popen(["python", "-c", "print('test')"])
-p.wait()
-"""
-
 file_fork = """
 import os
 import time
@@ -273,14 +267,14 @@ class TestSubprocess(CmdlineTmpl):
 
     def test_code(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            output_file = os.path.join(tmpdir, "result.json")
-            self.template(["viztracer", "-o", output_file, "cmdline_test.py"],
-                          expected_output_file=output_file,
-                          script=file_subprocess_code, cleanup=False)
-            with open(output_file) as f:
+            self.template(['viztracer', '-o', os.path.join(tmpdir, "result.json"), '--subprocess_child',
+                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 trace_events = json.load(f)["traceEvents"]
                 for entry in trace_events:
-                    if entry["name"] == "process_name" and entry["args"]["name"] == "python -c":
+                    if entry["name"] == "process_name":
+                        self.assertEqual(entry["args"]["name"], "python -c")
                         break
                 else:
                     self.fail("no valid child process_name event found")
