@@ -232,9 +232,6 @@ class VizTracer(_VizTracer):
             rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
             rb.save(output_file=output_file, file_info=file_info)
 
-        if self.viztmp is not None and os.path.exists(self.viztmp):
-            os.remove(self.viztmp)
-
         if enabled:
             self.start()
 
@@ -306,7 +303,11 @@ class VizTracer(_VizTracer):
         if not self._exiting:
             self._exiting = True
             os.chdir(self.cwd)
-            self.save()
+            try:
+                self.save()
+            finally:
+                if self.viztmp is not None and os.path.exists(self.viztmp):
+                    os.remove(self.viztmp)
             self.terminate()
 
 
