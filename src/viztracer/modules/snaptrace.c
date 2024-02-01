@@ -650,20 +650,27 @@ snaptrace_load(TracerObject* self, PyObject* args)
         PyObject* dict = PyDict_New();
         PyObject* args = PyDict_New();
         PyObject* process_name_string = PyUnicode_FromString("process_name");
-        PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
-        if (!current_process_method) {
-            perror("Failed to access multiprocessing.current_process()");
-            exit(-1);
-        }
-        PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
-        if (!current_process_method) {
-            perror("Failed to access multiprocessing.current_process()");
-            exit(-1);
-        }
-        PyObject* process_name = PyObject_GetAttrString(current_process, "name");
+        PyObject* process_name = NULL;
 
-        Py_DECREF(current_process_method);
-        Py_DECREF(current_process);
+        if (self->process_name) {
+            process_name = self->process_name;
+            Py_INCREF(process_name);
+        } else {
+            PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
+            if (!current_process_method) {
+                perror("Failed to access multiprocessing.current_process()");
+                exit(-1);
+            }
+            PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+            if (!current_process_method) {
+                perror("Failed to access multiprocessing.current_process()");
+                exit(-1);
+            }
+            process_name = PyObject_GetAttrString(current_process, "name");
+            Py_DECREF(current_process_method);
+            Py_DECREF(current_process);
+        }
+        
         PyDict_SetItemString(dict, "ph", ph_M);
         PyDict_SetItemString(dict, "pid", pid);
         PyDict_SetItemString(dict, "tid", pid);
@@ -898,22 +905,30 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     // == Load the metadata first ==
     //    Process Name
     {
-        PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
-        if (!current_process_method) {
-            perror("Failed to access multiprocessing.current_process()");
-            exit(-1);
+        PyObject* process_name = NULL;
+        if (self->process_name) {
+            process_name = self->process_name;
+            Py_INCREF(process_name);
+        } else {
+            PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
+            if (!current_process_method) {
+                perror("Failed to access multiprocessing.current_process()");
+                exit(-1);
+            }
+            PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+            if (!current_process_method) {
+                perror("Failed to access multiprocessing.current_process()");
+                exit(-1);
+            }
+            process_name = PyObject_GetAttrString(current_process, "name");
+            Py_DECREF(current_process_method);
+            Py_DECREF(current_process);
         }
-        PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
-        if (!current_process_method) {
-            perror("Failed to access multiprocessing.current_process()");
-            exit(-1);
-        }
-        PyObject* process_name = PyObject_GetAttrString(current_process, "name");
 
-        Py_DECREF(current_process_method);
-        Py_DECREF(current_process);
-        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"%s\"}},",
-                pid, pid, PyUnicode_AsUTF8(process_name));
+        fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"",
+                pid, pid);
+        fprint_escape(fptr, PyUnicode_AsUTF8(process_name));
+        fprintf(fptr, "\"}},");
         Py_DECREF(process_name);
     }
 
@@ -1140,11 +1155,12 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
             "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
             "log_func_retval", "log_func_args", "log_async", "trace_self",
-            "min_duration",
+            "min_duration", "process_name",
             NULL};
     int kw_verbose = -1;
     int kw_max_stack_depth = 0;
     char* kw_lib_file_path = NULL;
+    PyObject* kw_process_name = NULL;
     PyObject* kw_include_files = NULL;
     PyObject* kw_exclude_files = NULL;
     int kw_ignore_c_function = -1;
@@ -1154,7 +1170,7 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
     int kw_log_async = -1;
     int kw_trace_self = -1;
     double kw_min_duration = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppd", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppdO", kwlist,
             &kw_verbose,
             &kw_lib_file_path,
             &kw_max_stack_depth,
@@ -1166,7 +1182,8 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             &kw_log_func_args,
             &kw_log_async,
             &kw_trace_self,
-            &kw_min_duration)) {
+            &kw_min_duration,
+            &kw_process_name)) {
         return NULL;
     }
 
@@ -1188,6 +1205,15 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
             exit(1);
         }
         strcpy(self->lib_file_path, kw_lib_file_path);
+    }
+
+    if (kw_process_name && !Py_IsNone(kw_process_name)) {
+        if (!PyUnicode_CheckExact(kw_process_name)) {
+            PyErr_SetString(PyExc_TypeError, "process_name must be a string");
+            return NULL;
+        }
+        Py_INCREF(kw_process_name);
+        Py_XSETREF(self->process_name, kw_process_name); 
     }
 
     if (kw_ignore_c_function == 1) {

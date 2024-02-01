@@ -28,7 +28,8 @@ class _VizTracer:
             log_gc: bool = False,
             log_async: bool = False,
             trace_self: bool = False,
-            min_duration: float = 0) -> None:
+            min_duration: float = 0,
+            process_name: Optional[str] = None) -> None:
         self.initialized = False
         self.enable = False
         self.parsed = False
@@ -53,6 +54,7 @@ class _VizTracer:
         self.total_entries = 0
         self.gc_start_args: Dict[str, int] = {}
         self.initialized = True
+        self.process_name = process_name
 
     @property
     def max_stack_depth(self) -> int:
@@ -237,6 +239,7 @@ class _VizTracer:
             "log_async": self.log_async,
             "trace_self": self.trace_self,
             "min_duration": self.min_duration,
+            "process_name": self.process_name,
         }
 
         self._tracer.config(**cfg)

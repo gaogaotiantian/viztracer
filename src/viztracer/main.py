@@ -264,6 +264,7 @@ class VizUI:
             "sanitize_function_name": options.sanitize_function_name,
             "dump_raw": True,
             "minimize_memory": options.minimize_memory,
+            "process_name": None,
         }
 
         return True, None
@@ -318,6 +319,12 @@ class VizUI:
     def run_code(self, code: Any, global_dict: Dict[str, Any]) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
+
+        if options.subprocess_child:
+            if options.cmd_string is not None:
+                self.init_kwargs["process_name"] = "python -c"
+            else:
+                self.init_kwargs["process_name"] = sys.argv[0]
 
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer

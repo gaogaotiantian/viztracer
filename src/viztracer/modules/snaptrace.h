@@ -69,6 +69,7 @@ typedef struct {
     int verbose;
     char* lib_file_path;
     int max_stack_depth;
+    PyObject* process_name;
     PyObject* include_files;
     PyObject* exclude_files;
     double min_duration;

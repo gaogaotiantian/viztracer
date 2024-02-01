@@ -7,6 +7,7 @@ import signal
 import sys
 import tempfile
 import unittest
+import json
 
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -42,6 +43,12 @@ while True:
 file_subprocess_module = """
 import subprocess
 print(subprocess.call(["python", "-m", "timeit", "-n", "100", "'1+1'"]))
+"""
+
+file_subprocess_code_string = """
+import subprocess
+p = subprocess.Popen(['python', '-c', 'import time;time.sleep(0.5)'])
+p.wait()
 """
 
 file_fork = """
@@ -226,6 +233,13 @@ class TestSubprocess(CmdlineTmpl):
     def tearDown(self):
         os.remove("child.py")
 
+    def assertSubprocessName(self, name, data):
+        for entry in data["traceEvents"]:
+            if entry["name"] == "process_name" and entry["args"]["name"] == name:
+                break
+        else:
+            self.fail("no matching subprocess name")
+
     def test_basic(self):
         def check_func(data):
             pids = set()
@@ -240,12 +254,32 @@ class TestSubprocess(CmdlineTmpl):
             self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
                           expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+                self.assertSubprocessName("child.py", json.load(f))
 
     def test_module(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      expected_stdout=".*100 loops.*",
-                      script=file_subprocess_module)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_file = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_file, "cmdline_test.py"],
+                          expected_output_file=output_file,
+                          expected_stdout=".*100 loops.*",
+                          script=file_subprocess_module,
+                          check_func=lambda data: self.assertSubprocessName("timeit", data))
+
+    def test_code_string(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
+                          expected_output_file=output_path,
+                          script=file_subprocess_code_string,
+                          check_func=lambda data: self.assertSubprocessName("python -c", data))
+
+            # this is for coverage
+            self.template(['viztracer', '-o', os.path.join(tmpdir, "result.json"), '--subprocess_child',
+                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+                self.assertSubprocessName("python -c", json.load(f))
 
     def test_nested(self):
         def check_func(data):
