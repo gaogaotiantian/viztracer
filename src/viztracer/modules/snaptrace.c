@@ -875,12 +875,12 @@ snaptrace_dump(TracerObject* self, PyObject* args)
     FILE* fptr = NULL;
     if (!PyArg_ParseTuple(args, "sp", &filename, &sanitize_function_name)) {
         PyErr_SetString(PyExc_TypeError, "Missing required file name");
-        Py_RETURN_NONE;
+        return NULL;
     }
     fptr = fopen(filename, "w");
     if (!fptr) {
         PyErr_Format(PyExc_ValueError, "Can't open file %s to write", filename);
-        Py_RETURN_NONE;
+        return NULL;
     }
 
     fprintf(fptr, "{\"traceEvents\":[");
