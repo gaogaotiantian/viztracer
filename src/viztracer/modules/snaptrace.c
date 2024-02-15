@@ -242,6 +242,229 @@ static struct PyModuleDef snaptracemodule = {
 // =============================================================================
 // Tracing function, triggered when FEE
 // =============================================================================
+
+int
+snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
+{
+    PyCodeObject* code = PyFrame_GetCode(frame);
+    PyObject* co_filename = code->co_filename;
+
+    if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
+        if (self->lib_file_path && startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
+            info->ignore_stack_depth += 1;
+            goto cleanup;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES)) {
+        if (info->ignore_stack_depth == 0) {
+            PyObject* files = NULL;
+            int record = 0;
+            int is_include = CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
+            if (is_include) {
+                files = self->include_files;
+                record = 0;
+            } else {
+                files = self->exclude_files;
+                record = 1;
+            }
+            Py_ssize_t length = PyList_GET_SIZE(files);
+            for (int i = 0; i < length; i++) {
+                PyObject* f = PyList_GET_ITEM(files, i);
+                if (startswith(PyUnicode_AsUTF8(co_filename), PyUnicode_AsUTF8(f))) {
+                    record = 1 - record;
+                    break;
+                }
+            }
+            if (record == 0) {
+                info->ignore_stack_depth += 1;
+                goto cleanup;
+            }
+        } else {
+            goto cleanup;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN)) {
+        if (startswith(PyUnicode_AsUTF8(co_filename), "<frozen")) {
+            info->ignore_stack_depth += 1;
+            goto cleanup;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
+            info->curr_task == NULL &&
+            (code->co_flags & CO_COROUTINE) != 0) {
+        PyObject* curr_task = Py_None;
+        info->paused = 1;
+        for (size_t i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
+            if (curr_task_getters[i] != NULL) {
+                curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
+                if (!curr_task) {
+                    PyErr_Clear();  // RuntimeError, probably
+                    curr_task = Py_None;
+                } else if (curr_task != Py_None) {
+                    break;  // got a valid task
+                }
+            }
+        }
+        info->paused = 0;
+        info->curr_task = curr_task;
+        Py_INCREF(curr_task);
+        info->curr_task_frame = frame;
+        Py_INCREF(frame);
+    }
+
+    // If it's a call, we need a new node, and we need to update the stack
+    if (!info->stack_top->next) {
+        info->stack_top->next = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
+        info->stack_top->next->prev = info->stack_top;
+    }
+    info->stack_top = info->stack_top->next;
+    info->stack_top->ts = get_ts(info);
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
+        log_func_args(info->stack_top, frame);
+    }
+
+cleanup:
+
+    Py_XDECREF(code);
+
+    return 0;
+}
+
+int
+snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
+{
+    // If it's a call, we need a new node, and we need to update the stack
+    if (!info->stack_top->next) {
+        info->stack_top->next = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
+        info->stack_top->next->prev = info->stack_top;
+    }
+    info->stack_top = info->stack_top->next;
+    info->stack_top->ts = get_ts(info);
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
+        log_func_args(info->stack_top, frame);
+    }
+
+    return 0;
+}
+
+int
+snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+{
+    struct FunctionNode* stack_top = info->stack_top;
+    if (stack_top->prev) {
+        // if stack_top has prev, it's not the fake node so it's at least root
+        double dur = get_ts(info) - info->stack_top->ts;
+        int log_this_entry = dur >= self->min_duration;
+
+        if (log_this_entry) {
+            struct EventNode* node = get_next_node(self);
+            PyCodeObject* code = PyFrame_GetCode(frame);
+
+            node->ntype = FEE_NODE;
+            node->ts = info->stack_top->ts;
+            node->data.fee.dur = dur;
+            node->tid = info->tid;
+            node->data.fee.type = PyTrace_RETURN;
+            node->data.fee.co_name = code->co_name;
+            node->data.fee.co_filename = code->co_filename;
+            node->data.fee.co_firstlineno = code->co_firstlineno;
+            Py_INCREF(node->data.fee.co_name);
+            Py_INCREF(node->data.fee.co_filename);
+            if (stack_top->args) {
+                // steal the reference when return
+                node->data.fee.args = stack_top->args;
+                Py_INCREF(stack_top->args);
+            }
+            if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
+                node->data.fee.retval = PyObject_Repr(arg);
+            }
+
+            if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+                if (info->curr_task) {
+                    node->data.fee.asyncio_task = info->curr_task;
+                    Py_INCREF(info->curr_task);
+                }
+            }
+
+            Py_DECREF(code);
+        }
+        // Finish return whether to log the data
+        info->stack_top = info->stack_top->prev;
+
+        if (stack_top->args) {
+            Py_DECREF(stack_top->args);
+            stack_top->args = NULL;
+        }
+
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
+                info->curr_task &&
+                frame == info->curr_task_frame) {
+            Py_DECREF(info->curr_task);
+            info->curr_task = NULL;
+            Py_DECREF(info->curr_task_frame);
+            info->curr_task_frame = NULL;
+        }
+    }
+
+    return 0;
+}
+
+int
+snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+{
+    struct FunctionNode* stack_top = info->stack_top;
+    if (stack_top->prev) {
+        // if stack_top has prev, it's not the fake node so it's at least root
+        double dur = get_ts(info) - info->stack_top->ts;
+        int log_this_entry = dur >= self->min_duration;
+
+        if (log_this_entry) {
+            struct EventNode* node = get_next_node(self);
+            PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
+            node->ntype = FEE_NODE;
+            node->ts = info->stack_top->ts;
+            node->data.fee.dur = dur;
+            node->tid = info->tid;
+            node->data.fee.type = PyTrace_C_RETURN;
+            node->data.fee.ml_name = cfunc->m_ml->ml_name;
+            if (cfunc->m_module) {
+                // The function belongs to a module
+                node->data.fee.m_module = cfunc->m_module;
+                Py_INCREF(cfunc->m_module);
+            } else {
+                // The function is a class method
+                node->data.fee.m_module = NULL;
+                if (cfunc->m_self) {
+                    // It's not a static method, has __self__
+                    node->data.fee.tp_name = cfunc->m_self->ob_type->tp_name;
+                } else {
+                    // It's a static method, does not have __self__
+                    node->data.fee.tp_name = NULL;
+                }
+            }
+
+            if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
+                if (info->curr_task) {
+                    node->data.fee.asyncio_task = info->curr_task;
+                    Py_INCREF(info->curr_task);
+                }
+            }
+        }
+        // Finish return whether to log the data
+        info->stack_top = info->stack_top->prev;
+
+        if (stack_top->args) {
+            Py_DECREF(stack_top->args);
+            stack_top->args = NULL;
+        }
+    }
+
+    return 0;
+}
+
 int
 snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
@@ -262,244 +485,62 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
         return 0;
     }
-
-    if (what == PyTrace_CALL || what == PyTrace_RETURN || 
-            (!CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION))) {
-        struct EventNode* node = NULL;
-        struct ThreadInfo* info = get_thread_info(self);
-        PyCodeObject* code = NULL;
-        PyFrameObject* f_back = NULL;
-        PyObject* co_filename = NULL;
-
-        int is_call = (what == PyTrace_CALL || what == PyTrace_C_CALL);
-        int is_return = (what == PyTrace_RETURN || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
-        int is_python = (what == PyTrace_CALL || what == PyTrace_RETURN);
-        int is_c = (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION);
-
-        if (info->paused) {
-            return 0;
-        }
-
-        if (info->ignore_stack_depth > 0) {
-            if (is_call) {
-                info->ignore_stack_depth += 1;
-                return 0;
-            } else if (is_return) {
-                info->ignore_stack_depth -= 1;
-                return 0;
-            }
-        }
-
-        // Fast Path Ended, we need some internal data here
-        code = PyFrame_GetCode(frame);
-        f_back = PyFrame_GetBack(frame);
-
-        co_filename = code->co_filename;
-
-        // Exclude Self
-        if (is_python && is_call && !CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
-            if (self->lib_file_path && startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
-                info->ignore_stack_depth += 1;
-                goto cleanup;
-            }
-        }
-
-        // IMPORTANT: the C function will always be called from our python methods, 
-        // so this check is redundant. However, the user should never be allowed 
-        // to call our C methods directly! Otherwise C functions will be recorded.
-        // We keep this part in case we need to use it in the future
-
-        //if (is_c && is_call) {
-        //    PyCFunctionObject* func = (PyCFunctionObject*) arg;
-        //    if (func->m_module) {
-        //        if (startswith(PyUnicode_AsUTF8(func->m_module), snaptracemodule.m_name)) {
-        //            printf("ignored\n");
-        //            info->ignore_stack_depth += 1;
-        //            return 0;
-        //        }
-        //    }
-        //} 
-
-        // Check max stack depth
-        if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
-            if (is_call) {
-                info->curr_stack_depth += 1;
-                if (info->curr_stack_depth > self->max_stack_depth) {
-                    goto cleanup;
-                }
-            } else if (is_return) {
-                if (info->curr_stack_depth > 0) {
-                    info->curr_stack_depth -= 1;
-                    if (info->curr_stack_depth + 1 > self->max_stack_depth) {
-                        goto cleanup;
-                    }
-                }
-            }
-        }
-
-        // Check include/exclude files
-        if (CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES | SNAPTRACE_EXCLUDE_FILES) && is_python && is_call) {
-            if (info->ignore_stack_depth == 0) {
-                PyObject* files = NULL;
-                int record = 0;
-                int is_include = CHECK_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
-                if (is_include) {
-                    files = self->include_files;
-                    record = 0;
-                } else {
-                    files = self->exclude_files;
-                    record = 1;
-                }
-                Py_ssize_t length = PyList_GET_SIZE(files);
-                for (int i = 0; i < length; i++) {
-                    PyObject* f = PyList_GET_ITEM(files, i);
-                    if (startswith(PyUnicode_AsUTF8(co_filename), PyUnicode_AsUTF8(f))) {
-                        record = 1 - record;
-                        break;
-                    }
-                }
-                if (record == 0) {
-                    info->ignore_stack_depth += 1;
-                    goto cleanup;
-                }
-            } else {
-                goto cleanup;
-            }
-        }
-
-        if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN)) {
-            if (is_python && is_call) {
-                if (startswith(PyUnicode_AsUTF8(co_filename), "<frozen")) {
-                    info->ignore_stack_depth += 1;
-                    goto cleanup;
-                }
-            }
-        }
-
-        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
-            if (info->curr_task == NULL) {
-                if (is_python && is_call && (code->co_flags & CO_COROUTINE) != 0) {
-                    PyObject* curr_task = Py_None;
-                    info->paused = 1;
-                    for (size_t i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
-                        if (curr_task_getters[i] != NULL) {
-                            curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
-                            if (!curr_task) {
-                                PyErr_Clear();  // RuntimeError, probably
-                                curr_task = Py_None;
-                            } else if (curr_task != Py_None) {
-                                break;  // got a valid task
-                            }
-                        }
-                    }
-                    info->paused = 0;
-                    info->curr_task = curr_task;
-                    Py_INCREF(curr_task);
-                    info->curr_task_frame = frame;
-                    Py_INCREF(frame);
-                }
-            }
-        }
-
-        if (is_call) {
-            // If it's a call, we need a new node, and we need to update the stack
-            if (!info->stack_top->next) {
-                info->stack_top->next = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
-                info->stack_top->next->prev = info->stack_top;
-            }
-            info->stack_top = info->stack_top->next;
-            info->stack_top->ts = get_ts(info);
-            if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
-                log_func_args(info->stack_top, frame);
-            }
-        } else if (is_return) {
-            struct FunctionNode* stack_top = info->stack_top;
-            if (stack_top->prev) {
-                // if stack_top has prev, it's not the fake node so it's at least root
-                double dur = get_ts(info) - info->stack_top->ts;
-                int log_this_entry = dur >= self->min_duration;
-
-                if (log_this_entry) {
-                    node = get_next_node(self);
-                    node->ntype = FEE_NODE;
-                    node->ts = info->stack_top->ts;
-                    node->data.fee.dur = dur;
-                    node->tid = info->tid;
-                    node->data.fee.type = what;
-                    if (is_python) {
-                        node->data.fee.co_name = code->co_name;
-                        node->data.fee.co_filename = code->co_filename;
-                        node->data.fee.co_firstlineno = code->co_firstlineno;
-                        Py_INCREF(node->data.fee.co_name);
-                        Py_INCREF(node->data.fee.co_filename);
-                        if (stack_top->args) {
-                            // steal the reference when return
-                            node->data.fee.args = stack_top->args;
-                            Py_INCREF(stack_top->args);
-                        }
-                        if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
-                            node->data.fee.retval = PyObject_Repr(arg);
-                        }
-                    } else if (is_c) {
-                        PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
-                        node->data.fee.ml_name = cfunc->m_ml->ml_name;
-                        if (cfunc->m_module) {
-                            // The function belongs to a module
-                            node->data.fee.m_module = cfunc->m_module;
-                            Py_INCREF(cfunc->m_module);
-                        } else {
-                            // The function is a class method
-                            node->data.fee.m_module = NULL;
-                            if (cfunc->m_self) {
-                                // It's not a static method, has __self__
-                                node->data.fee.tp_name = cfunc->m_self->ob_type->tp_name;
-                            } else {
-                                // It's a static method, does not have __self__
-                                node->data.fee.tp_name = NULL;
-                            }
-                        }
-                    } 
-
-                    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
-                        if (info->curr_task) {
-                            node->data.fee.asyncio_task = info->curr_task;
-                            Py_INCREF(info->curr_task);
-                        }
-                    }
-                }
-                // Finish return whether to log the data
-                info->stack_top = info->stack_top->prev;
-
-                if (stack_top->args) {
-                    Py_DECREF(stack_top->args);
-                    stack_top->args = NULL;
-                }
-
-                if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
-                    if (info->curr_task) {
-                        if (is_python && frame == info->curr_task_frame) {
-                            Py_DECREF(info->curr_task);
-                            info->curr_task = NULL;
-                            Py_DECREF(info->curr_task_frame);
-                            info->curr_task_frame = NULL;
-                        }
-                    }
-                }
-            }
-            goto cleanup;
-        } else {
-            printf("Unexpected event!\n");
-        }
-
-cleanup:
-
-        Py_XDECREF(code);
-        Py_XDECREF(f_back);
-
+    
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) &&
+            (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION)) {
+        return 0;
     }
 
+    struct ThreadInfo* info = get_thread_info(self);
 
-    return 0;
+    // This is a crazy hack for
+    // is_call == (what == PyTrace_CALL || what == PyTrace_C_CALL)
+    // Because PyTrace_CALL == 0 and PyTrace_C_CALL == 4
+    int is_call = !(what & 0x3);
+
+    if (info->paused) {
+        return 0;
+    }
+
+    if (info->ignore_stack_depth > 0) {
+        if (is_call) {
+            info->ignore_stack_depth += 1;
+            return 0;
+        } else {
+            info->ignore_stack_depth -= 1;
+            return 0;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
+        if (is_call) {
+            info->curr_stack_depth += 1;
+            if (info->curr_stack_depth > self->max_stack_depth) {
+                return 0;
+            }
+        } else {
+            if (info->curr_stack_depth > 0) {
+                info->curr_stack_depth -= 1;
+                if (info->curr_stack_depth + 1 > self->max_stack_depth) {
+                    return 0;
+                }
+            }
+        }
+    }
+
+    switch (what) {
+    case PyTrace_CALL:
+        return snaptrace_pycall_callback(self, frame, info);
+    case PyTrace_C_CALL:
+        return snaptrace_ccall_callback(self, frame, info);
+    case PyTrace_RETURN:
+        return snaptrace_pyreturn_callback(self, frame, info, arg);
+    case PyTrace_C_RETURN:
+    case PyTrace_C_EXCEPTION:
+        return snaptrace_creturn_callback(self, frame, info, arg);
+    default:
+        return 0;
+    }
 }
 
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args) 
