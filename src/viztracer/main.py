@@ -27,7 +27,7 @@ from .attach_process.add_code_to_python_process import run_python_code  # type: 
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
-from .util import color_print, pid_exists, same_line_print, time_str_to_us
+from .util import color_print, pid_exists, same_line_print, time_str_to_us, unique_file_name
 from .viztracer import VizTracer
 
 # For all the procedures in VizUI, return a tuple as the result
@@ -58,8 +58,11 @@ class VizUI:
                             help="specify rcfile for viztracer")
         parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
                             help="size of circular buffer. How many entries can it store")
-        parser.add_argument("--output_file", "-o", nargs="?", default=None,
-                            help="output file path. End with .json or .html or .gz")
+        filename_group = parser.add_mutually_exclusive_group()
+        filename_group.add_argument("--output_file", "-o", nargs="?", default=None,
+                                    help="output file path. End with .json or .html or .gz")
+        filename_group.add_argument("--unique_output_file", "-u", action="store_true", default=False,
+                                    help="Use a unique file name for each run")
         parser.add_argument("--output_dir", nargs="?", default=None,
                             help="output directory. Should only be used when --pid_suffix is used")
         parser.add_argument("--file_info", action="store_true", default=False,
@@ -209,6 +212,13 @@ class VizUI:
         if options.quiet:
             self.verbose = 0
 
+        if options.unique_output_file:
+            exec_name = "python"
+            if options.module:
+                exec_name = options.module
+            elif command:
+                exec_name = command[0]
+            self.ofile = unique_file_name(exec_name)
         if options.output_file:
             self.ofile = options.output_file
         elif options.pid_suffix:

@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import datetime
 import errno
 import os
 import re
@@ -61,6 +62,22 @@ def color_print(color, s: str, **kwargs) -> None:
 def same_line_print(s: str, width=80, **kwargs) -> None:
     print(f"\r{'':<{width}}", end="")  # clear the line
     print(f"\r{s}", end="", **kwargs)
+
+
+def unique_file_name(exec_name) -> str:
+    # Get the base name of the executable
+    filename = os.path.basename(exec_name)
+
+    # Remove the extension
+    filename = filename.split(".")[0]
+
+    d = datetime.datetime.now()
+    return "_".join([
+        f"{filename}",
+        f"{d.year}{d.month:02d}{d.day:02d}",
+        f"{d.hour:02d}{d.minute:02d}{d.second:02d}",
+        f"{os.getpid()}.json"
+    ])
 
 
 def compare_version(ver1: str, ver2: str) -> int:

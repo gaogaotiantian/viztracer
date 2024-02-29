@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import sys
+import tempfile
 from contextlib import contextmanager
 from unittest.case import skipIf
 
@@ -257,6 +258,26 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.html", "cmdline_test.py"], expected_output_file="result.html")
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
+
+    def test_unique_outputfile(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.template(["viztracer", "--output_dir", tmpdir, "-u", "cmdline_test.py"],
+                          expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            self.assertRegex(os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            abspath = os.path.abspath("cmdline_test.py")
+            self.template(["viztracer", "--output_dir", tmpdir, "-u", abspath],
+                          expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            self.assertRegex(os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.template(["viztracer", "--output_dir", tmpdir, "-u", "-m", "numbers"],
+                          expected_output_file=None)
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            self.assertRegex(os.listdir(tmpdir)[0], r"numbers_\d{8}_\d{6}_\d+\.json")
 
     def test_verbose(self):
         result = self.template(["python", "-m", "viztracer", "cmdline_test.py"])
