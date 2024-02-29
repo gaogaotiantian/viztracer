@@ -217,7 +217,6 @@ class VizUI:
             if options.module:
                 exec_name = options.module
             elif command:
-                # Strip the possible .py suffix
                 exec_name = command[0]
             self.ofile = unique_file_name(exec_name)
         if options.output_file:
