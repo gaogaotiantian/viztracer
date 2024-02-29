@@ -61,6 +61,13 @@ Three types of files are supported, html, json and gz(gzip of json file).
     viztracer -o other_name.json my_script.py
     viztracer -o other_name.json.gz my_script.py
 
+You can make viztracer to generate a unique name for the output file by using ``-u`` or ``--unique_output_file``
+
+.. code-block::
+
+    viztracer -u my_script.py
+    viztracer --output_dir ./my_reports -u my_script.py
+
 You can also show flamegraph from ``result.json`` file
 
 .. code-block::
