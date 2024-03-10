@@ -5,10 +5,12 @@ on:
     branches: [ master ]
     paths:
       - "src/viztracer/**"
+      - "setup.py"
       - ".github/workflows/wheels.yml"
   pull_request:
     paths:
       - "src/viztracer/**"
+      - "setup.py"
       - ".github/workflows/wheels.yml"
 
 jobs:
