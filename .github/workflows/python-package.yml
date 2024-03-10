@@ -9,11 +9,13 @@ on:
     paths:
       - "src/viztracer/**"
       - "tests/**"
+      - "setup.py"
       - ".github/workflows/python-package.yml"
   pull_request:
     paths:
       - "src/viztracer/**"
       - "tests/**"
+      - "setup.py"
       - ".github/workflows/python-package.yml"
 
 jobs:
