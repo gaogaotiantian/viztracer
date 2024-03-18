@@ -16,7 +16,6 @@ from .viztracer import VizTracer, get_tracer
 __all__ = [
     "__version__",
     "main",
-    "sim_main",
     "viewer_main",
     "VizTracer",
     "ignore_function",
