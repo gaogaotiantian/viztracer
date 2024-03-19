@@ -380,7 +380,8 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "-m", "numbers"])
 
     def test_import_star(self):
-        self.template(["python", "-c", "from viztracer import *"], script=None, expected_output_file=None)
+        script = "from viztracer import *"
+        self.template(["python", "cmdline_test.py"], script=script, expected_output_file=None)
 
     def test_log_gc(self):
         self.template(["viztracer", "--log_gc", "cmdline_test.py"], script=file_gc)
