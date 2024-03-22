@@ -6,6 +6,7 @@ import atexit
 import base64
 import builtins
 import configparser
+import io
 import json
 import multiprocessing.util  # type: ignore
 import os
@@ -410,8 +411,11 @@ class VizUI:
         search_result = self.search_file(file_name)
         if not search_result:
             return False, f"No such file as {file_name}"
+        if file_name.endswith(".json"):
+            return False, f"viztracer can't run json file, did you mean \"vizviewer {file_name}\"?"
         file_name = search_result
-        with open(file_name, "rb") as f:
+
+        with io.open_code(file_name) as f:
             code_string = f.read()
         if options.magic_comment or options.log_var or options.log_number or options.log_attr or \
                 options.log_func_exec or options.log_exception or options.log_func_entry:

@@ -512,6 +512,8 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_invalid_file(self):
         self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
+        self.template(["viztracer", "result_wrong.json"], script_name="result_wrong.json",
+                      success=False, expected_output_file=[], expected_stdout="vizviewer result_wrong.json")
 
     def test_rcfile(self):
 
