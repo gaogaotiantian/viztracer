@@ -13,6 +13,7 @@ import viztracer
 from viztracer.report_builder import ReportBuilder
 
 from .base_tmpl import BaseTmpl
+from .package_env import package_matrix
 
 
 class TestReportBuilder(BaseTmpl):
@@ -28,6 +29,7 @@ class TestReportBuilder(BaseTmpl):
             result2 = s.getvalue()
         self.assertEqual(result1, result2)
 
+    @package_matrix(["~orjson", "orjson"])
     def test_minimize_memory(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:
@@ -72,6 +74,7 @@ class TestReportBuilder(BaseTmpl):
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
 
+    @package_matrix(["~orjson", "orjson"])
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_invalid_json_file(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -84,6 +87,7 @@ class TestReportBuilder(BaseTmpl):
                 rb.save(s)
             self.assertIn("Invalid json file", mock_stdout.getvalue())
 
+    @package_matrix(["~orjson", "orjson"])
     @patch('sys.stdout', new_callable=io.StringIO)
     def test_all_invalid_json(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -95,6 +99,7 @@ class TestReportBuilder(BaseTmpl):
                     rb.save(s)
             self.assertEqual(str(context.exception), "No valid json files found")
 
+    @package_matrix(["~orjson", "orjson"])
     def test_combine(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path1 = os.path.join(tmpdir, "result1.json")
