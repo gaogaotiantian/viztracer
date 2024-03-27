@@ -134,7 +134,7 @@ class TestReportBuilderCmdline(CmdlineTmpl):
             script = textwrap.dedent(f"""
                 import io
                 from viztracer.report_builder import ReportBuilder
-                rb = ReportBuilder(['{invalid_json_file}'], verbose=1)
+                rb = ReportBuilder(['{os.path.normpath(invalid_json_file)}'], verbose=1)
                 try:
                     with io.StringIO() as s:
                         rb.save(s)
