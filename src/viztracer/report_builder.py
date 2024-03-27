@@ -2,14 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 try:
-    import orjson  # type: ignore
+    import orjson as json  # type: ignore
 except ImportError:
     import json
 
 import gzip
 import os
 import re
-import sys
 from string import Template
 from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
@@ -27,10 +26,7 @@ def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
         with open(data, encoding="utf-8") as f:
             json_str = f.read()
 
-    if "orjson" in sys.modules:
-        return orjson.loads(json_str)
-    else:
-        return json.loads(json_str)
+    return json.loads(json_str)
 
 
 class ReportBuilder:
@@ -161,18 +157,18 @@ class ReportBuilder:
                 tmpl = f.read()
             with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
                 sub["trace_viewer_full"] = f.read()
-            if "orjson" in sys.modules:
-                sub["json_data"] = orjson.dumps(self.combined_json) \
-                                         .decode("utf-8") \
-                                         .replace("</script>", "<\\/script>")
+            if json.__name__ == "orjson":
+                sub["json_data"] = json.dumps(self.combined_json) \
+                                       .decode("utf-8") \
+                                       .replace("</script>", "<\\/script>")
             else:
                 sub["json_data"] = json.dumps(self.combined_json) \
                                        .replace("</script>", "<\\/script>")
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
             self.prepare_json(file_info=file_info)
-            if "orjson" in sys.modules:
-                output_file.write(orjson.dumps(self.combined_json).decode("utf-8"))
+            if json.__name__ == "orjson":
+                output_file.write(json.dumps(self.combined_json).decode("utf-8"))
             else:
                 if self.minimize_memory:
                     json.dump(self.combined_json, output_file)  # type: ignore
