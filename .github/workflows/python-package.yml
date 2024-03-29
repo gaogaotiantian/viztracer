@@ -17,6 +17,8 @@ on:
       - "tests/**"
       - "setup.py"
       - ".github/workflows/python-package.yml"
+  schedule:
+    - cron: '0 10 * * *'
 
 jobs:
   build:
