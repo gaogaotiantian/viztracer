@@ -209,6 +209,20 @@ if __name__ == "__main__":
     gc.enable()
 """
 
+file_pool_with_pickle = """
+from multiprocessing import get_context
+
+class Bar:
+    pass
+
+def foo(args):
+    return Bar()
+
+if __name__ == '__main__':
+    with get_context('spawn').Pool(1) as pool:
+        _ = list(pool.imap_unordered(foo, [1]))
+"""
+
 file_loky = """
 from loky import get_reusable_executor
 import time
@@ -427,6 +441,20 @@ class TestMultiprocessing(CmdlineTmpl):
             # coveragepy has some issue with multiprocess pool
             if not os.getenv("COVERAGE_RUN"):
                 raise e
+
+    @unittest.skipIf("win32" in sys.platform, "Does not support Windows")
+    def test_multiprocessing_pool_with_pickle(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertGreater(len(pids), 1)
+
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=file_pool_with_pickle,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
 
     def test_multiprosessing_stack_depth(self):
         def check_func(data):

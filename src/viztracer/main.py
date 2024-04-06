@@ -399,7 +399,8 @@ class VizUI:
         setattr(main_mod, "__file__", "<string>")
         setattr(main_mod, "__builtins__", globals()["__builtins__"])
 
-        sys.modules["__main__"] = main_mod
+        # __mp_main__ should be a duplicate of __main__ for pickle
+        sys.modules["__main__"] = sys.modules["__mp_main__"] = main_mod
         code = compile(cmd_string, "<string>", "exec")
         sys.argv = ["-c"] + self.command[:]
         return self.run_code(code, main_mod.__dict__)
@@ -440,7 +441,8 @@ class VizUI:
         setattr(main_mod, "__file__", os.path.abspath(file_name))
         setattr(main_mod, "__builtins__", globals()["__builtins__"])
 
-        sys.modules["__main__"] = main_mod
+        # __mp_main__ should be a duplicate of __main__ for pickle
+        sys.modules["__main__"] = sys.modules["__mp_main__"] = main_mod
         code = compile(code_string, os.path.abspath(file_name), "exec")
         sys.path.insert(0, os.path.dirname(file_name))
         sys.argv = command[:]
