@@ -25,12 +25,12 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        os: [ubuntu-latest, macos-latest-arm64, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
         exclude:
           - python-version: '3.8'
-            os: macos-latest-arm64
+            os: macos-latest
           - python-version: '3.9'
-            os: macos-latest-arm64
+            os: macos-latest
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
