@@ -46,7 +46,7 @@ jobs:
         sudo apt-get install gdb
         echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
     - name: Setup lldb
-      if: matrix.os == 'macos-latest' || matrix.os == 'macos-14'
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: latest-stable
