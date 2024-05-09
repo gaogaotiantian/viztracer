@@ -8,8 +8,10 @@
 #include <time.h>
 #if _WIN32
 #include <windows.h>
-#elif __APPLE
+#elif defined(__APPLE__)
 #include <pthread.h>
+#elif defined(__FreeBSD__)
+#include <pthread_np.h>
 #else
 #include <pthread.h>
 #include <sys/syscall.h>
@@ -1503,13 +1505,15 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
 
 #if _WIN32  
     info->tid = GetCurrentThreadId();
-#elif __APPLE__
+#elif defined(__APPLE__)
     __uint64_t tid = 0;
     if (pthread_threadid_np(NULL, &tid)) {
         info->tid = (unsigned long)pthread_self();
     } else {
         info->tid = tid;
     }
+#elif defined(__FreeBSD__)
+    info->tid = pthread_getthreadid_np();
 #else
     info->tid = syscall(SYS_gettid);
 #endif
