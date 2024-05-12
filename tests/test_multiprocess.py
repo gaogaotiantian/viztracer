@@ -51,6 +51,15 @@ p = subprocess.Popen(['python', '-c', 'import time;time.sleep(0.5)'])
 p.wait()
 """
 
+file_subprocess_shell = """
+import subprocess
+import os
+with open(os.path.join(os.path.dirname(__file__), "sub.py"), "w") as f:
+    f.write("print('hello')")
+path = os.path.join(os.path.dirname(__file__), "sub.py")
+print(subprocess.call(f"python {path}", shell=True))
+"""
+
 file_fork = """
 import os
 import time
@@ -294,6 +303,21 @@ class TestSubprocess(CmdlineTmpl):
             self.assertEqual(len(os.listdir(tmpdir)), 1)
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 self.assertSubprocessName("python -c", json.load(f))
+
+    def test_subprocess_shell_true(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
+                          expected_output_file=output_path,
+                          script=file_subprocess_shell,
+                          expected_stdout=".*hello.*",
+                          check_func=check_func)
 
     def test_nested(self):
         def check_func(data):
