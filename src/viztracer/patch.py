@@ -66,7 +66,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
     def subprocess_init(self: subprocess.Popen[Any], args: Union[str, Sequence[Any], Any], **kwargs: Any) -> None:
         new_args = args
         if isinstance(new_args, str):
-            new_args = shlex.split(new_args)
+            new_args = shlex.split(new_args, posix=sys.platform != "win32")
         if isinstance(new_args, Sequence):
             if "python" in os.path.basename(new_args[0]):
                 new_args = build_command(new_args)
