@@ -215,10 +215,12 @@ class ReportBuilder:
                 elif msg_type == "view_command":
                     report_abspath = os.path.abspath(msg_args["output_file"])
                     print("Use the following command to open the report:")
-                    if " " in report_abspath:
-                        color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
-                    else:
-                        color_print("OKGREEN", f"vizviewer {report_abspath}")
+                    # if " " in report_abspath:
+                    #     color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
+                    # else:
+                    #     color_print("OKGREEN", f"vizviewer {report_abspath}")
+
+                    color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
                 elif msg_type == "invalid_json":
                     print("")
                     color_print("WARNING", "Found and ignored invalid json file, you may lost some process data.")
