@@ -324,6 +324,8 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
     }
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts(info);
+    info->stack_top->func = (PyObject*) code;
+    Py_INCREF(code);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame);
     }
@@ -336,7 +338,7 @@ cleanup:
 }
 
 int
-snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
+snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
 {
     // If it's a call, we need a new node, and we need to update the stack
     if (!info->stack_top->next) {
@@ -345,6 +347,8 @@ snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct Thread
     }
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts(info);
+    info->stack_top->func = arg;
+    Py_INCREF(arg);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame);
     }
@@ -363,7 +367,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
 
         if (log_this_entry) {
             struct EventNode* node = get_next_node(self);
-            PyCodeObject* code = PyFrame_GetCode(frame);
+            PyCodeObject* code = (PyCodeObject*) stack_top->func;
 
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
@@ -390,8 +394,6 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
                     Py_INCREF(info->curr_task);
                 }
             }
-
-            Py_DECREF(code);
         }
         // Finish return whether to log the data
         info->stack_top = info->stack_top->prev;
@@ -400,6 +402,8 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
             Py_DECREF(stack_top->args);
             stack_top->args = NULL;
         }
+
+        Py_XDECREF(stack_top->func);
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
                 info->curr_task &&
@@ -425,7 +429,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
 
         if (log_this_entry) {
             struct EventNode* node = get_next_node(self);
-            PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
+            PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
             node->data.fee.dur = dur;
@@ -462,6 +466,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
             Py_DECREF(stack_top->args);
             stack_top->args = NULL;
         }
+        Py_XDECREF(stack_top->func);
     }
 
     return 0;
@@ -534,7 +539,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     case PyTrace_CALL:
         return snaptrace_pycall_callback(self, frame, info);
     case PyTrace_C_CALL:
-        return snaptrace_ccall_callback(self, frame, info);
+        return snaptrace_ccall_callback(self, frame, info, arg);
     case PyTrace_RETURN:
         return snaptrace_pyreturn_callback(self, frame, info, arg);
     case PyTrace_C_RETURN:

@@ -32,6 +32,8 @@ struct FunctionNode {
     struct FunctionNode* prev;
     double ts;
     PyObject* args;
+    // PyCodeObject* for Python function, PyCFunctionObject* for C function
+    PyObject* func;
 };
 
 struct ThreadInfo {
