@@ -72,7 +72,7 @@ class TestSegFaultRegression(BaseTmpl):
         except Exception:
             pass
         tracer.stop()
-        tracer.cleanup()
+        tracer.clear()
 
 
 class TestFunctionArg(BaseTmpl):

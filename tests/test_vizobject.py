@@ -61,7 +61,7 @@ class TestVizObject(BaseTmpl):
     def test_trigger_on_change(self):
         tracer = VizTracer(verbose=0)
         tracer.stop()
-        tracer.cleanup()
+        tracer.clear()
         tracer.start()
         a = VizObject(tracer, "my variable", trigger_on_change=False)
         a.hello = 1

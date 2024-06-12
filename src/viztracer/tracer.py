@@ -271,9 +271,6 @@ class _VizTracer:
     def clear(self) -> None:
         self._tracer.clear()
 
-    def cleanup(self) -> None:
-        self._tracer.cleanup()
-
     def enable_thread_tracing(self) -> None:
         sys.setprofile(self._tracer.threadtracefunc)
 

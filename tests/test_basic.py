@@ -49,7 +49,7 @@ class TestTracerBasic(BaseTmpl):
         t.parse()
         self.assertEventNumber(t.data, 21)
 
-    def test_cleanup(self):
+    def test_clear(self):
         def fib(n):
             if n == 1 or n == 0:
                 return 1
@@ -59,7 +59,7 @@ class TestTracerBasic(BaseTmpl):
         t.start()
         fib(5)
         t.stop()
-        t.cleanup()
+        t.clear()
         t.parse()
         self.assertEventNumber(t.data, 0)
 

@@ -241,11 +241,7 @@ VizTracer
 
     .. py:method:: clear()
 
-        clear all the data
-
-    .. py:method:: cleanup()
-
-        clear all the data and free the memory allocated
+        clear all the collected data
 
     .. py:method:: parse()
 

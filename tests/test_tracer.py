@@ -62,9 +62,9 @@ class TestCTracer(BaseTmpl):
         tracer.start()
         fib(5)
         tracer.stop()
-        tracer.cleanup()
         tracer.clear()
-        tracer.cleanup()
+        tracer.clear()
+        tracer.clear()
 
 
 class TestCircularBuffer(BaseTmpl):

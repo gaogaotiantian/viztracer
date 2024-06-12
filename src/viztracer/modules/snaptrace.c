@@ -27,14 +27,13 @@
 int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
 int snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
-static PyObject* snaptrace_start(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_stop(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_pause(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_resume(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_load(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_start(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_stop(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_dump(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_clear(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_cleanup(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args);
@@ -43,7 +42,7 @@ static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_getts(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* args);
 static void snaptrace_flush_unfinished(TracerObject* self);
@@ -204,12 +203,11 @@ void clear_stack(struct FunctionNode** stack_top) {
 
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
-    {"start", (PyCFunction)snaptrace_start, METH_VARARGS, "start profiling"},
-    {"stop", (PyCFunction)snaptrace_stop, METH_VARARGS, "stop profiling"},
-    {"load", (PyCFunction)snaptrace_load, METH_VARARGS, "load buffer"},
+    {"start", (PyCFunction)snaptrace_start, METH_NOARGS, "start profiling"},
+    {"stop", (PyCFunction)snaptrace_stop, METH_NOARGS, "stop profiling"},
+    {"load", (PyCFunction)snaptrace_load, METH_NOARGS, "load buffer"},
     {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS, "dump buffer to file"},
-    {"clear", (PyCFunction)snaptrace_clear, METH_VARARGS, "clear buffer"},
-    {"cleanup", (PyCFunction)snaptrace_cleanup, METH_VARARGS, "free the memory allocated"},
+    {"clear", (PyCFunction)snaptrace_clear, METH_NOARGS, "clear buffer"},
     {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"addinstant", (PyCFunction)snaptrace_addinstant, METH_VARARGS, "add instant event"},
@@ -218,10 +216,10 @@ static PyMethodDef Tracer_methods[] = {
     {"addraw", (PyCFunction)snaptrace_addraw, METH_VARARGS, "add raw event"},
     {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
-    {"getts", (PyCFunction)snaptrace_getts, METH_VARARGS, "get timestamp"},
+    {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
     {"setcurrstack", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
-    {"pause", (PyCFunction)snaptrace_pause, METH_VARARGS, "pause profiling"},
-    {"resume", (PyCFunction)snaptrace_resume, METH_VARARGS, "resume profiling"},
+    {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
+    {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
     {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_VARARGS, "reset ignore stack depth"},
     {NULL, NULL, 0, NULL}
 };
@@ -399,20 +397,14 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
         // Finish return whether to log the data
         info->stack_top = info->stack_top->prev;
 
-        if (stack_top->args) {
-            Py_DECREF(stack_top->args);
-            stack_top->args = NULL;
-        }
-
+        Py_CLEAR(stack_top->args);
         Py_CLEAR(stack_top->func);
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
                 info->curr_task &&
                 frame == info->curr_task_frame) {
-            Py_DECREF(info->curr_task);
-            info->curr_task = NULL;
-            Py_DECREF(info->curr_task_frame);
-            info->curr_task_frame = NULL;
+            Py_CLEAR(info->curr_task);
+            Py_CLEAR(info->curr_task_frame);
         }
     }
 
@@ -463,11 +455,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
         // Finish return whether to log the data
         info->stack_top = info->stack_top->prev;
 
-        if (stack_top->args) {
-            Py_DECREF(stack_top->args);
-            stack_top->args = NULL;
-        }
-
+        Py_CLEAR(stack_top->args);
         Py_CLEAR(stack_top->func);
     }
 
@@ -584,7 +572,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
 // =============================================================================
 
 static PyObject*
-snaptrace_start(TracerObject* self, PyObject* args)
+snaptrace_start(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (curr_tracer) {
         printf("Warning! Overwrite tracer! You should not have two VizTracer recording at the same time!\n");
@@ -599,7 +587,7 @@ snaptrace_start(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_stop(TracerObject* self, PyObject* args)
+snaptrace_stop(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self) {
         struct ThreadInfo* info = get_thread_info(self);
@@ -618,7 +606,7 @@ snaptrace_stop(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_pause(TracerObject* self, PyObject* args)
+snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
@@ -640,7 +628,7 @@ snaptrace_pause(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_resume(TracerObject* self, PyObject* args)
+snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->collecting) {
         PyGILState_STATE state = PyGILState_Ensure();
@@ -731,7 +719,7 @@ snaptrace_flush_unfinished(TracerObject* self)
 }
 
 static PyObject*
-snaptrace_load(TracerObject* self, PyObject* args)
+snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     PyObject* lst = PyList_New(0);
 
@@ -741,7 +729,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
     PyObject* cat_fee = PyUnicode_FromString("FEE");
     PyObject* cat_instant = PyUnicode_FromString("INSTANT");
     PyObject* ph_B = PyUnicode_FromString("B");
-    PyObject* ph_E = PyUnicode_FromString("E");
     PyObject* ph_i = PyUnicode_FromString("i");
     PyObject* ph_X = PyUnicode_FromString("X");
     PyObject* ph_C = PyUnicode_FromString("C");
@@ -978,7 +965,6 @@ snaptrace_load(TracerObject* self, PyObject* args)
     Py_DECREF(cat_fee);
     Py_DECREF(cat_instant);
     Py_DECREF(ph_B);
-    Py_DECREF(ph_E);
     Py_DECREF(ph_i);
     Py_DECREF(ph_X);
     Py_DECREF(ph_C);
@@ -1206,7 +1192,7 @@ snaptrace_dump(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_clear(TracerObject* self, PyObject* args)
+snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     while (curr != self->buffer + self->buffer_tail_idx) {
@@ -1219,13 +1205,6 @@ snaptrace_clear(TracerObject* self, PyObject* args)
     }
     self->buffer_tail_idx = self->buffer_head_idx;
 
-    Py_RETURN_NONE;
-}
-
-static PyObject* 
-snaptrace_cleanup(TracerObject* self, PyObject* args)
-{
-    snaptrace_clear(self, args);
     Py_RETURN_NONE;
 }
 
@@ -1251,7 +1230,7 @@ snaptrace_setpid(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_getts(TracerObject* self, PyObject* args)
+snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
     double ts = get_ts(info);
@@ -1680,18 +1659,15 @@ static void snaptrace_threaddestructor(void* key) {
             }
             while (info->stack_top) {
                 tmp = info->stack_top;
-                if (tmp->args) {
-                    Py_DECREF(tmp->args);
-                    tmp->args = NULL;
-                }
+                Py_CLEAR(tmp->args);
                 Py_CLEAR(tmp->func);
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }
         }
         info->stack_top = NULL;
-        info->curr_task = NULL;
-        info->curr_task_frame = NULL;
+        Py_CLEAR(info->curr_task);
+        Py_CLEAR(info->curr_task_frame);
         info->metadata_node->thread_info = NULL;
         PyMem_FREE(info);
         PyGILState_Release(state);
@@ -1766,24 +1742,19 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 static void
 Tracer_dealloc(TracerObject* self)
 {
-    snaptrace_cleanup(self, NULL);
+    snaptrace_clear(self, NULL);
     if (self->lib_file_path) {
         PyMem_FREE(self->lib_file_path);
     }
-    if (self->include_files) {
-        Py_DECREF(self->include_files);
-    }
-    if (self->exclude_files) {
-        Py_DECREF(self->exclude_files);
-    }
+    Py_XDECREF(self->include_files);
+    Py_XDECREF(self->exclude_files);
     PyMem_FREE(self->buffer);
 
     struct MetadataNode* node = self->metadata_head;
     struct MetadataNode* prev = NULL;
     while (node) {
         prev = node;
-        Py_DECREF(node->name);
-        node->name = NULL;
+        Py_CLEAR(node->name);
         node = node->next;
         PyMem_FREE(prev);
     }
