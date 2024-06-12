@@ -404,8 +404,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
             stack_top->args = NULL;
         }
 
-        Py_XDECREF(stack_top->func);
-        stack_top->func = NULL;
+        Py_CLEAR(stack_top->func);
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
                 info->curr_task &&
@@ -468,8 +467,8 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
             Py_DECREF(stack_top->args);
             stack_top->args = NULL;
         }
-        Py_XDECREF(stack_top->func);
-        stack_top->func = NULL;
+
+        Py_CLEAR(stack_top->func);
     }
 
     return 0;
@@ -1685,10 +1684,7 @@ static void snaptrace_threaddestructor(void* key) {
                     Py_DECREF(tmp->args);
                     tmp->args = NULL;
                 }
-                if (tmp->func) {
-                    Py_DECREF(tmp->func);
-                    tmp->func = NULL;
-                }
+                Py_CLEAR(tmp->func);
                 info->stack_top = info->stack_top->next;
                 PyMem_FREE(tmp);
             }
