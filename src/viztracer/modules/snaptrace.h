@@ -45,12 +45,14 @@ struct ThreadInfo {
     PyObject* curr_task;
     PyFrameObject* curr_task_frame;
     double prev_ts;
+    struct MetadataNode* metadata_node;
 };
 
 struct MetadataNode {
+    struct MetadataNode* next;
     unsigned long tid;
     PyObject* name;
-    struct MetadataNode* next;
+    struct ThreadInfo* thread_info;
 };
 
 typedef struct {

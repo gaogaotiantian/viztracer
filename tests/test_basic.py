@@ -95,6 +95,17 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.parse()
         self.assertEventNumber(tracer.data, 10)
 
+    def test_unfinished_function(self):
+        def f():
+            tracer.stop()
+            tracer.parse()
+
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        f()
+        self.assertEventNumber(tracer.data, 1)
+        self.assertEqual(tracer.data["traceEvents"][-1]["ph"], "B")
+
     def test_save(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()
