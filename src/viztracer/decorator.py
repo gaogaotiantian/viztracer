@@ -47,7 +47,7 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
                 os.mkdir(output_dir)
             file_name = os.path.join(output_dir, f"result_{func.__name__}_{int(100000 * time.time())}.json")
             tracer.fork_save(file_name)
-            tracer.cleanup()
+            tracer.clear()
             return ret
 
         return wrapper
