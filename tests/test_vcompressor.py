@@ -344,13 +344,13 @@ tracer.start()
 class MyThreadSparse(threading.Thread):
     def run(self):
         counter = VizCounter(tracer, 'thread counter ' + str(self.ident))
-        counter.a = sys.maxsize - 1
+        counter.a = -1
         time.sleep(0.01)
-        counter.a = sys.maxsize * 2
+        counter.a = counter.a * 2
         time.sleep(0.01)
-        counter.a = -sys.maxsize + 2
+        counter.a = 2
         time.sleep(0.01)
-        counter.a = -sys.maxsize * 2
+        counter.a = counter.a * 2
 
 main_counter = VizCounter(tracer, 'main counter')
 thread1 = MyThreadSparse()
@@ -431,8 +431,8 @@ threads = [thread1, thread2]
 for thread in threads:
     thread.join()
 
-main_viz_object.arg1 = {100: "string1"}
-main_viz_object.arg2 = {100: "string1", -100: "string2"}
+main_viz_object.arg1 = {"100": "string1"}
+main_viz_object.arg2 = {"100": "string1", "-100": "string2"}
 
 tracer.stop()
 tracer.save(output_file='%s')
