@@ -228,7 +228,7 @@ class TestFilterPerformance(BaseTmpl):
             func()
             baseline = t.get_time()
         tracer.stop()
-        tracer.cleanup()
+        tracer.clear()
 
         tracer.include_files = ["/"]
         tracer.start()
@@ -236,7 +236,7 @@ class TestFilterPerformance(BaseTmpl):
             func()
             include_files = t.get_time()
         tracer.stop()
-        tracer.cleanup()
+        tracer.clear()
 
         tracer.include_files = []
         tracer.max_stack_depth = 200
@@ -245,7 +245,7 @@ class TestFilterPerformance(BaseTmpl):
             func()
             max_stack_depth = t.get_time()
         tracer.stop()
-        tracer.cleanup()
+        tracer.clear()
 
         logging.info("Filter performance:")
         logging.info(f"Baseline:        {baseline:.9f}(1)")
