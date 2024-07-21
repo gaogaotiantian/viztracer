@@ -16,7 +16,7 @@ More help can be found in "Support - Controls".
 * Super easy to use, no source code change for most features, no package dependency
 * Supports threading, multiprocessing, subprocess and async
 * Powerful front-end, able to render GB-level trace smoothly
-* Works on Linux/MacOS/Windows
+* Works on linux/macOS/windows
 
 ## Install
 
