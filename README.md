@@ -277,6 +277,6 @@ Please send bug reports and feature requests through [github issue tracker](http
 
 ## License
 
-Copyright 2020-2023 Tian Gao.
+Copyright 2020-2024 Tian Gao.
 
 Distributed under the terms of the  [Apache 2.0 license](https://github.com/gaogaotiantian/viztracer/blob/master/LICENSE).
