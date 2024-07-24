@@ -189,7 +189,7 @@ class AstTransformer(ast.NodeTransformer):
             event="instant",
         )
 
-    def get_add_variable_node(self, name: str, var_node: ast.AST, event: str) -> ast.Expr:
+    def get_add_variable_node(self, name: str, var_node: ast.expr, event: str) -> ast.Expr:
         node_instrument = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
