@@ -347,14 +347,15 @@ class CodeMonkey:
     def add_source_processor(self):
         self.source_processor = SourceProcessor()
 
-    def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1):
+    def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1, *, _feature_version=-1):
         if self.source_processor is not None:
             source = self.source_processor.process(source)
         if self.ast_transformers:
-            tree = self._compile(source, filename, mode, flags | ast.PyCF_ONLY_AST, dont_inherit, optimize)
+            tree = self._compile(source, filename, mode, flags | ast.PyCF_ONLY_AST,
+                                 dont_inherit, optimize, _feature_version=_feature_version)
             for trans in self.ast_transformers:
                 trans.visit(tree)
                 ast.fix_missing_locations(tree)
-            return self._compile(tree, filename, mode, flags, dont_inherit, optimize)
+            return self._compile(tree, filename, mode, flags, dont_inherit, optimize, _feature_version=_feature_version)
 
-        return self._compile(source, filename, mode, flags, dont_inherit, optimize)
+        return self._compile(source, filename, mode, flags, dont_inherit, optimize, _feature_version=_feature_version)
