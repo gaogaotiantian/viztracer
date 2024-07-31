@@ -4,7 +4,7 @@
 try:
     import orjson as json  # type: ignore
 except ImportError:
-    import json
+    import json  # type: ignore
 
 import gzip
 import os
@@ -163,7 +163,7 @@ class ReportBuilder:
                                        .replace("</script>", "<\\/script>")
             else:
                 sub["json_data"] = json.dumps(self.combined_json) \
-                                       .replace("</script>", "<\\/script>")
+                                       .replace("</script>", "<\\/script>")  # type: ignore
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
             self.prepare_json(file_info=file_info)
@@ -173,7 +173,7 @@ class ReportBuilder:
                 if self.minimize_memory:
                     json.dump(self.combined_json, output_file)  # type: ignore
                 else:
-                    output_file.write(json.dumps(self.combined_json))
+                    output_file.write(json.dumps(self.combined_json))  # type: ignore
 
     def save(self, output_file: Union[str, TextIO] = "result.html", file_info: bool = True) -> None:
         if isinstance(output_file, str):
