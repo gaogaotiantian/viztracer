@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import sys
+import textwrap
 import tempfile
 from contextlib import contextmanager
 from unittest.case import skipIf
@@ -399,6 +400,15 @@ class TestCommandLineBasic(CmdlineTmpl):
                       script=file_log_var,
                       expected_output_file="result.json",
                       expected_entries=12)
+
+        code_ast = textwrap.dedent("""
+            import ast
+            tree = ast.parse("a = 1")
+        """)
+        self.template(["viztracer", "--log_var", "tree", "-o", "result.json", "cmdline_test.py"],
+                      script=code_ast,
+                      expected_output_file="result.json",
+                      expected_entries=4)
 
     def test_log_attr(self):
         self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"],
