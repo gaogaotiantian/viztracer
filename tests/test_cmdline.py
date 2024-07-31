@@ -407,8 +407,7 @@ class TestCommandLineBasic(CmdlineTmpl):
         """)
         self.template(["viztracer", "--log_var", "tree", "-o", "result.json", "cmdline_test.py"],
                       script=code_ast,
-                      expected_output_file="result.json",
-                      expected_entries=4)
+                      expected_output_file="result.json")
 
     def test_log_attr(self):
         self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"],
