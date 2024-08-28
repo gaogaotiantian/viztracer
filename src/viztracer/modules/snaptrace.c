@@ -373,11 +373,8 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
             node->data.fee.dur = dur;
             node->tid = info->tid;
             node->data.fee.type = PyTrace_RETURN;
-            node->data.fee.co_name = code->co_name;
-            node->data.fee.co_filename = code->co_filename;
-            node->data.fee.co_firstlineno = code->co_firstlineno;
-            Py_INCREF(node->data.fee.co_name);
-            Py_INCREF(node->data.fee.co_filename);
+            node->data.fee.code = code;
+            Py_INCREF(code);
             if (stack_top->args) {
                 // steal the reference when return
                 node->data.fee.args = stack_top->args;
@@ -679,11 +676,8 @@ snaptrace_flush_unfinished(TracerObject* self)
             if (PyCode_Check(func_node->func)) {
                 PyCodeObject* code = (PyCodeObject*) func_node->func;
                 fee_node->data.fee.type = PyTrace_CALL;
-                fee_node->data.fee.co_name = code->co_name;
-                fee_node->data.fee.co_filename = code->co_filename;
-                fee_node->data.fee.co_firstlineno = code->co_firstlineno;
-                Py_INCREF(fee_node->data.fee.co_name);
-                Py_INCREF(fee_node->data.fee.co_filename);
+                fee_node->data.fee.code = code;
+                Py_INCREF(code);
             } else if (PyCFunction_Check(func_node->func)) {
                 PyCFunctionObject* cfunc = (PyCFunctionObject*) func_node->func;
                 fee_node->data.fee.type = PyTrace_C_CALL;
