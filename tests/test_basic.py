@@ -87,6 +87,23 @@ class TestVizTracerBasic(BaseTmpl):
         os.remove("test_with.json")
         self.assertTrue(had_exception)
 
+    def test_name_with_class(self):
+        class A:
+            def f(self):
+                pass
+
+        tracer = VizTracer(verbose=0)
+        tracer.start()
+        A().f()
+        tracer.stop()
+        tracer.parse()
+        if sys.version_info >= (3, 11):
+            self.assertIn("TestVizTracerBasic.test_name_with_class.<locals>.A.f",
+                          [e["name"].split()[0] for e in tracer.data["traceEvents"]])
+        else:
+            self.assertIn("f",
+                          [e["name"].split()[0] for e in tracer.data["traceEvents"]])
+
     def test_tracer_entries(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()

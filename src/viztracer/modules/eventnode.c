@@ -9,9 +9,7 @@ void clear_node(struct EventNode* node) {
     switch (node->ntype) {
     case FEE_NODE:
         if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-            Py_DECREF(node->data.fee.co_filename);
-            Py_DECREF(node->data.fee.co_name);
-            node->data.fee.co_firstlineno = 0;
+            Py_DECREF(node->data.fee.code);
             if (node->data.fee.args) {
                 Py_DECREF(node->data.fee.args);
                 node->data.fee.args = NULL;
@@ -91,9 +89,13 @@ PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
     // string instances
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
         name = PyUnicode_FromFormat("%s (%s:%d)",
-               PyUnicode_AsUTF8(node->data.fee.co_name),
-               PyUnicode_AsUTF8(node->data.fee.co_filename),
-               node->data.fee.co_firstlineno);
+#if PY_VERSION_HEX >= 0x030B0000
+               PyUnicode_AsUTF8(node->data.fee.code->co_qualname),
+#else
+               PyUnicode_AsUTF8(node->data.fee.code->co_name),
+#endif
+               PyUnicode_AsUTF8(node->data.fee.code->co_filename),
+               node->data.fee.code->co_firstlineno);
     } else {
         if (node->data.fee.m_module) {
             // The function belongs to a module
@@ -142,10 +144,14 @@ static void fputs_escape(const char* s, FILE* fptr)
 void fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name)
 {
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-        fputs(PyUnicode_AsUTF8(node->data.fee.co_name), fptr);
+#if PY_VERSION_HEX >= 0x030B0000
+        fputs(PyUnicode_AsUTF8(node->data.fee.code->co_qualname), fptr);
+#else
+        fputs(PyUnicode_AsUTF8(node->data.fee.code->co_name), fptr);
+#endif
         fputs(" (", fptr);
-        fputs_escape(PyUnicode_AsUTF8(node->data.fee.co_filename), fptr);
-        fprintf(fptr, ":%d)", node->data.fee.co_firstlineno);
+        fputs_escape(PyUnicode_AsUTF8(node->data.fee.code->co_filename), fptr);
+        fprintf(fptr, ":%d)", node->data.fee.code->co_firstlineno);
     } else {
         const char* ml_name = node->data.fee.ml_name;
 

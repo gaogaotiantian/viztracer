@@ -24,11 +24,7 @@ struct FEEData {
             const char* ml_name;
             const char* tp_name;
         };
-        struct {
-            PyObject* co_name;
-            PyObject* co_filename;
-            int co_firstlineno;
-        };
+        PyCodeObject* code;
     };
     int type;
     double dur;
