@@ -126,7 +126,7 @@ except Exception:
 
 file_log_audit = """
 # something viztracer does not use
-import cgi
+import netrc
 a = 0
 b = id(a)
 """
