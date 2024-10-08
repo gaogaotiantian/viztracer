@@ -66,15 +66,15 @@ static PyObject* curr_task_getters[2] = {0};
 LARGE_INTEGER qpc_freq;
 #endif
 
-#ifdef Py_NOGIL
-// The "nogil" implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
+#ifdef Py_GIL_DISABLED
+// The free threading implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
 // a per-tracer mutex. The mutex is acquired in SNAPTRACE_THREAD_PROTECT_START
 // and released in SNAPTRACE_THREAD_PROTECT_END.
 // NOTE: these macros delimit a C scope so any variables accessed after
 // a SNAPTRACE_THREAD_PROTECT_END need to be declared before
 // SNAPTRACE_THREAD_PROTECT_START.
-#define SNAPTRACE_THREAD_PROTECT_START(self) Py_BEGIN_CRITICAL_SECTION(&self->mutex)
-#define SNAPTRACE_THREAD_PROTECT_END(self) Py_END_CRITICAL_SECTION
+#define SNAPTRACE_THREAD_PROTECT_START(self) Py_BEGIN_CRITICAL_SECTION(self)
+#define SNAPTRACE_THREAD_PROTECT_END(self) Py_END_CRITICAL_SECTION()
 #else
 // The default implementation is a no-op.
 #define SNAPTRACE_THREAD_PROTECT_START(self)
@@ -1804,6 +1804,10 @@ PyInit_snaptrace(void)
     if (!m) {
         return NULL;
     }
+
+#ifdef Py_GIL_DISABLED
+    PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#endif
 
     Py_INCREF(&TracerType);
     if (PyModule_AddObject(m, "Tracer", (PyObject*) &TracerType) < 0) {

@@ -81,9 +81,6 @@ typedef struct {
     long buffer_size;
     long buffer_head_idx;
     long buffer_tail_idx;
-#ifdef Py_NOGIL
-    PyMutex mutex;
-#endif
     struct MetadataNode* metadata_head;
 } TracerObject;
 
