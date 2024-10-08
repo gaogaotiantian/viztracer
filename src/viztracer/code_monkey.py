@@ -259,8 +259,6 @@ class AstTransformer(ast.NodeTransformer):
             return f"({','.join([self.get_string_of_expr(elt) for elt in node.elts])})"
         elif isinstance(node, ast.List):
             return f"[{','.join([self.get_string_of_expr(elt) for elt in node.elts])}]"
-        elif sys.version_info < (3, 9) and isinstance(node, ast.Index):
-            return self.get_string_of_expr(node.value)
         elif isinstance(node, ast.Slice):
             lower = self.get_string_of_expr(node.lower) if "lower" in node._fields and node.lower else ""
             upper = self.get_string_of_expr(node.upper) if "upper" in node._fields and node.upper else ""
@@ -271,8 +269,6 @@ class AstTransformer(ast.NodeTransformer):
                 return f"{lower}:{upper}"
             else:
                 return f"{lower}:"
-        elif sys.version_info < (3, 9) and isinstance(node, ast.ExtSlice):
-            return ",".join([self.get_string_of_expr(dim) for dim in node.dims])
         color_print("WARNING", "Unexpected node type {} for ast.Assign. \
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return ""

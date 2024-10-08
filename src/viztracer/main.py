@@ -372,13 +372,10 @@ class VizUI:
         # threading._threading_atexits or it will deadlock if not explicitly
         # release the resource in the code
         # Python 3.9+ has this issue
-        try:
-            if threading._threading_atexits:  # type: ignore
-                for atexit_call in threading._threading_atexits:  # type: ignore
-                    atexit_call()
-                threading._threading_atexits = []  # type: ignore
-        except AttributeError:
-            pass
+        if threading._threading_atexits:  # type: ignore
+            for atexit_call in threading._threading_atexits:  # type: ignore
+                atexit_call()
+            threading._threading_atexits = []  # type: ignore
 
         return True, None
 
