@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [39, 310, 311, 312, 313]
         manylinux-image: [manylinux2014]
         arch: [auto, aarch64]
 
@@ -58,7 +58,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, macos-13, windows-latest]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [39, 310, 311, 312, 313]
         exclude:
           - python-version: '38'
             os: macos-latest
