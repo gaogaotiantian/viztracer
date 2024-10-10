@@ -49,6 +49,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
+          CIBW_FREE_THREADED_SUPPORT: 1
 
   build-wheels-macos-windows:
     name: Build wheels on ${{ matrix.os }}
