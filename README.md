@@ -212,11 +212,7 @@ Refer to [async docs](https://viztracer.readthedocs.io/en/stable/concurrency.htm
 
 ### Flamegraph
 
-VizTracer can show flamegraph of traced data.
-
-```sh
-vizviewer --flamegraph result.json
-```
+Perfetto supports native flamegraph, just select slices on the UI and choose "Slice Flamegraph".
 
 [![example_img](https://github.com/gaogaotiantian/viztracer/blob/master/img/flamegraph.png)](https://github.com/gaogaotiantian/viztracer/blob/master/img/flamegraph.png)
 

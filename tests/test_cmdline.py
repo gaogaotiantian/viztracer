@@ -344,14 +344,14 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_trace_self(self):
         def check_func(data):
-            self.assertGreater(len(data["traceEvents"]), 10000)
+            self.assertGreater(len(data["traceEvents"]), 1000)
 
         example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
         if sys.platform == "win32":
-            self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
+            self.template(["viztracer", "--trace_self", "vizviewer", "--server_only",
                            os.path.join(example_json_dir, "multithread.json")], success=False)
         else:
-            self.template(["viztracer", "--trace_self", "vizviewer", "--flamegraph", "--server_only",
+            self.template(["viztracer", "--trace_self", "vizviewer", "--server_only",
                            os.path.join(example_json_dir, "multithread.json")],
                           send_sig=(signal.SIGTERM, "Ctrl+C"), expected_output_file="result.json", check_func=check_func)
 
