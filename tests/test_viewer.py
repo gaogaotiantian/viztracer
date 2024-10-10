@@ -339,6 +339,34 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
+    def test_vizviewer_info(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                f.write(json_script)
+
+            v = Viewer(f.name, once=True)
+            v.run()
+            try:
+                time.sleep(0.5)
+                resp = urllib.request.urlopen(f"{v.url()}/vizviewer_info")
+                self.assertTrue(resp.code == 200)
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen(f"{v.url()}/localtrace")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+            except Exception:
+                v.stop()
+                raise
+            finally:
+                try:
+                    v.process.wait(timeout=20)
+                    v.stop()
+                except subprocess.TimeoutExpired:
+                    v.stop()
+                    v.process.kill()
+        finally:
+            os.remove(f.name)
+
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -415,4 +443,6 @@ class TestViewer(CmdlineTmpl):
     def test_invalid(self):
         self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
         self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)
-        self.template(["vizviewer", "--flamegraph"], success=False, expected_output_file=None)
+        self.template(["vizviewer", "--flamegraph", "README.md"], success=False, expected_output_file=None)
+        self.template(["vizviewer", "--flamegraph", "example/json/multithread.md"],
+                      success=False, expected_output_file=None, expected_stdout="--flamegraph is removed.*")
