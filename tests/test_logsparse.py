@@ -76,6 +76,29 @@ if __name__ == "__main__":
         time.sleep(0.1)
 """
 
+file_multiprocess_spawn = """
+import multiprocessing
+import multiprocessing.pool
+from viztracer import get_tracer
+
+def bar():
+    pass
+
+def child(idx):
+    with get_tracer().log_event("custom_event"):
+        bar()
+
+def main():
+    with multiprocessing.pool.Pool(
+        2,
+        context=multiprocessing.get_context('spawn'),
+    ) as pool:
+        pool.map(child, range(3))
+
+if __name__ == "__main__":
+    main()
+"""
+
 file_context_manager = """
 from viztracer import VizTracer, log_sparse
 
@@ -198,6 +221,14 @@ class TestLogSparse(CmdlineTmpl):
                 # coveragepy has some issue with multiprocess pool
                 if not os.getenv("COVERAGE_RUN"):
                     raise e
+
+    def test_multiprocess_spawn(self):
+        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+                      script=file_multiprocess_spawn,
+                      expected_output_file="result.json",
+                      expected_entries=3,
+                      check_func=functools.partial(self.check_func, target=['custom_event'] * 3),
+                      concurrency="multiprocessing")
 
     def test_context_manager(self):
         self.template(["python", "cmdline_test.py"], script=file_context_manager,
