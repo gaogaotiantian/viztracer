@@ -78,22 +78,20 @@ if __name__ == "__main__":
 
 file_multiprocess_spawn = """
 import multiprocessing
-import multiprocessing.pool
 from viztracer import get_tracer
 
 def bar():
     pass
 
-def child(idx):
-    with get_tracer().log_event("custom_event"):
-        bar()
+def child(it):
+    for idx in it:
+        with get_tracer().log_event(f"custom_event"):
+            bar()
 
 def main():
-    with multiprocessing.pool.Pool(
-        2,
-        context=multiprocessing.get_context('spawn'),
-    ) as pool:
-        pool.map(child, range(3))
+    p = multiprocessing.get_context("spawn").Process(target=child, args=(range(3), ))
+    p.start()
+    p.join()
 
 if __name__ == "__main__":
     main()
