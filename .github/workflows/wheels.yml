@@ -82,3 +82,4 @@ jobs:
         env:
           CIBW_BUILD: 'cp${{ matrix.python-version }}-*'
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
+          CIBW_FREE_THREADED_SUPPORT: 1
