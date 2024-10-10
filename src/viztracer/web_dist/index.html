@@ -6,7 +6,7 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
   <link rel="shortcut icon" id="favicon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
 </head>
-<body data-perfetto_version='{"stable":"v37.0-a9e8e2a6b"}'>
+<body data-perfetto_version='{"stable":"v47.0-76b5f54bf"}'>
   <!--
     Don't add any content here. The whole <body> is replaced by
     frontend/index.ts when bootstrapping. This is only used for very early
@@ -28,7 +28,10 @@
 <span>Perfetto UI - An unrecoverable problem occurred</span>
 
 If you are seeing this message, something went wrong while loading the UI.
-Please file a bug (details below) and try these remediation steps:
+In most cases this is due to very slow or flaky network and it goes away by
+disabling and re-enabling WiFi or trying reloading.
+
+If the problem persists try these remediation steps:
 
 * Force-reload the page with Ctrl+Shift+R (Mac: Meta+Shift+R) or
   Shift + click on the refresh button.
@@ -37,7 +40,7 @@ Please file a bug (details below) and try these remediation steps:
 
 * Clear the site data and caches from devtools, following <a target="_blank" href="https://developers.google.com/web/tools/chrome-devtools/storage/cache#deletecache">these instructions</a>.
 
-In any case, **FILE A BUG** attaching logs and screenshots from devtools.
+If none of this works, file a bug attaching logs and screenshots from devtools.
   Googlers:      <a href="http://go/perfetto-ui-bug" target="_blank">go/perfetto-ui-bug</a>
   Non-googlers:  <a href="https://github.com/google/perfetto/issues/new" target="_blank">github.com/google/perfetto/issues/new</a>
 
@@ -49,7 +52,7 @@ Technical Information:
   <script type="text/javascript">
     'use strict';
     (function () {
-      const TIMEOUT_MS = 20000;
+      const TIMEOUT_MS = 120000;
       let errTimerId = undefined;
 
       function errHandler(err) {
