@@ -21,8 +21,6 @@ import urllib.parse
 from http import HTTPStatus
 from typing import Any, Callable, Dict, List, Optional
 
-from .flamegraph import FlameGraph
-
 
 dir_lock = threading.Lock()
 
@@ -77,9 +75,7 @@ class PerfettoHandler(HttpHandler):
         self.server.last_request = self.path
         self.server_thread.notify_active()
         if self.path.endswith("vizviewer_info"):
-            info = {
-                "is_flamegraph": self.server_thread.flamegraph,
-            }
+            info = {}
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
@@ -100,13 +96,6 @@ class PerfettoHandler(HttpHandler):
                 self.path = f"/{filename}"
                 self.server.trace_served = True
                 return super().do_GET()
-        elif self.path.endswith("flamegraph"):
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(self.server_thread.fg_data).encode("utf-8"))
-            self.wfile.flush()
-            self.server.trace_served = True
         else:
             self.directory = os.path.join(os.path.dirname(__file__), "web_dist")
             with chdir_temp(self.directory):
@@ -276,7 +265,6 @@ class ServerThread(threading.Thread):
             path: str,
             port: int = 9001,
             once: bool = False,
-            flamegraph: bool = False,
             use_external_processor: bool = False,
             timeout: float = 10,
             quiet: bool = False) -> None:
@@ -286,7 +274,6 @@ class ServerThread(threading.Thread):
         self.timeout = timeout
         self.quiet = quiet
         self.link = f"http://127.0.0.1:{self.port}"
-        self.flamegraph = flamegraph
         self.use_external_procesor = use_external_processor
         self.externel_processor_process: Optional[ExternalProcessorProcess] = None
         self.fg_data: Optional[List[Dict[str, Any]]] = None
@@ -313,17 +300,7 @@ class ServerThread(threading.Thread):
         filename = os.path.basename(self.path)
 
         Handler: Callable[..., HttpHandler]
-        if self.flamegraph:
-            if filename.endswith("json"):
-                with open(self.path, encoding="utf-8", errors="ignore") as f:
-                    trace_data = json.load(f)
-                fg = FlameGraph(trace_data)
-                self.fg_data = fg.dump_to_perfetto()
-                Handler = functools.partial(PerfettoHandler, self)
-            else:
-                print(f"Do not support flamegraph for file type {filename}")
-                return 1
-        elif filename.endswith("json"):
+        if filename.endswith("json"):
             trace_data = None
             if self.use_external_procesor:
                 Handler = functools.partial(ExternalProcessorHandler, self)
@@ -378,13 +355,11 @@ class DirectoryViewer:
             path: str,
             port: int,
             server_only: bool,
-            flamegraph: bool,
             timeout: int,
             use_external_processor: bool) -> None:
         self.base_path = os.path.abspath(path)
         self.port = port
         self.server_only = server_only
-        self.flamegraph = flamegraph
         self.timeout = timeout
         self.use_external_processor = use_external_processor
         self.max_port_number = 10
@@ -411,7 +386,6 @@ class DirectoryViewer:
                 t = ServerThread(
                     path,
                     port=port,
-                    flamegraph=self.flamegraph,
                     use_external_processor=self.use_external_processor,
                     quiet=True)
                 t.start()
@@ -474,22 +448,24 @@ def viewer_main() -> int:
     parser.add_argument("--timeout", nargs="?", type=int, default=10,
                         help="Timeout in seconds to stop the server without trace data requests")
     parser.add_argument("--flamegraph", default=False, action="store_true",
-                        help="Show flamegraph of data")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--use_external_processor", default=False, action="store_true",
                         help="Use the more powerful external trace processor instead of WASM")
 
     options = parser.parse_args(sys.argv[1:])
     f = options.file[0]
 
+    if options.flamegraph:
+        print("--flamegraph is removed because the front-end supports native flamegraph now.")
+        print("You can select slices in the UI and do 'Slice Flamegraph'.")
+        return 1
+
     if options.use_external_processor:
         # Perfetto trace processor only accepts requests from localhost:10000
         options.port = 10000
-        # external trace process won't work with once or flamegraph or directory
+        # external trace process won't work with once or directory
         if options.once:
             print("You can't use --once with --use_external_processor")
-            return 1
-        if options.flamegraph:
-            print("You can't use --flamegraph with --use_external_processor")
             return 1
         if os.path.isdir(f):
             print("You can't use --use_external_processor on a directory")
@@ -502,7 +478,6 @@ def viewer_main() -> int:
                 path=f,
                 port=options.port,
                 server_only=options.server_only,
-                flamegraph=options.flamegraph,
                 timeout=options.timeout,
                 use_external_processor=options.use_external_processor,
             )
@@ -517,7 +492,6 @@ def viewer_main() -> int:
                 path,
                 port=options.port,
                 once=options.once,
-                flamegraph=options.flamegraph,
                 timeout=options.timeout,
                 use_external_processor=options.use_external_processor,
             )
