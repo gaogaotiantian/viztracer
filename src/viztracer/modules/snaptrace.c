@@ -692,7 +692,7 @@ snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish)
             fee_node->tid = meta_node->tid;
 
             if (flush_as_finish) {
-                fee_node->data.fee.dur = info->prev_ts - func_node->ts;
+                fee_node->data.fee.dur = get_ts(info) - func_node->ts;
             } else {
                 fee_node->data.fee.dur = 0;
             }
