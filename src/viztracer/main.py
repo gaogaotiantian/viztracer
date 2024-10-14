@@ -169,6 +169,11 @@ class VizUI:
                 raise ValueError("Config file does not contain [default] section")
             for action in self.parser._actions:
                 if hasattr(action, "dest") and action.dest in cfg_parser["default"]:
+                    convert = action.type if action.type is not None else str
+                    if not callable(convert):
+                        # This only happens when action.type is not None but not a callable
+                        # This should not happen in normal case
+                        raise ValueError(f"Invalid action type {action.type}")  # pragma: no cover
                     if action.nargs == 0:
                         setattr(ret, action.dest, action.const)
                     elif action.nargs is None or action.nargs == "?":
@@ -178,10 +183,8 @@ class VizUI:
                             # when it's a store, but with type == bool
                             setattr(ret, action.dest, cfg_parser["default"].getboolean(action.dest))
                         else:
-                            convert = action.type if action.type is not None else str
                             setattr(ret, action.dest, convert(cfg_parser["default"][action.dest]))
                     else:
-                        convert = action.type if action.type is not None else str
                         setattr(ret, action.dest, [convert(val) for val in cfg_parser["default"][action.dest].strip().split()])
         else:
             if filename != ".viztracerrc":
