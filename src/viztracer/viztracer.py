@@ -184,9 +184,9 @@ class VizTracer(_VizTracer):
             self._plugin_manager.event("pre-start")
             _VizTracer.start(self)
 
-    def stop(self) -> None:
+    def stop(self, stop_option: Optional[str] = None) -> None:
         if self.enable:
-            _VizTracer.stop(self)
+            _VizTracer.stop(self, stop_option)
             self._plugin_manager.event("post-stop")
 
     def run(self, command: str, output_file: Optional[str] = None) -> None:
@@ -301,7 +301,7 @@ class VizTracer(_VizTracer):
     def exit_routine(self) -> None:
         # We need to avoid SIGTERM terminate our process when we dump data
         signal.signal(signal.SIGTERM, lambda sig, frame: 0)
-        self.stop()
+        self.stop(stop_option="flush_as_finish")
         if not self._exiting:
             self._exiting = True
             os.chdir(self.cwd)

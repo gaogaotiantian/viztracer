@@ -254,11 +254,11 @@ class _VizTracer:
         self.config()
         self._tracer.start()
 
-    def stop(self) -> None:
+    def stop(self, stop_option: Optional[str] = None) -> None:
         self.enable = False
         if self.log_print:
             self.restore_print()
-        self._tracer.stop()
+        self._tracer.stop(stop_option)
 
     def pause(self) -> None:
         if self.enable:

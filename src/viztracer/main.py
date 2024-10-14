@@ -361,7 +361,7 @@ class VizUI:
         exec(code, global_dict)
 
         if not options.log_exit:
-            tracer.stop()
+            tracer.stop(stop_option="flush_as_finish")
 
         # The user code may forked, check it because Finalize won't execute
         # if the pid is not the same
