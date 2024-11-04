@@ -251,7 +251,8 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
     PyObject* co_filename = code->co_filename;
 
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
-        if (self->lib_file_path && startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
+        if (self->lib_file_path && co_filename && PyUnicode_Check(co_filename) &&
+                startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
             info->ignore_stack_depth += 1;
             goto cleanup;
         }
@@ -365,8 +366,15 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
         int log_this_entry = dur >= self->min_duration;
 
         if (log_this_entry) {
-            struct EventNode* node = get_next_node(self);
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
+
+            if (!PyCode_Check(code)) {
+                self->collecting = 0;
+                PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
+                return -1;
+            }
+
+            struct EventNode* node = get_next_node(self);
 
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
@@ -418,8 +426,16 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
         int log_this_entry = dur >= self->min_duration;
 
         if (log_this_entry) {
-            struct EventNode* node = get_next_node(self);
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
+
+            if (!PyCFunction_Check(cfunc)) {
+                self->collecting = 0;
+                PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
+                return -1;
+            }
+
+            struct EventNode* node = get_next_node(self);
+
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
             node->data.fee.dur = dur;
@@ -474,6 +490,7 @@ int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
+    int ret = 0;
 
     if (!self->collecting) {
         PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
@@ -486,6 +503,12 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     }
 
     struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        self->collecting = 0;
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Thread info not found. This should not happen.");
+        return -1;
+    }
 
     // This is a crazy hack for
     // is_call == (what == PyTrace_CALL || what == PyTrace_C_CALL)
@@ -525,21 +548,21 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     switch (what) {
     case PyTrace_CALL:
         info->curr_stack_depth += 1;
-        snaptrace_pycall_callback(self, frame, info);
+        ret = snaptrace_pycall_callback(self, frame, info);
         break;
     case PyTrace_C_CALL:
         info->curr_stack_depth += 1;
-        snaptrace_ccall_callback(self, frame, info, arg);
+        ret = snaptrace_ccall_callback(self, frame, info, arg);
         break;
     case PyTrace_RETURN:
-        snaptrace_pyreturn_callback(self, frame, info, arg);
+        ret = snaptrace_pyreturn_callback(self, frame, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
         break;
     case PyTrace_C_RETURN:
     case PyTrace_C_EXCEPTION:
-        snaptrace_creturn_callback(self, frame, info, arg);
+        ret = snaptrace_creturn_callback(self, frame, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
@@ -548,7 +571,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
         return 0;
     }
 
-    return 0;
+    return ret;
 }
 
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args) 
@@ -571,6 +594,8 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
         what = PyTrace_RETURN;
     } else if (!strcmp(event, "c_return")) {
         what = PyTrace_C_RETURN;
+    } else if (!strcmp(event, "c_exception")) {
+        what = PyTrace_C_EXCEPTION;
     } else {
         printf("Unexpected event type: %s\n", event);
     }
