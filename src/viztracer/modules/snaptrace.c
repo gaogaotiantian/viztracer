@@ -366,13 +366,15 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
         int log_this_entry = dur >= self->min_duration;
 
         if (log_this_entry) {
-            struct EventNode* node = get_next_node(self);
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
 
             if (!PyCode_Check(code)) {
+                self->collecting = 0;
                 PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
                 return -1;
             }
+
+            struct EventNode* node = get_next_node(self);
 
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
@@ -424,13 +426,15 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
         int log_this_entry = dur >= self->min_duration;
 
         if (log_this_entry) {
-            struct EventNode* node = get_next_node(self);
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
 
             if (!PyCFunction_Check(cfunc)) {
+                self->collecting = 0;
                 PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
                 return -1;
             }
+
+            struct EventNode* node = get_next_node(self);
 
             node->ntype = FEE_NODE;
             node->ts = info->stack_top->ts;
@@ -501,6 +505,7 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     struct ThreadInfo* info = get_thread_info(self);
 
     if (!info) {
+        self->collecting = 0;
         PyErr_SetString(PyExc_RuntimeError, "VizTracer: Thread info not found. This should not happen.");
         return -1;
     }
