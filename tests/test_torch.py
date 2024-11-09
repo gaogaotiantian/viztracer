@@ -42,7 +42,7 @@ class TestTorch(CmdlineTmpl):
                     self.assertTrue(any(e["name"] == "torch.empty" for e in events))
                     self.assertTrue(any(e["name"] == "aten::empty" for e in events))
         else:
-            with self.assertRaises(RuntimeError):
+            with self.assertRaises(ImportError):
                 _ = VizTracer(log_torch=True, verbose=0)
 
     def case_cmdline(self):
