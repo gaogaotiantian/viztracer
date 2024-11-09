@@ -139,6 +139,8 @@ If you are using Jupyter, you can use viztracer cell magics.
 # Your code after
 ```
 
+A ``VizTracer Report`` button will appear after the cell and you can click it to view the results
+
 ### PyTorch
 
 VizTracer can log native calls and GPU events of PyTorch (based on `torch.profiler`) with
@@ -152,9 +154,6 @@ with VizTracer(log_torch=True) as tracer:
 ```sh
 viztracer --log_torch your_model.py
 ```
-
-
-A ``VizTracer Report`` button will appear after the cell and you can click it to view the results
 
 ## Advanced Usage
 
