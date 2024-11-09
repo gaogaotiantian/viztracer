@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import textwrap
 import time
 
 from .base_tmpl import BaseTmpl
@@ -24,7 +25,7 @@ fib(5)
 class CmdlineTmpl(BaseTmpl):
     def build_script(self, script, name="cmdline_test.py"):
         with open(name, "w") as f:
-            f.write(script)
+            f.write(textwrap.dedent(script))
 
     def cleanup(self, output_file="result.json", script_name="cmdline_test.py"):
         if os.path.exists(script_name):
