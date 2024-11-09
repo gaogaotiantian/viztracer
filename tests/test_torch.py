@@ -27,6 +27,9 @@ class TestTorch(CmdlineTmpl):
         with self.subTest("cmdline"):
             self.case_cmdline()
 
+        with self.subTest("corner"):
+            self.case_corner()
+
     def case_basic(self):
         try:
             import torch
@@ -69,3 +72,26 @@ class TestTorch(CmdlineTmpl):
 
         else:
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script="pass", success=False)
+
+    def case_corner(self):
+        try:
+            import torch
+        except ImportError:
+            torch = None
+
+        if torch:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with VizTracer(log_torch=True, verbose=0,
+                               output_file=f"{tmpdir}/result.json") as tracer:
+                    torch.empty(3)
+                    with self.assertRaises(RuntimeError):
+                        tracer.calibrate_torch_timer()
+                torch_offset = tracer.torch_offset
+                tracer.calibrate_torch_timer()
+                self.assertEqual(tracer.torch_offset, torch_offset)
+        else:
+            tracer = VizTracer(verbose=0)
+            # Bad bad, just for coverage
+            tracer.log_torch = True
+            with self.assertRaises(ImportError):
+                tracer.start()
