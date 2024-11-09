@@ -13,6 +13,7 @@ VizTracer
                  log_func_args=False,\
                  log_print=False,\
                  log_gc=False,\
+                 log_torch=False,\
                  log_async=False,\
                  pid_suffix=False,\
                  register_global=True,\
@@ -176,6 +177,18 @@ VizTracer
         .. code-block::
 
             viztracer --log_gc
+
+    .. py:attribute:: log_torch
+        :type: boolean
+        :value: False
+
+        Whether log native torch events
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            viztracer --log_torch
 
     .. py:attribute:: log_async
         :type: boolean

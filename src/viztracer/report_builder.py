@@ -16,7 +16,7 @@ from . import __version__
 from .util import color_print, same_line_print
 
 
-def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
+def get_json(data: Union[Dict, str, Tuple[str, Dict]]) -> Dict[str, Any]:
     # This function will return a json object if data is already json object
     # or a opened file or a file path
     if isinstance(data, dict):
@@ -25,6 +25,25 @@ def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
     elif isinstance(data, str):
         with open(data, encoding="utf-8") as f:
             json_str = f.read()
+    elif isinstance(data, tuple):
+        path, args = data
+        if args['type'] == 'torch':
+            with open(path, encoding="utf-8") as f:
+                json_str = f.read()
+            ret = json.loads(json_str)
+            offset = args['offset']
+
+            for event in ret['traceEvents']:
+                if 'ts' in event:
+                    event['ts'] += offset
+                if event['ph'] == 'M':
+                    # Pop metadata timestamp so it won't overwrite
+                    # process and thread names
+                    event.pop('ts', None)
+
+            ret['viztracer_metadata'] = {}
+
+            return ret
 
     return json.loads(json_str)
 
@@ -32,7 +51,7 @@ def get_json(data: Union[Dict, str]) -> Dict[str, Any]:
 class ReportBuilder:
     def __init__(
             self,
-            data: Union[Sequence[str], Dict],
+            data: Union[Sequence[Union[str, Dict, Tuple[str, Dict]]], Dict],
             verbose: int = 1,
             align: bool = False,
             minimize_memory: bool = False) -> None:
@@ -50,6 +69,10 @@ class ReportBuilder:
             raise TypeError("Invalid data type for ReportBuilder")
         if isinstance(data, (list, tuple)):
             for path in data:
+                if isinstance(path, dict):
+                    continue
+                if isinstance(path, tuple):
+                    path = path[0]
                 if not isinstance(path, str):
                     raise TypeError("Path should be a string")
                 if not os.path.exists(path):
@@ -71,6 +94,7 @@ class ReportBuilder:
                     try:
                         self.jsons.append(get_json(j))
                     except json.JSONDecodeError:
+                        assert isinstance(j, str)
                         self.invalid_json_paths.append(j)
                 if len(self.invalid_json_paths) > 0:
                     self.final_messages.append(("invalid_json", {"paths": self.invalid_json_paths}))
@@ -92,7 +116,7 @@ class ReportBuilder:
         for one in self.jsons[1:]:
             if "traceEvents" in one:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
-            if one["viztracer_metadata"].get("overflow", False):
+            if one.get("viztracer_metadata", {}).get("overflow", False):
                 self.combined_json["viztracer_metadata"]["overflow"] = True
 
     def align_events(self, original_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

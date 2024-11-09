@@ -34,6 +34,7 @@ class VizTracer(_VizTracer):
                  log_gc: bool = False,
                  log_sparse: bool = False,
                  log_async: bool = False,
+                 log_torch: bool = False,
                  log_audit: Optional[Sequence[str]] = None,
                  pid_suffix: bool = False,
                  file_info: bool = True,
@@ -70,6 +71,9 @@ class VizTracer(_VizTracer):
         self.system_print = None
         self.log_sparse = log_sparse
         self.log_audit = log_audit
+        self.log_torch = log_torch
+        self.torch_profile = None
+        self.torch_offset = 0.0
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
@@ -87,6 +91,9 @@ class VizTracer(_VizTracer):
 
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
+
+        if self.log_torch:
+            self.calibrate_torch_timer()
 
     @property
     def pid_suffix(self) -> bool:
@@ -117,6 +124,7 @@ class VizTracer(_VizTracer):
             "log_sparse": self.log_sparse,
             "log_async": self.log_async,
             "log_audit": self.log_audit,
+            "log_torch": self.log_torch,
             "pid_suffix": self.pid_suffix,
             "min_duration": self.min_duration,
             "dump_raw": self.dump_raw,
@@ -179,14 +187,71 @@ class VizTracer(_VizTracer):
         self._afterfork_args = args
         self._afterfork_kwargs = kwargs
 
+    def calibrate_torch_timer(self, force=False):
+        if self.enable:
+            raise RuntimeError("You can't calibrate torch timer while tracer is running")
+        if self.torch_offset and not force:
+            return
+        import json
+        import tempfile
+        import torch  # type: ignore
+        from torch.profiler import profile, supported_activities  # type: ignore
+        verbose = self.verbose
+        # Silent the tracer during calibration
+        self.verbose = 0
+        with profile(activities=supported_activities()) as prof:
+            _VizTracer.start(self)
+            for _ in range(20):
+                torch.empty(100)
+            _VizTracer.stop(self)
+        with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
+            prof.export_chrome_trace(tmpfile.name)
+            self.parse()
+            torch_starts = []
+            torch_ends = []
+            viz_starts = []
+            viz_ends = []
+            min_offset = None
+            max_offset = None
+            with open(tmpfile.name, "r") as f:
+                torch_data = json.load(f)
+                for event in torch_data["traceEvents"]:
+                    if event["ph"] == "X" and event["name"] == "aten::empty":
+                        torch_starts.append(event["ts"])
+                        torch_ends.append(event["ts"] + event["dur"])
+            for event in self.data["traceEvents"]:
+                if event["ph"] == "X" and event["name"] == "torch.empty":
+                    viz_starts.append(event["ts"])
+                    viz_ends.append(event["ts"] + event["dur"])
+            if len(torch_starts) == 0 or len(viz_starts) == 0 or len(torch_starts) != len(viz_starts):
+                raise RuntimeError("Torch timer calibration failed")  # pragma: no cover
+
+            for i in range(len(torch_starts)):
+                if min_offset is None or torch_starts[i] + min_offset < viz_starts[i]:
+                    min_offset = viz_starts[i] - torch_starts[i]
+                if max_offset is None or torch_ends[i] + max_offset > viz_ends[i]:
+                    max_offset = viz_ends[i] - torch_ends[i]
+            assert min_offset is not None and max_offset is not None
+            self.torch_offset = (min_offset + max_offset) / 2
+            self.clear()
+        self.verbose = verbose
+
     def start(self) -> None:
         if not self.enable:
             self._plugin_manager.event("pre-start")
+            if self.log_torch:
+                try:
+                    from torch.profiler import profile, supported_activities
+                except ImportError:
+                    raise ImportError("torch is not installed, please install it to use log_torch")
+                self.torch_profile = profile(activities=supported_activities()).__enter__()
             _VizTracer.start(self)
 
     def stop(self, stop_option: Optional[str] = None) -> None:
         if self.enable:
             _VizTracer.stop(self, stop_option)
+            if self.torch_profile is not None:
+                self.torch_profile.__exit__(None, None, None)
             self._plugin_manager.event("post-stop")
 
     def run(self, command: str, output_file: Optional[str] = None) -> None:
@@ -223,7 +288,8 @@ class VizTracer(_VizTracer):
 
         # If there are plugins, we can't do dump raw because it will skip the data
         # manipulation phase
-        if not self._plugin_manager.has_plugin and self.dump_raw:
+        # If we want to dump torch profile, we can't do dump raw either
+        if not self._plugin_manager.has_plugin and not self.log_torch and self.dump_raw:
             self.dump(output_file, sanitize_function_name=self.sanitize_function_name)
         else:
             if not self.parsed:
@@ -231,8 +297,16 @@ class VizTracer(_VizTracer):
 
             self._plugin_manager.event("pre-save")
 
-            rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
-            rb.save(output_file=output_file, file_info=file_info)
+            if self.log_torch and self.torch_profile is not None:
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
+                    self.torch_profile.export_chrome_trace(tmpfile.name)
+                    rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'offset': self.torch_offset}), self.data],
+                                       verbose, minimize_memory=self.minimize_memory)
+                    rb.save(output_file=output_file, file_info=file_info)
+            else:
+                rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
+                rb.save(output_file=output_file, file_info=file_info)
 
         if enabled:
             self.start()

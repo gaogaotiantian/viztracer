@@ -100,6 +100,8 @@ class VizUI:
                             help="log all function arguments, this will introduce large overhead")
         parser.add_argument("--log_gc", action="store_true", default=False,
                             help="log ref cycle garbage collection operations")
+        parser.add_argument("--log_torch", action="store_true", default=False,
+                            help="log all the supported torch events together with the trace")
         parser.add_argument("--log_var", nargs="*", default=None,
                             help="log variable with specified names")
         parser.add_argument("--log_number", nargs="*", default=None,
@@ -252,6 +254,12 @@ class VizUI:
         except ValueError:
             return False, f"Can't convert {options.min_duration} to time. Format should be 0.3ms or 13us"
 
+        if options.log_torch:
+            try:
+                import torch  # type: ignore  # noqa: F401
+            except ImportError:
+                return False, "torch is not installed"
+
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
@@ -269,6 +277,7 @@ class VizUI:
             "log_sparse": options.log_sparse,
             "log_async": options.log_async,
             "log_audit": options.log_audit,
+            "log_torch": options.log_torch,
             "pid_suffix": True,
             "file_info": False,
             "register_global": True,
