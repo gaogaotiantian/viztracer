@@ -256,7 +256,7 @@ class VizUI:
 
         if options.log_torch:
             try:
-                import torch  # type: ignore
+                import torch  # noqa: F401
             except ImportError:
                 return False, "torch is not installed"
 

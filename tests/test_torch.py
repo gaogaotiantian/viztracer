@@ -33,8 +33,9 @@ class TestTorch(CmdlineTmpl):
         if torch:
             with tempfile.TemporaryDirectory() as tmpdir:
                 with VizTracer(log_torch=True, verbose=0,
-                               output_file=f"{tmpdir}/result.json") as tracer:
+                               output_file=f"{tmpdir}/result.json"):
                     torch.empty(3)
+
                 with open(f"{tmpdir}/result.json") as f:
                     data = json.load(f)
                     events = data["traceEvents"]
@@ -55,6 +56,7 @@ class TestTorch(CmdlineTmpl):
                 import torch
                 torch.empty(3)
             """
+
             def check_func(data):
                 events = data["traceEvents"]
                 self.assertTrue(any(e["name"] == "torch.empty" for e in events))
