@@ -3,7 +3,9 @@
 
 
 import json
+import sys
 import tempfile
+import unittest
 
 from viztracer import VizTracer
 
@@ -11,6 +13,7 @@ from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
 
 
+@unittest.skipIf(sys.version_info >= (3, 13) and "linux" not in sys.platform, "torch only supports linux on python 3.13")
 class TestTorch(CmdlineTmpl):
     @package_matrix(["~torch", "torch"])
     def test_entry(self):
