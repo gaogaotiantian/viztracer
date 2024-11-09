@@ -14,7 +14,7 @@ More help can be found in "Support - Controls".
 
 * Detailed function entry/exit information on timeline with source code
 * Super easy to use, no source code change for most features, no package dependency
-* Supports threading, multiprocessing, subprocess and async
+* Supports threading, multiprocessing, subprocess, async and PyTorch
 * Powerful front-end, able to render GB-level trace smoothly
 * Works on Linux/MacOS/Windows
 
@@ -30,15 +30,8 @@ pip install viztracer
 
 ### Command Line
 
-Assume you have a python script to run:
-
 ```sh
-python3 my_script.py arg1 arg2
-```
-
-You can simply use VizTracer by
-
-```sh
+# Instead of "python3 my_script.py arg1 arg2"
 viztracer my_script.py arg1 arg2
 ```
 
@@ -47,6 +40,13 @@ viztracer my_script.py arg1 arg2
 <summary>
 A <code>result.json</code> file will be generated, which you can open with <code>vizviewer</code>
 </summary>
+
+```sh
+# You can display all the files in a directory and open them in browser too
+vizviewer ./
+# For very large trace files, try external trace processor
+vizviewer --use_external_processor result.json
+```
 
 vizviewer will host an HTTP server on ``http://localhost:9001``. You can also open your browser and use that address.
 
@@ -66,10 +66,6 @@ vizviewer --once result.json
 
 ```sh
 vizviewer result.json
-# You can display all the files in a directory and open them in browser too
-vizviewer ./
-# For very large trace files, try external trace processor
-vizviewer --use_external_processor result.json
 ```
 
 A [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=gaogaotiantian.viztracer-vscode)
@@ -142,6 +138,21 @@ If you are using Jupyter, you can use viztracer cell magics.
 %%viztracer
 # Your code after
 ```
+
+### PyTorch
+
+VizTracer can log native calls and GPU events of PyTorch (based on `torch.profiler`) with
+``--log_torch``.
+
+```python
+with VizTracer(log_torch=True) as tracer:
+    # Your torch code
+```
+
+```sh
+viztracer --log_torch your_model.py
+```
+
 
 A ``VizTracer Report`` button will appear after the cell and you can click it to view the results
 

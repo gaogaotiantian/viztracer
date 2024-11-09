@@ -136,6 +136,23 @@ Cell magic ``%%viztracer`` supports some of the command line arguments:
 * ``--log_print``
 * ``--log_sparse``
 
+
+PyTorch
+-------
+
+VizTracer can log native calls and GPU events of PyTorch (based on ``torch.profiler``) with
+``--log_torch``.
+
+.. code-block:: python
+
+    with VizTracer(log_torch=True) as tracer:
+        # Your torch code
+
+.. code-block::
+
+    viztracer --log_torch your_model.py
+
+
 Display Report
 --------------
 
