@@ -194,8 +194,8 @@ class VizTracer(_VizTracer):
             return
         import json
         import tempfile
-        import torch
-        from torch.profiler import profile, supported_activities
+        import torch  # type: ignore
+        from torch.profiler import profile, supported_activities  # type: ignore
         verbose = self.verbose
         # Silent the tracer during calibration
         self.verbose = 0
