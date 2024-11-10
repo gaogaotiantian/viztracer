@@ -64,6 +64,12 @@ jobs:
         python -m build
         pip install (Get-ChildItem dist/*.whl)
         python -m unittest
+    - name: Upload the test time artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test_time_trace
+        path: test_time_trace.json
+        retention-days: 7
     - name: Generate coverage report
       run: |
         coverage run --source viztracer --parallel-mode -m unittest

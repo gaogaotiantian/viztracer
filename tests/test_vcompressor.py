@@ -108,6 +108,7 @@ tracer.save(output_file='%s')
 """
 
 
+@unittest.skipIf(os.getenv("COVERAGE_RUN"), "skipped on coverage run")
 class TestVCompressorPerformance(CmdlineTmpl):
 
     BenchmarkResult = namedtuple("BenchmarkResult", ["file_size", "elapsed_time"])  # unit: byte, second
