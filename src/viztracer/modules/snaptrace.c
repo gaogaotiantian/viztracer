@@ -139,7 +139,12 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame)
     PyObject* func_arg_dict = PyDict_New();
     PyCodeObject* code = PyFrame_GetCode(frame);
     PyObject* names = PyCode_GetVarnames(code);
+
+#if PY_VERSION_HEX >= 0x030D0000
+    PyObject* locals = PyEval_GetFrameLocals();
+#else
     PyObject* locals = PyEval_GetLocals();
+#endif
 
     int idx = 0;
     if (!node->args) {
@@ -168,6 +173,10 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame)
         Py_DECREF(repr);
         idx++;
     }
+
+#if PY_VERSION_HEX >= 0x030D0000
+    Py_DECREF(locals);
+#endif
 
     PyDict_SetItemString(node->args, "func_args", func_arg_dict);
     Py_DECREF(func_arg_dict);
