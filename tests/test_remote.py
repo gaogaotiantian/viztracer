@@ -95,7 +95,7 @@ class TestRemote(CmdlineTmpl):
             out = p_script.stdout.readline()
             self.assertIn("Ready", out.decode("utf-8"))
 
-            wait_time = 2
+            wait_time = 1
             # Test attach feature
             attach_cmd_with_t = attach_cmd + ["-t", str(wait_time)]
             p_attach = subprocess.Popen(attach_cmd_with_t, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

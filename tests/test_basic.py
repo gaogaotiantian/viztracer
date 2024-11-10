@@ -3,6 +3,7 @@
 
 import builtins
 import json
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -204,10 +205,8 @@ class TestDecorator(BaseTmpl):
     def test_trace_and_save(self):
         if os.getenv("GITHUB_ACTIONS"):
             timeout = 60
-            wait = 3
         else:
             timeout = 20
-            wait = 1
         with tempfile.TemporaryDirectory() as tmp_dir:
 
             @trace_and_save(output_dir=tmp_dir, verbose=0)
@@ -218,11 +217,10 @@ class TestDecorator(BaseTmpl):
                 time.sleep(0.0001)
                 my_function(10)
 
-            time.sleep(wait)
-
             def t():
                 self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
+            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
             self.assertTrueTimeout(t, timeout)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -232,11 +230,11 @@ class TestDecorator(BaseTmpl):
                 return
 
             cover_mkdir()
-            time.sleep(wait)
 
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
 
+            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
             self.assertTrueTimeout(t, timeout)
 
         if sys.platform in ["linux", "linux2", "darwin"]:
@@ -245,7 +243,6 @@ class TestDecorator(BaseTmpl):
             def my_function2(n):
                 fib(n)
             my_function2(10)
-            time.sleep(0.5)
 
             def t1():
                 a = subprocess.run(["ls result_my_function2*.json"],

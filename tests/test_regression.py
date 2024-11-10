@@ -124,6 +124,7 @@ term_code = """
 import time
 a = []
 a.append(1)
+print("ready", flush=True)
 for i in range(10):
     time.sleep(1)
 """
@@ -133,7 +134,7 @@ class TestTermCaught(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "windows does not have graceful term")
     def test_term(self):
         self.template(["viztracer", "-o", "term.json", "cmdline_test.py"],
-                      expected_output_file="term.json", script=term_code, send_sig=signal.SIGTERM)
+                      expected_output_file="term.json", script=term_code, send_sig=(signal.SIGTERM, "ready"))
 
 
 class TestIssue42(BaseTmpl):
@@ -391,23 +392,26 @@ import os
 import time
 import multiprocessing
 
-def target():
+def target(conn):
+    conn.recv()
+    conn.send("ready")
+    conn.recv()
     if os.getenv("GITHUB_ACTIONS"):
-        time.sleep(9)
-    else:
         time.sleep(3)
+    else:
+        time.sleep(1)
 
 if __name__ == '__main__':
-    p = multiprocessing.Process(target=target)
+    parent, child = multiprocessing.Pipe()
+    p = multiprocessing.Process(target=target, args=(child,))
     p.start()
     # The main process will join the child in multiprocessing.process._children.
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    if os.getenv("GITHUB_ACTIONS"):
-        time.sleep(3)
-    else:
-        time.sleep(1)
+    parent.send("check")
+    parent.recv()
+    parent.send("exit")
 """
 
 wait_for_terminated_child = """
@@ -416,24 +420,27 @@ import os
 import signal
 import multiprocessing
 
-def target():
+def target(conn):
+    conn.recv()
+    conn.send("ready")
+    conn.recv()
     if os.getenv("GITHUB_ACTIONS"):
-        time.sleep(9)
-    else:
         time.sleep(3)
+    else:
+        time.sleep(1)
     os.kill(os.getpid(), signal.SIGTERM)
 
 if __name__ == '__main__':
-    p = multiprocessing.Process(target=target)
+    parent, child = multiprocessing.Pipe()
+    p = multiprocessing.Process(target=target, args=(child,))
     p.start()
     # The main process will join the child in multiprocessing.process._children.
     # This is a hack to make sure the main process won't join the child process,
     # so we can test the VizUI.wait_children_finish function
     multiprocessing.process._children = set()
-    if os.getenv("GITHUB_ACTIONS"):
-        time.sleep(3)
-    else:
-        time.sleep(1)
+    parent.send("check")
+    parent.recv()
+    parent.send("exit")
 """
 
 
