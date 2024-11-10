@@ -71,7 +71,7 @@ jobs:
     - name: Upload the test time artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: test_time_trace
+        name: test_time_trace_{{ matrix.os }}_{{ matrix.python-version }}
         path: test_time_trace.json
         retention-days: 7
     - name: Generate coverage report
