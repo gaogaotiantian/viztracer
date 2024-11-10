@@ -3,6 +3,7 @@
 
 import gc
 import io
+import json
 import logging
 import os
 import sys
@@ -17,13 +18,44 @@ logging.basicConfig(
 
 
 class BaseTmpl(TestCase):
+    trace_test_time = os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN")
+
+    @classmethod
+    def setUpClass(cls):
+        if cls.trace_test_time:
+            cls._test_time_events = []
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.trace_test_time:
+            if os.path.exists("test_time_trace.json"):
+                with open("test_time_trace.json", "r") as f:
+                    trace = json.load(f)
+            else:
+                trace = {"traceEvents": []}
+            trace["traceEvents"].extend(cls._test_time_events)
+
+            with open("test_time_trace.json", "w") as f:
+                json.dump(trace, f)
+
     def setUp(self):
         logging.info("=" * 60)
         logging.info(f"{self.id()} start")
         self.stdout = io.StringIO()
         self.stdout_orig, sys.stdout = sys.stdout, self.stdout
+        if self.trace_test_time:
+            self._test_start_time = time.time()
 
     def tearDown(self):
+        if self.trace_test_time:
+            test_duration = time.time() - self._test_start_time
+            self._test_time_events.append({
+                "name": self.id(),
+                "cat": "test",
+                "ph": "X",
+                "ts": self._test_start_time * 1e6,
+                "dur": test_duration * 1e6,
+            })
         sys.stdout = self.stdout_orig
         logging.info(f"{self.id()} finish")
         gc.collect()

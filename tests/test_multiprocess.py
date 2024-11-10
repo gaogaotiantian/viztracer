@@ -250,10 +250,12 @@ e.map(my_function, range(5))
 
 class TestSubprocess(CmdlineTmpl):
     def setUp(self):
+        super().setUp()
         with open("child.py", "w") as f:
             f.write(file_child)
 
     def tearDown(self):
+        super().tearDown()
         os.remove("child.py")
 
     def assertSubprocessName(self, name, data):
