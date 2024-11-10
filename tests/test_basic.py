@@ -218,8 +218,6 @@ class TestDecorator(BaseTmpl):
                 time.sleep(0.0001)
                 my_function(10)
 
-            time.sleep(wait)
-
             def t():
                 self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
@@ -232,7 +230,6 @@ class TestDecorator(BaseTmpl):
                 return
 
             cover_mkdir()
-            time.sleep(wait)
 
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
@@ -245,7 +242,6 @@ class TestDecorator(BaseTmpl):
             def my_function2(n):
                 fib(n)
             my_function2(10)
-            time.sleep(0.5)
 
             def t1():
                 a = subprocess.run(["ls result_my_function2*.json"],

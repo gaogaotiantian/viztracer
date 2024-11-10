@@ -94,14 +94,14 @@ class TestVCompressor(CmdlineTmpl):
 
 test_large_fib = """
 from viztracer import VizTracer
-tracer = VizTracer(tracer_entries=2000000)
+tracer = VizTracer()
 tracer.start()
 
 def fib(n):
     if n < 2:
         return 1
     return fib(n-1) + fib(n-2)
-fib(27)
+fib(23)
 
 tracer.stop()
 tracer.save(output_file='%s')

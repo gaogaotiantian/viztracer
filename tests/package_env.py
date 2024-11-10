@@ -21,7 +21,7 @@ def get_curr_packages():
 def package_keeper():
     orig_packages = get_curr_packages()
     try:
-        yield
+        yield orig_packages
     finally:
         curr_packages = get_curr_packages()
         for pkg in curr_packages:
@@ -30,10 +30,19 @@ def package_keeper():
         subprocess.check_call([sys.executable, "-m", "pip", "install", *orig_packages], stdout=subprocess.DEVNULL)
 
 
-def setup_env(pkg_matrix):
+def setup_env(pkg_matrix, orig_packages):
+    def pkg_key(pkg):
+        # Put the the config that already meets the requirement first
+        if pkg.startswith("~") and pkg[1:] not in orig_packages:
+            return 0
+        elif pkg in orig_packages:
+            return 0
+        return 1
+
     if isinstance(pkg_matrix[0], list):
         pkg_config_iter = product(*pkg_matrix)
     else:
+        pkg_matrix.sort(key=pkg_key)
         pkg_config_iter = product(pkg_matrix)
     for pkg_config in pkg_config_iter:
         for pkg in pkg_config:
@@ -50,8 +59,8 @@ def package_matrix(pkg_matrix):
 
         def wrapper(*args, **kwargs):
             if os.getenv("GITHUB_ACTIONS"):
-                with package_keeper():
-                    for _ in setup_env(pkg_matrix):
+                with package_keeper() as orig_packages:
+                    for _ in setup_env(pkg_matrix, orig_packages):
                         try:
                             func(*args, **kwargs)
                         except SkipTest:
@@ -64,8 +73,8 @@ def package_matrix(pkg_matrix):
 
         if os.getenv("GITHUB_ACTIONS"):
             def new_run(self, result=None):
-                with package_keeper():
-                    for _ in setup_env(pkg_matrix):
+                with package_keeper() as orig_packages:
+                    for _ in setup_env(pkg_matrix, orig_packages):
                         try:
                             self._run(result)
                         except SkipTest:
