@@ -220,7 +220,7 @@ class TestDecorator(BaseTmpl):
             def t():
                 self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
 
-            self.assertTrueTimeout(lambda: not multiprocessing.active_children(), timeout)
+            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
             self.assertTrueTimeout(t, timeout)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -234,7 +234,7 @@ class TestDecorator(BaseTmpl):
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
 
-            self.assertTrueTimeout(lambda: not multiprocessing.active_children(), timeout)
+            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
             self.assertTrueTimeout(t, timeout)
 
         if sys.platform in ["linux", "linux2", "darwin"]:
