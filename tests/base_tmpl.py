@@ -18,14 +18,16 @@ logging.basicConfig(
 
 
 class BaseTmpl(TestCase):
+    trace_test_time = os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN")
+
     @classmethod
     def setUpClass(cls):
-        if os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN"):
+        if cls.trace_test_time:
             cls._test_time_events = []
 
     @classmethod
     def tearDownClass(cls):
-        if os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN"):
+        if cls.trace_test_time:
             if os.path.exists("test_time_trace.json"):
                 with open("test_time_trace.json", "r") as f:
                     trace = json.load(f)
@@ -41,11 +43,11 @@ class BaseTmpl(TestCase):
         logging.info(f"{self.id()} start")
         self.stdout = io.StringIO()
         self.stdout_orig, sys.stdout = sys.stdout, self.stdout
-        if os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN"):
+        if self.trace_test_time:
             self._test_start_time = time.time()
 
     def tearDown(self):
-        if os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN"):
+        if self.trace_test_time:
             test_duration = time.time() - self._test_start_time
             self._test_time_events.append({
                 "name": self.id(),
