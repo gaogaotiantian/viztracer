@@ -5,7 +5,6 @@
 import json
 import sys
 import tempfile
-import unittest
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
