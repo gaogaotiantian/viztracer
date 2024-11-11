@@ -228,7 +228,9 @@ class _VizTracer:
 
         cfg = {
             "verbose": self.verbose,
-            "lib_file_path": os.path.dirname(os.path.realpath(__file__)),
+            # We use the filename from code object to ensure the consistency when
+            # comparing to the filename of other code objects on Windows
+            "lib_file_path": os.path.dirname(sys._getframe().f_code.co_filename),
             "max_stack_depth": self.max_stack_depth,
             "include_files": self.include_files,
             "exclude_files": self.exclude_files,
