@@ -261,6 +261,7 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
         if (co_filename == self->prev_filename) {
             if (self->prev_filename_skip) {
+                info->ignore_stack_depth += 1;
                 goto cleanup;
             }
         } else {
