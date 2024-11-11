@@ -10,7 +10,18 @@ from .package_env import package_matrix
 
 @package_matrix(["~torch", "torch"] if sys.version_info < (3, 13) or "linux" in sys.platform else ["~torch"])
 class TestTorch(CmdlineTmpl):
-    def test_basic(self):
+    def test_entry(self):
+        # We only want to install/uninstall torch once, so do all tests in one function
+        with self.subTest("basic"):
+            self.case_basic()
+
+        with self.subTest("cmdline"):
+            self.case_cmdline()
+
+        with self.subTest("corner"):
+            self.case_corner()
+
+    def case_basic(self):
         assert self.pkg_config is not None
 
         if self.pkg_config.has("torch"):
@@ -37,7 +48,7 @@ class TestTorch(CmdlineTmpl):
                           expected_output_file=None, success=False,
                           expected_stderr=".*ModuleNotFoundError.*")
 
-    def test_cmdline(self):
+    def case_cmdline(self):
         assert self.pkg_config is not None
 
         if self.pkg_config.has("torch"):
@@ -56,7 +67,7 @@ class TestTorch(CmdlineTmpl):
         else:
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script="pass", success=False)
 
-    def test_corner(self):
+    def case_corner(self):
         assert self.pkg_config is not None
 
         if self.pkg_config.has("torch"):
