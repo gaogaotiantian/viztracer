@@ -2,9 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import json
 import sys
-import tempfile
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
@@ -16,23 +14,20 @@ class TestTorch(CmdlineTmpl):
         assert self.pkg_config is not None
 
         if self.pkg_config.has("torch"):
-            with tempfile.TemporaryDirectory() as tmpdir:
-                script = f"""
-                    import torch
-                    from viztracer import VizTracer
-                    with VizTracer(log_torch=True, verbose=0,
-                                   output_file="{tmpdir}/result.json"):
-                        torch.empty(3)
-                """
+            script = """
+                import torch
+                from viztracer import VizTracer
+                with VizTracer(log_torch=True, verbose=0):
+                    torch.empty(3)
+            """
 
-                self.template(["python", "cmdline_test.py"], script=script,
-                              expected_output_file=None)
+            def check_func(data):
+                events = data["traceEvents"]
+                self.assertTrue(any(e["name"] == "torch.empty" for e in events))
+                self.assertTrue(any(e["name"] == "aten::empty" for e in events))
 
-                with open(f"{tmpdir}/result.json") as f:
-                    data = json.load(f)
-                    events = data["traceEvents"]
-                    self.assertTrue(any(e["name"] == "torch.empty" for e in events))
-                    self.assertTrue(any(e["name"] == "aten::empty" for e in events))
+            self.template(["python", "cmdline_test.py"], script=script,
+                          check_func=check_func)
         else:
             script = """
                 from viztracer import VizTracer
@@ -65,24 +60,22 @@ class TestTorch(CmdlineTmpl):
         assert self.pkg_config is not None
 
         if self.pkg_config.has("torch"):
-            with tempfile.TemporaryDirectory() as tmpdir:
-                script = f"""
-                    import torch
-                    from viztracer import VizTracer
-                    with VizTracer(log_torch=True, verbose=0,
-                                   output_file=f"{tmpdir}/result.json") as tracer:
-                        torch.empty(3)
-                        try:
-                            tracer.calibrate_torch_timer()
-                        except RuntimeError:
-                            pass
-                        else:
-                            assert False, "Should raise RuntimeError"
-                    torch_offset = tracer.torch_offset
-                    tracer.calibrate_torch_timer()
-                    assert tracer.torch_offset == torch_offset
-                """
-                self.template(["python", "cmdline_test.py"], script=script, expected_output_file=None)
+            script = """
+                import torch
+                from viztracer import VizTracer
+                with VizTracer(log_torch=True, verbose=0) as tracer:
+                    torch.empty(3)
+                    try:
+                        tracer.calibrate_torch_timer()
+                    except RuntimeError:
+                        pass
+                    else:
+                        assert False, "Should raise RuntimeError"
+                torch_offset = tracer.torch_offset
+                tracer.calibrate_torch_timer()
+                assert tracer.torch_offset == torch_offset
+            """
+            self.template(["python", "cmdline_test.py"], script=script)
         else:
             script = """
                 from viztracer import VizTracer
