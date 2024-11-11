@@ -7,8 +7,6 @@ import sys
 import tempfile
 import unittest
 
-from viztracer import VizTracer
-
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
 
