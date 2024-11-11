@@ -9,6 +9,7 @@ import subprocess
 import sys
 import textwrap
 import time
+from typing import Optional
 
 from .base_tmpl import BaseTmpl
 
@@ -45,7 +46,7 @@ class CmdlineTmpl(BaseTmpl):
 
     def template(self,
                  cmd_list,
-                 expected_output_file="result.json",
+                 expected_output_file: Optional[str] = "result.json",
                  success=True,
                  script=file_fib,
                  script_name="cmdline_test.py",

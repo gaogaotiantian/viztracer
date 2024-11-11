@@ -19,6 +19,7 @@ logging.basicConfig(
 
 class BaseTmpl(TestCase):
     trace_test_time = os.getenv("GITHUB_ACTION") and not os.getenv("COVERAGE_RUN")
+    pkg_config = None
 
     @classmethod
     def setUpClass(cls):
