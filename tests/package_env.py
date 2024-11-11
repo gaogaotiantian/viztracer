@@ -10,6 +10,19 @@ from itertools import product
 from unittest import SkipTest
 
 
+class PackageConfig:
+    def __init__(self, pkg_config):
+        self.pkg_config = pkg_config
+
+    def has(self, package):
+        for pkg in self.pkg_config:
+            if f"~{package}" in pkg:
+                return False
+            elif package in pkg:
+                return True
+        return False
+
+
 def get_curr_packages():
     freeze_process = subprocess.run([sys.executable, "-m", "pip", "freeze"],
                                     check=True, stdout=subprocess.PIPE)
@@ -50,7 +63,7 @@ def setup_env(pkg_matrix, orig_packages):
                 subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]], stdout=subprocess.DEVNULL)
             else:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", pkg], stdout=subprocess.DEVNULL)
-        yield
+        yield PackageConfig(pkg_config)
 
 
 def package_matrix(pkg_matrix):
@@ -74,14 +87,18 @@ def package_matrix(pkg_matrix):
         if os.getenv("GITHUB_ACTIONS"):
             def new_run(self, result=None):
                 with package_keeper() as orig_packages:
-                    for _ in setup_env(pkg_matrix, orig_packages):
+                    for pkg_config in setup_env(pkg_matrix, orig_packages):
                         try:
+                            self.pkg_config = pkg_config
                             self._run(result)
                         except SkipTest:
                             pass
+                        self.pkg_config = None
 
             cls._run = cls.run
             cls.run = new_run
+        else:
+            cls.pkg_config = PackageConfig(get_curr_packages())
         return cls
 
     def inner(func_or_cls):
