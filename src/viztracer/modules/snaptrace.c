@@ -25,7 +25,6 @@
 // Function declarations
 
 int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
-int snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
 static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
 static PyObject* snaptrace_start(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_stop(TracerObject* self, PyObject* stop_option);
@@ -485,24 +484,12 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
 }
 
 int
-snaptrace_tracefuncdisabled(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
-{
-    TracerObject* self = (TracerObject*) obj;
-    if (self->collecting) {
-        PyEval_SetProfile(snaptrace_tracefunc, obj);
-        return snaptrace_tracefunc(obj, frame, what, arg);
-    }
-    return 0;
-}
-
-int
 snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
     int ret = 0;
 
     if (!self->collecting) {
-        PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
         return 0;
     }
     
@@ -594,7 +581,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
         exit(1);
     }
     snaptrace_createthreadinfo((TracerObject*) obj);
-    PyEval_SetProfile(snaptrace_tracefuncdisabled, obj);
+    PyEval_SetProfile(snaptrace_tracefunc, obj);
     if (!strcmp(event, "call")) {
         what = PyTrace_CALL;
     } else if (!strcmp(event, "c_call")) {
@@ -608,7 +595,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
     } else {
         printf("Unexpected event type: %s\n", event);
     }
-    snaptrace_tracefuncdisabled(obj, frame, what, trace_args);
+    snaptrace_tracefunc(obj, frame, what, trace_args);
     Py_RETURN_NONE;
 }
 
@@ -1780,7 +1767,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->buffer_tail_idx = 0;
         self->metadata_head = NULL;
         snaptrace_createthreadinfo(self);
-        // Python: threading.setprofile(tracefuncdisabled)
+        // Python: threading.setprofile(tracefunc)
         {
             PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
 
@@ -1794,7 +1781,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
             Py_DECREF(setprofile);
             Py_DECREF(callback);
         }
-        PyEval_SetProfile(snaptrace_tracefuncdisabled, (PyObject*)self);
+        PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
     }
 
     return (PyObject*) self;
