@@ -92,7 +92,8 @@ def package_matrix(pkg_matrix):
                             self.pkg_config = pkg_config
                             self._run(result)
                         except SkipTest:
-                            pass
+                            # If it's a class, we skip the whole class
+                            break
                         self.pkg_config = None
 
             cls._run = cls.run
