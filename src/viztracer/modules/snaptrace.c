@@ -1637,19 +1637,18 @@ static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
     PyGILState_STATE state = PyGILState_Ensure();
     SNAPTRACE_THREAD_PROTECT_START(self);
 
-    PyObject* current_thread_method = PyObject_GetAttrString(threading_module, "current_thread");
-    if (!current_thread_method) {
-        perror("Failed to access threading.current_thread()");
-        exit(-1);
-    }
-    PyObject* current_thread = PyObject_CallObject(current_thread_method, NULL);
+    PyObject* current_thread = PyObject_CallMethod(threading_module, "current_thread", "");
     if (!current_thread) {
         perror("Failed to access threading.current_thread()");
         exit(-1);
     }
     PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
+    if (!thread_name) {
+        // It's okay not having a name
+        PyErr_Clear();
+        thread_name = PyUnicode_FromString("Unknown");
+    }
 
-    Py_DECREF(current_thread_method);
     Py_DECREF(current_thread);
 
     // Check for existing node for the same tid first
@@ -1769,17 +1768,12 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         snaptrace_createthreadinfo(self);
         // Python: threading.setprofile(tracefunc)
         {
-            PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
-
             PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
-            PyObject* callback = Py_BuildValue("(N)", handler);
 
-            if (PyObject_CallObject(setprofile, callback) == NULL) {
+            if (PyObject_CallMethod(threading_module, "setprofile", "N", handler) == NULL) {
                 perror("Failed to call threading.setprofile() properly");
                 exit(-1);
             }
-            Py_DECREF(setprofile);
-            Py_DECREF(callback);
         }
         PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
     }
@@ -1808,25 +1802,12 @@ Tracer_dealloc(TracerObject* self)
     }
 
     // threading.setprofile(None)
-    PyObject* setprofile = PyObject_GetAttrString(threading_module, "setprofile");
-    // This is important to keep REFCNT normal
-    if (setprofile != Py_None) {
-        PyObject* tuple = PyTuple_New(1);
-        PyObject* result = NULL;
-
-        PyTuple_SetItem(tuple, 0, Py_None);
-        Py_INCREF(Py_None);
-
-        result = PyObject_CallObject(setprofile, tuple);
-        if (result == NULL) {
-            perror("Failed to call threading.setprofile() properly dealloc");
-            exit(-1);
-        } else {
-            Py_DECREF(result);
-        }
-        Py_DECREF(tuple);
+    // It's possible that during deallocation phase threading module has released setprofile
+    // and we should be okay with that.
+    PyObject* result = PyObject_CallMethod(threading_module, "setprofile", "O", Py_None);
+    if (result != NULL) {
+        Py_DECREF(result);
     }
-    Py_DECREF(setprofile);
 
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
