@@ -72,6 +72,8 @@ typedef struct {
     unsigned int check_flags;
     int verbose;
     char* lib_file_path;
+    PyObject* prev_filename;
+    int prev_filename_skip;
     int max_stack_depth;
     PyObject* process_name;
     PyObject* include_files;

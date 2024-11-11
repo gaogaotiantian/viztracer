@@ -259,10 +259,18 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
     PyObject* co_filename = code->co_filename;
 
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
-        if (self->lib_file_path && co_filename && PyUnicode_Check(co_filename) &&
-                startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
-            info->ignore_stack_depth += 1;
-            goto cleanup;
+        if (co_filename == self->prev_filename) {
+            if (self->prev_filename_skip) {
+                goto cleanup;
+            }
+        } else {
+            self->prev_filename = co_filename;
+            if (self->lib_file_path && startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
+                self->prev_filename_skip = 1;
+                info->ignore_stack_depth += 1;
+                goto cleanup;
+            }
+            self->prev_filename_skip = 0;
         }
     }
 
