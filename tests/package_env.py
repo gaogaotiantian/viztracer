@@ -89,12 +89,8 @@ def package_matrix(pkg_matrix):
             def new_run(self, result=None):
                 with package_keeper() as orig_packages:
                     for pkg_config in setup_env(pkg_matrix, orig_packages):
-                        try:
-                            self.pkg_config = pkg_config
-                            self._run(result)
-                        except SkipTest:
-                            # If it's a class, we skip the whole class
-                            break
+                        self.pkg_config = pkg_config
+                        self._run(result)
                         self.pkg_config = None
 
             cls._run = cls.run

@@ -11,8 +11,7 @@ from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
 
 
-@package_matrix(["~torch", "torch"])
-@unittest.skipIf(sys.version_info >= (3, 13) and "linux" not in sys.platform, "torch only supports linux on python 3.13")
+@package_matrix(["~torch", "torch"] if sys.version_info < (3, 13) or "linux" in sys.platform else ["~torch"])
 class TestTorch(CmdlineTmpl):
     def test_basic(self):
         assert self.pkg_config is not None
