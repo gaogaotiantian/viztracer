@@ -46,10 +46,11 @@ def package_keeper():
 def setup_env(pkg_matrix, orig_packages):
     def pkg_key(pkg):
         # Put the the config that already meets the requirement first
-        if pkg.startswith("~") and pkg[1:] not in orig_packages:
-            return 0
-        elif pkg in orig_packages:
-            return 0
+        for package in orig_packages:
+            if pkg.startswith("~") and pkg[1:] not in package:
+                return 0
+            elif pkg in package:
+                return 0
         return 1
 
     if isinstance(pkg_matrix[0], list):
