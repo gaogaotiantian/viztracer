@@ -30,6 +30,8 @@ class VizTracer(_VizTracer):
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
                  log_func_args: bool = False,
+                 log_func_repr: Optional[Callable] = None,
+                 log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
                  log_sparse: bool = False,
@@ -47,6 +49,12 @@ class VizTracer(_VizTracer):
                  process_name: Optional[str] = None,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []) -> None:
+
+        if log_func_with_objprint:
+            if log_func_repr:
+                raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
+            log_func_repr = objprint.objstr
+
         super().__init__(
             tracer_entries=tracer_entries,
             max_stack_depth=max_stack_depth,
@@ -58,6 +66,7 @@ class VizTracer(_VizTracer):
             log_print=log_print,
             log_gc=log_gc,
             log_func_args=log_func_args,
+            log_func_repr=log_func_repr,
             log_async=log_async,
             trace_self=trace_self,
             min_duration=min_duration,

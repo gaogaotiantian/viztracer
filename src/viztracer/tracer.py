@@ -6,7 +6,7 @@ import gc
 import os
 import sys
 from io import StringIO
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Union
 
 import viztracer.snaptrace as snaptrace  # type: ignore
 
@@ -24,6 +24,7 @@ class _VizTracer:
             ignore_frozen: bool = False,
             log_func_retval: bool = False,
             log_func_args: bool = False,
+            log_func_repr: Optional[Callable] = None,
             log_print: bool = False,
             log_gc: bool = False,
             log_async: bool = False,
@@ -45,6 +46,7 @@ class _VizTracer:
         self.ignore_frozen = ignore_frozen
         self.log_func_retval = log_func_retval
         self.log_func_args = log_func_args
+        self.log_func_repr = log_func_repr
         self.log_async = log_async
         self.min_duration = min_duration
         self.log_print = log_print
@@ -144,6 +146,18 @@ class _VizTracer:
         self.config()
 
     @property
+    def log_func_repr(self) -> Optional[Callable]:
+        return self.__log_func_repr
+
+    @log_func_repr.setter
+    def log_func_repr(self, log_func_repr: Optional[Callable]) -> None:
+        if log_func_repr is None or callable(log_func_repr):
+            self.__log_func_repr = log_func_repr
+        else:
+            raise ValueError("log_func_repr needs to be a callable")
+        self.config()
+
+    @property
     def log_async(self) -> bool:
         return self.__log_async
 
@@ -238,6 +252,7 @@ class _VizTracer:
             "ignore_frozen": self.ignore_frozen,
             "log_func_retval": self.log_func_retval,
             "log_func_args": self.log_func_args,
+            "log_func_repr": self.log_func_repr,
             "log_async": self.log_async,
             "trace_self": self.trace_self,
             "min_duration": self.min_duration,

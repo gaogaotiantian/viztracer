@@ -205,6 +205,18 @@ class TestTracerFeature(BaseTmpl):
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
         self.assertTrue("args" in events[0] and "func_args" in events[0]["args"])
 
+    def test_log_func_repr(self):
+        def myrepr(obj):
+            return "deadbeef"
+        tracer = _VizTracer(log_func_args=True, log_func_repr=myrepr)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
+        self.assertTrue("args" in events[0] and "func_args" in events[0]["args"] and
+                        events[0]["args"]["func_args"]["n"] == "deadbeef")
+
     def test_log_gc(self):
         import gc
         tracer = _VizTracer(log_gc=True)
