@@ -214,8 +214,8 @@ class TestTracerFeature(BaseTmpl):
         tracer.stop()
         tracer.parse()
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
-        self.assertTrue("args" in events[0] and "func_args" in events[0]["args"] and
-                        events[0]["args"]["func_args"]["n"] == "deadbeef")
+        self.assertTrue("args" in events[0] and "func_args" in events[0]["args"]
+                        and events[0]["args"]["func_args"]["n"] == "deadbeef")
 
     def test_log_gc(self):
         import gc

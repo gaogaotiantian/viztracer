@@ -152,7 +152,7 @@ You can log every function's arguments and return value with a custom function. 
             return f"MyClass({obj.value})"
         return repr(obj)
 
-    tracer = VizTracer(log_func_repr=myrepr)
+    tracer = VizTracer(log_func_args=True, log_func_repr=myrepr)
 
 From the CLI, you can use the ``--log_func_with_objprint`` option to log with objprint
 
