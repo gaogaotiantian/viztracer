@@ -1,7 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-try:
+
+def load_ipython_extension(ipython) -> None:
+    """
+    Use `%load_ext viztracer`
+    Lazy execute the following code because importing IPython is slow
+    """
     from IPython.core.magic import (Magics, cell_magic,  # type: ignore
                                     magics_class, needs_local_scope)
     from IPython.core.magic_arguments import (argument, magic_arguments, parse_argstring)  # type: ignore
@@ -62,12 +67,4 @@ try:
 
             display(button)
 
-except ImportError:  # pragma: no cover
-    pass
-
-
-def load_ipython_extension(ipython) -> None:
-    """
-    Use `%load_ext viztracer`
-    """
     ipython.register_magics(VizTracerMagics)

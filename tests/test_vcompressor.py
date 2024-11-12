@@ -387,7 +387,7 @@ def call_self(n):
         return
     return call_self(n-1)
 for _ in range(10):
-    call_self(1000)
+    call_self(900)
 
 tracer.stop()
 tracer.save(output_file='%s')
