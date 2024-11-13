@@ -153,10 +153,10 @@ class TestInstant(BaseTmpl):
     def test_invalid_scope(self):
         tracer = VizTracer(verbose=0)
         tracer.start()
-        tracer.add_instant('instant - "karma": True', scope="invalid")
+        with self.assertRaises(ValueError):
+            tracer.add_instant('instant - "karma": True', scope="invalid")
         tracer.stop()
-        tracer.parse()
-        self.assertEventNumber(tracer.data, 0)
+        tracer.clear()
 
 
 class TestFunctionArg(BaseTmpl):

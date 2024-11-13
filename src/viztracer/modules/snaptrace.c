@@ -35,12 +35,12 @@ static PyObject* snaptrace_dump(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* args);
@@ -218,12 +218,12 @@ static PyMethodDef Tracer_methods[] = {
     {"clear", (PyCFunction)snaptrace_clear, METH_NOARGS, "clear buffer"},
     {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
     {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
-    {"addinstant", (PyCFunction)snaptrace_addinstant, METH_VARARGS, "add instant event"},
-    {"addcounter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
-    {"addobject", (PyCFunction)snaptrace_addobject, METH_VARARGS, "add object event"},
-    {"addraw", (PyCFunction)snaptrace_addraw, METH_VARARGS, "add raw event"},
-    {"addfunctionarg", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
-    {"getfunctionarg", (PyCFunction)snaptrace_getfunctionarg, METH_VARARGS, "get current function arg"},
+    {"add_instant", (PyCFunction)snaptrace_addinstant, METH_VARARGS|METH_KEYWORDS, "add instant event"},
+    {"add_counter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
+    {"add_object", (PyCFunction)snaptrace_addobject, METH_VARARGS|METH_KEYWORDS, "add object event"},
+    {"add_raw", (PyCFunction)snaptrace_addraw, METH_VARARGS, "add raw event"},
+    {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
+    {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
     {"setcurrstack", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
@@ -1445,16 +1445,46 @@ snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-snaptrace_addinstant(TracerObject* self, PyObject* args)
+snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* name = NULL;
     PyObject* instant_args = NULL;
     PyObject* scope = NULL;
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
-    if (!PyArg_ParseTuple(args, "OOO", &name, &instant_args, &scope)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+    static char* kwlist[] = {"name", "args", "scope", NULL};
+    const char* allowed_scope[] = {"g", "p", "t"};
+
+    if (!self->collecting) {
+        Py_RETURN_NONE;
+    }
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|OO", kwlist,
+                                     &name, &instant_args, &scope)) {
+        return NULL;
+    }
+
+    if (!instant_args) {
+        instant_args = Py_None;
+    }
+
+    if (!scope) {
+        scope = PyUnicode_FromString("g");
+    } else {
+        if (!PyUnicode_CheckExact(scope)) {
+            PyErr_SetString(PyExc_TypeError, "Scope must be a string");
+            return NULL;
+        }
+        for (int i = 0; i < 3; i++) {
+            if (strcmp(PyUnicode_AsUTF8(scope), allowed_scope[i]) == 0) {
+                break;
+            }
+            if (i == 2) {
+                PyErr_SetString(PyExc_ValueError, "Scope must be one of 'g', 'p', 't'");
+                return NULL;
+            }
+        }
+        Py_INCREF(scope);
     }
 
     node = get_next_node(self);
@@ -1466,7 +1496,6 @@ snaptrace_addinstant(TracerObject* self, PyObject* args)
     node->data.instant.scope = scope;
     Py_INCREF(name);
     Py_INCREF(instant_args);
-    Py_INCREF(scope);
 
     Py_RETURN_NONE;
 }
@@ -1477,9 +1506,13 @@ snaptrace_addfunctionarg(TracerObject* self, PyObject* args)
     PyObject* key = NULL;
     PyObject* value = NULL;
     struct ThreadInfo* info = get_thread_info(self);
+
+    if (!self->collecting) {
+        Py_RETURN_NONE;
+    }
+
     if (!PyArg_ParseTuple(args, "OO", &key, &value)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+        return NULL;
     }
 
     struct FunctionNode* fnode = info->stack_top;
@@ -1499,9 +1532,13 @@ snaptrace_addcounter(TracerObject* self, PyObject* args)
     PyObject* counter_args = NULL;
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
+
+    if (!self->collecting) {
+        Py_RETURN_NONE;
+    }
+
     if (!PyArg_ParseTuple(args, "OO", &name, &counter_args)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+        return NULL;
     }
 
     node = get_next_node(self);
@@ -1517,17 +1554,27 @@ snaptrace_addcounter(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_addobject(TracerObject* self, PyObject* args)
+snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* ph = NULL;
     PyObject* id = NULL;
     PyObject* name = NULL;
     PyObject* object_args = NULL;
+    static char* kwlist[] = {"ph", "obj_id", "name", "args", NULL};
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
-    if (!PyArg_ParseTuple(args, "OOOO", &ph, &id, &name, &object_args)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+
+    if (!self->collecting) {
+        Py_RETURN_NONE;
+    }
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OOO|O", kwlist,
+                                     &ph, &id, &name, &object_args)) {
+        return NULL;
+    }
+
+    if (!object_args) {
+        object_args = Py_None;
     }
 
     node = get_next_node(self);
@@ -1552,9 +1599,9 @@ snaptrace_addraw(TracerObject* self, PyObject* args)
     PyObject* raw = NULL;
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
+
     if (!PyArg_ParseTuple(args, "O", &raw)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+        return NULL;
     }
 
     node = get_next_node(self);
@@ -1587,7 +1634,7 @@ snaptrace_setignorestackcounter(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_getfunctionarg(TracerObject* self, PyObject* args)
+snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
 

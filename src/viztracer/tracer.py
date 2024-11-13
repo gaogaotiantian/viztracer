@@ -265,13 +265,6 @@ class _VizTracer(snaptrace.Tracer):
     def enable_thread_tracing(self) -> None:
         sys.setprofile(self.threadtracefunc)
 
-    def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
-        if self.enable:
-            if scope not in ["g", "p", "t"]:
-                print("Scope has to be one of g, p, t")
-                return
-            self.addinstant(name, args, scope)
-
     def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
         if self.enable:
             if event == "instant":
@@ -283,21 +276,6 @@ class _VizTracer(snaptrace.Tracer):
                     raise ValueError(f"{name}({var}) is not a number")
             else:
                 raise ValueError(f"{event} is not supported")
-
-    def add_counter(self, name: str, args: Dict[str, Any]) -> None:
-        if self.enable:
-            self.addcounter(name, args)
-
-    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None) -> None:
-        if self.enable:
-            self.addobject(ph, obj_id, name, args)
-
-    def add_func_args(self, key: str, value: Any) -> None:
-        if self.enable:
-            self.addfunctionarg(key, value)
-
-    def add_raw(self, raw: Dict[str, Any]) -> None:
-        self.addraw(raw)
 
     def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
         if self.enable:
@@ -321,9 +299,9 @@ class _VizTracer(snaptrace.Tracer):
 
     def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
         exec_line = f"({lineno}) {name} = {val}"
-        curr_args = self.getfunctionarg()
+        curr_args = self.get_func_args()
         if not curr_args:
-            self.addfunctionarg("exec_steps", [exec_line])
+            self.add_func_args("exec_steps", [exec_line])
         else:
             if "exec_steps" in curr_args:
                 curr_args["exec_steps"].append(exec_line)
