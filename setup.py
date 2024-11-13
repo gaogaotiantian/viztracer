@@ -52,6 +52,7 @@ setuptools.setup(
                 "src/viztracer/modules/util.c",
                 "src/viztracer/modules/eventnode.c",
                 "src/viztracer/modules/snaptrace.c",
+                "src/viztracer/modules/snaptrace_member.c",
             ],
             extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"]),
             extra_link_args={"win32": []}.get(sys.platform, ["-lpthread"]),

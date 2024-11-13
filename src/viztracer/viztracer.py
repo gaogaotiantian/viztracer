@@ -9,26 +9,26 @@ import os
 import platform
 import signal
 import sys
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from viztracer.snaptrace import Tracer  # type: ignore
 
 import objprint  # type: ignore
 
 from . import __version__
 from .report_builder import ReportBuilder
-from .tracer import _VizTracer
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
 
 
 # This is the interface of the package. Almost all user should use this
 # class for the functions
-class VizTracer(_VizTracer):
+class VizTracer(Tracer):
     def __init__(self,
                  tracer_entries: int = 1000000,
                  verbose: int = 1,
                  max_stack_depth: int = -1,
-                 include_files: Optional[Sequence[str]] = None,
-                 exclude_files: Optional[Sequence[str]] = None,
+                 include_files: Optional[List[str]] = None,
+                 exclude_files: Optional[List[str]] = None,
                  ignore_c_function: bool = False,
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
@@ -50,24 +50,34 @@ class VizTracer(_VizTracer):
                  process_name: Optional[str] = None,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []) -> None:
-        super().__init__(
-            tracer_entries=tracer_entries,
-            max_stack_depth=max_stack_depth,
-            include_files=include_files,
-            exclude_files=exclude_files,
-            ignore_c_function=ignore_c_function,
-            ignore_frozen=ignore_frozen,
-            log_func_retval=log_func_retval,
-            log_print=log_print,
-            log_gc=log_gc,
-            log_func_args=log_func_args,
-            log_async=log_async,
-            trace_self=trace_self,
-            min_duration=min_duration,
-            process_name=process_name,
-        )
-        self._tracer: Any
+        super().__init__(tracer_entries)
+
+        # Members of C Tracer object
         self.verbose = verbose
+        self.max_stack_depth = max_stack_depth
+        self.ignore_c_function = ignore_c_function
+        self.ignore_frozen = ignore_frozen
+        self.log_func_args = log_func_args
+        self.log_func_retval = log_func_retval
+        self.log_async = log_async
+        self.log_gc = log_gc
+        self.log_print = log_print
+        self.trace_self = trace_self
+        self.lib_file_path = os.path.dirname(sys._getframe().f_code.co_filename)
+        self.process_name = process_name
+        self.min_duration = min_duration
+
+        if include_files is None:
+            self.include_files = include_files
+        else:
+            self.include_files = include_files[:] + [os.path.abspath(f) for f in include_files if not f.startswith("/")]
+
+        if exclude_files is None:
+            self.exclude_files = exclude_files
+        else:
+            self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
+
+        # Members of VizTracer object
         self.pid_suffix = pid_suffix
         self.file_info = file_info
         self.output_file = output_file
@@ -79,8 +89,17 @@ class VizTracer(_VizTracer):
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
-        self._exiting = False
         self.system_print = builtins.print
+
+        # Members for the collected data
+        self.enable = False
+        self.parsed = False
+        self.tracer_entries = tracer_entries
+        self.data: Dict[str, Any] = {}
+        self.total_entries = 0
+        self.gc_start_args: Dict[str, int] = {}
+
+        self._exiting = False
         if register_global:
             self.register_global()
 
@@ -203,10 +222,10 @@ class VizTracer(_VizTracer):
         # Silent the tracer during calibration
         self.verbose = 0
         with profile(activities=supported_activities()) as prof:
-            _VizTracer.start(self)
+            super().start()
             for _ in range(20):
                 torch.empty(100)
-            _VizTracer.stop(self)
+            super().stop()
         with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
             prof.export_chrome_trace(tmpfile.name)
             self.parse()
@@ -253,7 +272,6 @@ class VizTracer(_VizTracer):
                 self.overload_print()
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
-            self.config()
             self._plugin_manager.event("pre-start")
             super().start()
 

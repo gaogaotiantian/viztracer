@@ -2,11 +2,14 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class Tracer:
     threadtracefunc: Callable
+
+    include_files: Optional[List[str]]
+    exclude_files: Optional[List[str]]
 
     def __init__(self, tracer_entries: int) -> None:
         ...
@@ -32,7 +35,7 @@ class Tracer:
     def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
         ...
 
-    def setignorestackcounter(self, value) -> int:
+    def setignorestackcounter(self, value: int) -> int:
         ...
 
     def _set_curr_stack_depth(self, stack_depth: int) -> None:
@@ -41,10 +44,7 @@ class Tracer:
     def getts(self) -> float:
         ...
 
-    def setpid(self, pid: int = -1) -> None:
-        ...
-
-    def _config(self, **kwargs) -> None:
+    def setpid(self, pid: int = -1, /) -> None:
         ...
 
     def add_func_args(self, key: str, value: Any) -> None:

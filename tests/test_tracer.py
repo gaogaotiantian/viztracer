@@ -93,14 +93,14 @@ class TestTracerFilter(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
-        tracer.include_files = [os.path.abspath("./")]
+        tracer = VizTracer(include_files=[os.path.abspath("./")])
         tracer.start()
         fib(10)
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 177)
 
-        tracer.include_files = ["./"]
+        tracer = VizTracer(include_files=["./"])
         tracer.start()
         fib(10)
         tracer.stop()
@@ -115,21 +115,21 @@ class TestTracerFilter(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 177)
 
-        tracer.exclude_files = [os.path.abspath("./")]
+        tracer = VizTracer(exclude_files=[os.path.abspath("./")])
         tracer.start()
         fib(10)
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
-        tracer.exclude_files = ["./"]
+        tracer = VizTracer(exclude_files=["./"])
         tracer.start()
         fib(10)
         tracer.stop()
         entries = tracer.parse()
         self.assertEqual(entries, 0)
 
-        tracer.exclude_files = []
+        tracer = VizTracer(exclude_files=[])
         tracer.start()
         fib(10)
         tracer.stop()

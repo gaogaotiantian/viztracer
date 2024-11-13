@@ -34,21 +34,21 @@ static PyObject* snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 static PyObject* snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* kw);
+static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth);
+static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* value);
 static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame);
 static double get_ts(struct ThreadInfo*);
+extern PyGetSetDef Tracer_getsetters[];
 
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
@@ -217,18 +217,17 @@ static PyMethodDef Tracer_methods[] = {
     {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS|METH_KEYWORDS, "dump buffer to file"},
     {"clear", (PyCFunction)snaptrace_clear, METH_NOARGS, "clear buffer"},
     {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
-    {"_config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"add_instant", (PyCFunction)snaptrace_addinstant, METH_VARARGS|METH_KEYWORDS, "add instant event"},
-    {"add_counter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
+    {"add_counter", (PyCFunction)snaptrace_addcounter, METH_VARARGS|METH_KEYWORDS, "add counter event"},
     {"add_object", (PyCFunction)snaptrace_addobject, METH_VARARGS|METH_KEYWORDS, "add object event"},
-    {"add_raw", (PyCFunction)snaptrace_addraw, METH_VARARGS, "add raw event"},
-    {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
+    {"add_raw", (PyCFunction)snaptrace_addraw, METH_VARARGS|METH_KEYWORDS, "add raw event"},
+    {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS|METH_KEYWORDS, "add function arg"},
     {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
-    {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
+    {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_O, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
-    {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_VARARGS, "reset ignore stack depth"},
+    {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_O, "reset ignore stack depth"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1288,160 +1287,16 @@ snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
-snaptrace_setcurrstack(TracerObject* self, PyObject* args)
+snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth)
 {
-    int stack_depth = 1;
     struct ThreadInfo* info = get_thread_info(self);
 
-    if (!PyArg_ParseTuple(args, "|i", &stack_depth)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
-    }
-
-    info->curr_stack_depth = stack_depth;
-
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw)
-{
-    static char* kwlist[] = {"verbose", "lib_file_path", "max_stack_depth", 
-            "include_files", "exclude_files", "ignore_c_function", "ignore_frozen",
-            "log_func_retval", "log_func_args", "log_async", "trace_self",
-            "min_duration", "process_name",
-            NULL};
-    int kw_verbose = -1;
-    int kw_max_stack_depth = 0;
-    char* kw_lib_file_path = NULL;
-    PyObject* kw_process_name = NULL;
-    PyObject* kw_include_files = NULL;
-    PyObject* kw_exclude_files = NULL;
-    int kw_ignore_c_function = -1;
-    int kw_ignore_frozen = -1;
-    int kw_log_func_retval = -1;
-    int kw_log_func_args = -1;
-    int kw_log_async = -1;
-    int kw_trace_self = -1;
-    double kw_min_duration = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "|isiOOppppppdO", kwlist,
-            &kw_verbose,
-            &kw_lib_file_path,
-            &kw_max_stack_depth,
-            &kw_include_files,
-            &kw_exclude_files,
-            &kw_ignore_c_function,
-            &kw_ignore_frozen,
-            &kw_log_func_retval,
-            &kw_log_func_args,
-            &kw_log_async,
-            &kw_trace_self,
-            &kw_min_duration,
-            &kw_process_name)) {
+    if (!PyLong_Check(stack_depth)) {
+        PyErr_SetString(PyExc_TypeError, "stack_depth must be an integer");
         return NULL;
     }
 
-    if (kw_verbose >= 0) {
-        self->verbose = kw_verbose;
-    }
-
-    if (kw_lib_file_path) {
-        // Obviously we need to copy the string here or it would fail on
-        // MacOS + python3.8
-        // The documentation did not say whether the value persists on "s"
-        // so we should copy it anyway. 
-        if (self->lib_file_path) {
-            PyMem_FREE(self->lib_file_path);
-        }
-        self->lib_file_path = PyMem_Calloc((strlen(kw_lib_file_path) + 1), sizeof(char));
-        if (!self->lib_file_path) {
-            printf("Out of memory!\n");
-            exit(1);
-        }
-        strcpy(self->lib_file_path, kw_lib_file_path);
-    }
-
-    if (kw_process_name && !Py_IsNone(kw_process_name)) {
-        if (!PyUnicode_CheckExact(kw_process_name)) {
-            PyErr_SetString(PyExc_TypeError, "process_name must be a string");
-            return NULL;
-        }
-        Py_INCREF(kw_process_name);
-        Py_XSETREF(self->process_name, kw_process_name); 
-    }
-
-    if (kw_ignore_c_function == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
-    } else if (kw_ignore_c_function == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION);
-    }
-
-    if (kw_ignore_frozen == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN);
-    } else if (kw_ignore_frozen == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN);
-    }
-
-    if (kw_log_func_retval == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
-    } else if (kw_log_func_retval == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE);
-    }
-
-    if (kw_log_func_args == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
-    } else if (kw_log_func_args == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS);
-    }
-
-    if (kw_log_async == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
-    } else if (kw_log_async == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
-    }
-
-    if (kw_trace_self == 1) {
-        SET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
-    } else if (kw_trace_self == 0) {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF);
-    }
-
-    if (kw_min_duration > 0) {
-        // In Python code the default unit is us
-        // Convert to ns which is what c Code uses
-        self->min_duration = kw_min_duration * 1000;
-    } else {
-        self->min_duration = 0;
-    }
-
-    if (kw_max_stack_depth >= 0) {
-        SET_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH);       
-        self->max_stack_depth = kw_max_stack_depth;
-    } else {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH);
-    }
-
-    if (kw_include_files && kw_include_files != Py_None) {
-        if (self->include_files) {
-            Py_DECREF(self->include_files);
-        }
-        self->include_files = kw_include_files;
-        Py_INCREF(self->include_files);
-        SET_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
-    } else {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
-    }
-
-    if (kw_exclude_files && kw_exclude_files != Py_None) {
-        if (self->exclude_files) {
-            Py_DECREF(self->exclude_files);
-        }
-        self->exclude_files = kw_exclude_files;
-        Py_INCREF(self->exclude_files);
-        SET_FLAG(self->check_flags, SNAPTRACE_EXCLUDE_FILES);
-    } else {
-        UNSET_FLAG(self->check_flags, SNAPTRACE_EXCLUDE_FILES);
-    }
+    info->curr_stack_depth = PyLong_AsLong(stack_depth);
 
     Py_RETURN_NONE;
 }
@@ -1503,17 +1358,18 @@ snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-snaptrace_addfunctionarg(TracerObject* self, PyObject* args)
+snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* key = NULL;
     PyObject* value = NULL;
+    static char* kwlist[] = {"key", "value", NULL};
     struct ThreadInfo* info = get_thread_info(self);
 
     if (!self->collecting) {
         Py_RETURN_NONE;
     }
 
-    if (!PyArg_ParseTuple(args, "OO", &key, &value)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO", kwlist, &key, &value)) {
         return NULL;
     }
 
@@ -1528,10 +1384,11 @@ snaptrace_addfunctionarg(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_addcounter(TracerObject* self, PyObject* args)
+snaptrace_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* name = NULL;
     PyObject* counter_args = NULL;
+    static char* kwlist[] = {"name", "args", NULL};
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
 
@@ -1539,7 +1396,8 @@ snaptrace_addcounter(TracerObject* self, PyObject* args)
         Py_RETURN_NONE;
     }
 
-    if (!PyArg_ParseTuple(args, "OO", &name, &counter_args)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO", kwlist,
+                                     &name, &counter_args)) {
         return NULL;
     }
 
@@ -1596,13 +1454,14 @@ snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-snaptrace_addraw(TracerObject* self, PyObject* args)
+snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* raw = NULL;
+    static char* kwlist[] = {"raw", NULL};
     struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
 
-    if (!PyArg_ParseTuple(args, "O", &raw)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", kwlist, &raw)) {
         return NULL;
     }
 
@@ -1616,20 +1475,19 @@ snaptrace_addraw(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_setignorestackcounter(TracerObject* self, PyObject* args)
+snaptrace_setignorestackcounter(TracerObject* self, PyObject* value)
 {
-    int value = 0;
     int current_value = 0;
     struct ThreadInfo* info = get_thread_info(self);
 
-    if (!PyArg_ParseTuple(args, "i", &value)) {
-        printf("Error when parsing arguments!\n");
-        exit(1);
+    if (!PyLong_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "value must be an integer");
+        return NULL;
     }
 
     current_value = info->ignore_stack_depth;
     // +1 to compensate for this call so when it returns, the value is correct
-    info->ignore_stack_depth = value + 1;
+    info->ignore_stack_depth = PyLong_AsLong(value) + 1;
 
     // -1 is the actual ignore stack depth before this call
     return Py_BuildValue("i", current_value - 1);
@@ -1882,7 +1740,8 @@ static PyTypeObject TracerType = {
     .tp_new = Tracer_New,
     .tp_init = (initproc) Tracer_Init,
     .tp_dealloc = (destructor) Tracer_dealloc,
-    .tp_methods = Tracer_methods
+    .tp_methods = Tracer_methods,
+    .tp_getset = Tracer_getsetters,
 };
 
 PyMODINIT_FUNC
