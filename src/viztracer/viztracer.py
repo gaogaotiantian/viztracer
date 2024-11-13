@@ -33,6 +33,8 @@ class VizTracer(Tracer):
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
                  log_func_args: bool = False,
+                 log_func_repr: Optional[Callable] = None,
+                 log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
                  log_sparse: bool = False,
@@ -76,6 +78,12 @@ class VizTracer(Tracer):
             self.exclude_files = exclude_files
         else:
             self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
+
+        if log_func_with_objprint:
+            if log_func_repr:
+                raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
+            log_func_repr = objprint.objstr
+        self.log_func_repr = log_func_repr
 
         # Members of VizTracer object
         self.pid_suffix = pid_suffix

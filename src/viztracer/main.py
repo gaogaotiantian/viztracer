@@ -92,6 +92,8 @@ class VizUI:
                             help="log functions in exit functions like atexit")
         parser.add_argument("--log_func_retval", action="store_true", default=False,
                             help="log return value of the function in the report")
+        parser.add_argument("--log_func_with_objprint", action="store_true", default=False,
+                            help="use objprint for function argument and return value")
         parser.add_argument("--log_print", action="store_true", default=False,
                             help="replace all print() function to adding an event to the result")
         parser.add_argument("--log_sparse", action="store_true", default=False,
@@ -272,6 +274,7 @@ class VizUI:
             "ignore_frozen": options.ignore_frozen,
             "log_func_retval": options.log_func_retval,
             "log_func_args": options.log_func_args,
+            "log_func_with_objprint": options.log_func_with_objprint,
             "log_print": options.log_print,
             "log_gc": options.log_gc,
             "log_sparse": options.log_sparse,

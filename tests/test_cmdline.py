@@ -319,6 +319,9 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_log_func_args(self):
         self.template(["python", "-m", "viztracer", "--log_func_args", "cmdline_test.py"])
 
+    def test_log_func_with_objprint(self):
+        self.template(["python", "-m", "viztracer", "--log_func_args", "--log_func_with_objprint", "cmdline_test.py"])
+
     def test_minimize_memory(self):
         self.template(["python", "-m", "viztracer", "--minimize_memory", "cmdline_test.py"])
 

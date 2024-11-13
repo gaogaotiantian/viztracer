@@ -22,6 +22,7 @@ class TestInvalidArgs(BaseTmpl):
             "min_duration": ["0.1.0", "12", "3us"],
             "ignore_frozen": ["hello", 1, "True"],
             "log_async": ["hello", 1, "True"],
+            "log_func_repr": ["hello", 1, True],
         }
         tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():
@@ -43,6 +44,10 @@ class TestInvalidOperation(BaseTmpl):
         tracer.stop()
         with self.assertRaises(Exception):
             tracer.save("test.invalid")
+
+    def test_log_func_conflict(self):
+        with self.assertRaises(ValueError):
+            _ = VizTracer(log_func_repr=repr, log_func_with_objprint=True, verbose=0)
 
     def test_add_invalid_variable(self):
         tracer = VizTracer(verbose=0)

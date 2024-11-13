@@ -421,6 +421,41 @@ Tracer_trace_self_getter(TracerObject* self, void* closure)
     }
 }
 
+static int
+Tracer_log_func_repr_setter(TracerObject* self, PyObject* value, void* closure)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the attribute");
+        return -1;
+    }
+
+    if (value == Py_None) {
+        Py_XDECREF(self->log_func_repr);
+        self->log_func_repr = NULL;
+        return 0;
+    }
+
+    if (!PyCallable_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "log_func_repr must be a boolean");
+        return -1;
+    }
+
+    Py_INCREF(value);
+    Py_XSETREF(self->log_func_repr, value);
+
+    return 0;
+}
+
+static PyObject*
+Tracer_log_func_repr_getter(TracerObject* self, void* closure)
+{
+    if (self->log_func_repr == NULL) {
+        Py_RETURN_NONE;
+    }
+    Py_INCREF(self->log_func_repr);
+    return self->log_func_repr;
+}
+
 PyGetSetDef Tracer_getsetters[] = {
     {"max_stack_depth", (getter)Tracer_max_stack_depth_getter, (setter)Tracer_max_stack_depth_setter, "max_stack_depth", NULL},
     {"include_files", (getter)Tracer_include_files_getter, (setter)Tracer_include_files_setter, "include_files", NULL},
@@ -435,5 +470,6 @@ PyGetSetDef Tracer_getsetters[] = {
     {"log_func_args", (getter)Tracer_log_func_args_getter, (setter)Tracer_log_func_args_setter, "log_func_args", NULL},
     {"log_async", (getter)Tracer_log_async_getter, (setter)Tracer_log_async_setter, "log_async", NULL},
     {"trace_self", (getter)Tracer_trace_self_getter, (setter)Tracer_trace_self_setter, "trace_self", NULL},
+    {"log_func_repr", (getter)Tracer_log_func_repr_getter, (setter)Tracer_log_func_repr_setter, "log_func_repr", NULL},
     {NULL}
 };
