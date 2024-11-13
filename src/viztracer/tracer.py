@@ -1,16 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import builtins
 import gc
 import os
 import sys
-from io import StringIO
 from typing import Any, Dict, Optional, Sequence, Union
 
 import viztracer.snaptrace as snaptrace  # type: ignore
-
-from . import __version__
 
 
 class _VizTracer(snaptrace.Tracer):
@@ -50,7 +46,6 @@ class _VizTracer(snaptrace.Tracer):
         self.log_print = log_print
         self.log_gc = log_gc
         self.trace_self = trace_self
-        self.system_print = builtins.print
         self.total_entries = 0
         self.gc_start_args: Dict[str, int] = {}
         self.initialized = True
@@ -244,23 +239,7 @@ class _VizTracer(snaptrace.Tracer):
             "process_name": self.process_name,
         }
 
-        super().config(**cfg)
-
-    def start(self) -> None:
-        self.enable = True
-        self.parsed = False
-        if self.log_print:
-            self.overload_print()
-        if self.include_files is not None and self.exclude_files is not None:
-            raise Exception("include_files and exclude_files can't be both specified!")
-        self.config()
-        super().start()
-
-    def stop(self, stop_option: Optional[str] = None) -> None:
-        self.enable = False
-        if self.log_print:
-            self.restore_print()
-        super().stop(stop_option)
+        super()._config(**cfg)
 
     def enable_thread_tracing(self) -> None:
         sys.setprofile(self.threadtracefunc)
@@ -296,61 +275,3 @@ class _VizTracer(snaptrace.Tracer):
                     "collected": 0,
                     "uncollectable": 0,
                 })
-
-    def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
-        exec_line = f"({lineno}) {name} = {val}"
-        curr_args = self.get_func_args()
-        if not curr_args:
-            self.add_func_args("exec_steps", [exec_line])
-        else:
-            if "exec_steps" in curr_args:
-                curr_args["exec_steps"].append(exec_line)
-            else:
-                curr_args["exec_steps"] = [exec_line]
-
-    def _set_curr_stack_depth(self, stack_depth: int) -> None:
-        self.setcurrstack(stack_depth)
-
-    def parse(self) -> int:
-        # parse() is also performance sensitive. We could have a lot of entries
-        # in buffer, so try not to add any overhead when parsing
-        # We parse the buffer into Chrome Trace Event Format
-        self.stop()
-        if not self.parsed:
-            self.data = {
-                "traceEvents": self.load(),
-                "viztracer_metadata": {
-                    "version": __version__,
-                    "overflow": False,
-                },
-            }
-            metadata_count = 0
-            for d in self.data["traceEvents"]:
-                if d["ph"] == "M":
-                    metadata_count += 1
-                else:
-                    break
-            self.total_entries = len(self.data["traceEvents"]) - metadata_count
-            if self.total_entries == self.tracer_entries:
-                self.data["viztracer_metadata"]["overflow"] = True
-            self.parsed = True
-
-        return self.total_entries
-
-    def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
-        super().dump(filename, sanitize_function_name)
-
-    def overload_print(self) -> None:
-        self.system_print = builtins.print
-
-        def new_print(*args, **kwargs):
-            self.pause()
-            io = StringIO()
-            kwargs["file"] = io
-            self.system_print(*args, **kwargs)
-            self.add_instant(f"print - {io.getvalue()}")
-            self.resume()
-        builtins.print = new_print
-
-    def restore_print(self) -> None:
-        builtins.print = self.system_print

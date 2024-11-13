@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
+import io
 import multiprocessing
 import os
 import platform
@@ -11,6 +12,7 @@ from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 import objprint  # type: ignore
 
+from . import __version__
 from .report_builder import ReportBuilder
 from .tracer import _VizTracer
 from .vizevent import VizEvent
@@ -68,7 +70,6 @@ class VizTracer(_VizTracer):
         self.pid_suffix = pid_suffix
         self.file_info = file_info
         self.output_file = output_file
-        self.system_print = None
         self.log_sparse = log_sparse
         self.log_audit = log_audit
         self.log_torch = log_torch
@@ -78,6 +79,7 @@ class VizTracer(_VizTracer):
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
         self._exiting = False
+        self.system_print = builtins.print
         if register_global:
             self.register_global()
 
@@ -238,21 +240,57 @@ class VizTracer(_VizTracer):
 
     def start(self) -> None:
         if not self.enable:
-            self._plugin_manager.event("pre-start")
+            self.enable = True
+            self.parsed = False
             if self.log_torch:
                 try:
                     from torch.profiler import profile, supported_activities
                 except ImportError:
                     raise ImportError("torch is not installed, please install it to use log_torch")
                 self.torch_profile = profile(activities=supported_activities()).__enter__()
-            _VizTracer.start(self)
+            if self.log_print:
+                self.overload_print()
+            if self.include_files is not None and self.exclude_files is not None:
+                raise Exception("include_files and exclude_files can't be both specified!")
+            self.config()
+            self._plugin_manager.event("pre-start")
+            super().start()
 
     def stop(self, stop_option: Optional[str] = None) -> None:
         if self.enable:
-            _VizTracer.stop(self, stop_option)
+            self.enable = False
+            if self.log_print:
+                self.restore_print()
+            super().stop(stop_option)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
             self._plugin_manager.event("post-stop")
+
+    def parse(self) -> int:
+        # parse() is also performance sensitive. We could have a lot of entries
+        # in buffer, so try not to add any overhead when parsing
+        # We parse the buffer into Chrome Trace Event Format
+        self.stop()
+        if not self.parsed:
+            self.data = {
+                "traceEvents": self.load(),
+                "viztracer_metadata": {
+                    "version": __version__,
+                    "overflow": False,
+                },
+            }
+            metadata_count = 0
+            for d in self.data["traceEvents"]:
+                if d["ph"] == "M":
+                    metadata_count += 1
+                else:
+                    break
+            self.total_entries = len(self.data["traceEvents"]) - metadata_count
+            if self.total_entries == self.tracer_entries:
+                self.data["viztracer_metadata"]["overflow"] = True
+            self.parsed = True
+
+        return self.total_entries
 
     def run(self, command: str, output_file: Optional[str] = None) -> None:
         self.start()
@@ -376,6 +414,32 @@ class VizTracer(_VizTracer):
                 if self.viztmp is not None and os.path.exists(self.viztmp):
                     os.remove(self.viztmp)
             self.terminate()
+
+    def overload_print(self) -> None:
+        self.system_print = builtins.print
+
+        def new_print(*args, **kwargs):
+            self.pause()
+            file = io.StringIO()
+            kwargs["file"] = file
+            self.system_print(*args, **kwargs)
+            self.add_instant(f"print - {file.getvalue()}")
+            self.resume()
+        builtins.print = new_print
+
+    def restore_print(self) -> None:
+        builtins.print = self.system_print
+
+    def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
+        exec_line = f"({lineno}) {name} = {val}"
+        curr_args = self.get_func_args()
+        if not curr_args:
+            self.add_func_args("exec_steps", [exec_line])
+        else:
+            if "exec_steps" in curr_args:
+                curr_args["exec_steps"].append(exec_line)
+            else:
+                curr_args["exec_steps"] = [exec_line]
 
 
 def get_tracer() -> Optional[VizTracer]:

@@ -17,16 +17,25 @@ class Tracer:
     def stop(self, stop_option: Optional[str] = None) -> None:
         ...
 
-    def clear(self) -> None:
-        ...
-
     def resume(self) -> None:
         ...
 
     def pause(self) -> None:
         ...
 
+    def clear(self) -> None:
+        ...
+
+    def load(self) -> Dict[str, Any]:
+        ...
+
+    def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
+        ...
+
     def setignorestackcounter(self, value) -> int:
+        ...
+
+    def _set_curr_stack_depth(self, stack_depth: int) -> None:
         ...
 
     def getts(self) -> float:
@@ -35,7 +44,7 @@ class Tracer:
     def setpid(self, pid: int = -1) -> None:
         ...
 
-    def config(self, **kwargs) -> None:
+    def _config(self, **kwargs) -> None:
         ...
 
     def add_func_args(self, key: str, value: Any) -> None:

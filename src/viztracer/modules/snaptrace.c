@@ -31,7 +31,7 @@ static PyObject* snaptrace_stop(TracerObject* self, PyObject* stop_option);
 static PyObject* snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_dump(TracerObject* self, PyObject* args);
+static PyObject* snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
 static PyObject* snaptrace_config(TracerObject* self, PyObject* args, PyObject* kw);
@@ -214,10 +214,10 @@ static PyMethodDef Tracer_methods[] = {
     {"start", (PyCFunction)snaptrace_start, METH_NOARGS, "start profiling"},
     {"stop", (PyCFunction)snaptrace_stop, METH_O, "stop profiling"},
     {"load", (PyCFunction)snaptrace_load, METH_NOARGS, "load buffer"},
-    {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS, "dump buffer to file"},
+    {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS|METH_KEYWORDS, "dump buffer to file"},
     {"clear", (PyCFunction)snaptrace_clear, METH_NOARGS, "clear buffer"},
     {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
-    {"config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
+    {"_config", (PyCFunction)snaptrace_config, METH_VARARGS|METH_KEYWORDS, "config the snaptrace module"},
     {"add_instant", (PyCFunction)snaptrace_addinstant, METH_VARARGS|METH_KEYWORDS, "add instant event"},
     {"add_counter", (PyCFunction)snaptrace_addcounter, METH_VARARGS, "add counter event"},
     {"add_object", (PyCFunction)snaptrace_addobject, METH_VARARGS|METH_KEYWORDS, "add object event"},
@@ -225,7 +225,7 @@ static PyMethodDef Tracer_methods[] = {
     {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS, "add function arg"},
     {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
-    {"setcurrstack", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
+    {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_VARARGS, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
     {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_VARARGS, "reset ignore stack depth"},
@@ -1023,13 +1023,15 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
-snaptrace_dump(TracerObject* self, PyObject* args)
+snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
 {
     const char* filename = NULL;
     int sanitize_function_name = 0;
+    static char* kwlist[] = {"filename", "sanitize_function_name", NULL};
     FILE* fptr = NULL;
-    if (!PyArg_ParseTuple(args, "sp", &filename, &sanitize_function_name)) {
-        PyErr_SetString(PyExc_TypeError, "Missing required file name");
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "s|p", kwlist,
+                                     &filename, &sanitize_function_name)) {
         return NULL;
     }
     fptr = fopen(filename, "w");

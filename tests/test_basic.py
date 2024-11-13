@@ -12,7 +12,6 @@ import time
 import unittest
 
 from viztracer import VizTracer, get_tracer, ignore_function, trace_and_save
-from viztracer.tracer import _VizTracer
 
 from .base_tmpl import BaseTmpl
 
@@ -29,7 +28,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
-        t = _VizTracer()
+        t = VizTracer()
         t.verbose = 0
         t.start()
         fib(5)
@@ -43,7 +42,7 @@ class TestTracerBasic(BaseTmpl):
         def fun(n):
             for _ in range(n):
                 random.randrange(n)
-        t = _VizTracer(ignore_c_function=True)
+        t = VizTracer(ignore_c_function=True)
         t.verbose = 0
         t.start()
         fun(10)
@@ -56,7 +55,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
-        t = _VizTracer()
+        t = VizTracer()
         t.verbose = 0
         t.start()
         fib(5)
