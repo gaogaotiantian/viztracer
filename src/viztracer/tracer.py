@@ -275,7 +275,7 @@ class _VizTracer(snaptrace.Tracer):
 
     def setignorestackcounter(self, value) -> int:
         # +2 and -2 to compensate for two calls: the current one and the call in the next line
-        return self.setignorestackcounter(value + 2) - 2
+        return super().setignorestackcounter(value + 2) - 2
 
     def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
         if self.enable:
