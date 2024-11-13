@@ -17,7 +17,7 @@ class Tracer:
     def start(self) -> None:
         ...
 
-    def stop(self, stop_option: Optional[str] = None) -> None:
+    def stop(self, stop_option: Optional[str]) -> None:
         ...
 
     def resume(self) -> None:
