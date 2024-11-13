@@ -2,30 +2,33 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
+import gc
+import io
 import multiprocessing
 import os
 import platform
 import signal
 import sys
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from viztracer.snaptrace import Tracer  # type: ignore
 
 import objprint  # type: ignore
 
+from . import __version__
 from .report_builder import ReportBuilder
-from .tracer import _VizTracer
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
 
 
 # This is the interface of the package. Almost all user should use this
 # class for the functions
-class VizTracer(_VizTracer):
+class VizTracer(Tracer):
     def __init__(self,
                  tracer_entries: int = 1000000,
                  verbose: int = 1,
                  max_stack_depth: int = -1,
-                 include_files: Optional[Sequence[str]] = None,
-                 exclude_files: Optional[Sequence[str]] = None,
+                 include_files: Optional[List[str]] = None,
+                 exclude_files: Optional[List[str]] = None,
                  ignore_c_function: bool = False,
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
@@ -49,35 +52,43 @@ class VizTracer(_VizTracer):
                  process_name: Optional[str] = None,
                  output_file: str = "result.json",
                  plugins: Sequence[Union[VizPluginBase, str]] = []) -> None:
+        super().__init__(tracer_entries)
+
+        # Members of C Tracer object
+        self.verbose = verbose
+        self.max_stack_depth = max_stack_depth
+        self.ignore_c_function = ignore_c_function
+        self.ignore_frozen = ignore_frozen
+        self.log_func_args = log_func_args
+        self.log_func_retval = log_func_retval
+        self.log_async = log_async
+        self.log_gc = log_gc
+        self.log_print = log_print
+        self.trace_self = trace_self
+        self.lib_file_path = os.path.dirname(sys._getframe().f_code.co_filename)
+        self.process_name = process_name
+        self.min_duration = min_duration
+
+        if include_files is None:
+            self.include_files = include_files
+        else:
+            self.include_files = include_files[:] + [os.path.abspath(f) for f in include_files if not f.startswith("/")]
+
+        if exclude_files is None:
+            self.exclude_files = exclude_files
+        else:
+            self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
 
         if log_func_with_objprint:
             if log_func_repr:
                 raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
             log_func_repr = objprint.objstr
+        self.log_func_repr = log_func_repr
 
-        super().__init__(
-            tracer_entries=tracer_entries,
-            max_stack_depth=max_stack_depth,
-            include_files=include_files,
-            exclude_files=exclude_files,
-            ignore_c_function=ignore_c_function,
-            ignore_frozen=ignore_frozen,
-            log_func_retval=log_func_retval,
-            log_print=log_print,
-            log_gc=log_gc,
-            log_func_args=log_func_args,
-            log_func_repr=log_func_repr,
-            log_async=log_async,
-            trace_self=trace_self,
-            min_duration=min_duration,
-            process_name=process_name,
-        )
-        self._tracer: Any
-        self.verbose = verbose
+        # Members of VizTracer object
         self.pid_suffix = pid_suffix
         self.file_info = file_info
         self.output_file = output_file
-        self.system_print = None
         self.log_sparse = log_sparse
         self.log_audit = log_audit
         self.log_torch = log_torch
@@ -86,6 +97,16 @@ class VizTracer(_VizTracer):
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
+        self.system_print = builtins.print
+
+        # Members for the collected data
+        self.enable = False
+        self.parsed = False
+        self.tracer_entries = tracer_entries
+        self.data: Dict[str, Any] = {}
+        self.total_entries = 0
+        self.gc_start_args: Dict[str, int] = {}
+
         self._exiting = False
         if register_global:
             self.register_global()
@@ -209,10 +230,10 @@ class VizTracer(_VizTracer):
         # Silent the tracer during calibration
         self.verbose = 0
         with profile(activities=supported_activities()) as prof:
-            _VizTracer.start(self)
+            super().start()
             for _ in range(20):
                 torch.empty(100)
-            _VizTracer.stop(self)
+            super().stop(None)
         with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
             prof.export_chrome_trace(tmpfile.name)
             self.parse()
@@ -247,21 +268,56 @@ class VizTracer(_VizTracer):
 
     def start(self) -> None:
         if not self.enable:
-            self._plugin_manager.event("pre-start")
+            self.enable = True
+            self.parsed = False
             if self.log_torch:
                 try:
                     from torch.profiler import profile, supported_activities
                 except ImportError:
                     raise ImportError("torch is not installed, please install it to use log_torch")
                 self.torch_profile = profile(activities=supported_activities()).__enter__()
-            _VizTracer.start(self)
+            if self.log_print:
+                self.overload_print()
+            if self.include_files is not None and self.exclude_files is not None:
+                raise Exception("include_files and exclude_files can't be both specified!")
+            self._plugin_manager.event("pre-start")
+            super().start()
 
     def stop(self, stop_option: Optional[str] = None) -> None:
         if self.enable:
-            _VizTracer.stop(self, stop_option)
+            self.enable = False
+            if self.log_print:
+                self.restore_print()
+            super().stop(stop_option)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
             self._plugin_manager.event("post-stop")
+
+    def parse(self) -> int:
+        # parse() is also performance sensitive. We could have a lot of entries
+        # in buffer, so try not to add any overhead when parsing
+        # We parse the buffer into Chrome Trace Event Format
+        self.stop()
+        if not self.parsed:
+            self.data = {
+                "traceEvents": self.load(),
+                "viztracer_metadata": {
+                    "version": __version__,
+                    "overflow": False,
+                },
+            }
+            metadata_count = 0
+            for d in self.data["traceEvents"]:
+                if d["ph"] == "M":
+                    metadata_count += 1
+                else:
+                    break
+            self.total_entries = len(self.data["traceEvents"]) - metadata_count
+            if self.total_entries == self.tracer_entries:
+                self.data["viztracer_metadata"]["overflow"] = True
+            self.parsed = True
+
+        return self.total_entries
 
     def run(self, command: str, output_file: Optional[str] = None) -> None:
         self.start()
@@ -322,26 +378,17 @@ class VizTracer(_VizTracer):
 
     def fork_save(self, output_file: Optional[str] = None) -> multiprocessing.Process:
         if multiprocessing.get_start_method() != "fork":
-            # You have to parse first if you are not forking, address space is not copied
-            # Since it's not forking, we can't pickle tracer, just set it to None when
-            # we spawn
-            if not self.parsed:
-                self.parse()
-            tracer = self._tracer
-            self._tracer = None
-        else:
-            # Fix the current pid so it won't give new pid when parsing
-            self._tracer.setpid()
+            raise RuntimeError("fork_save is only supported in fork start method")
+
+        # Fix the current pid so it won't give new pid when parsing
+        self.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file})
         p.start()
 
-        if multiprocessing.get_start_method() != "fork":
-            self._tracer = tracer
-        else:
-            # Revert to the normal pid mode
-            self._tracer.setpid(0)
+        # Revert to the normal pid mode
+        self.setpid(0)
 
         return p
 
@@ -394,6 +441,82 @@ class VizTracer(_VizTracer):
                 if self.viztmp is not None and os.path.exists(self.viztmp):
                     os.remove(self.viztmp)
             self.terminate()
+
+    def enable_thread_tracing(self) -> None:
+        sys.setprofile(self.threadtracefunc)
+
+    def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
+        if self.enable:
+            if event == "instant":
+                self.add_instant(f"{name} = {repr(var)}", scope="p")
+            elif event == "counter":
+                if isinstance(var, (int, float)):
+                    self.add_counter(name, {name: var})
+                else:
+                    raise ValueError(f"{name}({var}) is not a number")
+            else:
+                raise ValueError(f"{event} is not supported")
+
+    def overload_print(self) -> None:
+        self.system_print = builtins.print
+
+        def new_print(*args, **kwargs):
+            self.pause()
+            file = io.StringIO()
+            kwargs["file"] = file
+            self.system_print(*args, **kwargs)
+            self.add_instant(f"print - {file.getvalue()}")
+            self.resume()
+        builtins.print = new_print
+
+    def restore_print(self) -> None:
+        builtins.print = self.system_print
+
+    def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
+        exec_line = f"({lineno}) {name} = {val}"
+        curr_args = self.get_func_args()
+        if not curr_args:
+            self.add_func_args("exec_steps", [exec_line])
+        else:
+            if "exec_steps" in curr_args:
+                curr_args["exec_steps"].append(exec_line)
+            else:
+                curr_args["exec_steps"] = [exec_line]
+
+    @property
+    def log_gc(self) -> bool:
+        return self.__log_gc
+
+    @log_gc.setter
+    def log_gc(self, log_gc: bool) -> None:
+        if isinstance(log_gc, bool):
+            self.__log_gc = log_gc
+            if log_gc:
+                gc.callbacks.append(self.add_garbage_collection)
+            elif self.add_garbage_collection in gc.callbacks:
+                gc.callbacks.remove(self.add_garbage_collection)
+        else:
+            raise TypeError(f"log_gc needs to be True or False, not {log_gc}")
+
+    def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
+        if self.enable:
+            if phase == "start":
+                args = {
+                    "collecting": 1,
+                    "collected": 0,
+                    "uncollectable": 0,
+                }
+                self.add_counter("garbage collection", args)
+                self.gc_start_args = args
+            if phase == "stop" and self.gc_start_args:
+                self.gc_start_args["collected"] = info["collected"]
+                self.gc_start_args["uncollectable"] = info["uncollectable"]
+                self.gc_start_args = {}
+                self.add_counter("garbage collection", {
+                    "collecting": 0,
+                    "collected": 0,
+                    "uncollectable": 0,
+                })
 
 
 def get_tracer() -> Optional[VizTracer]:

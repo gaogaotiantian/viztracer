@@ -9,9 +9,9 @@ import subprocess
 import sys
 import tempfile
 import time
+import unittest
 
 from viztracer import VizTracer, get_tracer, ignore_function, trace_and_save
-from viztracer.tracer import _VizTracer
 
 from .base_tmpl import BaseTmpl
 
@@ -28,7 +28,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
-        t = _VizTracer()
+        t = VizTracer()
         t.verbose = 0
         t.start()
         fib(5)
@@ -42,7 +42,7 @@ class TestTracerBasic(BaseTmpl):
         def fun(n):
             for _ in range(n):
                 random.randrange(n)
-        t = _VizTracer(ignore_c_function=True)
+        t = VizTracer(ignore_c_function=True)
         t.verbose = 0
         t.start()
         fun(10)
@@ -55,7 +55,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
-        t = _VizTracer()
+        t = VizTracer()
         t.verbose = 0
         t.start()
         fib(5)
@@ -152,10 +152,10 @@ class TestInstant(BaseTmpl):
     def test_invalid_scope(self):
         tracer = VizTracer(verbose=0)
         tracer.start()
-        tracer.add_instant('instant - "karma": True', scope="invalid")
+        with self.assertRaises(ValueError):
+            tracer.add_instant('instant - "karma": True', scope="invalid")
         tracer.stop()
-        tracer.parse()
-        self.assertEventNumber(tracer.data, 0)
+        tracer.clear()
 
 
 class TestFunctionArg(BaseTmpl):
@@ -176,6 +176,9 @@ class TestDecorator(BaseTmpl):
     def test_pause_resume(self):
         tracer = VizTracer(verbose=0)
 
+        def f():
+            pass
+
         @ignore_function(tracer=tracer)
         def ignore(n):
             if n == 0:
@@ -183,9 +186,10 @@ class TestDecorator(BaseTmpl):
             return ignore(n - 1) + 1
         tracer.start()
         ignore(10)
+        f()
         tracer.stop()
         tracer.parse()
-        self.assertEventNumber(tracer.data, 0)
+        self.assertEventNumber(tracer.data, 1)
 
     def test_ignore_function_without_global_tracer(self):
 
@@ -275,6 +279,7 @@ class TestLogPrint(BaseTmpl):
 
 
 class TestForkSave(BaseTmpl):
+    @unittest.skipUnless(multiprocessing.get_start_method() == "fork", "Fork save only works with fork")
     def test_basic(self):
         def fib(n):
             if n == 1 or n == 0:
@@ -309,6 +314,12 @@ class TestForkSave(BaseTmpl):
                 pid = data["traceEvents"][0]["pid"]
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
+
+    @unittest.skipUnless(multiprocessing.get_start_method() != "fork", "Fork save only works with fork")
+    def test_non_fork_platform(self):
+        tracer = VizTracer(verbose=0)
+        with self.assertRaises(RuntimeError):
+            tracer.fork_save("result.json")
 
 
 class TestGlobalTracer(BaseTmpl):

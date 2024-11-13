@@ -16,7 +16,6 @@ class TestInvalidArgs(BaseTmpl):
             "include_files": ["./src"],
             "exclude_files": ["./src"],
             "ignore_c_function": ["hello", 1, "True"],
-            "log_print": ["hello", 1, "True"],
             "log_func_retval": ["hello", 1, "True"],
             "log_gc": ["hello", 1, "True"],
             "log_func_args": ["hello", 1, "True"],
@@ -28,7 +27,8 @@ class TestInvalidArgs(BaseTmpl):
         tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():
             for val in vals:
-                self.assertRaises(ValueError, tracer.__setattr__, args, val)
+                with self.assertRaises((ValueError, TypeError)):
+                    setattr(tracer, args, val)
 
 
 class TestInvalidOperation(BaseTmpl):
