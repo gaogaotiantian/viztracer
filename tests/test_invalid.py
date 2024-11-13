@@ -27,7 +27,7 @@ class TestInvalidArgs(BaseTmpl):
         tracer = VizTracer(verbose=0)
         for args, vals in invalid_args.items():
             for val in vals:
-                self.assertRaises(ValueError, tracer.__setattr__, args, val)
+                self.assertRaises((ValueError, TypeError), tracer.__setattr__, args, val)
 
 
 class TestInvalidOperation(BaseTmpl):

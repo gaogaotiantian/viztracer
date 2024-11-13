@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
+import gc
 import io
 import multiprocessing
 import os
@@ -415,6 +416,21 @@ class VizTracer(_VizTracer):
                     os.remove(self.viztmp)
             self.terminate()
 
+    def enable_thread_tracing(self) -> None:
+        sys.setprofile(self.threadtracefunc)
+
+    def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
+        if self.enable:
+            if event == "instant":
+                self.add_instant(f"{name} = {repr(var)}", scope="p")
+            elif event == "counter":
+                if isinstance(var, (int, float)):
+                    self.add_counter(name, {name: var})
+                else:
+                    raise ValueError(f"{name}({var}) is not a number")
+            else:
+                raise ValueError(f"{event} is not supported")
+
     def overload_print(self) -> None:
         self.system_print = builtins.print
 
@@ -440,6 +456,41 @@ class VizTracer(_VizTracer):
                 curr_args["exec_steps"].append(exec_line)
             else:
                 curr_args["exec_steps"] = [exec_line]
+
+    @property
+    def log_gc(self) -> bool:
+        return self.__log_gc
+
+    @log_gc.setter
+    def log_gc(self, log_gc: bool) -> None:
+        if isinstance(log_gc, bool):
+            self.__log_gc = log_gc
+            if log_gc:
+                gc.callbacks.append(self.add_garbage_collection)
+            elif self.add_garbage_collection in gc.callbacks:
+                gc.callbacks.remove(self.add_garbage_collection)
+        else:
+            raise TypeError(f"log_gc needs to be True or False, not {log_gc}")
+
+    def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
+        if self.enable:
+            if phase == "start":
+                args = {
+                    "collecting": 1,
+                    "collected": 0,
+                    "uncollectable": 0,
+                }
+                self.add_counter("garbage collection", args)
+                self.gc_start_args = args
+            if phase == "stop" and self.gc_start_args:
+                self.gc_start_args["collected"] = info["collected"]
+                self.gc_start_args["uncollectable"] = info["uncollectable"]
+                self.gc_start_args = {}
+                self.add_counter("garbage collection", {
+                    "collecting": 0,
+                    "collected": 0,
+                    "uncollectable": 0,
+                })
 
 
 def get_tracer() -> Optional[VizTracer]:
