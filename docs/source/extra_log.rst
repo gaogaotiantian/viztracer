@@ -140,6 +140,25 @@ You can enable this feature in command line or using inline.
     
     tracer = VizTracer(log_func_retval=True)
 
+Log Function Argument And Return Value With Custom Function
+-----------------------------------------------------------
+
+You can log every function's arguments and return value with a custom function. You can feed your own function to ``VizTracer``
+
+.. code-block:: python
+
+    def myrepr(obj):
+        if isinstance(obj, MyClass):
+            return f"MyClass({obj.value})"
+        return repr(obj)
+
+    tracer = VizTracer(log_func_args=True, log_func_repr=myrepr)
+
+From the CLI, you can use the ``--log_func_with_objprint`` option to log with objprint
+
+.. code-block::
+
+    viztracer --log_func_args --log_func_with_objprint my_script.py
 
 Log Print
 ---------

@@ -153,6 +153,26 @@ VizTracer
         .. code-block::
 
             viztracer --log_func_args
+
+    .. py:attribute:: log_func_repr
+        :type: Optional[Callable]
+        :value: None
+
+        A custom repr function to log the function arguments and return value. The function should take
+        a single argument and return a string.
+
+    .. py:attribute:: log_func_with_objprint
+        :type: boolean
+        :value: False
+
+        Whether log the arguments and return value of the function with ``objprint``.
+        This attribute can't be ``True`` if ``log_func_repr`` is given.
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            viztracer --log_func_with_objprint
     
     .. py:attribute:: log_print 
         :type: boolean
