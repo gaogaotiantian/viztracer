@@ -265,10 +265,6 @@ class _VizTracer(snaptrace.Tracer):
     def enable_thread_tracing(self) -> None:
         sys.setprofile(self.threadtracefunc)
 
-    def setignorestackcounter(self, value) -> int:
-        # +2 and -2 to compensate for two calls: the current one and the call in the next line
-        return super().setignorestackcounter(value + 2) - 2
-
     def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
         if self.enable:
             if scope not in ["g", "p", "t"]:

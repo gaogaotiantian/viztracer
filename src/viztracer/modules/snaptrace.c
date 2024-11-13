@@ -1579,9 +1579,11 @@ snaptrace_setignorestackcounter(TracerObject* self, PyObject* args)
     }
 
     current_value = info->ignore_stack_depth;
-    info->ignore_stack_depth = value;
+    // +1 to compensate for this call so when it returns, the value is correct
+    info->ignore_stack_depth = value + 1;
 
-    return Py_BuildValue("i", current_value);
+    // -1 is the actual ignore stack depth before this call
+    return Py_BuildValue("i", current_value - 1);
 }
 
 static PyObject*
