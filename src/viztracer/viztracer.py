@@ -313,26 +313,17 @@ class VizTracer(_VizTracer):
 
     def fork_save(self, output_file: Optional[str] = None) -> multiprocessing.Process:
         if multiprocessing.get_start_method() != "fork":
-            # You have to parse first if you are not forking, address space is not copied
-            # Since it's not forking, we can't pickle tracer, just set it to None when
-            # we spawn
-            if not self.parsed:
-                self.parse()
-            tracer = self._tracer
-            self._tracer = None
-        else:
-            # Fix the current pid so it won't give new pid when parsing
-            self.setpid()
+            raise RuntimeError("fork_save is only supported in fork start method")
+
+        # Fix the current pid so it won't give new pid when parsing
+        self.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file})
         p.start()
 
-        if multiprocessing.get_start_method() != "fork":
-            self._tracer = tracer
-        else:
-            # Revert to the normal pid mode
-            self.setpid(0)
+        # Revert to the normal pid mode
+        self.setpid(0)
 
         return p
 

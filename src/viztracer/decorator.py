@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
+import multiprocessing
 import os
 import time
 from typing import Any, Callable, Optional
@@ -46,7 +47,10 @@ def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
             file_name = os.path.join(output_dir, f"result_{func.__name__}_{int(100000 * time.time())}.json")
-            tracer.fork_save(file_name)
+            if multiprocessing.get_start_method() == "fork":
+                tracer.fork_save(file_name)
+            else:
+                tracer.save(file_name)
             tracer.clear()
             return ret
 

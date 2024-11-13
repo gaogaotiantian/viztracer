@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unittest
 
 from viztracer import VizTracer, get_tracer, ignore_function, trace_and_save
 from viztracer.tracer import _VizTracer
@@ -279,6 +280,7 @@ class TestLogPrint(BaseTmpl):
 
 
 class TestForkSave(BaseTmpl):
+    @unittest.skipUnless(multiprocessing.get_start_method() == "fork", "Fork save only works with fork")
     def test_basic(self):
         def fib(n):
             if n == 1 or n == 0:
@@ -313,6 +315,12 @@ class TestForkSave(BaseTmpl):
                 pid = data["traceEvents"][0]["pid"]
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
+
+    @unittest.skipUnless(multiprocessing.get_start_method() != "fork", "Fork save only works with fork")
+    def test_non_fork_platform(self):
+        tracer = VizTracer(verbose=0)
+        with self.assertRaises(RuntimeError):
+            tracer.fork_save("result.json")
 
 
 class TestGlobalTracer(BaseTmpl):
