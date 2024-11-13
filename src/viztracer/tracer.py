@@ -13,7 +13,7 @@ import viztracer.snaptrace as snaptrace  # type: ignore
 from . import __version__
 
 
-class _VizTracer:
+class _VizTracer(snaptrace.Tracer):
     def __init__(
             self,
             tracer_entries: int = 1000000,
@@ -30,10 +30,10 @@ class _VizTracer:
             trace_self: bool = False,
             min_duration: float = 0,
             process_name: Optional[str] = None) -> None:
+        super().__init__(tracer_entries)
         self.initialized = False
         self.enable = False
         self.parsed = False
-        self._tracer = snaptrace.Tracer(tracer_entries)
         self.tracer_entries = tracer_entries
         self.data: Dict[str, Any] = {}
         self.verbose = 0
@@ -244,7 +244,7 @@ class _VizTracer:
             "process_name": self.process_name,
         }
 
-        self._tracer.config(**cfg)
+        super().config(**cfg)
 
     def start(self) -> None:
         self.enable = True
@@ -254,41 +254,35 @@ class _VizTracer:
         if self.include_files is not None and self.exclude_files is not None:
             raise Exception("include_files and exclude_files can't be both specified!")
         self.config()
-        self._tracer.start()
+        super().start()
 
     def stop(self, stop_option: Optional[str] = None) -> None:
         self.enable = False
         if self.log_print:
             self.restore_print()
-        self._tracer.stop(stop_option)
+        super().stop(stop_option)
 
     def pause(self) -> None:
         if self.enable:
-            self._tracer.pause()
+            super().pause()
 
     def resume(self) -> None:
         if self.enable:
-            self._tracer.resume()
-
-    def clear(self) -> None:
-        self._tracer.clear()
+            super().resume()
 
     def enable_thread_tracing(self) -> None:
-        sys.setprofile(self._tracer.threadtracefunc)
-
-    def getts(self) -> float:
-        return self._tracer.getts()
+        sys.setprofile(self.threadtracefunc)
 
     def setignorestackcounter(self, value) -> int:
         # +2 and -2 to compensate for two calls: the current one and the call in the next line
-        return self._tracer.setignorestackcounter(value + 2) - 2
+        return self.setignorestackcounter(value + 2) - 2
 
     def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
         if self.enable:
             if scope not in ["g", "p", "t"]:
                 print("Scope has to be one of g, p, t")
                 return
-            self._tracer.addinstant(name, args, scope)
+            self.addinstant(name, args, scope)
 
     def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
         if self.enable:
@@ -304,18 +298,18 @@ class _VizTracer:
 
     def add_counter(self, name: str, args: Dict[str, Any]) -> None:
         if self.enable:
-            self._tracer.addcounter(name, args)
+            self.addcounter(name, args)
 
     def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None) -> None:
         if self.enable:
-            self._tracer.addobject(ph, obj_id, name, args)
+            self.addobject(ph, obj_id, name, args)
 
     def add_func_args(self, key: str, value: Any) -> None:
         if self.enable:
-            self._tracer.addfunctionarg(key, value)
+            self.addfunctionarg(key, value)
 
     def add_raw(self, raw: Dict[str, Any]) -> None:
-        self._tracer.addraw(raw)
+        self.addraw(raw)
 
     def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
         if self.enable:
@@ -339,9 +333,9 @@ class _VizTracer:
 
     def add_func_exec(self, name: str, val: Any, lineno: int) -> None:
         exec_line = f"({lineno}) {name} = {val}"
-        curr_args = self._tracer.getfunctionarg()
+        curr_args = self.getfunctionarg()
         if not curr_args:
-            self._tracer.addfunctionarg("exec_steps", [exec_line])
+            self.addfunctionarg("exec_steps", [exec_line])
         else:
             if "exec_steps" in curr_args:
                 curr_args["exec_steps"].append(exec_line)
@@ -349,7 +343,7 @@ class _VizTracer:
                 curr_args["exec_steps"] = [exec_line]
 
     def _set_curr_stack_depth(self, stack_depth: int) -> None:
-        self._tracer.setcurrstack(stack_depth)
+        self.setcurrstack(stack_depth)
 
     def parse(self) -> int:
         # parse() is also performance sensitive. We could have a lot of entries
@@ -358,7 +352,7 @@ class _VizTracer:
         self.stop()
         if not self.parsed:
             self.data = {
-                "traceEvents": self._tracer.load(),
+                "traceEvents": self.load(),
                 "viztracer_metadata": {
                     "version": __version__,
                     "overflow": False,
@@ -378,7 +372,7 @@ class _VizTracer:
         return self.total_entries
 
     def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
-        self._tracer.dump(filename, sanitize_function_name)
+        super().dump(filename, sanitize_function_name)
 
     def overload_print(self) -> None:
         self.system_print = builtins.print

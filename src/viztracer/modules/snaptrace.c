@@ -1729,24 +1729,6 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 {
     TracerObject* self = (TracerObject*) type->tp_alloc(type, 0);
     if (self) {
-#if _WIN32
-        if ((self->dwTlsIndex = TlsAlloc()) == TLS_OUT_OF_INDEXES) {
-            printf("Error on TLS!\n");
-            exit(-1);
-        }
-        QueryPerformanceFrequency(&qpc_freq); 
-#else
-        if (pthread_key_create(&self->thread_key, snaptrace_threaddestructor)) {
-            perror("Failed to create Tss_Key");
-            exit(-1);
-        }
-#endif
-        if (!PyArg_ParseTuple(args, "l", &self->buffer_size)) {
-            printf("You need to specify buffer size when initializing Tracer\n");
-            exit(-1);
-        }
-        // We need an extra slot for circular buffer
-        self->buffer_size += 1;
         self->collecting = 0;
         self->fix_pid = 0;
         self->total_entries = 0;
@@ -1757,28 +1739,56 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->include_files = NULL;
         self->exclude_files = NULL;
         self->min_duration = 0;
-        self->buffer = (struct EventNode*) PyMem_Calloc(self->buffer_size, sizeof(struct EventNode));
-        if (!self->buffer) {
-            printf("Out of memory!\n");
-            exit(1);
-        }
+        self->buffer = NULL;
         self->buffer_head_idx = 0;
         self->buffer_tail_idx = 0;
         self->metadata_head = NULL;
-        snaptrace_createthreadinfo(self);
-        // Python: threading.setprofile(tracefunc)
-        {
-            PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
-
-            if (PyObject_CallMethod(threading_module, "setprofile", "N", handler) == NULL) {
-                perror("Failed to call threading.setprofile() properly");
-                exit(-1);
-            }
-        }
-        PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
     }
 
     return (PyObject*) self;
+}
+
+static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
+{
+    if (!PyArg_ParseTuple(args, "l", &self->buffer_size)) {
+        PyErr_SetString(PyExc_TypeError, "You need to specify buffer size when initializing Tracer");
+        return -1;
+    }
+
+    // We need an extra slot for circular buffer
+    self->buffer_size += 1;
+    self->buffer = (struct EventNode*) PyMem_Calloc(self->buffer_size, sizeof(struct EventNode));
+    if (!self->buffer) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+#if _WIN32
+    if ((self->dwTlsIndex = TlsAlloc()) == TLS_OUT_OF_INDEXES) {
+        printf("Error on TLS!\n");
+        exit(-1);
+    }
+    QueryPerformanceFrequency(&qpc_freq); 
+#else
+    if (pthread_key_create(&self->thread_key, snaptrace_threaddestructor)) {
+        perror("Failed to create Tss_Key");
+        exit(-1);
+    }
+#endif
+
+    snaptrace_createthreadinfo(self);
+    // Python: threading.setprofile(tracefunc)
+    {
+        PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
+
+        if (PyObject_CallMethod(threading_module, "setprofile", "N", handler) == NULL) {
+            perror("Failed to call threading.setprofile() properly");
+            exit(-1);
+        }
+    }
+    PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
+
+    return 0;
 }
 
 static void
@@ -1814,12 +1824,13 @@ Tracer_dealloc(TracerObject* self)
 
 static PyTypeObject TracerType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "viztracer.Tracer",
+    .tp_name = "snaptrace.Tracer",
     .tp_doc = "Tracer",
     .tp_basicsize = sizeof(TracerObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     .tp_new = Tracer_New,
+    .tp_init = (initproc) Tracer_Init,
     .tp_dealloc = (destructor) Tracer_dealloc,
     .tp_methods = Tracer_methods
 };

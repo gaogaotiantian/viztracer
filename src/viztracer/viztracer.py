@@ -322,7 +322,7 @@ class VizTracer(_VizTracer):
             self._tracer = None
         else:
             # Fix the current pid so it won't give new pid when parsing
-            self._tracer.setpid()
+            self.setpid()
 
         p = multiprocessing.Process(target=self.save, daemon=False,
                                     kwargs={"output_file": output_file})
@@ -332,7 +332,7 @@ class VizTracer(_VizTracer):
             self._tracer = tracer
         else:
             # Revert to the normal pid mode
-            self._tracer.setpid(0)
+            self.setpid(0)
 
         return p
 
