@@ -348,6 +348,13 @@ cleanup:
 int
 snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
 {
+    PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
+
+    if (cfunc->m_self == (PyObject*)self) {
+        info->ignore_stack_depth += 1;
+        return 0;
+    }
+
     // If it's a call, we need a new node, and we need to update the stack
     if (!info->stack_top->next) {
         info->stack_top->next = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
@@ -651,11 +658,10 @@ snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused))
 
         if (!info->paused) {
             PyEval_SetProfile(NULL, NULL);
-            // When we enter this function, viztracer.pause and
-            // tracer.pause both have been called. We need to
-            // reduce the ignore_stack_depth to simulate the
+            // When we enter this function, tracer.pause has been called.
+            // We need to reduce the ignore_stack_depth to simulate the
             // returns from these two functions
-            info->ignore_stack_depth -= 2;
+            info->ignore_stack_depth -= 1;
             info->paused = 1;
         }
         PyGILState_Release(state);
@@ -673,13 +679,6 @@ snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
 
         if (info->paused) {
             PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
-            // When we enter this function, viztracer.pause and
-            // tracer.pause both have been called but not recorded.
-            // It seems like C function tracer.pause's return will not
-            // be recorded.
-            // We need to increment the ignore_stack_depth to simulate the
-            // call of the function
-            info->ignore_stack_depth += 1;
             info->paused = 0;
         }
         PyGILState_Release(state);

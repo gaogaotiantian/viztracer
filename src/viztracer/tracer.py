@@ -262,14 +262,6 @@ class _VizTracer(snaptrace.Tracer):
             self.restore_print()
         super().stop(stop_option)
 
-    def pause(self) -> None:
-        if self.enable:
-            super().pause()
-
-    def resume(self) -> None:
-        if self.enable:
-            super().resume()
-
     def enable_thread_tracing(self) -> None:
         sys.setprofile(self.threadtracefunc)
 

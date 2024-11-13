@@ -176,6 +176,9 @@ class TestDecorator(BaseTmpl):
     def test_pause_resume(self):
         tracer = VizTracer(verbose=0)
 
+        def f():
+            pass
+
         @ignore_function(tracer=tracer)
         def ignore(n):
             if n == 0:
@@ -183,9 +186,10 @@ class TestDecorator(BaseTmpl):
             return ignore(n - 1) + 1
         tracer.start()
         ignore(10)
+        f()
         tracer.stop()
         tracer.parse()
-        self.assertEventNumber(tracer.data, 0)
+        self.assertEventNumber(tracer.data, 1)
 
     def test_ignore_function_without_global_tracer(self):
 
