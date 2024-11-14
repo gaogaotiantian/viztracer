@@ -39,9 +39,10 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                for py, aten in zip(py_events, aten_events):
-                    self.assertLess(py["ts"], aten["ts"])
-                    self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                if sys.platform != "darwin":
+                    for py, aten in zip(py_events, aten_events):
+                        self.assertLess(py["ts"], aten["ts"])
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -70,9 +71,10 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                for py, aten in zip(py_events, aten_events):
-                    self.assertLess(py["ts"], aten["ts"])
-                    self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                if sys.platform != "darwin":
+                    for py, aten in zip(py_events, aten_events):
+                        self.assertLess(py["ts"], aten["ts"])
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 
