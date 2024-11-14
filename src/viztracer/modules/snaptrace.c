@@ -1807,7 +1807,7 @@ PyInit_snaptrace(void)
 #if _WIN32
     QueryPerformanceFrequency(&qpc_freq);
 #elif defined(__APPLE__)
-    mach_timebase_info(&mach_timebase);
+    mach_timebase_info(&timebase_info);
 #endif
 
     return m;
