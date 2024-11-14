@@ -63,6 +63,8 @@ static PyObject* curr_task_getters[2] = {0};
 
 #if _WIN32
 LARGE_INTEGER qpc_freq;
+#elif defined(__APPLE__)
+mach_timebase_info_data_t timebase_info;
 #endif
 
 #ifdef Py_GIL_DISABLED
@@ -1692,7 +1694,6 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
         printf("Error on TLS!\n");
         exit(-1);
     }
-    QueryPerformanceFrequency(&qpc_freq); 
 #else
     if (pthread_key_create(&self->thread_key, snaptrace_threaddestructor)) {
         perror("Failed to create Tss_Key");
@@ -1801,6 +1802,9 @@ PyInit_snaptrace(void)
         PyErr_Clear();
     }
     json_module = PyImport_ImportModule("json");
+
+    QueryPerformanceFrequency(&qpc_freq);
+    mach_timebase_info(&mach_timebase);
 
     return m;
 }
