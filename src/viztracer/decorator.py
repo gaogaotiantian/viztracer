@@ -16,12 +16,14 @@ R = TypeVar("R")
 @overload
 def ignore_function(method: None,
                     tracer: Optional[VizTracer] = None) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    # pragma: no cover
     pass
 
 
 @overload
 def ignore_function(method: Callable[..., R],
                     tracer: Optional[VizTracer] = None) -> Callable[..., R]:
+    # pragma: no cover
     pass
 
 
@@ -55,6 +57,7 @@ def ignore_function(method: Optional[Callable[..., R]] = None,
 def trace_and_save(method: None,
                    output_dir: str = "./",
                    **viztracer_kwargs) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    # pragma: no cover
     pass
 
 
@@ -62,6 +65,7 @@ def trace_and_save(method: None,
 def trace_and_save(method: Callable[..., R],
                    output_dir: str = "./",
                    **viztracer_kwargs) -> Callable[..., R]:
+    # pragma: no cover
     pass
 
 
@@ -148,6 +152,7 @@ def _log_sparse_wrapper(func: Callable, stack_depth: int = 0,
 def log_sparse(func: None,
                stack_depth: int = 0,
                dynamic_tracer_check: bool = False) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    # pragma: no cover
     pass
 
 
@@ -155,6 +160,7 @@ def log_sparse(func: None,
 def log_sparse(func: Callable[..., R],
                stack_depth: int = 0,
                dynamic_tracer_check: bool = False) -> Callable[..., R]:
+    # pragma: no cover
     pass
 
 
