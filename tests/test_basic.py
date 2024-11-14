@@ -135,8 +135,22 @@ class TestVizTracerBasic(BaseTmpl):
                 path = os.path.join(tmpdir, *file_path)
                 tracer.start()
                 fib(5)
+                tracer.stop()
                 tracer.save(path)
                 self.assertFileExists(path)
+
+    def test_time_sanity(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        start = tracer.getts()
+        time.sleep(0.3)
+        end = tracer.getts()
+        tracer.stop()
+        tracer.parse()
+        time_events = [e for e in tracer.data["traceEvents"] if e["name"] == "time.sleep"]
+        self.assertEqual(len(time_events), 1)
+        self.assertAlmostEqual(time_events[0]["dur"], 0.3e6, delta=0.003e6)
+        self.assertAlmostEqual(end - start, 0.3e6, delta=0.006e6)
 
 
 class TestInstant(BaseTmpl):

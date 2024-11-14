@@ -24,19 +24,34 @@ inline int startswith(const char* target, const char* prefix)
     return strncmp(target, prefix, len) == 0;
 }
 
-inline double get_system_ts(void)
+inline long long get_system_ts(void)
 {
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
-    double curr_ts = (double) counter.QuadPart;
-    curr_ts *= 1000000000LL;
-    curr_ts /= qpc_freq.QuadPart;
-    return curr_ts;
+    return counter.QuadPart;
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return ((double)t.tv_sec * 1e9 + t.tv_nsec);
+    return (long long)(t.tv_sec * 1e9 + t.tv_nsec);
+#endif
+}
+
+inline double system_ts_to_us(long long ts)
+{
+#if _WIN32
+    return (double)ts * 1e6 / qpc_freq.QuadPart;
+#else
+    return (double)ts / 1e3;
+#endif
+}
+
+inline long long system_ts_to_ns(long long ts)
+{
+#if _WIN32
+    return ts * 1e9 / qpc_freq.QuadPart;
+#else
+    return ts;
 #endif
 }
 
