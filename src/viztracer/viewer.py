@@ -19,7 +19,7 @@ import threading
 import time
 import urllib.parse
 from http import HTTPStatus
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 
 dir_lock = threading.Lock()
@@ -277,7 +277,7 @@ class ServerThread(threading.Thread):
         self.link = f"http://127.0.0.1:{self.port}"
         self.use_external_procesor = use_external_processor
         self.externel_processor_process: Optional[ExternalProcessorProcess] = None
-        self.fg_data: Optional[List[Dict[str, Any]]] = None
+        self.fg_data: Optional[list[dict[str, Any]]] = None
         self.file_info = None
         self.httpd: Optional[VizViewerTCPServer] = None
         self.last_active = time.time()
@@ -364,7 +364,7 @@ class DirectoryViewer:
         self.timeout = timeout
         self.use_external_processor = use_external_processor
         self.max_port_number = 10
-        self.servers: Dict[str, ServerThread] = {}
+        self.servers: dict[str, ServerThread] = {}
 
     def get_link(self, path: str) -> str:
         path = os.path.join(self.base_path, path)
