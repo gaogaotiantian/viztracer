@@ -1803,8 +1803,11 @@ PyInit_snaptrace(void)
     }
     json_module = PyImport_ImportModule("json");
 
+#if _WIN32
     QueryPerformanceFrequency(&qpc_freq);
+#elif defined(__APPLE__)
     mach_timebase_info(&mach_timebase);
+#endif
 
     return m;
 }
