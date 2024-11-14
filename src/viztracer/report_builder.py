@@ -10,13 +10,13 @@ import gzip
 import os
 import re
 from string import Template
-from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
+from typing import Any, Optional, Sequence, TextIO, Union
 
 from . import __version__
 from .util import color_print, same_line_print
 
 
-def get_json(data: Union[Dict, str, Tuple[str, Dict]]) -> Dict[str, Any]:
+def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
     # This function will return a json object if data is already json object
     # or a opened file or a file path
     if isinstance(data, dict):
@@ -51,20 +51,20 @@ def get_json(data: Union[Dict, str, Tuple[str, Dict]]) -> Dict[str, Any]:
 class ReportBuilder:
     def __init__(
             self,
-            data: Union[Sequence[Union[str, Dict, Tuple[str, Dict]]], Dict],
+            data: Union[Sequence[Union[str, dict, tuple[str, dict]]], dict],
             verbose: int = 1,
             align: bool = False,
             minimize_memory: bool = False) -> None:
         self.data = data
         self.verbose = verbose
-        self.combined_json: Dict = {}
+        self.combined_json: dict = {}
         self.entry_number_threshold = 4000000
         self.align = align
         self.minimize_memory = minimize_memory
-        self.jsons: List[Dict] = []
-        self.invalid_json_paths: List[str] = []
+        self.jsons: list[dict] = []
+        self.invalid_json_paths: list[str] = []
         self.json_loaded = False
-        self.final_messages: List[Tuple[str, Dict]] = []
+        self.final_messages: list[tuple[str, dict]] = []
         if not isinstance(data, (dict, list, tuple)):
             raise TypeError("Invalid data type for ReportBuilder")
         if isinstance(data, (list, tuple)):
@@ -119,7 +119,7 @@ class ReportBuilder:
             if one.get("viztracer_metadata", {}).get("overflow", False):
                 self.combined_json["viztracer_metadata"]["overflow"] = True
 
-    def align_events(self, original_events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def align_events(self, original_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Apply an offset to all the trace events, making the start timestamp 0
         This is useful when comparing multiple runs of the same script

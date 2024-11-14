@@ -5,26 +5,26 @@ import ast
 import copy
 import re
 from functools import reduce
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from .util import color_print
 
 
 class AstTransformer(ast.NodeTransformer):
-    def __init__(self, inst_type: str, inst_args: Dict[str, dict]) -> None:
+    def __init__(self, inst_type: str, inst_args: dict[str, dict]) -> None:
         super().__init__()
         self.inst_type: str = inst_type
-        self.inst_args: Dict[str, dict] = inst_args
+        self.inst_args: dict[str, dict] = inst_args
         self.curr_lineno: int = 0
         self.log_func_exec_enable: bool = False
 
-    def visit_Assign(self, node: ast.Assign) -> Union[ast.stmt, List[ast.stmt]]:
+    def visit_Assign(self, node: ast.Assign) -> Union[ast.stmt, list[ast.stmt]]:
         return self._visit_generic_assign(node)
 
-    def visit_AugAssign(self, node: ast.AugAssign) -> Union[ast.stmt, List[ast.stmt]]:
+    def visit_AugAssign(self, node: ast.AugAssign) -> Union[ast.stmt, list[ast.stmt]]:
         return self._visit_generic_assign(node)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> Union[ast.stmt, List[ast.stmt]]:
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> Union[ast.stmt, list[ast.stmt]]:
         return self._visit_generic_assign(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
@@ -37,7 +37,7 @@ class AstTransformer(ast.NodeTransformer):
                 if re.fullmatch(funcname, node.name):
                     node.body.insert(0, self.get_instrument_node("Function Entry", node.name))
         elif self.inst_type in ("log_var", "log_number"):
-            instrumented_nodes: List[ast.stmt] = []
+            instrumented_nodes: list[ast.stmt] = []
             args = node.args
             func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
             if "vararg" in args._fields and args.vararg:
@@ -69,15 +69,15 @@ class AstTransformer(ast.NodeTransformer):
                 node.body = instrumented_nodes + node.body
         return node
 
-    def visit_Raise(self, node: ast.Raise) -> Union[ast.AST, List[ast.AST]]:
+    def visit_Raise(self, node: ast.Raise) -> Union[ast.AST, list[ast.AST]]:
         if self.inst_type == "log_exception":
             instrument_node = self.get_instrument_node_by_node("Exception", node.exc)
             return [instrument_node, node]
         return node
 
-    def _visit_generic_assign(self, node: Union[ast.Assign, ast.AugAssign, ast.AnnAssign]) -> List[ast.stmt]:
+    def _visit_generic_assign(self, node: Union[ast.Assign, ast.AugAssign, ast.AnnAssign]) -> list[ast.stmt]:
         self.generic_visit(node)
-        ret: List[ast.stmt] = [node]
+        ret: list[ast.stmt] = [node]
         self.curr_lineno = node.lineno
         if self.inst_type in ("log_var", "log_number", "log_attr", "log_func_exec"):
             if isinstance(node, (ast.AugAssign, ast.AnnAssign)):
@@ -91,7 +91,7 @@ class AstTransformer(ast.NodeTransformer):
                         ret.extend(instrumented_nodes)
         return ret
 
-    def get_assign_targets(self, node: ast.expr) -> List[str]:
+    def get_assign_targets(self, node: ast.expr) -> list[str]:
         """
         :param ast.Node node:
         """
@@ -105,7 +105,7 @@ class AstTransformer(ast.NodeTransformer):
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return []
 
-    def get_assign_targets_with_attr(self, node: ast.AST) -> List[ast.Attribute]:
+    def get_assign_targets_with_attr(self, node: ast.AST) -> list[ast.Attribute]:
         """
         :param ast.Node node:
         """
@@ -119,13 +119,13 @@ class AstTransformer(ast.NodeTransformer):
             Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
         return []
 
-    def get_assign_log_nodes(self, target: ast.expr) -> List[ast.stmt]:
+    def get_assign_log_nodes(self, target: ast.expr) -> list[ast.stmt]:
         """
         given a target of any type of Assign, return the instrumented node
         that log this variable
         if this target is not supposed to be logged, return []
         """
-        ret: List[ast.stmt] = []
+        ret: list[ast.stmt] = []
         if self.inst_type in ("log_var", "log_number"):
             target_ids = self.get_assign_targets(target)
             for target_id in target_ids:
@@ -334,12 +334,12 @@ class CodeMonkey:
         self.file_name: str = file_name
         self._compile: Callable = compile
         self.source_processor: Optional[SourceProcessor] = None
-        self.ast_transformers: List[AstTransformer] = []
+        self.ast_transformers: list[AstTransformer] = []
 
-    def add_instrument(self, inst_type: str, inst_args: Dict[str, Dict]) -> None:
+    def add_instrument(self, inst_type: str, inst_args: dict[str, dict]) -> None:
         self.ast_transformers.append(AstTransformer(inst_type, inst_args))
 
-    def add_source_processor(self):
+    def add_source_processor(self) -> None:
         self.source_processor = SourceProcessor()
 
     def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1, *, _feature_version=-1):

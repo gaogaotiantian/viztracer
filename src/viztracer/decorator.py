@@ -5,14 +5,31 @@ import functools
 import multiprocessing
 import os
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TypeVar, Union, overload
 
 from .viztracer import VizTracer, get_tracer
 
 
-def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTracer] = None) -> Callable:
+R = TypeVar("R")
 
-    def inner(func: Callable) -> Callable:
+
+@overload
+def ignore_function(method: None,
+                    tracer: Optional[VizTracer] = None) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    pass
+
+
+@overload
+def ignore_function(method: Callable[..., R],
+                    tracer: Optional[VizTracer] = None) -> Callable[..., R]:
+    pass
+
+
+def ignore_function(method: Optional[Callable[..., R]] = None,
+                    tracer: Optional[VizTracer] = None) -> Union[Callable[..., R],
+                                                                 Callable[[Callable[..., R]], Callable[..., R]]]:
+
+    def inner(func: Callable[..., R]) -> Callable[..., R]:
 
         @functools.wraps(func)
         def ignore_wrapper(*args, **kwargs) -> Any:
@@ -34,9 +51,26 @@ def ignore_function(method: Optional[Callable] = None, tracer: Optional[VizTrace
     return inner
 
 
-def trace_and_save(method: Optional[Callable] = None, output_dir: str = "./", **viztracer_kwargs):
+@overload
+def trace_and_save(method: None,
+                   output_dir: str = "./",
+                   **viztracer_kwargs) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    pass
 
-    def inner(func: Callable) -> Callable:
+
+@overload
+def trace_and_save(method: Callable[..., R],
+                   output_dir: str = "./",
+                   **viztracer_kwargs) -> Callable[..., R]:
+    pass
+
+
+def trace_and_save(method: Optional[Callable[..., R]] = None,
+                   output_dir: str = "./",
+                   **viztracer_kwargs) -> Union[Callable[..., R],
+                                                Callable[[Callable[..., R]], Callable[..., R]]]:
+
+    def inner(func: Callable[..., R]) -> Callable[..., R]:
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
@@ -110,7 +144,24 @@ def _log_sparse_wrapper(func: Callable, stack_depth: int = 0,
     return wrapper
 
 
-def log_sparse(func: Optional[Callable] = None, stack_depth: int = 0, dynamic_tracer_check: bool = False) -> Callable:
+@overload
+def log_sparse(func: None,
+               stack_depth: int = 0,
+               dynamic_tracer_check: bool = False) -> Callable[[Callable[..., R]], Callable[..., R]]:
+    pass
+
+
+@overload
+def log_sparse(func: Callable[..., R],
+               stack_depth: int = 0,
+               dynamic_tracer_check: bool = False) -> Callable[..., R]:
+    pass
+
+
+def log_sparse(func: Optional[Callable[..., R]] = None,
+               stack_depth: int = 0,
+               dynamic_tracer_check: bool = False) -> Union[Callable[..., R],
+                                                            Callable[[Callable[..., R]], Callable[..., R]]]:
     if func is None:
         return functools.partial(_log_sparse_wrapper, stack_depth=stack_depth, dynamic_tracer_check=dynamic_tracer_check)
     return _log_sparse_wrapper(func=func, stack_depth=stack_depth, dynamic_tracer_check=dynamic_tracer_check)

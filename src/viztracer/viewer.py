@@ -26,7 +26,7 @@ dir_lock = threading.Lock()
 
 
 @contextlib.contextmanager
-def chdir_temp(d):
+def chdir_temp(d: str):
     with dir_lock:
         curr_cwd = os.getcwd()
         os.chdir(d)
@@ -239,6 +239,7 @@ class ExternalProcessorProcess:
 
     def _wait_start(self):
         print("Loading and parsing trace data, this could take a while...")
+        assert self._process.stderr is not None
         while True:
             line = self._process.stderr.readline().decode("utf-8")
             if "This server can be used" in line:
