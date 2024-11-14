@@ -10,6 +10,7 @@
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <pthread.h>
+#include <mach/mach_time.h>
 #elif defined(__FreeBSD__)
 #include <pthread_np.h>
 #else
