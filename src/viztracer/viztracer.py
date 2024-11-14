@@ -231,8 +231,8 @@ class VizTracer(Tracer):
         self.verbose = 0
         with profile(activities=supported_activities()) as prof:
             super().start()
-            for _ in range(20):
-                torch.empty(100)
+            for i in range(20):
+                torch.empty(1)
             super().stop(None)
         with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
             prof.export_chrome_trace(tmpfile.name)

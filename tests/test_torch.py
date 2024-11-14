@@ -29,16 +29,16 @@ class TestTorch(CmdlineTmpl):
                 import torch
                 from viztracer import VizTracer
                 with VizTracer(log_torch=True, verbose=0):
-                    for _ in range(5):
-                        torch.empty(3)
+                    for _ in range(100):
+                        torch.empty(2)
             """
 
             def check_func(data):
                 events = data["traceEvents"]
                 py_events = [e for e in events if e["name"] == "torch.empty"]
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
-                self.assertEqual(len(py_events), 5)
-                self.assertEqual(len(aten_events), 5)
+                self.assertEqual(len(py_events), 100)
+                self.assertEqual(len(aten_events), 100)
                 for py, aten in zip(py_events, aten_events):
                     self.assertLess(py["ts"], aten["ts"])
                     self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
@@ -60,16 +60,16 @@ class TestTorch(CmdlineTmpl):
         if self.pkg_config.has("torch"):
             script = """
                 import torch
-                for _ in range(5):
-                    torch.empty(5)
+                for _ in range(100):
+                    torch.empty(2)
             """
 
             def check_func(data):
                 events = data["traceEvents"]
                 py_events = [e for e in events if e["name"] == "torch.empty"]
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
-                self.assertEqual(len(py_events), 5)
-                self.assertEqual(len(aten_events), 5)
+                self.assertEqual(len(py_events), 100)
+                self.assertEqual(len(aten_events), 100)
                 for py, aten in zip(py_events, aten_events):
                     self.assertLess(py["ts"], aten["ts"])
                     self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
