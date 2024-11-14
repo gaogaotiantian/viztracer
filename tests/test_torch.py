@@ -29,7 +29,8 @@ class TestTorch(CmdlineTmpl):
                 import torch
                 from viztracer import VizTracer
                 with VizTracer(log_torch=True, verbose=0):
-                    torch.empty(5)
+                    for _ in range(5):
+                        torch.empty(3)
             """
 
             def check_func(data):
@@ -59,7 +60,8 @@ class TestTorch(CmdlineTmpl):
         if self.pkg_config.has("torch"):
             script = """
                 import torch
-                torch.empty(5)
+                for _ in range(5):
+                    torch.empty(5)
             """
 
             def check_func(data):
