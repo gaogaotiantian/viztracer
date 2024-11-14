@@ -224,6 +224,7 @@ class VizTracer(Tracer):
             return
         import json
         import tempfile
+        import warnings
         import torch  # type: ignore
         from torch.profiler import profile, supported_activities  # type: ignore
         verbose = self.verbose
@@ -231,8 +232,8 @@ class VizTracer(Tracer):
         self.verbose = 0
         with profile(activities=supported_activities()) as prof:
             super().start()
-            for i in range(20):
-                torch.empty(1)
+            for i in range(100):
+                torch.empty(i)
             super().stop(None)
         with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
             prof.export_chrome_trace(tmpfile.name)
@@ -262,6 +263,8 @@ class VizTracer(Tracer):
                 if max_offset is None or torch_ends[i] + max_offset > viz_ends[i]:
                     max_offset = viz_ends[i] - torch_ends[i]
             assert min_offset is not None and max_offset is not None
+            if min_offset > max_offset:  # pragma: no cover
+                warnings.warn("Torch timer calibration failed, result might not be aligned", RuntimeWarning)
             self.torch_offset = (min_offset + max_offset) / 2
             self.clear()
         self.verbose = verbose
