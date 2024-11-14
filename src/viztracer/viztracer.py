@@ -257,7 +257,7 @@ class VizTracer(Tracer):
                     viz_ends.append(event["ts"] + event["dur"])
             if len(torch_starts) == 0 or len(viz_starts) == 0 or len(torch_starts) != len(viz_starts):
                 raise RuntimeError("Torch timer calibration failed")  # pragma: no cover
-            
+
             for i in range(len(torch_starts)):
                 if min_offset is None or torch_starts[i] + min_offset < viz_starts[i]:
                     min_offset = viz_starts[i] - torch_starts[i]
