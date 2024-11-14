@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Literal, Optional
 
 from .viztracer import VizTracer
 
@@ -12,7 +12,7 @@ class _EventBase:
         self._viztracer_tracer: VizTracer = tracer
         self._viztracer_name: str = name
         self._viztracer_enable: bool = False
-        self._viztracer_config: Dict = {
+        self._viztracer_config: dict = {
             "trigger_on_change": True,
             "include_attributes": [],
             "exclude_attributes": [],
@@ -37,7 +37,7 @@ class _EventBase:
                 else:
                     self._viztracer_log()
 
-    def _viztracer_get_attr_list(self) -> List[str]:
+    def _viztracer_get_attr_list(self) -> list[str]:
         if self._viztracer_config["include_attributes"]:
             return self._viztracer_config["include_attributes"]
         else:
@@ -59,7 +59,8 @@ class _EventBase:
         self._viztracer_log()
 
     @staticmethod
-    def triggerlog(method: Optional[Callable] = None, when: str = "after") -> Callable:
+    def triggerlog(method: Optional[Callable] = None,
+                   when: Literal["after", "before", "both"] = "after") -> Callable:
         if when not in ["after", "before", "both"]:
             raise ValueError(f"when has to be one of 'after', 'before' or 'both', not {when}")
 

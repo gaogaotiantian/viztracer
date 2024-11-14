@@ -59,12 +59,12 @@ def color_print(color, s: str, **kwargs) -> None:
         print(s)
 
 
-def same_line_print(s: str, width=80, **kwargs) -> None:
+def same_line_print(s: str, width: int = 80, **kwargs) -> None:
     print(f"\r{'':<{width}}", end="")  # clear the line
     print(f"\r{s}", end="", **kwargs)
 
 
-def unique_file_name(exec_name) -> str:
+def unique_file_name(exec_name: str) -> str:
     # Get the base name of the executable
     filename = os.path.basename(exec_name)
 

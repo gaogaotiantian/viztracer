@@ -3,7 +3,7 @@
 
 
 import sys
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from . import __version__
 from .util import color_print, compare_version
@@ -32,7 +32,7 @@ class VizPluginBase:
         #     return "0.10.5"
         raise NotImplementedError("Plugin of viztracer has to implement support_version method")
 
-    def message(self, m_type: str, payload: Dict) -> Dict:
+    def message(self, m_type: str, payload: dict) -> dict:
         """
         This is the only logical interface with VizTracer. To make it simple and flexible,
         we use m_type for message type, and the payload could be any json compatible
@@ -101,7 +101,7 @@ class VizPluginManager:
             print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
             sys.exit(1)
 
-    def _send_message(self, plugin: VizPluginBase, m_type: str, payload: Dict) -> None:
+    def _send_message(self, plugin: VizPluginBase, m_type: str, payload: dict) -> None:
         # this is the only interface to communicate with vizplugin
         # in the future we may need to do version compatibility
         # here
@@ -121,7 +121,7 @@ class VizPluginManager:
         for plugin in self._plugins:
             self._send_message(plugin, "event", {"when": when})
 
-    def command(self, cmd: Dict) -> None:
+    def command(self, cmd: dict) -> None:
         for plugin in self._plugins:
             self._send_message(plugin, "command", cmd)
 
@@ -131,11 +131,11 @@ class VizPluginManager:
             del plugin
         self._plugins = []
 
-    def assert_success(self, plugin: VizPluginBase, cmd: Dict, ret: Optional[Dict]) -> None:
+    def assert_success(self, plugin: VizPluginBase, cmd: dict, ret: Optional[dict]) -> None:
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 
-    def resolve(self, version: str, ret: Dict) -> None:
+    def resolve(self, version: str, ret: dict) -> None:
         if not ret or "action" not in ret:
             return
         if ret["action"] == "handle_data":

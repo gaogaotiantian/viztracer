@@ -19,7 +19,8 @@ import threading
 import time
 import types
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from types import CodeType
+from typing import Any, Optional, Union
 
 from viztracer.vcompressor import VCompressor
 
@@ -34,7 +35,7 @@ from .viztracer import VizTracer
 # For all the procedures in VizUI, return a tuple as the result
 # The first element bool indicates whether the procedure succeeds
 # The second element is the error message if it fails.
-VizProcedureResult = Tuple[bool, Optional[str]]
+VizProcedureResult = tuple[bool, Optional[str]]
 
 
 class VizUI:
@@ -44,7 +45,7 @@ class VizUI:
         self.verbose: int = 1
         self.ofile: str = "result.json"
         self.options: argparse.Namespace = argparse.Namespace()
-        self.args: List[str] = []
+        self.args: list[str] = []
         self._exiting: bool = False
         self.multiprocess_output_dir: str = tempfile.mkdtemp()
         self.cwd: str = os.getcwd()
@@ -196,7 +197,7 @@ class VizUI:
                 raise FileNotFoundError(f"{filename} does not exist")
         return ret
 
-    def parse(self, argv: List[str]) -> VizProcedureResult:
+    def parse(self, argv: list[str]) -> VizProcedureResult:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
         # We need to filter those out, they might conflict with our arguments
         idx: Optional[int] = None
@@ -342,7 +343,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Any, global_dict: Dict[str, Any]) -> VizProcedureResult:
+    def run_code(self, code: Union[CodeType, str], global_dict: dict[str, Any]) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
 
@@ -500,7 +501,7 @@ class VizUI:
 
         return True, None
 
-    def run_combine(self, files: List[str], align: bool = False) -> VizProcedureResult:
+    def run_combine(self, files: list[str], align: bool = False) -> VizProcedureResult:
         options = self.options
         builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
         if options.output_file:
@@ -515,7 +516,7 @@ class VizUI:
         print(__version__)
         return True, None
 
-    def _check_attach_availability(self) -> Tuple[bool, Optional[str]]:
+    def _check_attach_availability(self) -> tuple[bool, Optional[str]]:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
 
@@ -607,7 +608,7 @@ class VizUI:
 
         return True, None
 
-    def _wait_attach(self, interval) -> None:
+    def _wait_attach(self, interval: float) -> None:
         # interval == 0 means waiting for CTRL+C
         try:
             if interval > 0:

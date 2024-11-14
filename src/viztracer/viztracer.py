@@ -9,8 +9,8 @@ import os
 import platform
 import signal
 import sys
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-from viztracer.snaptrace import Tracer  # type: ignore
+from typing import Any, Callable, Literal, Optional, Sequence, Union
+from viztracer.snaptrace import Tracer
 
 import objprint  # type: ignore
 
@@ -27,13 +27,13 @@ class VizTracer(Tracer):
                  tracer_entries: int = 1000000,
                  verbose: int = 1,
                  max_stack_depth: int = -1,
-                 include_files: Optional[List[str]] = None,
-                 exclude_files: Optional[List[str]] = None,
+                 include_files: Optional[list[str]] = None,
+                 exclude_files: Optional[list[str]] = None,
                  ignore_c_function: bool = False,
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
                  log_func_args: bool = False,
-                 log_func_repr: Optional[Callable] = None,
+                 log_func_repr: Optional[Callable[..., str]] = None,
                  log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
@@ -103,9 +103,9 @@ class VizTracer(Tracer):
         self.enable = False
         self.parsed = False
         self.tracer_entries = tracer_entries
-        self.data: Dict[str, Any] = {}
+        self.data: dict[str, Any] = {}
         self.total_entries = 0
-        self.gc_start_args: Dict[str, int] = {}
+        self.gc_start_args: dict[str, int] = {}
 
         self._exiting = False
         if register_global:
@@ -116,8 +116,8 @@ class VizTracer(Tracer):
         self.viztmp: Optional[str] = None
 
         self._afterfork_cb: Optional[Callable] = None
-        self._afterfork_args: Tuple = tuple()
-        self._afterfork_kwargs: Dict = {}
+        self._afterfork_args: tuple = tuple()
+        self._afterfork_kwargs: dict = {}
 
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
@@ -137,7 +137,7 @@ class VizTracer(Tracer):
             raise ValueError(f"pid_suffix needs to be a boolean, not {pid_suffix}")
 
     @property
-    def init_kwargs(self) -> Dict:
+    def init_kwargs(self) -> dict:
         return {
             "tracer_entries": self.tracer_entries,
             "verbose": self.verbose,
@@ -191,7 +191,7 @@ class VizTracer(Tracer):
         signal.signal(signal.SIGUSR1, signal_start)
         signal.signal(signal.SIGUSR2, signal_stop)
 
-    def log_instant(self, name: str, args: Any = None, scope: str = "t", cond: bool = True) -> None:
+    def log_instant(self, name: str, args: Any = None, scope: Literal["g", "p", "t"] = "t", cond: bool = True) -> None:
         if cond:
             self.add_instant(name, args=args, scope=scope)
 
@@ -206,7 +206,7 @@ class VizTracer(Tracer):
         call_frame = sys._getframe(1)
         return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
 
-    def shield_ignore(self, func, *args, **kwargs):
+    def shield_ignore(self, func: Callable, *args, **kwargs):
         prev_ignore_stack = self.setignorestackcounter(0)
         res = func(*args, **kwargs)
         self.setignorestackcounter(prev_ignore_stack)
@@ -217,7 +217,7 @@ class VizTracer(Tracer):
         self._afterfork_args = args
         self._afterfork_kwargs = kwargs
 
-    def calibrate_torch_timer(self, force=False):
+    def calibrate_torch_timer(self, force: bool = False):
         if self.enable:
             raise RuntimeError("You can't calibrate torch timer while tracer is running")
         if self.torch_offset and not force:
@@ -498,7 +498,7 @@ class VizTracer(Tracer):
         else:
             raise TypeError(f"log_gc needs to be True or False, not {log_gc}")
 
-    def add_garbage_collection(self, phase: str, info: Dict[str, Any]) -> None:
+    def add_garbage_collection(self, phase: str, info: dict[str, Any]) -> None:
         if self.enable:
             if phase == "start":
                 args = {

@@ -2,16 +2,16 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Literal, Optional
 
 
 class Tracer:
     threadtracefunc: Callable
 
-    include_files: Optional[List[str]]
-    exclude_files: Optional[List[str]]
+    include_files: Optional[list[str]]
+    exclude_files: Optional[list[str]]
 
-    def __init__(self, tracer_entries: int) -> None:
+    def __init__(self, tracer_entries: int, /) -> None:
         ...
 
     def start(self) -> None:
@@ -29,7 +29,7 @@ class Tracer:
     def clear(self) -> None:
         ...
 
-    def load(self) -> Dict[str, Any]:
+    def load(self) -> dict[str, Any]:
         ...
 
     def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
@@ -50,17 +50,17 @@ class Tracer:
     def add_func_args(self, key: str, value: Any) -> None:
         ...
 
-    def get_func_args(self) -> Optional[Dict[str, Any]]:
+    def get_func_args(self) -> Optional[dict[str, Any]]:
         ...
 
-    def add_raw(self, raw: Dict[str, Any]) -> None:
+    def add_raw(self, raw: dict[str, Any]) -> None:
         ...
 
-    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[Dict[str, Any]] = None) -> None:
+    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[dict[str, Any]] = None) -> None:
         ...
 
-    def add_counter(self, name: str, args: Dict[str, Any]) -> None:
+    def add_counter(self, name: str, args: dict[str, Any]) -> None:
         ...
 
-    def add_instant(self, name: str, args: Any = None, scope: str = "g") -> None:
+    def add_instant(self, name: str, args: Any = None, scope: Literal["g", "p", "t"] = "g") -> None:
         ...

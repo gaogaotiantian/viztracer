@@ -9,7 +9,7 @@ import re
 import sys
 import textwrap
 from multiprocessing import Process
-from typing import Any, Callable, Dict, List, Sequence, Union, no_type_check
+from typing import Any, Callable, Sequence, Union, no_type_check
 
 from .viztracer import VizTracer
 
@@ -94,7 +94,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
     setattr(subprocess.Popen, "__init__", subprocess_init)
 
 
-def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
+def patch_multiprocessing(tracer: VizTracer, args: list[str]) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
@@ -113,7 +113,7 @@ def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
 
     # For spawn process
     @functools.wraps(multiprocessing.spawn.get_command_line)
-    def get_command_line(**kwds) -> List[str]:
+    def get_command_line(**kwds) -> list[str]:
         """
         Returns prefix of command line used for spawning a child process
         """
@@ -137,12 +137,12 @@ def patch_multiprocessing(tracer: VizTracer, args: List[str]) -> None:
 class SpawnProcess:
     def __init__(
             self,
-            viztracer_kwargs: Dict[str, Any],
+            viztracer_kwargs: dict[str, Any],
             run: Callable,
             target: Callable,
-            args: List[Any],
-            kwargs: Dict[str, Any],
-            cmdline_args: List[str]):
+            args: list[Any],
+            kwargs: dict[str, Any],
+            cmdline_args: list[str]):
         self._viztracer_kwargs = viztracer_kwargs
         self._run = run
         self._target = target
@@ -162,7 +162,7 @@ class SpawnProcess:
         self._run()
 
 
-def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[str]):
+def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[str]):
     import multiprocessing.spawn
     from multiprocessing import process, reduction  # type: ignore
     from multiprocessing.spawn import prepare
@@ -187,7 +187,7 @@ def patch_spawned_process(viztracer_kwargs: Dict[str, Any], cmdline_args: List[s
 
 def install_all_hooks(
         tracer: VizTracer,
-        args: List[str],
+        args: list[str],
         patch_multiprocess: bool = True) -> None:
 
     # multiprocess hook
