@@ -64,4 +64,33 @@ inline long long system_ts_to_ns(long long ts)
 #endif
 }
 
+inline int64_t calc_base_time_ns(void)
+{
+#if _WIN32
+    FILETIME ft;
+    ULARGE_INTEGER ui;
+    // get timestamps
+    int64_t system_ts = get_system_ts();
+    GetSystemTimeAsFileTime(&ft);
+
+    int64_t sys_ns = system_ts_to_ns(system_ts);
+    ui.LowPart = ft.dwLowDateTime;
+    ui.HighPart = ft.dwHighDateTime;
+
+    int64_t filetime_ns = (ui.QuadPart - 116444736000000000ULL) * 100;
+    return filetime_ns - sys_ns;
+#else
+    struct timespec t;
+
+    // get timestamps
+    int64_t system_ts = get_system_ts();
+    clock_gettime(CLOCK_REALTIME, &t);
+
+    int64_t sys_ns = system_ts_to_ns(system_ts);
+    int64_t realtime_ns = (int64_t)t.tv_sec * 1e9 + t.tv_nsec;
+
+    return realtime_ns - sys_ns;
+#endif
+}
+
 #endif

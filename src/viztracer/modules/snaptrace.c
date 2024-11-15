@@ -42,6 +42,7 @@ static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* 
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth);
 static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* value);
 static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
@@ -236,6 +237,7 @@ static PyMethodDef Tracer_methods[] = {
     {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS|METH_KEYWORDS, "add function arg"},
     {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
+    {"get_base_time", (PyCFunction)snaptrace_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
     {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_O, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
@@ -1307,6 +1309,12 @@ snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
     double us = system_ts_to_us(ts);
 
     return PyFloat_FromDouble(us);
+}
+
+static PyObject*
+snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    return PyLong_FromLongLong(calc_base_time_ns());
 }
 
 static PyObject*

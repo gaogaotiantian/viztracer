@@ -31,11 +31,14 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
             with open(path, encoding="utf-8") as f:
                 json_str = f.read()
             ret = json.loads(json_str)
-            offset = args['offset']
+            base_offset = args['base_offset']
+            torch_offset = ret['baseTimeNanoseconds']
+            # convert to us
+            offset_diff = (torch_offset - base_offset) / 1000
 
             for event in ret['traceEvents']:
                 if 'ts' in event:
-                    event['ts'] += offset
+                    event['ts'] += offset_diff
                 if event['ph'] == 'M':
                     # Pop metadata timestamp so it won't overwrite
                     # process and thread names
