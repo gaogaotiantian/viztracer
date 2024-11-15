@@ -152,7 +152,7 @@ class TestVizTracerBasic(BaseTmpl):
         time_events = [e for e in tracer.data["traceEvents"] if e["name"] == "time.sleep"]
         self.assertEqual(len(time_events), 1)
         self.assertAlmostEqual(time_events[0]["dur"], end - start, delta=0.003e6)
-        self.assertAlmostEqual(end - start, end_real - start_real , delta=0.003e6)
+        self.assertAlmostEqual(end - start, end_real - start_real, delta=0.003e6)
 
 
 class TestInstant(BaseTmpl):
