@@ -139,6 +139,18 @@ class TestVizTracerBasic(BaseTmpl):
                 tracer.save(path)
                 self.assertFileExists(path)
 
+    def test_save_while_enabled(self):
+        tracer = VizTracer(tracer_entries=10)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tracer.start()
+            fib(5)
+            tracer.save(os.path.join(tmpdir, "result.json"))
+            tracer.clear()
+            fib(5)
+            tracer.stop()
+            tracer.parse()
+            self.assertEventNumber(tracer.data, 10)
+
     def test_time_sanity(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()
