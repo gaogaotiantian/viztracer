@@ -34,7 +34,6 @@ inline int64_t get_base_time_ns(void)
 
 inline int64_t get_system_ts(void)
 {
-    return __rdtsc();
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
