@@ -9,6 +9,7 @@
 #include <time.h>
 
 #if _WIN32
+#include <windows.h>
 extern LARGE_INTEGER qpc_freq;
 #elif defined(__APPLE__)
 #include <mach/mach_time.h>
