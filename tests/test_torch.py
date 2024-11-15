@@ -39,10 +39,9 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                if sys.platform != "darwin":
-                    for py, aten in zip(py_events, aten_events):
-                        self.assertLess(py["ts"], aten["ts"])
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                for py, aten in zip(py_events, aten_events):
+                    self.assertLess(py["ts"], aten["ts"])
+                    self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -71,44 +70,11 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                if sys.platform != "darwin":
-                    for py, aten in zip(py_events, aten_events):
-                        self.assertLess(py["ts"], aten["ts"])
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                for py, aten in zip(py_events, aten_events):
+                    self.assertLess(py["ts"], aten["ts"])
+                    self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 
         else:
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script="pass", success=False)
-
-    def case_corner(self):
-        assert self.pkg_config is not None
-
-        if self.pkg_config.has("torch"):
-            script = """
-                import torch
-                from viztracer import VizTracer
-                with VizTracer(log_torch=True, verbose=0) as tracer:
-                    torch.empty(3)
-                    try:
-                        tracer.calibrate_torch_timer()
-                    except RuntimeError:
-                        pass
-                    else:
-                        assert False, "Should raise RuntimeError"
-                torch_offset = tracer.torch_offset
-                tracer.calibrate_torch_timer()
-                assert tracer.torch_offset == torch_offset
-            """
-            self.template(["python", "cmdline_test.py"], script=script)
-        else:
-            script = """
-                from viztracer import VizTracer
-                tracer = VizTracer(verbose=0)
-                # Bad bad, just for coverage
-                tracer.log_torch = True
-                tracer.start()
-            """
-
-            self.template(["python", "cmdline_test.py"], script=script, expected_output_file=None, success=False,
-                          expected_stderr=".*ImportError.*")
