@@ -31,15 +31,24 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
             with open(path, encoding="utf-8") as f:
                 json_str = f.read()
             ret = json.loads(json_str)
-            offset = args['offset']
+            base_offset = args['base_offset']
+            torch_offset = ret['baseTimeNanoseconds']
+            # convert to us
+            offset_diff = (torch_offset - base_offset) / 1000
 
             for event in ret['traceEvents']:
                 if 'ts' in event:
-                    event['ts'] += offset
+                    event['ts'] += offset_diff
                 if event['ph'] == 'M':
                     # Pop metadata timestamp so it won't overwrite
                     # process and thread names
                     event.pop('ts', None)
+
+            ret.pop("baseTimeNanoseconds")
+            ret.pop("displayTimeUnit")
+            ret.pop("traceName")
+            ret.pop("deviceProperties")
+            ret.pop("schemaVersion")
 
             ret['viztracer_metadata'] = {}
 
@@ -54,7 +63,8 @@ class ReportBuilder:
             data: Union[Sequence[Union[str, dict, tuple[str, dict]]], dict],
             verbose: int = 1,
             align: bool = False,
-            minimize_memory: bool = False) -> None:
+            minimize_memory: bool = False,
+            base_time: Optional[int] = None) -> None:
         self.data = data
         self.verbose = verbose
         self.combined_json: dict = {}
@@ -64,6 +74,7 @@ class ReportBuilder:
         self.jsons: list[dict] = []
         self.invalid_json_paths: list[str] = []
         self.json_loaded = False
+        self.base_time = base_time
         self.final_messages: list[tuple[str, dict]] = []
         if not isinstance(data, (dict, list, tuple)):
             raise TypeError("Invalid data type for ReportBuilder")
@@ -118,6 +129,9 @@ class ReportBuilder:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
             if one.get("viztracer_metadata", {}).get("overflow", False):
                 self.combined_json["viztracer_metadata"]["overflow"] = True
+            if one.get("viztracer_metadata", {}).get("baseTimeNanoseconds") is not None:
+                self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = \
+                    one["viztracer_metadata"]["baseTimeNanoseconds"]
 
     def align_events(self, original_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -147,6 +161,9 @@ class ReportBuilder:
             self.combined_json["displayTimeUnit"] = display_time_unit
 
         self.combined_json["viztracer_metadata"]["version"] = __version__
+
+        if self.base_time is not None:
+            self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = self.base_time
 
         if file_info:
             self.combined_json["file_info"] = {"files": {}, "functions": {}}

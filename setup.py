@@ -51,6 +51,7 @@ setuptools.setup(
             sources=[
                 "src/viztracer/modules/util.c",
                 "src/viztracer/modules/eventnode.c",
+                "src/viztracer/modules/quicktime.c",
                 "src/viztracer/modules/snaptrace.c",
                 "src/viztracer/modules/snaptrace_member.c",
             ],

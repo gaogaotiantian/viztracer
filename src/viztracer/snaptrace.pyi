@@ -44,6 +44,9 @@ class Tracer:
     def getts(self) -> float:
         ...
 
+    def get_base_time(self) -> int:
+        ...
+
     def setpid(self, pid: int = -1, /) -> None:
         ...
 

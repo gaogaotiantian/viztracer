@@ -93,7 +93,6 @@ class VizTracer(Tracer):
         self.log_audit = log_audit
         self.log_torch = log_torch
         self.torch_profile = None
-        self.torch_offset = 0.0
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
@@ -122,8 +121,9 @@ class VizTracer(Tracer):
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
 
-        if self.log_torch:
-            self.calibrate_torch_timer()
+        if log_torch:
+            # To generate an import error if torch is not installed
+            import torch  # type: ignore  # noqa: F401
 
     @property
     def pid_suffix(self) -> bool:
@@ -217,66 +217,13 @@ class VizTracer(Tracer):
         self._afterfork_args = args
         self._afterfork_kwargs = kwargs
 
-    def calibrate_torch_timer(self, force: bool = False):
-        if self.enable:
-            raise RuntimeError("You can't calibrate torch timer while tracer is running")
-        if self.torch_offset and not force:
-            return
-        import json
-        import tempfile
-        import warnings
-        import torch  # type: ignore
-        from torch.profiler import profile, supported_activities  # type: ignore
-        verbose = self.verbose
-        # Silent the tracer during calibration
-        self.verbose = 0
-        with profile(activities=supported_activities()) as prof:
-            super().start()
-            self.parsed = False
-            for i in range(100):
-                torch.empty(i)
-            super().stop(None)
-        with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
-            prof.export_chrome_trace(tmpfile.name)
-            self.parse()
-            torch_starts = []
-            torch_ends = []
-            viz_starts = []
-            viz_ends = []
-            min_offset = None
-            max_offset = None
-            with open(tmpfile.name, "r") as f:
-                torch_data = json.load(f)
-                for event in torch_data["traceEvents"]:
-                    if event["ph"] == "X" and event["name"] == "aten::empty":
-                        torch_starts.append(event["ts"])
-                        torch_ends.append(event["ts"] + event["dur"])
-            for event in self.data["traceEvents"]:
-                if event["ph"] == "X" and event["name"] == "torch.empty":
-                    viz_starts.append(event["ts"])
-                    viz_ends.append(event["ts"] + event["dur"])
-            if len(torch_starts) == 0 or len(viz_starts) == 0 or len(torch_starts) != len(viz_starts):
-                raise RuntimeError("Torch timer calibration failed")  # pragma: no cover
-
-            for i in range(len(torch_starts)):
-                if min_offset is None or torch_starts[i] + min_offset < viz_starts[i]:
-                    min_offset = viz_starts[i] - torch_starts[i]
-                if max_offset is None or torch_ends[i] + max_offset > viz_ends[i]:
-                    max_offset = viz_ends[i] - torch_ends[i]
-            assert min_offset is not None and max_offset is not None
-            if min_offset > max_offset:  # pragma: no cover
-                warnings.warn("Torch timer calibration failed, result might not be aligned", RuntimeWarning)
-            self.torch_offset = (min_offset + max_offset) / 2
-            self.clear()
-        self.verbose = verbose
-
     def start(self) -> None:
         if not self.enable:
             self.enable = True
             self.parsed = False
             if self.log_torch:
                 try:
-                    from torch.profiler import profile, supported_activities
+                    from torch.profiler import profile, supported_activities  # type: ignore
                 except ImportError:
                     raise ImportError("torch is not installed, please install it to use log_torch")
                 self.torch_profile = profile(activities=supported_activities()).__enter__()
@@ -370,11 +317,11 @@ class VizTracer(Tracer):
                 import tempfile
                 with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
                     self.torch_profile.export_chrome_trace(tmpfile.name)
-                    rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'offset': self.torch_offset}), self.data],
-                                       verbose, minimize_memory=self.minimize_memory)
+                    rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'base_offset': self.get_base_time()}), self.data],
+                                       verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                     rb.save(output_file=output_file, file_info=file_info)
             else:
-                rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
+                rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                 rb.save(output_file=output_file, file_info=file_info)
 
         if enabled:

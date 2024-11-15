@@ -5,12 +5,10 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <frameobject.h>
-#include <time.h>
 #if _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <pthread.h>
-#include <mach/mach_time.h>
 #elif defined(__FreeBSD__)
 #include <pthread_np.h>
 #else
@@ -20,6 +18,7 @@
 
 #include "pythoncapi_compat.h"
 #include "snaptrace.h"
+#include "quicktime.h"
 #include "util.h"
 #include "eventnode.h"
 
@@ -42,6 +41,7 @@ static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* 
 static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw);
 static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
+static PyObject* snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused));
 static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth);
 static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* value);
 static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
@@ -61,12 +61,6 @@ PyObject* trio_module = NULL;
 PyObject* trio_lowlevel_module = NULL;
 
 static PyObject* curr_task_getters[2] = {0};
-
-#if _WIN32
-LARGE_INTEGER qpc_freq;
-#elif defined(__APPLE__)
-mach_timebase_info_data_t timebase_info;
-#endif
 
 #ifdef Py_GIL_DISABLED
 // The free threading implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
@@ -236,6 +230,7 @@ static PyMethodDef Tracer_methods[] = {
     {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS|METH_KEYWORDS, "add function arg"},
     {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
+    {"get_base_time", (PyCFunction)snaptrace_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
     {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_O, "set current stack depth"},
     {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
@@ -389,7 +384,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
@@ -459,7 +454,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
@@ -929,7 +924,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 PyDict_SetItemString(dict, "ph", ph_B);
             } else {
                 PyDict_SetItemString(dict, "ph", ph_X);
-                PyObject* dur = PyFloat_FromDouble(system_ts_to_us(node->data.fee.dur));
+                PyObject* dur = PyFloat_FromDouble(dur_ts_to_us(node->data.fee.dur));
                 PyDict_SetItemString(dict, "dur", dur);
                 Py_DECREF(dur);
             }
@@ -1160,7 +1155,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
         switch (node->ntype) {
         case FEE_NODE:
             ;
-            long long dur_long = system_ts_to_ns(node->data.fee.dur);
+            long long dur_long = dur_ts_to_ns(node->data.fee.dur);
             char ph = 'X';
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_C_CALL) {
                 ph = 'B';
@@ -1307,6 +1302,12 @@ snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
     double us = system_ts_to_us(ts);
 
     return PyFloat_FromDouble(us);
+}
+
+static PyObject*
+snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    return PyLong_FromLongLong(get_base_time_ns());
 }
 
 static PyObject*
@@ -1716,6 +1717,7 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
             exit(-1);
         }
     }
+
     PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
 
     return 0;
@@ -1808,11 +1810,7 @@ PyInit_snaptrace(void)
     }
     json_module = PyImport_ImportModule("json");
 
-#if _WIN32
-    QueryPerformanceFrequency(&qpc_freq);
-#elif defined(__APPLE__)
-    mach_timebase_info(&timebase_info);
-#endif
+    quicktime_init();
 
     return m;
 }
