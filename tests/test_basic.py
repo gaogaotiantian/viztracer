@@ -142,19 +142,17 @@ class TestVizTracerBasic(BaseTmpl):
     def test_time_sanity(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()
+        start_real = time.perf_counter_ns() / 1000
         start = tracer.getts()
         time.sleep(0.3)
         end = tracer.getts()
+        end_real = time.perf_counter_ns() / 1000
         tracer.stop()
         tracer.parse()
         time_events = [e for e in tracer.data["traceEvents"] if e["name"] == "time.sleep"]
         self.assertEqual(len(time_events), 1)
         self.assertAlmostEqual(time_events[0]["dur"], end - start, delta=0.003e6)
-        if os.getenv("GITHUB_ACTIONS") and sys.platform == "darwin":
-            # Github actions on mac is unstable
-            pass
-        else:
-            self.assertAlmostEqual(end - start, 0.3e6, delta=0.006e6)
+        self.assertAlmostEqual(end - start, end_real - start_real , delta=0.003e6)
 
 
 class TestInstant(BaseTmpl):
