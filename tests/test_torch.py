@@ -2,13 +2,23 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import platform
 import sys
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
 
 
-@package_matrix(["~torch", "torch"] if sys.version_info < (3, 13) or "linux" in sys.platform else ["~torch"])
+def support_torch():
+    if "linux" in sys.platform:
+        return True
+    if sys.platform == "win32":
+        return sys.version_info < (3, 13)
+    if sys.platform == "darwin":
+        return platform.machine().lower() == "arm64"
+
+
+@package_matrix(["~torch", "torch"] if support_torch() else ["~torch"])
 class TestTorch(CmdlineTmpl):
     def test_entry(self):
         # We only want to install/uninstall torch once, so do all tests in one function
