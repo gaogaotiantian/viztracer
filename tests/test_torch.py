@@ -46,10 +46,15 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                if sys.platform != "darwin":
-                    for py, aten in zip(py_events, aten_events):
+                for py, aten in zip(py_events, aten_events):
+                    if "linux" in sys.platform:
+                        # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                    else:
+                        # Not so much about others, 50us should be fine
+                        self.assertAlmostEqual(py["ts"], aten["ts"], delta=50)
+                        self.assertAlmostEqual(py["ts"] + py["dur"], aten["ts"] + aten["dur"], delta=50)
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -78,10 +83,15 @@ class TestTorch(CmdlineTmpl):
                 aten_events = [e for e in events if e["name"] == "aten::empty"]
                 self.assertEqual(len(py_events), 100)
                 self.assertEqual(len(aten_events), 100)
-                if sys.platform != "darwin":
-                    for py, aten in zip(py_events, aten_events):
+                for py, aten in zip(py_events, aten_events):
+                    if "linux" in sys.platform:
+                        # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                    else:
+                        # Not so much about others, 50us should be fine
+                        self.assertAlmostEqual(py["ts"], aten["ts"], delta=50)
+                        self.assertAlmostEqual(py["ts"] + py["dur"], aten["ts"] + aten["dur"], delta=50)
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 

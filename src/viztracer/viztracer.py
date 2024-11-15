@@ -318,10 +318,10 @@ class VizTracer(Tracer):
                 with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
                     self.torch_profile.export_chrome_trace(tmpfile.name)
                     rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'base_offset': self.get_base_time()}), self.data],
-                                       verbose, minimize_memory=self.minimize_memory)
+                                       verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                     rb.save(output_file=output_file, file_info=file_info)
             else:
-                rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory)
+                rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                 rb.save(output_file=output_file, file_info=file_info)
 
         if enabled:
