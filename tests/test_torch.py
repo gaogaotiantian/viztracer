@@ -15,7 +15,7 @@ def support_torch():
     if sys.platform == "win32":
         return sys.version_info < (3, 13)
     if sys.platform == "darwin":
-        return platform.machine().lower() == "arm64"
+        return platform.machine().lower() == "arm64" and sys.version_info < (3, 13)
 
 
 @package_matrix(["~torch", "torch"] if support_torch() else ["~torch"])
