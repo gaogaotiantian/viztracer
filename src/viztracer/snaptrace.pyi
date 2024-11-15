@@ -6,6 +6,7 @@ from typing import Any, Callable, Literal, Optional
 
 
 class Tracer:
+    threadtracefunc: Callable
 
     include_files: Optional[list[str]]
     exclude_files: Optional[list[str]]
@@ -32,9 +33,6 @@ class Tracer:
         ...
 
     def dump(self, filename: str, sanitize_function_name: bool = False) -> None:
-        ...
-
-    def threadtracefunc(self, frame, event, arg, /) -> None:
         ...
 
     def setignorestackcounter(self, value: int) -> int:
