@@ -1,0 +1,84 @@
+// Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+// For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
+
+#ifndef __SNAPTRACE_QUICKTIME_H__
+#define __SNAPTRACE_QUICKTIME_H__
+
+#include <stdint.h>
+#include <time.h>
+
+#if _WIN32
+extern LARGE_INTEGER qpc_freq;
+#elif defined(__APPLE__)
+extern mach_timebase_info_data_t timebase_info;
+#endif
+
+extern double ts_to_ns_factor;
+extern int64_t system_base_time;
+
+void quicktime_init();
+
+inline int64_t get_base_time_ns(void)
+{
+    return system_base_time;
+};
+
+inline int64_t get_system_ts(void)
+{
+#if _WIN32
+    LARGE_INTEGER counter = {0};
+    QueryPerformanceCounter(&counter);
+    return counter.QuadPart;
+#elif defined(__APPLE__)
+    return mach_absolute_time();
+#else
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (int64_t)(t.tv_sec * 1e9 + t.tv_nsec);
+#endif
+}
+
+inline int64_t get_system_ns(void)
+{
+#if _WIN32
+    LARGE_INTEGER counter = {0};
+    QueryPerformanceCounter(&counter);
+    return counter.QuadPart * 1e9 / qpc_freq.QuadPart;
+#elif defined(__APPLE__)
+    return mach_absolute_time() * timebase_info.numer / timebase_info.denom;
+#else
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (int64_t)(t.tv_sec * 1e9 + t.tv_nsec);
+#endif
+}
+
+
+inline int64_t get_system_epoch_ns(void)
+{
+#if _WIN32
+    FILETIME ft;
+    ULARGE_INTEGER ui;
+    GetSystemTimePreciseAsFileTime(&ft);
+    ui.LowPart = ft.dwLowDateTime;
+    ui.HighPart = ft.dwHighDateTime;
+    return (ui.QuadPart - 116444736000000000ULL) * 100;
+#else
+    struct timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    return (int64_t)t.tv_sec * 1e9 + t.tv_nsec;
+#endif
+}
+
+inline double system_ts_to_us(int64_t ts)
+{
+    return (double)ts * ts_to_ns_factor / 1e3;
+}
+
+inline int64_t system_ts_to_ns(int64_t ts)
+{
+    return ts * ts_to_ns_factor;
+}
+
+#endif

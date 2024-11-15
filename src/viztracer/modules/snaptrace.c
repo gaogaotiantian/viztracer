@@ -5,12 +5,10 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <frameobject.h>
-#include <time.h>
 #if _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <pthread.h>
-#include <mach/mach_time.h>
 #elif defined(__FreeBSD__)
 #include <pthread_np.h>
 #else
@@ -20,6 +18,7 @@
 
 #include "pythoncapi_compat.h"
 #include "snaptrace.h"
+#include "quicktime.h"
 #include "util.h"
 #include "eventnode.h"
 
@@ -62,12 +61,6 @@ PyObject* trio_module = NULL;
 PyObject* trio_lowlevel_module = NULL;
 
 static PyObject* curr_task_getters[2] = {0};
-
-#if _WIN32
-LARGE_INTEGER qpc_freq;
-#elif defined(__APPLE__)
-mach_timebase_info_data_t timebase_info;
-#endif
 
 #ifdef Py_GIL_DISABLED
 // The free threading implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
@@ -1314,7 +1307,7 @@ snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 static PyObject*
 snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
-    return PyLong_FromLongLong(calc_base_time_ns());
+    return PyLong_FromLongLong(get_base_time_ns());
 }
 
 static PyObject*
@@ -1816,11 +1809,7 @@ PyInit_snaptrace(void)
     }
     json_module = PyImport_ImportModule("json");
 
-#if _WIN32
-    QueryPerformanceFrequency(&qpc_freq);
-#elif defined(__APPLE__)
-    mach_timebase_info(&timebase_info);
-#endif
+    quicktime_init();
 
     return m;
 }
