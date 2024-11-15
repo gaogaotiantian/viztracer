@@ -23,6 +23,29 @@ mach_timebase_info_data_t timebase_info;
 
 double ts_to_ns_factor = 1.0;
 int64_t system_base_time = 0;
+int64_t system_base_ts = 0;
+int64_t t0_ts = 0;
+int64_t t0_ns = 0;
+
+double system_ts_to_us(int64_t ts)
+{
+    return system_ts_to_ns(ts) / 1000.0;
+}
+
+int64_t system_ts_to_ns(int64_t ts)
+{
+    return t0_ns + (ts - t0_ts) * ts_to_ns_factor;
+}
+
+double dur_ts_to_us(int64_t dur)
+{
+    return (double)dur * ts_to_ns_factor / 1000;
+}
+
+int64_t dur_ts_to_ns(int64_t dur)
+{
+    return dur * ts_to_ns_factor;
+}
 
 static int compare_double(const void *a, const void *b)
 {
@@ -41,6 +64,8 @@ static void calibrate_quicktime()
     int64_t end_ts[CALIBRATE_SIZE] = {0};
     int64_t end_ns[CALIBRATE_SIZE] = {0};
     double factors[CALIBRATE_SIZE] = {0};
+    t0_ts = 0;
+    t0_ns = 0;
 
     for (int i = 0; i < CALIBRATE_SIZE; i++)
     {
@@ -48,7 +73,12 @@ static void calibrate_quicktime()
         start_ns[i] = get_system_ns();
         int64_t start_after = get_system_ts();
         start_ts[i] = start_before + (start_after - start_before) / 2;
+        t0_ts += start_ts[i];
+        t0_ns += start_ns[i];
     }
+
+    t0_ts /= CALIBRATE_SIZE;
+    t0_ns /= CALIBRATE_SIZE;
 
 #if _WIN32
     Sleep(100);

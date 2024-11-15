@@ -384,7 +384,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
@@ -454,7 +454,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
@@ -924,7 +924,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 PyDict_SetItemString(dict, "ph", ph_B);
             } else {
                 PyDict_SetItemString(dict, "ph", ph_X);
-                PyObject* dur = PyFloat_FromDouble(system_ts_to_us(node->data.fee.dur));
+                PyObject* dur = PyFloat_FromDouble(dur_ts_to_us(node->data.fee.dur));
                 PyDict_SetItemString(dict, "dur", dur);
                 Py_DECREF(dur);
             }
@@ -1155,7 +1155,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
         switch (node->ntype) {
         case FEE_NODE:
             ;
-            long long dur_long = system_ts_to_ns(node->data.fee.dur);
+            long long dur_long = dur_ts_to_ns(node->data.fee.dur);
             char ph = 'X';
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_C_CALL) {
                 ph = 'B';
@@ -1717,6 +1717,7 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
             exit(-1);
         }
     }
+
     PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
 
     return 0;

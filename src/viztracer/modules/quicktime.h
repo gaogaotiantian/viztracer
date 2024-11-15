@@ -21,6 +21,10 @@ extern double ts_to_ns_factor;
 extern int64_t system_base_time;
 
 void quicktime_init();
+double system_ts_to_us(int64_t ts);
+int64_t system_ts_to_ns(int64_t ts);
+double dur_ts_to_us(int64_t dur);
+int64_t dur_ts_to_ns(int64_t dur);
 
 inline int64_t get_base_time_ns(void)
 {
@@ -72,16 +76,6 @@ inline int64_t get_system_epoch_ns(void)
     clock_gettime(CLOCK_REALTIME, &t);
     return (int64_t)t.tv_sec * 1e9 + t.tv_nsec;
 #endif
-}
-
-inline double system_ts_to_us(int64_t ts)
-{
-    return (double)ts * ts_to_ns_factor / 1e3;
-}
-
-inline int64_t system_ts_to_ns(int64_t ts)
-{
-    return ts * ts_to_ns_factor;
 }
 
 #endif
