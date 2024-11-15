@@ -123,7 +123,7 @@ class VizTracer(Tracer):
 
         if log_torch:
             # To generate an import error if torch is not installed
-            import torch  # noqa: F401
+            import torch  # type: ignore  # noqa: F401
 
     @property
     def pid_suffix(self) -> bool:
