@@ -70,8 +70,11 @@ inline int64_t calc_base_time_ns(void)
     FILETIME ft;
     ULARGE_INTEGER ui;
     // get timestamps
-    int64_t system_ts = get_system_ts();
+    int64_t system_ts_before = get_system_ts();
     GetSystemTimeAsFileTime(&ft);
+    int64_t system_ts_after = get_system_ts();
+
+    int64_t system_ts = system_ts_before + (system_ts_after - system_ts_before) / 2;
 
     int64_t sys_ns = system_ts_to_ns(system_ts);
     ui.LowPart = ft.dwLowDateTime;
@@ -83,8 +86,11 @@ inline int64_t calc_base_time_ns(void)
     struct timespec t;
 
     // get timestamps
-    int64_t system_ts = get_system_ts();
+    int64_t system_ts_before = get_system_ts();
     clock_gettime(CLOCK_REALTIME, &t);
+    int64_t system_ts_after = get_system_ts();
+
+    int64_t system_ts = system_ts_before + (system_ts_after - system_ts_before) / 2;
 
     int64_t sys_ns = system_ts_to_ns(system_ts);
     int64_t realtime_ns = (int64_t)t.tv_sec * 1e9 + t.tv_nsec;
