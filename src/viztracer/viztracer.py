@@ -93,7 +93,6 @@ class VizTracer(Tracer):
         self.log_audit = log_audit
         self.log_torch = log_torch
         self.torch_profile = None
-        self.torch_offset = 0.0
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
@@ -121,6 +120,10 @@ class VizTracer(Tracer):
 
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
+
+        if log_torch:
+            # To generate an import error if torch is not installed
+            import torch  # type: ignore
 
     @property
     def pid_suffix(self) -> bool:
