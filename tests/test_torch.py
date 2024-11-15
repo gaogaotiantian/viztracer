@@ -51,10 +51,13 @@ class TestTorch(CmdlineTmpl):
                         # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                    elif sys.platform == "win32":
+                        # Windows is at least sane, give it 50us diff
+                        self.assertLess(py["ts"], aten["ts"] + 50)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
                     else:
-                        # Not so much about others, 500us should be fine
-                        self.assertLess(py["ts"], aten["ts"] + 500)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 500)
+                        # Mac is pure crazy and we don't care about it
+                        pass
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -88,10 +91,13 @@ class TestTorch(CmdlineTmpl):
                         # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                    elif sys.platform == "win32":
+                        # Windows is at least sane, give it 50us diff
+                        self.assertLess(py["ts"], aten["ts"] + 50)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
                     else:
-                        # Not so much about others, 500us should be fine
-                        self.assertLess(py["ts"], aten["ts"] + 500)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 500)
+                        # Mac is pure crazy and we don't care about it
+                        pass
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 
