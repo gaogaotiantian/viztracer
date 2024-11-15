@@ -10,6 +10,7 @@
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <pthread.h>
+#include <mach/mach_time.h>
 #elif defined(__FreeBSD__)
 #include <pthread_np.h>
 #else
@@ -47,7 +48,7 @@ static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
 static void snaptrace_threaddestructor(void* key);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObject* log_func_repr);
-static double get_ts(struct ThreadInfo*);
+static int64_t get_ts(struct ThreadInfo*);
 extern PyGetSetDef Tracer_getsetters[];
 
 TracerObject* curr_tracer = NULL;
@@ -63,6 +64,8 @@ static PyObject* curr_task_getters[2] = {0};
 
 #if _WIN32
 LARGE_INTEGER qpc_freq;
+#elif defined(__APPLE__)
+mach_timebase_info_data_t timebase_info;
 #endif
 
 #ifdef Py_GIL_DISABLED
@@ -92,9 +95,9 @@ static struct ThreadInfo* get_thread_info(TracerObject* self)
     return info;
 }
 
-static double get_ts(struct ThreadInfo* info)
+static int64_t get_ts(struct ThreadInfo* info)
 {
-    double curr_ts = get_system_ts();
+    int64_t curr_ts = get_system_ts();
     if (curr_ts <= info->prev_ts) {
         // We use artificial timestamp to avoid timestamp conflict.
         // 20 ns should be a safe granularity because that's normally
@@ -381,8 +384,8 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
-        double dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = dur >= self->min_duration;
+        int64_t dur = get_ts(info) - info->stack_top->ts;
+        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
@@ -451,8 +454,8 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
-        double dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = dur >= self->min_duration;
+        int64_t dur = get_ts(info) - info->stack_top->ts;
+        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
@@ -882,7 +885,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyObject* dict = PyDict_New();
         PyObject* name = NULL;
         PyObject* tid = PyLong_FromLong(node->tid);
-        PyObject* ts = PyFloat_FromDouble(node->ts / 1000);
+        PyObject* ts = PyFloat_FromDouble(system_ts_to_us(node->ts));
 
         PyDict_SetItemString(dict, "pid", pid);
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
@@ -922,7 +925,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 PyDict_SetItemString(dict, "ph", ph_B);
             } else {
                 PyDict_SetItemString(dict, "ph", ph_X);
-                PyObject* dur = PyFloat_FromDouble(node->data.fee.dur / 1000);
+                PyObject* dur = PyFloat_FromDouble(system_ts_to_us(node->data.fee.dur));
                 PyDict_SetItemString(dict, "dur", dur);
                 Py_DECREF(dur);
             }
@@ -1121,7 +1124,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
 
     while (curr != self->buffer + self->buffer_tail_idx) {
         struct EventNode* node = curr;
-        long long ts_long = node->ts;
+        long long ts_long = system_ts_to_ns(node->ts);
         unsigned long tid = node->tid;
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
@@ -1153,7 +1156,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
         switch (node->ntype) {
         case FEE_NODE:
             ;
-            long long dur_long = node->data.fee.dur;
+            long long dur_long = system_ts_to_ns(node->data.fee.dur);
             char ph = 'X';
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_C_CALL) {
                 ph = 'B';
@@ -1296,9 +1299,10 @@ static PyObject*
 snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
-    double ts = get_ts(info);
+    int64_t ts = get_ts(info);
+    double us = system_ts_to_us(ts);
 
-    return PyFloat_FromDouble(ts / 1000);
+    return PyFloat_FromDouble(us);
 }
 
 static PyObject*
@@ -1691,7 +1695,6 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
         printf("Error on TLS!\n");
         exit(-1);
     }
-    QueryPerformanceFrequency(&qpc_freq); 
 #else
     if (pthread_key_create(&self->thread_key, snaptrace_threaddestructor)) {
         perror("Failed to create Tss_Key");
@@ -1800,6 +1803,12 @@ PyInit_snaptrace(void)
         PyErr_Clear();
     }
     json_module = PyImport_ImportModule("json");
+
+#if _WIN32
+    QueryPerformanceFrequency(&qpc_freq);
+#elif defined(__APPLE__)
+    mach_timebase_info(&timebase_info);
+#endif
 
     return m;
 }

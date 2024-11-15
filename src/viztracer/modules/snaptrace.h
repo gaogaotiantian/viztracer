@@ -30,7 +30,7 @@
 struct FunctionNode {
     struct FunctionNode* next;
     struct FunctionNode* prev;
-    double ts;
+    int64_t ts;
     PyObject* args;
     // PyCodeObject* for Python function, PyCFunctionObject* for C function
     PyObject* func;
@@ -44,7 +44,7 @@ struct ThreadInfo {
     struct FunctionNode* stack_top;
     PyObject* curr_task;
     PyFrameObject* curr_task_frame;
-    double prev_ts;
+    int64_t prev_ts;
     struct MetadataNode* metadata_node;
 };
 

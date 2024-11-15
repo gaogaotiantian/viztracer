@@ -27,7 +27,7 @@ struct FEEData {
         PyCodeObject* code;
     };
     int type;
-    double dur;
+    int64_t dur;
     PyObject* asyncio_task;
 };
 
@@ -51,7 +51,7 @@ struct ObjectData {
 
 struct EventNode {
     NodeType ntype;
-    double ts;
+    int64_t ts;
     unsigned long tid;
     union {
         struct FEEData fee;

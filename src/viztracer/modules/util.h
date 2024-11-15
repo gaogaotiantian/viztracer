@@ -11,6 +11,9 @@
 #if _WIN32
 #include <windows.h>
 extern LARGE_INTEGER qpc_freq;
+#elif defined(__APPLE__)
+#include <mach/mach_time.h>
+extern mach_timebase_info_data_t timebase_info;
 #endif
 
 void Print_Py(PyObject* o);
@@ -24,19 +27,40 @@ inline int startswith(const char* target, const char* prefix)
     return strncmp(target, prefix, len) == 0;
 }
 
-inline double get_system_ts(void)
+inline long long get_system_ts(void)
 {
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
-    double curr_ts = (double) counter.QuadPart;
-    curr_ts *= 1000000000LL;
-    curr_ts /= qpc_freq.QuadPart;
-    return curr_ts;
+    return counter.QuadPart;
+#elif defined(__APPLE__)
+    return mach_absolute_time();
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-    return ((double)t.tv_sec * 1e9 + t.tv_nsec);
+    return (long long)(t.tv_sec * 1e9 + t.tv_nsec);
+#endif
+}
+
+inline double system_ts_to_us(long long ts)
+{
+#if _WIN32
+    return (double)ts * 1e6 / qpc_freq.QuadPart;
+#elif defined(__APPLE__)
+    return (double)ts * timebase_info.numer / timebase_info.denom / 1e3;
+#else
+    return (double)ts / 1e3;
+#endif
+}
+
+inline long long system_ts_to_ns(long long ts)
+{
+#if _WIN32
+    return ts * 1e9 / qpc_freq.QuadPart;
+#elif defined(__APPLE__)
+    return ts * timebase_info.numer / timebase_info.denom;
+#else
+    return ts;
 #endif
 }
 
