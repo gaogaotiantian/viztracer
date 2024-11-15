@@ -5,6 +5,7 @@
 #ifndef __SNAPTRACE_QUICKTIME_H__
 #define __SNAPTRACE_QUICKTIME_H__
 
+#include <Python.h>
 #include <stdint.h>
 #include <time.h>
 

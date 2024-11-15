@@ -2,11 +2,11 @@
 // For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+#include <Python.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-#include <Python.h>
 
 #include "quicktime.h"
 
