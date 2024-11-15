@@ -104,7 +104,11 @@ static int64_t get_ts(struct ThreadInfo* info)
         // how long clock_gettime() takes.
         // It's possible to have three same timestamp in a row so we
         // need to check if curr_ts <= prev_ts instead of ==
+#if _WIN32 || defined(__APPLE__)
+        curr_ts = info->prev_ts + 1;
+#else
         curr_ts = info->prev_ts + 20;
+#endif
     }
     info->prev_ts = curr_ts;
     return curr_ts;
