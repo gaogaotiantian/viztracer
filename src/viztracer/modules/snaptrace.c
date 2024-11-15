@@ -385,7 +385,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_us(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCodeObject* code = (PyCodeObject*) stack_top->func;
@@ -455,7 +455,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
         int64_t dur = get_ts(info) - info->stack_top->ts;
-        int log_this_entry = self->min_duration == 0 || system_ts_to_us(dur) >= self->min_duration;
+        int log_this_entry = self->min_duration == 0 || system_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
             PyCFunctionObject* cfunc = (PyCFunctionObject*) stack_top->func;
