@@ -13,4 +13,4 @@ coverage
 ipywidgets>8.0.5
 loky>=3.0.0
 jaxlib; sys_platform != 'win32' and python_version < '3.11'
-numpy; sys_platform == 'darwin'
+numpy<2.0; sys_platform == 'darwin'
