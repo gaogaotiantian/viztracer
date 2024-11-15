@@ -8,7 +8,6 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
-#include <x86intrin.h>
 
 #if _WIN32
 #include <windows.h>
