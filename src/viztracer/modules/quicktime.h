@@ -11,6 +11,7 @@
 #if _WIN32
 extern LARGE_INTEGER qpc_freq;
 #elif defined(__APPLE__)
+#include <mach/mach_time.h>
 extern mach_timebase_info_data_t timebase_info;
 #endif
 

@@ -88,9 +88,6 @@ static void calibrate_quicktime()
     qsort(start_ns, CALIBRATE_SIZE, sizeof(int64_t), compare_int64);
 
     system_base_time = start_ns[CALIBRATE_SIZE / 2];
-
-    printf("Calibrated ts_to_ns_factor: %f\n", ts_to_ns_factor);
-    printf("Calibrated system_base_time: %ld\n", system_base_time);
 }
 
 void quicktime_init()
