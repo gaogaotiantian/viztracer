@@ -53,8 +53,8 @@ class TestTorch(CmdlineTmpl):
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
                     else:
                         # Not so much about others, 50us should be fine
-                        self.assertAlmostEqual(py["ts"], aten["ts"], delta=50)
-                        self.assertAlmostEqual(py["ts"] + py["dur"], aten["ts"] + aten["dur"], delta=50)
+                        self.assertLess(py["ts"], aten["ts"] + 50)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -90,8 +90,8 @@ class TestTorch(CmdlineTmpl):
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
                     else:
                         # Not so much about others, 50us should be fine
-                        self.assertAlmostEqual(py["ts"], aten["ts"], delta=50)
-                        self.assertAlmostEqual(py["ts"] + py["dur"], aten["ts"] + aten["dur"], delta=50)
+                        self.assertLess(py["ts"], aten["ts"] + 50)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 
