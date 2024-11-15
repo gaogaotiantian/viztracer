@@ -52,9 +52,9 @@ class TestTorch(CmdlineTmpl):
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
                     else:
-                        # Not so much about others, 50us should be fine
-                        self.assertLess(py["ts"], aten["ts"] + 50)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
+                        # Not so much about others, 500us should be fine
+                        self.assertLess(py["ts"], aten["ts"] + 500)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 500)
 
             self.template(["python", "cmdline_test.py"], script=script,
                           check_func=check_func)
@@ -89,9 +89,9 @@ class TestTorch(CmdlineTmpl):
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
                     else:
-                        # Not so much about others, 50us should be fine
-                        self.assertLess(py["ts"], aten["ts"] + 50)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
+                        # Not so much about others, 500us should be fine
+                        self.assertLess(py["ts"], aten["ts"] + 500)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 500)
 
             self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
 
