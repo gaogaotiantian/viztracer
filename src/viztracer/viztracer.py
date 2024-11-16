@@ -222,10 +222,7 @@ class VizTracer(Tracer):
             self.enable = True
             self.parsed = False
             if self.log_torch:
-                try:
-                    from torch.profiler import profile, supported_activities  # type: ignore
-                except ImportError:
-                    raise ImportError("torch is not installed, please install it to use log_torch")
+                from torch.profiler import profile, supported_activities  # type: ignore
                 self.torch_profile = profile(activities=supported_activities()).__enter__()
             if self.log_print:
                 self.overload_print()
