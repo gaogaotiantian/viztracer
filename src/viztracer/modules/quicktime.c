@@ -25,8 +25,8 @@ mach_timebase_info_data_t timebase_info;
 double ts_to_ns_factor = 1.0;
 int64_t system_base_time = 0;
 int64_t system_base_ts = 0;
-int64_t start_ts[CALIBRATE_SIZE] = {0};
-int64_t start_ns[CALIBRATE_SIZE] = {0};
+int64_t* start_ts = NULL;
+int64_t* start_ns = NULL;
 int64_t t0_ts = 0;
 int64_t t0_ns = 0;
 bool calibrated = false;
@@ -105,6 +105,12 @@ int64_t dur_ts_to_ns(int64_t dur)
     return dur * ts_to_ns_factor;
 }
 
+void quicktime_free()
+{
+    free(start_ts);
+    free(start_ns);
+}
+
 void quicktime_init()
 {
 #if _WIN32
@@ -112,6 +118,10 @@ void quicktime_init()
 #elif defined(__APPLE__)
     mach_timebase_info(&timebase_info);
 #endif
+
+    start_ts = (int64_t*)malloc(sizeof(int64_t) * CALIBRATE_SIZE);
+    start_ns = (int64_t*)malloc(sizeof(int64_t) * CALIBRATE_SIZE);
+
     int64_t diff_ns[CALIBRATE_SIZE] = {0};
 
     t0_ts = 0;

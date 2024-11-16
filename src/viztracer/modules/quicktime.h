@@ -21,6 +21,7 @@ extern double ts_to_ns_factor;
 extern int64_t system_base_time;
 
 void quicktime_init();
+void quicktime_free();
 double system_ts_to_us(int64_t ts);
 int64_t system_ts_to_ns(int64_t ts);
 double dur_ts_to_us(int64_t dur);
