@@ -22,8 +22,6 @@ import re
 from types import CodeType
 from typing import Any, Optional, Union
 
-from viztracer.vcompressor import VCompressor
-
 from . import __version__
 from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
@@ -474,6 +472,8 @@ class VizUI:
         else:
             output_file = self.options.output_file
 
+        from viztracer.vcompressor import VCompressor
+
         compressor = VCompressor()
 
         with open(file_to_compress) as f:
@@ -491,6 +491,8 @@ class VizUI:
             output_file = "result.json"
         else:
             output_file = self.options.output_file
+
+        from viztracer.vcompressor import VCompressor
 
         compressor = VCompressor()
 

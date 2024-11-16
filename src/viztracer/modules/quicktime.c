@@ -31,17 +31,20 @@ int64_t t0_ts = 0;
 int64_t t0_ns = 0;
 bool calibrated = false;
 
-static int compare_double(const void *a, const void *b)
+static int
+compare_double(const void *a, const void *b)
 {
     return (*(double *)a - *(double *)b);
 }
 
-static int compare_int64(const void *a, const void *b)
+static int
+compare_int64(const void *a, const void *b)
 {
     return (*(int64_t *)a - *(int64_t *)b);
 }
 
-static void calibrate_quicktime()
+static void
+calibrate_quicktime()
 {
     int64_t end_ts[CALIBRATE_SIZE] = {0};
     int64_t end_ns[CALIBRATE_SIZE] = {0};
@@ -65,7 +68,8 @@ static void calibrate_quicktime()
     ts_to_ns_factor = factors[CALIBRATE_SIZE / 2];
 }
 
-double system_ts_to_us(int64_t ts)
+double
+system_ts_to_us(int64_t ts)
 {
     if (!calibrated)
     {
@@ -75,7 +79,8 @@ double system_ts_to_us(int64_t ts)
     return system_ts_to_ns(ts) / 1000.0;
 }
 
-int64_t system_ts_to_ns(int64_t ts)
+int64_t
+system_ts_to_ns(int64_t ts)
 {
     if (!calibrated)
     {
@@ -85,7 +90,8 @@ int64_t system_ts_to_ns(int64_t ts)
     return t0_ns + (ts - t0_ts) * ts_to_ns_factor;
 }
 
-double dur_ts_to_us(int64_t dur)
+double
+dur_ts_to_us(int64_t dur)
 {
     if (!calibrated)
     {
@@ -95,7 +101,8 @@ double dur_ts_to_us(int64_t dur)
     return (double)dur * ts_to_ns_factor / 1000;
 }
 
-int64_t dur_ts_to_ns(int64_t dur)
+int64_t
+dur_ts_to_ns(int64_t dur)
 {
     if (!calibrated)
     {
@@ -105,13 +112,15 @@ int64_t dur_ts_to_ns(int64_t dur)
     return dur * ts_to_ns_factor;
 }
 
-void quicktime_free()
+void
+quicktime_free()
 {
     free(start_ts);
     free(start_ns);
 }
 
-void quicktime_init()
+void
+quicktime_init()
 {
 #if _WIN32
     QueryPerformanceFrequency(&qpc_freq);

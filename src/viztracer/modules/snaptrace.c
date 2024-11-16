@@ -22,35 +22,6 @@
 #include "util.h"
 #include "eventnode.h"
 
-// Function declarations
-
-int snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg);
-static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args);
-static PyObject* snaptrace_start(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_stop(TracerObject* self, PyObject* stop_option);
-static PyObject* snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_setpid(TracerObject* self, PyObject* args);
-static PyObject* snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addcounter(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw);
-static PyObject* snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused));
-static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth);
-static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* value);
-static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
-static void snaptrace_threaddestructor(void* key);
-static void snaptrace_free(void*);
-static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
-static void log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObject* log_func_repr);
-static int64_t get_ts(struct ThreadInfo*);
-extern PyGetSetDef Tracer_getsetters[];
 
 TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
@@ -63,34 +34,12 @@ PyObject* trio_lowlevel_module = NULL;
 
 static PyObject* curr_task_getters[2] = {0};
 
-#ifdef Py_GIL_DISABLED
-// The free threading implementation of SNAPTRACE_THREAD_PROTECT_START/END uses
-// a per-tracer mutex. The mutex is acquired in SNAPTRACE_THREAD_PROTECT_START
-// and released in SNAPTRACE_THREAD_PROTECT_END.
-// NOTE: these macros delimit a C scope so any variables accessed after
-// a SNAPTRACE_THREAD_PROTECT_END need to be declared before
-// SNAPTRACE_THREAD_PROTECT_START.
-#define SNAPTRACE_THREAD_PROTECT_START(self) Py_BEGIN_CRITICAL_SECTION(self)
-#define SNAPTRACE_THREAD_PROTECT_END(self) Py_END_CRITICAL_SECTION()
-#else
-// The default implementation is a no-op.
-#define SNAPTRACE_THREAD_PROTECT_START(self)
-#define SNAPTRACE_THREAD_PROTECT_END(self)
-#endif
+// =============================================================================
+// Utility function
+// =============================================================================
 
-static struct ThreadInfo* get_thread_info(TracerObject* self)
-{
-    // self is non-NULL value
-    struct ThreadInfo* info = NULL;
-#if _WIN32
-    info = TlsGetValue(self->dwTlsIndex);
-#else
-    info = pthread_getspecific(self->thread_key);
-#endif
-    return info;
-}
-
-static int64_t get_ts(struct ThreadInfo* info)
+static inline int64_t
+get_ts(struct ThreadInfo* info)
 {
     int64_t curr_ts = get_system_ts();
     if (curr_ts <= info->prev_ts) {
@@ -109,8 +58,8 @@ static int64_t get_ts(struct ThreadInfo* info)
     return curr_ts;
 }
 
-
-static inline struct EventNode* get_next_node(TracerObject* self)
+static inline struct EventNode*
+get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
 
@@ -135,7 +84,8 @@ static inline struct EventNode* get_next_node(TracerObject* self)
     return node;
 }
 
-static void log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObject* log_func_repr)
+static void
+log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObject* log_func_repr)
 {
     PyObject* func_arg_dict = PyDict_New();
     PyCodeObject* code = PyFrame_GetCode(frame);
@@ -191,7 +141,8 @@ static void log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObj
     Py_XDECREF(names);
 }
 
-static void verbose_printf(TracerObject* self, int v, const char* fmt, ...)
+static void
+verbose_printf(TracerObject* self, int v, const char* fmt, ...)
 {
     va_list args;
     if (self->verbose >= v) {
@@ -202,60 +153,161 @@ static void verbose_printf(TracerObject* self, int v, const char* fmt, ...)
     }
 }
 
-void clear_stack(struct FunctionNode** stack_top) {
-    if ((*stack_top)->args) {
-        Py_DECREF((*stack_top)->args);
-        (*stack_top)->args = NULL;
-    }
+void
+clear_stack(struct FunctionNode** stack_top) {
+    Py_CLEAR((*stack_top)->args);
     while ((*stack_top)->prev) {
         (*stack_top) = (*stack_top) -> prev;
-        if ((*stack_top)->args) {
-            Py_DECREF((*stack_top)->args);
-            (*stack_top)->args = NULL;
-        }
+        Py_CLEAR((*stack_top)->args);
     }
 }
 
-static PyMethodDef Tracer_methods[] = {
-    {"threadtracefunc", (PyCFunction)snaptrace_threadtracefunc, METH_VARARGS, "trace function"},
-    {"start", (PyCFunction)snaptrace_start, METH_NOARGS, "start profiling"},
-    {"stop", (PyCFunction)snaptrace_stop, METH_O, "stop profiling"},
-    {"load", (PyCFunction)snaptrace_load, METH_NOARGS, "load buffer"},
-    {"dump", (PyCFunction)snaptrace_dump, METH_VARARGS|METH_KEYWORDS, "dump buffer to file"},
-    {"clear", (PyCFunction)snaptrace_clear, METH_NOARGS, "clear buffer"},
-    {"setpid", (PyCFunction)snaptrace_setpid, METH_VARARGS, "set fixed pid"},
-    {"add_instant", (PyCFunction)snaptrace_addinstant, METH_VARARGS|METH_KEYWORDS, "add instant event"},
-    {"add_counter", (PyCFunction)snaptrace_addcounter, METH_VARARGS|METH_KEYWORDS, "add counter event"},
-    {"add_object", (PyCFunction)snaptrace_addobject, METH_VARARGS|METH_KEYWORDS, "add object event"},
-    {"add_raw", (PyCFunction)snaptrace_addraw, METH_VARARGS|METH_KEYWORDS, "add raw event"},
-    {"add_func_args", (PyCFunction)snaptrace_addfunctionarg, METH_VARARGS|METH_KEYWORDS, "add function arg"},
-    {"get_func_args", (PyCFunction)snaptrace_getfunctionarg, METH_NOARGS, "get current function arg"},
-    {"getts", (PyCFunction)snaptrace_getts, METH_NOARGS, "get timestamp"},
-    {"get_base_time", (PyCFunction)snaptrace_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
-    {"_set_curr_stack_depth", (PyCFunction)snaptrace_setcurrstack, METH_O, "set current stack depth"},
-    {"pause", (PyCFunction)snaptrace_pause, METH_NOARGS, "pause profiling"},
-    {"resume", (PyCFunction)snaptrace_resume, METH_NOARGS, "resume profiling"},
-    {"setignorestackcounter", (PyCFunction)snaptrace_setignorestackcounter, METH_O, "reset ignore stack depth"},
-    {NULL, NULL, 0, NULL}
-};
+// =============================================================================
+// Thread info related functions
+// =============================================================================
 
-// ================================================================
-// Python interface
-// ================================================================
+static struct ThreadInfo*
+get_thread_info(TracerObject* self)
+{
+    // self is non-NULL value
+    struct ThreadInfo* info = NULL;
+#if _WIN32
+    info = TlsGetValue(self->dwTlsIndex);
+#else
+    info = pthread_getspecific(self->thread_key);
+#endif
+    return info;
+}
 
-static struct PyModuleDef snaptracemodule = {
-    .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "viztracer.snaptrace",
-    .m_size = -1,
-    .m_free = snaptrace_free,
-};
+static struct ThreadInfo*
+snaptrace_createthreadinfo(TracerObject* self) {
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (info != NULL) {
+        // If we have created the thread info, just return it.
+        return info;
+    }
+
+    // Otherwise, we need to create thread info.
+
+    info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
+    info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
+
+#if _WIN32  
+    info->tid = GetCurrentThreadId();
+#elif defined(__APPLE__)
+    __uint64_t tid = 0;
+    if (pthread_threadid_np(NULL, &tid)) {
+        info->tid = (unsigned long)pthread_self();
+    } else {
+        info->tid = tid;
+    }
+#elif defined(__FreeBSD__)
+    info->tid = pthread_getthreadid_np();
+#else
+    info->tid = syscall(SYS_gettid);
+#endif
+
+#if _WIN32
+    TlsSetValue(self->dwTlsIndex, info);
+#else
+    pthread_setspecific(self->thread_key, info);
+#endif
+
+    PyGILState_STATE state = PyGILState_Ensure();
+    SNAPTRACE_THREAD_PROTECT_START(self);
+
+    PyObject* current_thread = PyObject_CallMethod(threading_module, "current_thread", "");
+    if (!current_thread) {
+        perror("Failed to access threading.current_thread()");
+        exit(-1);
+    }
+    PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
+    if (!thread_name) {
+        // It's okay not having a name
+        PyErr_Clear();
+        thread_name = PyUnicode_FromString("Unknown");
+    }
+
+    Py_DECREF(current_thread);
+
+    // Check for existing node for the same tid first
+    struct MetadataNode* node = self->metadata_head;
+    int found_node = 0;
+
+    while (node) {
+        if (node->tid == info->tid) {
+            Py_DECREF(node->name);
+            node->name = thread_name;
+            node->thread_info = info;
+            info->metadata_node = node;
+            found_node = 1;
+            break;
+        }
+        node = node->next;
+    }
+
+    if (!found_node) {
+        node = (struct MetadataNode*) PyMem_Calloc(1, sizeof(struct MetadataNode));
+        if (!node) {
+            perror("Out of memory!");
+            exit(-1);
+        }
+        node->name = thread_name;
+        node->tid = info->tid;
+        node->thread_info = info;
+        info->metadata_node = node;
+        node->next = self->metadata_head;
+        self->metadata_head = node;
+    }
+
+    info->curr_task = NULL;
+    info->curr_task_frame = NULL;
+    info->prev_ts = 0.0;
+
+    SNAPTRACE_THREAD_PROTECT_END(self);
+    PyGILState_Release(state);
+
+    return info;
+}
+
+static void
+snaptrace_threaddestructor(void* key) {
+    struct ThreadInfo* info = key;
+    struct FunctionNode* tmp = NULL;
+    if (info) {
+        PyGILState_STATE state = PyGILState_Ensure();
+        info->paused = 0;
+        info->curr_stack_depth = 0;
+        info->ignore_stack_depth = 0;
+        info->tid = 0;
+        if (info->stack_top) {
+            while (info->stack_top->prev) {
+                info->stack_top = info->stack_top->prev;
+            }
+            while (info->stack_top) {
+                tmp = info->stack_top;
+                Py_CLEAR(tmp->args);
+                Py_CLEAR(tmp->func);
+                info->stack_top = info->stack_top->next;
+                PyMem_FREE(tmp);
+            }
+        }
+        info->stack_top = NULL;
+        Py_CLEAR(info->curr_task);
+        Py_CLEAR(info->curr_task_frame);
+        info->metadata_node->thread_info = NULL;
+        PyMem_FREE(info);
+        PyGILState_Release(state);
+    }
+}
 
 // =============================================================================
 // Tracing function, triggered when FEE
 // =============================================================================
 
 int
-snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
+tracer_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
 {
     PyCodeObject* code = PyFrame_GetCode(frame);
     PyObject* co_filename = code->co_filename;
@@ -321,10 +373,8 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
             }
         }
         info->paused = 0;
-        info->curr_task = curr_task;
-        Py_INCREF(curr_task);
-        info->curr_task_frame = frame;
-        Py_INCREF(frame);
+        info->curr_task = Py_NewRef(curr_task);
+        info->curr_task_frame = (PyFrameObject*)Py_NewRef(frame);
     }
 
     // If it's a call, we need a new node, and we need to update the stack
@@ -334,8 +384,7 @@ snaptrace_pycall_callback(TracerObject* self, PyFrameObject* frame, struct Threa
     }
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts(info);
-    info->stack_top->func = (PyObject*) code;
-    Py_INCREF(code);
+    info->stack_top->func = Py_NewRef(code);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame, self->log_func_repr);
     }
@@ -348,7 +397,7 @@ cleanup:
 }
 
 int
-snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
 {
     PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
 
@@ -364,8 +413,7 @@ snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct Thread
     }
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts(info);
-    info->stack_top->func = arg;
-    Py_INCREF(arg);
+    info->stack_top->func = Py_NewRef(arg);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame, self->log_func_repr);
     }
@@ -374,7 +422,7 @@ snaptrace_ccall_callback(TracerObject* self, PyFrameObject* frame, struct Thread
 }
 
 int
-snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
 {
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
@@ -398,13 +446,9 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
             node->data.fee.dur = dur;
             node->tid = info->tid;
             node->data.fee.type = PyTrace_RETURN;
-            node->data.fee.code = code;
-            Py_INCREF(code);
-            if (stack_top->args) {
-                // steal the reference when return
-                node->data.fee.args = stack_top->args;
-                Py_INCREF(stack_top->args);
-            }
+            node->data.fee.code = (PyCodeObject*)Py_NewRef(code);
+            // steal the reference when return
+            node->data.fee.args = Py_XNewRef(stack_top->args);
             if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_RETURN_VALUE)) {
                 PyObject* repr = NULL;
                 if (self->log_func_repr) {
@@ -420,10 +464,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
             }
 
             if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
-                if (info->curr_task) {
-                    node->data.fee.asyncio_task = info->curr_task;
-                    Py_INCREF(info->curr_task);
-                }
+                node->data.fee.asyncio_task = Py_XNewRef(info->curr_task);
             }
         }
         // Finish return whether to log the data
@@ -444,7 +485,7 @@ snaptrace_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thr
 }
 
 int
-snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_creturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
 {
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
@@ -471,8 +512,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
             node->data.fee.ml_name = cfunc->m_ml->ml_name;
             if (cfunc->m_module) {
                 // The function belongs to a module
-                node->data.fee.m_module = cfunc->m_module;
-                Py_INCREF(cfunc->m_module);
+                node->data.fee.m_module = Py_NewRef(cfunc->m_module);
             } else {
                 // The function is a class method
                 node->data.fee.m_module = NULL;
@@ -486,10 +526,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
             }
 
             if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
-                if (info->curr_task) {
-                    node->data.fee.asyncio_task = info->curr_task;
-                    Py_INCREF(info->curr_task);
-                }
+                node->data.fee.asyncio_task = Py_XNewRef(info->curr_task);
             }
         }
         // Finish return whether to log the data
@@ -503,7 +540,7 @@ snaptrace_creturn_callback(TracerObject* self, PyFrameObject* frame, struct Thre
 }
 
 int
-snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
+tracer_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
     int ret = 0;
@@ -563,21 +600,21 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     switch (what) {
     case PyTrace_CALL:
         info->curr_stack_depth += 1;
-        ret = snaptrace_pycall_callback(self, frame, info);
+        ret = tracer_pycall_callback(self, frame, info);
         break;
     case PyTrace_C_CALL:
         info->curr_stack_depth += 1;
-        ret = snaptrace_ccall_callback(self, frame, info, arg);
+        ret = tracer_ccall_callback(self, frame, info, arg);
         break;
     case PyTrace_RETURN:
-        ret = snaptrace_pyreturn_callback(self, frame, info, arg);
+        ret = tracer_pyreturn_callback(self, frame, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
         break;
     case PyTrace_C_RETURN:
     case PyTrace_C_EXCEPTION:
-        ret = snaptrace_creturn_callback(self, frame, info, arg);
+        ret = tracer_creturn_callback(self, frame, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
@@ -589,7 +626,8 @@ snaptrace_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg
     return ret;
 }
 
-static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args) 
+static PyObject*
+tracer_threadtracefunc(PyObject* obj, PyObject* args) 
 {
     PyFrameObject* frame = NULL;
     char* event = NULL;
@@ -600,7 +638,7 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
         exit(1);
     }
     snaptrace_createthreadinfo((TracerObject*) obj);
-    PyEval_SetProfile(snaptrace_tracefunc, obj);
+    PyEval_SetProfile(tracer_tracefunc, obj);
     if (!strcmp(event, "call")) {
         what = PyTrace_CALL;
     } else if (!strcmp(event, "c_call")) {
@@ -614,93 +652,16 @@ static PyObject* snaptrace_threadtracefunc(PyObject* obj, PyObject* args)
     } else {
         printf("Unexpected event type: %s\n", event);
     }
-    snaptrace_tracefunc(obj, frame, what, trace_args);
+    tracer_tracefunc(obj, frame, what, trace_args);
     Py_RETURN_NONE;
 }
 
 // =============================================================================
-// Control interface with python
+// snaptrace.Tracer methods
 // =============================================================================
-
-static PyObject*
-snaptrace_start(TracerObject* self, PyObject* Py_UNUSED(unused))
-{
-    if (curr_tracer) {
-        printf("Warning! Overwrite tracer! You should not have two VizTracer recording at the same time!\n");
-    } else {
-        curr_tracer = self;
-    }
-
-    self->collecting = 1;
-    PyEval_SetProfile(snaptrace_tracefunc, (PyObject*) self);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-snaptrace_stop(TracerObject* self, PyObject* stop_option)
-{
-    if (self) {
-        struct ThreadInfo* info = get_thread_info(self);
-        self->collecting = 0;
-
-        if (PyUnicode_CheckExact(stop_option) &&
-                strcmp(PyUnicode_AsUTF8(stop_option), "flush_as_finish") == 0) {
-            snaptrace_flush_unfinished(self, 1);
-        } else {
-            snaptrace_flush_unfinished(self, 0);
-        }
-        info->curr_stack_depth = 0;
-        info->ignore_stack_depth = 0;
-        info->paused = 0;
-    }
-
-    curr_tracer = NULL;
-    PyEval_SetProfile(NULL, NULL);
-
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-snaptrace_pause(TracerObject* self, PyObject* Py_UNUSED(unused))
-{
-    if (self->collecting) {
-        PyGILState_STATE state = PyGILState_Ensure();
-        struct ThreadInfo* info = get_thread_info((TracerObject*)self);
-
-        if (!info->paused) {
-            PyEval_SetProfile(NULL, NULL);
-            // When we enter this function, tracer.pause has been called.
-            // We need to reduce the ignore_stack_depth to simulate the
-            // returns from these two functions
-            info->ignore_stack_depth -= 1;
-            info->paused = 1;
-        }
-        PyGILState_Release(state);
-    }
-
-    Py_RETURN_NONE;
-}
-
-static PyObject*
-snaptrace_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
-{
-    if (self->collecting) {
-        PyGILState_STATE state = PyGILState_Ensure();
-        struct ThreadInfo* info = get_thread_info(self);
-
-        if (info->paused) {
-            PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
-            info->paused = 0;
-        }
-        PyGILState_Release(state);
-    }
-
-    Py_RETURN_NONE;
-}
 
 static void
-snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish)
+tracer__flush_unfinished(TracerObject* self, int flush_as_finish)
 {
     SNAPTRACE_THREAD_PROTECT_START(self);
 
@@ -736,8 +697,7 @@ snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish)
                 } else {
                     fee_node->data.fee.type = PyTrace_CALL;
                 }
-                fee_node->data.fee.code = code;
-                Py_INCREF(code);
+                fee_node->data.fee.code = (PyCodeObject*)Py_NewRef(code);
             } else if (PyCFunction_Check(func_node->func)) {
                 PyCFunctionObject* cfunc = (PyCFunctionObject*) func_node->func;
                 if (flush_as_finish) {
@@ -748,8 +708,7 @@ snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish)
                 fee_node->data.fee.ml_name = cfunc->m_ml->ml_name;
                 if (cfunc->m_module) {
                     // The function belongs to a module
-                    fee_node->data.fee.m_module = cfunc->m_module;
-                    Py_INCREF(cfunc->m_module);
+                    fee_node->data.fee.m_module = Py_NewRef(cfunc->m_module);
                 } else {
                     // The function is a class method
                     fee_node->data.fee.m_module = NULL;
@@ -778,7 +737,84 @@ snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish)
 }
 
 static PyObject*
-snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
+tracer_start(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    if (curr_tracer) {
+        printf("Warning! Overwrite tracer! You should not have two VizTracer recording at the same time!\n");
+    } else {
+        curr_tracer = self;
+    }
+
+    self->collecting = 1;
+    PyEval_SetProfile(tracer_tracefunc, (PyObject*) self);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+tracer_stop(TracerObject* self, PyObject* stop_option)
+{
+    if (self) {
+        struct ThreadInfo* info = get_thread_info(self);
+        self->collecting = 0;
+
+        if (PyUnicode_CheckExact(stop_option) &&
+                strcmp(PyUnicode_AsUTF8(stop_option), "flush_as_finish") == 0) {
+            tracer__flush_unfinished(self, 1);
+        } else {
+            tracer__flush_unfinished(self, 0);
+        }
+        info->curr_stack_depth = 0;
+        info->ignore_stack_depth = 0;
+        info->paused = 0;
+    }
+
+    curr_tracer = NULL;
+    PyEval_SetProfile(NULL, NULL);
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+tracer_pause(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    if (self->collecting) {
+        PyGILState_STATE state = PyGILState_Ensure();
+        struct ThreadInfo* info = get_thread_info((TracerObject*)self);
+
+        if (!info->paused) {
+            PyEval_SetProfile(NULL, NULL);
+            // When we enter this function, tracer.pause has been called.
+            // We need to reduce the ignore_stack_depth to simulate the
+            // returns from these two functions
+            info->ignore_stack_depth -= 1;
+            info->paused = 1;
+        }
+        PyGILState_Release(state);
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+tracer_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    if (self->collecting) {
+        PyGILState_STATE state = PyGILState_Ensure();
+        struct ThreadInfo* info = get_thread_info(self);
+
+        if (info->paused) {
+            PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
+            info->paused = 0;
+        }
+        PyGILState_Release(state);
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     PyObject* lst = PyList_New(0);
 
@@ -817,8 +853,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyObject* process_name = NULL;
 
         if (self->process_name) {
-            process_name = self->process_name;
-            Py_INCREF(process_name);
+            process_name = Py_NewRef(self->process_name);
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -927,11 +962,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             PyDict_SetItemString(dict, "name", name);
             Py_DECREF(name);
 
-            PyObject* arg_dict = NULL;
-            if (node->data.fee.args) {
-                arg_dict = node->data.fee.args;
-                Py_INCREF(arg_dict);
-            }
+            PyObject* arg_dict = Py_XNewRef(node->data.fee.args);
             if (node->data.fee.retval) {
                 if (!arg_dict) {
                     arg_dict = PyDict_New();
@@ -1035,7 +1066,7 @@ snaptrace_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
-snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
 {
     const char* filename = NULL;
     int sanitize_function_name = 0;
@@ -1076,8 +1107,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
     {
         PyObject* process_name = NULL;
         if (self->process_name) {
-            process_name = self->process_name;
-            Py_INCREF(process_name);
+            process_name = Py_NewRef(self->process_name);
         } else {
             PyObject* current_process_method = PyObject_GetAttrString(multiprocessing_module, "current_process");
             if (!current_process_method) {
@@ -1253,7 +1283,7 @@ snaptrace_dump(TracerObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused))
+tracer_clear(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     while (curr != self->buffer + self->buffer_tail_idx) {
@@ -1270,7 +1300,7 @@ snaptrace_clear(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject* 
-snaptrace_setpid(TracerObject* self, PyObject* args)
+tracer_setpid(TracerObject* self, PyObject* args)
 {
     long input_pid = -1;
     if (!PyArg_ParseTuple(args, "|l", &input_pid)) {
@@ -1291,7 +1321,7 @@ snaptrace_setpid(TracerObject* self, PyObject* args)
 }
 
 static PyObject*
-snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
+tracer_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
     int64_t ts = get_ts(info);
@@ -1301,13 +1331,13 @@ snaptrace_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
-snaptrace_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
+tracer_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     return PyLong_FromLongLong(get_base_time_ns());
 }
 
 static PyObject*
-snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth)
+tracer_setcurrstack(TracerObject* self, PyObject* stack_depth)
 {
     struct ThreadInfo* info = get_thread_info(self);
 
@@ -1322,7 +1352,7 @@ snaptrace_setcurrstack(TracerObject* self, PyObject* stack_depth)
 }
 
 static PyObject*
-snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* name = NULL;
     PyObject* instant_args = NULL;
@@ -1368,17 +1398,15 @@ snaptrace_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
     node->ntype = INSTANT_NODE;
     node->tid = info->tid;
     node->ts = get_ts(info);
-    node->data.instant.name = name;
-    node->data.instant.args = instant_args;
+    node->data.instant.name = Py_NewRef(name);
+    node->data.instant.args = Py_NewRef(instant_args);
     node->data.instant.scope = scope;
-    Py_INCREF(name);
-    Py_INCREF(instant_args);
 
     Py_RETURN_NONE;
 }
 
 static PyObject*
-snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* key = NULL;
     PyObject* value = NULL;
@@ -1404,7 +1432,7 @@ snaptrace_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-snaptrace_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* name = NULL;
     PyObject* counter_args = NULL;
@@ -1425,16 +1453,14 @@ snaptrace_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
     node->ntype = COUNTER_NODE;
     node->tid = info->tid;
     node->ts = get_ts(info);
-    node->data.counter.name = name;
-    node->data.counter.args = counter_args;
-    Py_INCREF(name);
-    Py_INCREF(counter_args);
+    node->data.counter.name = Py_NewRef(name);
+    node->data.counter.args = Py_NewRef(counter_args);
 
     Py_RETURN_NONE;
 }
 
 static PyObject*
-snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_addobject(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* ph = NULL;
     PyObject* id = NULL;
@@ -1461,20 +1487,16 @@ snaptrace_addobject(TracerObject* self, PyObject* args, PyObject* kw)
     node->ntype = OBJECT_NODE;
     node->tid = info->tid;
     node->ts = get_ts(info);
-    node->data.object.ph = ph;
-    node->data.object.id = id;
-    node->data.object.name = name;
-    node->data.object.args = object_args;
-    Py_INCREF(ph);
-    Py_INCREF(id);
-    Py_INCREF(name);
-    Py_INCREF(object_args);
+    node->data.object.ph = Py_NewRef(ph);
+    node->data.object.id = Py_NewRef(id);
+    node->data.object.name = Py_NewRef(name);
+    node->data.object.args = Py_NewRef(object_args);
 
     Py_RETURN_NONE;
 }
 
 static PyObject*
-snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* kw)
+tracer_addraw(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* raw = NULL;
     static char* kwlist[] = {"raw", NULL};
@@ -1488,14 +1510,13 @@ snaptrace_addraw(TracerObject* self, PyObject* args, PyObject* kw)
     node = get_next_node(self);
     node->tid = info->tid;
     node->ntype = RAW_NODE;
-    node->data.raw = raw;
-    Py_INCREF(raw);
+    node->data.raw = Py_NewRef(raw);
 
     Py_RETURN_NONE;
 }
 
 static PyObject*
-snaptrace_setignorestackcounter(TracerObject* self, PyObject* value)
+tracer_setignorestackcounter(TracerObject* self, PyObject* value)
 {
     int current_value = 0;
     struct ThreadInfo* info = get_thread_info(self);
@@ -1514,7 +1535,7 @@ snaptrace_setignorestackcounter(TracerObject* self, PyObject* value)
 }
 
 static PyObject*
-snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
+tracer_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
 
@@ -1523,135 +1544,36 @@ snaptrace_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
         Py_RETURN_NONE;
     }
 
-    Py_INCREF(fnode->args);
-
-    return fnode->args;
+    return Py_NewRef(fnode->args);
 }
 
-static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self) {
-    struct ThreadInfo* info = get_thread_info(self);
-
-    if (info != NULL) {
-        // If we have created the thread info, just return it.
-        return info;
-    }
-
-    // Otherwise, we need to create thread info.
-
-    info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
-    info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
-
-#if _WIN32  
-    info->tid = GetCurrentThreadId();
-#elif defined(__APPLE__)
-    __uint64_t tid = 0;
-    if (pthread_threadid_np(NULL, &tid)) {
-        info->tid = (unsigned long)pthread_self();
-    } else {
-        info->tid = tid;
-    }
-#elif defined(__FreeBSD__)
-    info->tid = pthread_getthreadid_np();
-#else
-    info->tid = syscall(SYS_gettid);
-#endif
-
-#if _WIN32
-    TlsSetValue(self->dwTlsIndex, info);
-#else
-    pthread_setspecific(self->thread_key, info);
-#endif
-
-    PyGILState_STATE state = PyGILState_Ensure();
-    SNAPTRACE_THREAD_PROTECT_START(self);
-
-    PyObject* current_thread = PyObject_CallMethod(threading_module, "current_thread", "");
-    if (!current_thread) {
-        perror("Failed to access threading.current_thread()");
-        exit(-1);
-    }
-    PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
-    if (!thread_name) {
-        // It's okay not having a name
-        PyErr_Clear();
-        thread_name = PyUnicode_FromString("Unknown");
-    }
-
-    Py_DECREF(current_thread);
-
-    // Check for existing node for the same tid first
-    struct MetadataNode* node = self->metadata_head;
-    int found_node = 0;
-
-    while (node) {
-        if (node->tid == info->tid) {
-            Py_DECREF(node->name);
-            node->name = thread_name;
-            node->thread_info = info;
-            info->metadata_node = node;
-            found_node = 1;
-            break;
-        }
-        node = node->next;
-    }
-
-    if (!found_node) {
-        node = (struct MetadataNode*) PyMem_Calloc(1, sizeof(struct MetadataNode));
-        if (!node) {
-            perror("Out of memory!");
-            exit(-1);
-        }
-        node->name = thread_name;
-        node->tid = info->tid;
-        node->thread_info = info;
-        info->metadata_node = node;
-        node->next = self->metadata_head;
-        self->metadata_head = node;
-    }
-
-    info->curr_task = NULL;
-    info->curr_task_frame = NULL;
-    info->prev_ts = 0.0;
-
-    SNAPTRACE_THREAD_PROTECT_END(self);
-    PyGILState_Release(state);
-
-    return info;
-}
-
-static void snaptrace_threaddestructor(void* key) {
-    struct ThreadInfo* info = key;
-    struct FunctionNode* tmp = NULL;
-    if (info) {
-        PyGILState_STATE state = PyGILState_Ensure();
-        info->paused = 0;
-        info->curr_stack_depth = 0;
-        info->ignore_stack_depth = 0;
-        info->tid = 0;
-        if (info->stack_top) {
-            while (info->stack_top->prev) {
-                info->stack_top = info->stack_top->prev;
-            }
-            while (info->stack_top) {
-                tmp = info->stack_top;
-                Py_CLEAR(tmp->args);
-                Py_CLEAR(tmp->func);
-                info->stack_top = info->stack_top->next;
-                PyMem_FREE(tmp);
-            }
-        }
-        info->stack_top = NULL;
-        Py_CLEAR(info->curr_task);
-        Py_CLEAR(info->curr_task_frame);
-        info->metadata_node->thread_info = NULL;
-        PyMem_FREE(info);
-        PyGILState_Release(state);
-    }
-}
+static PyMethodDef Tracer_methods[] = {
+    {"threadtracefunc", (PyCFunction)tracer_threadtracefunc, METH_VARARGS, "trace function"},
+    {"start", (PyCFunction)tracer_start, METH_NOARGS, "start profiling"},
+    {"stop", (PyCFunction)tracer_stop, METH_O, "stop profiling"},
+    {"load", (PyCFunction)tracer_load, METH_NOARGS, "load buffer"},
+    {"dump", (PyCFunction)tracer_dump, METH_VARARGS|METH_KEYWORDS, "dump buffer to file"},
+    {"clear", (PyCFunction)tracer_clear, METH_NOARGS, "clear buffer"},
+    {"setpid", (PyCFunction)tracer_setpid, METH_VARARGS, "set fixed pid"},
+    {"add_instant", (PyCFunction)tracer_addinstant, METH_VARARGS|METH_KEYWORDS, "add instant event"},
+    {"add_counter", (PyCFunction)tracer_addcounter, METH_VARARGS|METH_KEYWORDS, "add counter event"},
+    {"add_object", (PyCFunction)tracer_addobject, METH_VARARGS|METH_KEYWORDS, "add object event"},
+    {"add_raw", (PyCFunction)tracer_addraw, METH_VARARGS|METH_KEYWORDS, "add raw event"},
+    {"add_func_args", (PyCFunction)tracer_addfunctionarg, METH_VARARGS|METH_KEYWORDS, "add function arg"},
+    {"get_func_args", (PyCFunction)tracer_getfunctionarg, METH_NOARGS, "get current function arg"},
+    {"getts", (PyCFunction)tracer_getts, METH_NOARGS, "get timestamp"},
+    {"get_base_time", (PyCFunction)tracer_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
+    {"_set_curr_stack_depth", (PyCFunction)tracer_setcurrstack, METH_O, "set current stack depth"},
+    {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
+    {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},
+    {"setignorestackcounter", (PyCFunction)tracer_setignorestackcounter, METH_O, "reset ignore stack depth"},
+    {NULL, NULL, 0, NULL}
+};
 
 // ===========================================================================
-// Tracer stuff 
+// snaptrace.Tracer internals
 // ===========================================================================
+
 static PyObject* 
 Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
 {
@@ -1676,7 +1598,8 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
     return (PyObject*) self;
 }
 
-static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
+static int
+Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
 {
     if (!PyArg_ParseTuple(args, "l", &self->buffer_size)) {
         PyErr_SetString(PyExc_TypeError, "You need to specify buffer size when initializing Tracer");
@@ -1714,7 +1637,7 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
         }
     }
 
-    PyEval_SetProfile(snaptrace_tracefunc, (PyObject*)self);
+    PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
 
     return 0;
 }
@@ -1722,7 +1645,7 @@ static int Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
 static void
 Tracer_dealloc(TracerObject* self)
 {
-    snaptrace_clear(self, NULL);
+    tracer_clear(self, NULL);
     if (self->lib_file_path) {
         PyMem_FREE(self->lib_file_path);
     }
@@ -1750,6 +1673,13 @@ Tracer_dealloc(TracerObject* self)
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
+// ================================================================
+// snaptrace.Tracer Definition
+// ================================================================
+
+// We define getsetters in another file
+extern PyGetSetDef Tracer_getsetters[];
+
 static PyTypeObject TracerType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "snaptrace.Tracer",
@@ -1764,7 +1694,12 @@ static PyTypeObject TracerType = {
     .tp_getset = Tracer_getsetters,
 };
 
-void snaptrace_free(void* Py_UNUSED(unused)) {
+// ================================================================
+// snaptrace Module Functions
+// ================================================================
+
+void
+snaptrace_free(void* Py_UNUSED(unused)) {
     quicktime_free();
     Py_CLEAR(threading_module);
     Py_CLEAR(multiprocessing_module);
@@ -1775,6 +1710,21 @@ void snaptrace_free(void* Py_UNUSED(unused)) {
     Py_CLEAR(curr_task_getters[1]);
     Py_CLEAR(json_module);
 }
+
+// ================================================================
+// snaptrace Module Definition
+// ================================================================
+
+static struct PyModuleDef snaptracemodule = {
+    .m_base = PyModuleDef_HEAD_INIT,
+    .m_name = "viztracer.snaptrace",
+    .m_size = -1,
+    .m_free = snaptrace_free,
+};
+
+// ================================================================
+// Python Interface
+// ================================================================
 
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 

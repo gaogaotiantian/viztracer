@@ -3,27 +3,23 @@
 
 #include <Python.h>
 #include <stdio.h>
+
+#include "pythoncapi_compat.h"
 #include "eventnode.h"
 
-void clear_node(struct EventNode* node) {
+void
+clear_node(struct EventNode* node) {
     switch (node->ntype) {
     case FEE_NODE:
         if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-            Py_DECREF(node->data.fee.code);
-            if (node->data.fee.args) {
-                Py_DECREF(node->data.fee.args);
-                node->data.fee.args = NULL;
-            }
-            if (node->data.fee.retval) {
-                Py_DECREF(node->data.fee.retval);
-                node->data.fee.retval = NULL;
-            }
+            Py_CLEAR(node->data.fee.code);
+            Py_CLEAR(node->data.fee.args);
+            Py_CLEAR(node->data.fee.retval);
         } else {
             node->data.fee.ml_name = NULL;
             if (node->data.fee.m_module) {
                 // The function belongs to a module
-                Py_DECREF(node->data.fee.m_module);
-                node->data.fee.m_module = NULL;
+                Py_CLEAR(node->data.fee.m_module);
             } else {
                 // The function is a class method
                 if (node->data.fee.tp_name) {
@@ -32,38 +28,25 @@ void clear_node(struct EventNode* node) {
                 }
             }
         }
-        if (node->data.fee.asyncio_task != NULL) {
-            Py_DECREF(node->data.fee.asyncio_task);
-            node->data.fee.asyncio_task = NULL;
-        }
+        Py_CLEAR(node->data.fee.asyncio_task);
         break;
     case INSTANT_NODE:
-        Py_DECREF(node->data.instant.name);
-        Py_DECREF(node->data.instant.args);
-        Py_DECREF(node->data.instant.scope);
-        node->data.instant.name = NULL;
-        node->data.instant.args = NULL;
-        node->data.instant.scope = NULL;
+        Py_CLEAR(node->data.instant.name);
+        Py_CLEAR(node->data.instant.args);
+        Py_CLEAR(node->data.instant.scope);
         break;
     case COUNTER_NODE:
-        Py_DECREF(node->data.counter.name);
-        Py_DECREF(node->data.counter.args);
-        node->data.counter.name = NULL;
-        node->data.counter.args = NULL;
+        Py_CLEAR(node->data.counter.name);
+        Py_CLEAR(node->data.counter.args);
         break;
     case OBJECT_NODE:
-        Py_DECREF(node->data.object.ph);
-        Py_DECREF(node->data.object.id);
-        Py_DECREF(node->data.object.name);
-        Py_DECREF(node->data.object.args);
-        node->data.object.ph = NULL;
-        node->data.object.id = NULL;
-        node->data.object.name = NULL;
-        node->data.object.args = NULL;
+        Py_CLEAR(node->data.object.ph);
+        Py_CLEAR(node->data.object.id);
+        Py_CLEAR(node->data.object.name);
+        Py_CLEAR(node->data.object.args);
         break;
     case RAW_NODE:
-        Py_DECREF(node->data.raw);
-        node->data.raw = NULL;
+        Py_CLEAR(node->data.raw);
         break;
     default:
         printf("Unknown Node Type When Clearing!\n");
@@ -75,7 +58,8 @@ void clear_node(struct EventNode* node) {
 // The caller is responsible to decrease the reference
 //   name_set is an initialized set to keep
 //   formatted names to save memory
-PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
+PyObject*
+get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
 {
     assert(PyDict_Check(name_dict));
 
@@ -118,9 +102,8 @@ PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
     }
 
     if (PyDict_Contains(name_dict, name)) {
-        ret = PyDict_GetItem(name_dict, name);
+        ret = Py_NewRef(PyDict_GetItem(name_dict, name));
         Py_DECREF(name);
-        Py_INCREF(ret);
     } else {
         // return name, so don't DECREF it
         PyDict_SetItem(name_dict, name, name);
@@ -130,7 +113,8 @@ PyObject* get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
     return ret;
 }
 
-static void fputs_escape(const char* s, FILE* fptr)
+static void
+fputs_escape(const char* s, FILE* fptr)
 {
     while (*s != 0) {
         if (*s == '\\' || *s == '\"') {
@@ -141,7 +125,8 @@ static void fputs_escape(const char* s, FILE* fptr)
     }
 }
 
-void fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name)
+void
+fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name)
 {
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
 #if PY_VERSION_HEX >= 0x030B0000

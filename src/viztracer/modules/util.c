@@ -8,14 +8,16 @@
 
 // Utility functions
 
-void Print_Py(PyObject* o)
+void
+Print_Py(PyObject* o)
 {
     PyObject* repr = PyObject_Repr(o);
     printf("%s\n", PyUnicode_AsUTF8(repr));
     Py_DECREF(repr);
 }
 
-void fprintjson(FILE* fptr, PyObject* obj)
+void
+fprintjson(FILE* fptr, PyObject* obj)
 {
     PyObject* json_dumps = PyObject_GetAttrString(json_module, "dumps");
     PyObject* call_args = PyTuple_New(1);
@@ -28,7 +30,8 @@ void fprintjson(FILE* fptr, PyObject* obj)
     Py_DECREF(args_str);
 }
 
-void fprint_escape(FILE *fptr, const char *s)
+void
+fprint_escape(FILE *fptr, const char *s)
 {
     while (*s != 0) {
         switch (*s) {

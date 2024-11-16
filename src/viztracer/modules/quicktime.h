@@ -27,12 +27,14 @@ int64_t system_ts_to_ns(int64_t ts);
 double dur_ts_to_us(int64_t dur);
 int64_t dur_ts_to_ns(int64_t dur);
 
-inline int64_t get_base_time_ns(void)
+inline int64_t
+get_base_time_ns(void)
 {
     return system_base_time;
 };
 
-inline int64_t get_system_ts(void)
+inline int64_t
+get_system_ts(void)
 {
 #if _WIN32
     LARGE_INTEGER counter = {0};
@@ -47,7 +49,8 @@ inline int64_t get_system_ts(void)
 #endif
 }
 
-inline int64_t get_system_ns(void)
+inline int64_t
+get_system_ns(void)
 {
 #if _WIN32
     LARGE_INTEGER counter = {0};
@@ -63,7 +66,8 @@ inline int64_t get_system_ns(void)
 }
 
 
-inline int64_t get_system_epoch_ns(void)
+inline int64_t
+get_system_epoch_ns(void)
 {
 #if _WIN32
     FILETIME ft;

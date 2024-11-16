@@ -1,3 +1,4 @@
+#include "pythoncapi_compat.h"
 #include "snaptrace.h"
 
 // ================================================================
@@ -51,8 +52,7 @@ Tracer_include_files_setter(TracerObject* self, PyObject* value, void* closure)
         self->include_files = NULL;
         UNSET_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
     } else {
-        self->include_files = value;
-        Py_INCREF(self->include_files);
+        self->include_files = Py_NewRef(value);
         SET_FLAG(self->check_flags, SNAPTRACE_INCLUDE_FILES);
     }
     return 0;
@@ -62,8 +62,7 @@ static PyObject*
 Tracer_include_files_getter(TracerObject* self, void* closure)
 {
     if (self->include_files) {
-        Py_INCREF(self->include_files);
-        return self->include_files;
+        return Py_NewRef(self->include_files);
     } else {
         Py_RETURN_NONE;
     }
@@ -87,8 +86,7 @@ Tracer_exclude_files_setter(TracerObject* self, PyObject* value, void* closure)
         self->exclude_files = NULL;
         UNSET_FLAG(self->check_flags, SNAPTRACE_EXCLUDE_FILES);
     } else {
-        self->exclude_files = value;
-        Py_INCREF(self->exclude_files);
+        self->exclude_files = Py_NewRef(value);
         SET_FLAG(self->check_flags, SNAPTRACE_EXCLUDE_FILES);
     }
     return 0;
@@ -98,8 +96,7 @@ static PyObject*
 Tracer_exclude_files_getter(TracerObject* self, void* closure)
 {
     if (self->exclude_files) {
-        Py_INCREF(self->exclude_files);
-        return self->exclude_files;
+        return Py_NewRef(self->exclude_files);
     } else {
         Py_RETURN_NONE;
     }
@@ -238,8 +235,7 @@ Tracer_process_name_setter(TracerObject* self, PyObject* value, void* closure)
     }
 
     if (value == Py_None) {
-        Py_XDECREF(self->process_name);
-        self->process_name = NULL;
+        Py_CLEAR(self->process_name);
         return 0;
     }
 
@@ -259,8 +255,7 @@ Tracer_process_name_getter(TracerObject* self, void* closure)
     if (self->process_name == NULL) {
         Py_RETURN_NONE;
     }
-    Py_INCREF(self->process_name);
-    return self->process_name;
+    return Py_NewRef(self->process_name);
 }
 
 static int
@@ -430,8 +425,7 @@ Tracer_log_func_repr_setter(TracerObject* self, PyObject* value, void* closure)
     }
 
     if (value == Py_None) {
-        Py_XDECREF(self->log_func_repr);
-        self->log_func_repr = NULL;
+        Py_CLEAR(self->log_func_repr);
         return 0;
     }
 
@@ -452,8 +446,7 @@ Tracer_log_func_repr_getter(TracerObject* self, void* closure)
     if (self->log_func_repr == NULL) {
         Py_RETURN_NONE;
     }
-    Py_INCREF(self->log_func_repr);
-    return self->log_func_repr;
+    return Py_NewRef(self->log_func_repr);
 }
 
 PyGetSetDef Tracer_getsetters[] = {
