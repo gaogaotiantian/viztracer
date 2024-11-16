@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 
 #include "quicktime.h"
@@ -24,28 +25,11 @@ mach_timebase_info_data_t timebase_info;
 double ts_to_ns_factor = 1.0;
 int64_t system_base_time = 0;
 int64_t system_base_ts = 0;
+int64_t start_ts[CALIBRATE_SIZE] = {0};
+int64_t start_ns[CALIBRATE_SIZE] = {0};
 int64_t t0_ts = 0;
 int64_t t0_ns = 0;
-
-double system_ts_to_us(int64_t ts)
-{
-    return system_ts_to_ns(ts) / 1000.0;
-}
-
-int64_t system_ts_to_ns(int64_t ts)
-{
-    return t0_ns + (ts - t0_ts) * ts_to_ns_factor;
-}
-
-double dur_ts_to_us(int64_t dur)
-{
-    return (double)dur * ts_to_ns_factor / 1000;
-}
-
-int64_t dur_ts_to_ns(int64_t dur)
-{
-    return dur * ts_to_ns_factor;
-}
+bool calibrated = false;
 
 static int compare_double(const void *a, const void *b)
 {
@@ -59,35 +43,9 @@ static int compare_int64(const void *a, const void *b)
 
 static void calibrate_quicktime()
 {
-    int64_t start_ts[CALIBRATE_SIZE] = {0};
-    int64_t start_ns[CALIBRATE_SIZE] = {0};
     int64_t end_ts[CALIBRATE_SIZE] = {0};
     int64_t end_ns[CALIBRATE_SIZE] = {0};
     double factors[CALIBRATE_SIZE] = {0};
-    t0_ts = 0;
-    t0_ns = 0;
-
-    for (int i = 0; i < CALIBRATE_SIZE; i++)
-    {
-        int64_t start_before = get_system_ts();
-        start_ns[i] = get_system_ns();
-        int64_t start_after = get_system_ts();
-        start_ts[i] = start_before + (start_after - start_before) / 2;
-        t0_ts += start_ts[i];
-        t0_ns += start_ns[i];
-    }
-
-    t0_ts /= CALIBRATE_SIZE;
-    t0_ns /= CALIBRATE_SIZE;
-
-#if _WIN32
-    Sleep(100);
-#else
-    struct timespec t;
-    t.tv_sec = 0;
-    t.tv_nsec = 100000000;
-    nanosleep(&t, NULL);
-#endif
 
     for (int i = 0; i < CALIBRATE_SIZE; i++)
     {
@@ -105,20 +63,46 @@ static void calibrate_quicktime()
     qsort(factors, CALIBRATE_SIZE, sizeof(double), compare_double);
 
     ts_to_ns_factor = factors[CALIBRATE_SIZE / 2];
+}
 
-    // Now let's find the base time
-
-    for (int i = 0; i < CALIBRATE_SIZE; i++)
+double system_ts_to_us(int64_t ts)
+{
+    if (!calibrated)
     {
-        int64_t start_before = get_system_ns();
-        start_ns[i] = get_system_epoch_ns();
-        int64_t start_after = get_system_ns();
-        start_ns[i] -= start_before + (start_after - start_before) / 2;
+        calibrate_quicktime();
+        calibrated = true;
     }
+    return system_ts_to_ns(ts) / 1000.0;
+}
 
-    qsort(start_ns, CALIBRATE_SIZE, sizeof(int64_t), compare_int64);
+int64_t system_ts_to_ns(int64_t ts)
+{
+    if (!calibrated)
+    {
+        calibrate_quicktime();
+        calibrated = true;
+    }
+    return t0_ns + (ts - t0_ts) * ts_to_ns_factor;
+}
 
-    system_base_time = start_ns[CALIBRATE_SIZE / 2];
+double dur_ts_to_us(int64_t dur)
+{
+    if (!calibrated)
+    {
+        calibrate_quicktime();
+        calibrated = true;
+    }
+    return (double)dur * ts_to_ns_factor / 1000;
+}
+
+int64_t dur_ts_to_ns(int64_t dur)
+{
+    if (!calibrated)
+    {
+        calibrate_quicktime();
+        calibrated = true;
+    }
+    return dur * ts_to_ns_factor;
 }
 
 void quicktime_init()
@@ -128,5 +112,35 @@ void quicktime_init()
 #elif defined(__APPLE__)
     mach_timebase_info(&timebase_info);
 #endif
-    calibrate_quicktime();
+    int64_t diff_ns[CALIBRATE_SIZE] = {0};
+
+    t0_ts = 0;
+    t0_ns = 0;
+
+    for (int i = 0; i < CALIBRATE_SIZE; i++)
+    {
+        int64_t start_before = get_system_ts();
+        start_ns[i] = get_system_ns();
+        int64_t start_after = get_system_ts();
+        start_ts[i] = start_before + (start_after - start_before) / 2;
+        t0_ts += start_ts[i];
+        t0_ns += start_ns[i];
+    }
+
+    t0_ts /= CALIBRATE_SIZE;
+    t0_ns /= CALIBRATE_SIZE;
+
+    // Now let's find the base time
+
+    for (int i = 0; i < CALIBRATE_SIZE; i++)
+    {
+        int64_t start_before = get_system_ns();
+        diff_ns[i] = get_system_epoch_ns();
+        int64_t start_after = get_system_ns();
+        diff_ns[i] -= start_before + (start_after - start_before) / 2;
+    }
+
+    qsort(diff_ns, CALIBRATE_SIZE, sizeof(int64_t), compare_int64);
+
+    system_base_time = diff_ns[CALIBRATE_SIZE / 2];
 }
