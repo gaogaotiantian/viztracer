@@ -69,7 +69,8 @@
  * 
  * And the parsed timestamp is always less than 0x3FFFFFFFFFFFFFFF
 */
-static inline void write_encoded_int(uint64_t num, FILE* fptr)
+static inline void
+write_encoded_int(uint64_t num, FILE* fptr)
 {
     if (num == (num & 0x3F)) {
         uint8_t encoded_num = (num << 2) | TS_6_BIT;
@@ -86,7 +87,8 @@ static inline void write_encoded_int(uint64_t num, FILE* fptr)
     }
 }
 
-static inline int read_encoded_int(uint64_t *num, FILE* fptr)
+static inline int
+read_encoded_int(uint64_t *num, FILE* fptr)
 {
     uint8_t flag;
     uint8_t encoded_num_8_bit = 0;
@@ -123,7 +125,8 @@ clean_exit:
 }
 
 
-int freadstrn(char* buffer, int n, FILE* fptr) 
+int
+freadstrn(char* buffer, int n, FILE* fptr) 
 {
     int c;
     int idx = 0;
@@ -142,7 +145,8 @@ int freadstrn(char* buffer, int n, FILE* fptr)
     return idx;
 }
 
-char* freadstr(FILE* fptr)
+char*
+freadstr(FILE* fptr)
 {
     char* str = NULL;
     int c = 0;
@@ -166,7 +170,8 @@ char* freadstr(FILE* fptr)
     return str;
 }
 
-int dump_metadata(FILE* fptr)
+int
+dump_metadata(FILE* fptr)
 {
     uint64_t version = VCOMPRESSOR_VERSION;
     if (!fptr) {
@@ -179,7 +184,8 @@ int dump_metadata(FILE* fptr)
 }
 
 
-PyObject* json_dumps_to_bytes(PyObject* json_data)
+PyObject*
+json_dumps_to_bytes(PyObject* json_data)
 {
     PyObject* json_ret      = NULL;
     PyObject* json_args     = NULL;
@@ -219,9 +225,7 @@ PyObject* json_dumps_to_bytes(PyObject* json_data)
     }
 
 clean_exit:
-    if (dumps_func) {
-        Py_DECREF(dumps_func);
-    }
+    Py_XDECREF(dumps_func);
 
     if (PyErr_Occurred()) {
         return NULL;
@@ -231,7 +235,8 @@ clean_exit:
 }
 
 
-PyObject* json_loads_from_bytes(PyObject* bytes_data)
+PyObject*
+json_loads_from_bytes(PyObject* bytes_data)
 {
     PyObject* loads_func    = NULL;
     PyObject* string_data   = NULL;
@@ -265,9 +270,7 @@ PyObject* json_loads_from_bytes(PyObject* bytes_data)
     }
 
 clean_exit:
-    if (loads_func) {
-        Py_DECREF(loads_func);
-    }
+    Py_XDECREF(loads_func);
 
     if (PyErr_Occurred()) {
         return NULL;
@@ -277,7 +280,8 @@ clean_exit:
 }
 
 
-PyObject* compress_bytes(PyObject* bytes_data)
+PyObject*
+compress_bytes(PyObject* bytes_data)
 {
     PyObject* zlib_args         = NULL;
     PyObject* compress_func     = NULL;
@@ -310,9 +314,7 @@ PyObject* compress_bytes(PyObject* bytes_data)
     }
 
 clean_exit:
-    if (compress_func) {
-        Py_DECREF(compress_func);
-    }
+    Py_XDECREF(compress_func);
 
     if (PyErr_Occurred()) {
         return NULL;
@@ -322,7 +324,8 @@ clean_exit:
 }
 
 
-PyObject* decompress_bytes(PyObject* bytes_data)
+PyObject*
+decompress_bytes(PyObject* bytes_data)
 {
     // decompress data
     PyObject* zlib_args = NULL;
@@ -354,9 +357,7 @@ PyObject* decompress_bytes(PyObject* bytes_data)
         goto clean_exit;
     }
 clean_exit:
-    if (decompress_func) {
-        Py_DECREF(decompress_func);
-    }
+    Py_XDECREF(decompress_func);
 
     if (PyErr_Occurred()) {
         return NULL;
@@ -366,7 +367,8 @@ clean_exit:
 }
 
 
-int json_dumps_and_compress_to_file(PyObject* json_data, FILE* fptr)
+int
+json_dumps_and_compress_to_file(PyObject* json_data, FILE* fptr)
 {
     char* buffer;
     uint64_t uncompressed_size = 0;
@@ -405,7 +407,8 @@ clean_exit:
 }
 
 
-PyObject* json_loads_and_decompress_from_file(FILE* fptr)
+PyObject*
+json_loads_and_decompress_from_file(FILE* fptr)
 {
     char* buffer = NULL;
     uint64_t compressed_size = 0;
@@ -471,7 +474,8 @@ clean_exit:
 }
 
 
-int dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
+int
+dump_parsed_trace_events(PyObject* trace_events, FILE* fptr)
 {
     // Dump process and thread names
     PyObject* process_names  = PyDict_GetItemString(trace_events, "process_names");
@@ -544,7 +548,8 @@ clean_exit:
 }
 
 
-int write_fee_events(PyObject* fee_key, PyObject* fee_value, FILE* fptr) {
+int
+write_fee_events(PyObject* fee_key, PyObject* fee_value, FILE* fptr) {
     PyObject* args_list = NULL;
     uint64_t pid = PyLong_AsLong(PyTuple_GetItem(fee_key, 0));
     uint64_t tid = PyLong_AsLong(PyTuple_GetItem(fee_key, 1));
@@ -607,7 +612,8 @@ clean_exit:
 }
 
 
-PyObject * load_fee_events(FILE* fptr) {
+PyObject*
+load_fee_events(FILE* fptr) {
     uint64_t pid    = 0;
     uint64_t tid    = 0;
     uint64_t count  = 0;
@@ -695,7 +701,8 @@ clean_exit:
 }
 
 
-int diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
+int
+diff_and_write_counter_args(PyObject* counter_args, FILE* fptr) {
     /* there may be several args in a counter, log them all may take more spaces
     *  so this step is to do diffing between two contiguous timestamp
     *  and finally we only log those changed args
@@ -1125,7 +1132,8 @@ clean_exit:
 }
 
 
-int dump_file_info(PyObject* file_info, FILE* fptr)
+int
+dump_file_info(PyObject* file_info, FILE* fptr)
 {
     // write data
     fputc(VC_HEADER_FILE_INFO, fptr);

@@ -293,6 +293,7 @@ clean_exit:
 
     // Py_RETURN_NONE;
 }
+
 static PyObject*
 vcompressor_decompress(VcompressorObject* self, PyObject* args) {
     PyObject* parsed_events = NULL;
