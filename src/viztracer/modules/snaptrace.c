@@ -46,6 +46,7 @@ static PyObject* snaptrace_setcurrstack(TracerObject* self, PyObject* stack_dept
 static PyObject* snaptrace_setignorestackcounter(TracerObject* self, PyObject* value);
 static void snaptrace_flush_unfinished(TracerObject* self, int flush_as_finish);
 static void snaptrace_threaddestructor(void* key);
+static void snaptrace_free(void*);
 static struct ThreadInfo* snaptrace_createthreadinfo(TracerObject* self);
 static void log_func_args(struct FunctionNode* node, PyFrameObject* frame, PyObject* log_func_repr);
 static int64_t get_ts(struct ThreadInfo*);
@@ -238,20 +239,15 @@ static PyMethodDef Tracer_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static PyMethodDef Snaptrace_methods[] = {
-    {NULL, NULL, 0, NULL}
-};
-
 // ================================================================
 // Python interface
 // ================================================================
 
 static struct PyModuleDef snaptracemodule = {
-    PyModuleDef_HEAD_INIT,
-    "viztracer.snaptrace",
-    NULL,
-    -1,
-    Snaptrace_methods
+    .m_base = PyModuleDef_HEAD_INIT,
+    .m_name = "viztracer.snaptrace",
+    .m_size = -1,
+    .m_free = snaptrace_free,
 };
 
 // =============================================================================
@@ -1767,6 +1763,18 @@ static PyTypeObject TracerType = {
     .tp_methods = Tracer_methods,
     .tp_getset = Tracer_getsetters,
 };
+
+void snaptrace_free(void* Py_UNUSED(unused)) {
+    quicktime_free();
+    Py_CLEAR(threading_module);
+    Py_CLEAR(multiprocessing_module);
+    Py_CLEAR(asyncio_module);
+    Py_CLEAR(asyncio_tasks_module);
+    Py_CLEAR(curr_task_getters[0]);
+    Py_CLEAR(trio_lowlevel_module);
+    Py_CLEAR(curr_task_getters[1]);
+    Py_CLEAR(json_module);
+}
 
 PyMODINIT_FUNC
 PyInit_snaptrace(void) 
