@@ -391,7 +391,8 @@ class VizTracer(Tracer):
             self.terminate()
 
     def enable_thread_tracing(self) -> None:
-        sys.setprofile(self.threadtracefunc)
+        if sys.version_info < (3, 12):
+            sys.setprofile(self.threadtracefunc)
 
     def add_variable(self, name: str, var: Any, event: str = "instant") -> None:
         if self.enable:
