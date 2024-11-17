@@ -17,6 +17,20 @@ extern LARGE_INTEGER qpc_freq;
 extern mach_timebase_info_data_t timebase_info;
 #endif
 
+#if defined(__i386__) || defined(__x86_64__) || defined(__amd64__)
+#define QUICKTIME_RDTSC
+#if defined(_MSC_VER)
+#include <intrin.h>
+#elif defined(__clang__)
+// `__rdtsc` is available by default.
+// NB: This has to be first, because Clang will also define `__GNUC__`
+#elif defined(__GNUC__)
+#include <x86intrin.h>
+#else
+#undef QUICKTIME_RDTSC
+#endif
+#endif
+
 extern double ts_to_ns_factor;
 extern int64_t system_base_time;
 
@@ -36,6 +50,9 @@ get_base_time_ns(void)
 inline int64_t
 get_system_ts(void)
 {
+#if defined(QUICKTIME_RDTSC)
+    return __rdtsc();
+#else
 #if _WIN32
     LARGE_INTEGER counter = {0};
     QueryPerformanceCounter(&counter);
@@ -46,6 +63,7 @@ get_system_ts(void)
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
     return (int64_t)(t.tv_sec * 1e9 + t.tv_nsec);
+#endif
 #endif
 }
 
