@@ -1,8 +1,10 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import sys
 import threading
 import time
+import unittest
 
 from viztracer import VizTracer, get_tracer
 
@@ -79,10 +81,10 @@ class TestMultithread(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 300)
 
+    @unittest.skipIf(sys.version_info >= (3, 12), "We always enable threading trace in Python 3.12+")
     def test_manual_tracefunc(self):
         tracer = VizTracer(max_stack_depth=4, verbose=0)
         # Force disable threading trace
-        threading.setprofile(None)
         tracer.start()
 
         threads = [MyThread() for _ in range(4)]

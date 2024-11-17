@@ -31,6 +31,8 @@ PyObject* asyncio_module = NULL;
 PyObject* asyncio_tasks_module = NULL;
 PyObject* trio_module = NULL;
 PyObject* trio_lowlevel_module = NULL;
+PyObject* sys_module = NULL;
+PyObject* sys_monitoring_missing = NULL;
 
 static PyObject* curr_task_getters[2] = {0};
 
@@ -173,30 +175,8 @@ clear_stack(struct FunctionNode** stack_top) {
 // =============================================================================
 
 static struct ThreadInfo*
-get_thread_info(TracerObject* self)
-{
-    // self is non-NULL value
-    struct ThreadInfo* info = NULL;
-#if _WIN32
-    info = TlsGetValue(self->dwTlsIndex);
-#else
-    info = pthread_getspecific(self->thread_key);
-#endif
-    return info;
-}
-
-static struct ThreadInfo*
 snaptrace_createthreadinfo(TracerObject* self) {
-    struct ThreadInfo* info = get_thread_info(self);
-
-    if (info != NULL) {
-        // If we have created the thread info, just return it.
-        return info;
-    }
-
-    // Otherwise, we need to create thread info.
-
-    info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
+    struct ThreadInfo* info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
     info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
 
 #if _WIN32  
@@ -225,8 +205,8 @@ snaptrace_createthreadinfo(TracerObject* self) {
 
     PyObject* current_thread = PyObject_CallMethod(threading_module, "current_thread", "");
     if (!current_thread) {
-        perror("Failed to access threading.current_thread()");
-        exit(-1);
+        PyErr_SetString(PyExc_RuntimeError, "Failed to get current thread");
+        goto cleanup;
     }
     PyObject* thread_name = PyObject_GetAttrString(current_thread, "name");
     if (!thread_name) {
@@ -256,8 +236,9 @@ snaptrace_createthreadinfo(TracerObject* self) {
     if (!found_node) {
         node = (struct MetadataNode*) PyMem_Calloc(1, sizeof(struct MetadataNode));
         if (!node) {
-            perror("Out of memory!");
-            exit(-1);
+            PyErr_SetString(PyExc_RuntimeError, "Out of memory!");
+            info = NULL;
+            goto cleanup;
         }
         node->name = thread_name;
         node->tid = info->tid;
@@ -270,9 +251,27 @@ snaptrace_createthreadinfo(TracerObject* self) {
     info->curr_task = NULL;
     info->curr_task_frame = NULL;
 
+cleanup:
+
     SNAPTRACE_THREAD_PROTECT_END(self);
     PyGILState_Release(state);
 
+    return info;
+}
+
+static struct ThreadInfo*
+get_thread_info(TracerObject* self)
+{
+    // self is non-NULL value
+    struct ThreadInfo* info = NULL;
+#if _WIN32
+    info = TlsGetValue(self->dwTlsIndex);
+#else
+    info = pthread_getspecific(self->thread_key);
+#endif
+    if (!info) {
+        info = snaptrace_createthreadinfo(self);
+    }
     return info;
 }
 
@@ -327,12 +326,9 @@ prepare_before_trace(TracerObject* self, int is_call, struct ThreadInfo** info_o
     struct ThreadInfo* info = get_thread_info(self);
 
     if (!info) {
-        info = snaptrace_createthreadinfo(self);
-        if (!info) {
-            self->collecting = 0;
-            PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to create thread info. This should not happen.");
-            return -1;
-        }
+        self->collecting = 0;
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to create thread info. This should not happen.");
+        return -1;
     }
 
     *info_out = info;
@@ -646,6 +642,8 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     return 0;
 }
 
+// sys.setprofile mechanism
+
 int
 tracer_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
@@ -693,7 +691,6 @@ tracer_threadtracefunc(PyObject* obj, PyObject* args)
         printf("Error when parsing arguments!\n");
         exit(1);
     }
-    snaptrace_createthreadinfo((TracerObject*) obj);
     PyEval_SetProfile(tracer_tracefunc, obj);
     if (!strcmp(event, "call")) {
         what = PyTrace_CALL;
@@ -710,6 +707,223 @@ tracer_threadtracefunc(PyObject* obj, PyObject* args)
     }
     tracer_tracefunc(obj, frame, what, trace_args);
     Py_RETURN_NONE;
+}
+
+// sys.monitoring mechanism
+
+PyObject* get_cfunc_from_callable(PyObject* callable, PyObject* self_arg)
+{
+    // return a new reference
+    if (PyCFunction_Check(callable)) {
+        Py_INCREF(callable);
+        return (PyObject*)((PyCFunctionObject*)callable);
+    }
+    if (Py_TYPE(callable) == &PyMethodDescr_Type) {
+        /* For backwards compatibility need to
+         * convert to builtin method */
+
+        /* If no arg, skip */
+        if (self_arg == sys_monitoring_missing) {
+            return NULL;
+        }
+        PyObject* meth = Py_TYPE(callable)->tp_descr_get(
+            callable, self_arg, (PyObject*)Py_TYPE(self_arg));
+        if (meth == NULL) {
+            return NULL;
+        }
+        if (PyCFunction_Check(meth)) {
+            return (PyObject*)((PyCFunctionObject*)meth);
+        }
+    }
+    return NULL;
+}
+
+PyObject*
+_pystart_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
+{
+    PyCodeObject* code = (PyCodeObject*)args[0];
+    int ret = tracer_pycall_callback((TracerObject*)self, code);
+    if (ret != 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyObject*
+_pyreturn_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
+{
+    PyCodeObject* code = (PyCodeObject*)args[0];
+    PyObject* arg = args[2];
+    int ret = tracer_pyreturn_callback((TracerObject*)self, code, arg);
+    if (ret != 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyObject*
+_ccall_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
+{
+    PyCodeObject* code = (PyCodeObject*)args[0];
+    PyObject* cfunc = get_cfunc_from_callable(args[2], args[3]);
+    if (!cfunc) {
+        Py_RETURN_NONE;
+    }
+    int ret = tracer_ccall_callback((TracerObject*)self, code, cfunc);
+    Py_DECREF(cfunc);
+    if (ret != 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+PyObject*
+_creturn_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
+{
+    PyCodeObject* code = (PyCodeObject*)args[0];
+    PyObject* cfunc = get_cfunc_from_callable(args[2], args[3]);
+    if (!cfunc) {
+        Py_RETURN_NONE;
+    }
+    int ret = tracer_creturn_callback((TracerObject*)self, code, cfunc);
+    Py_DECREF(cfunc);
+    if (ret != 0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static struct {
+    unsigned int event;
+    PyMethodDef callback_method;
+} callback_table[] = {
+    {PY_MONITORING_EVENT_PY_START,
+        {"_pystart_callback", (PyCFunction)_pystart_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_PY_RESUME,
+        {"_pystart_callback", (PyCFunction)_pystart_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_PY_THROW,
+        {"_pystart_callback", (PyCFunction)_pystart_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_PY_RETURN,
+        {"_pyreturn_callback", (PyCFunction)_pyreturn_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_PY_YIELD,
+        {"_pyreturn_callback", (PyCFunction)_pyreturn_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_PY_UNWIND,
+        {"_pyreturn_callback", (PyCFunction)_pyreturn_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_CALL,
+        {"_ccall_callback", (PyCFunction)_ccall_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_C_RETURN,
+        {"_creturn_callback", (PyCFunction)_creturn_callback, METH_FASTCALL, NULL}},
+    {PY_MONITORING_EVENT_C_RAISE,
+        {"_creturn_callback", (PyCFunction)_creturn_callback, METH_FASTCALL, NULL}},
+    {0,
+        {NULL, NULL, 0, NULL}}
+};
+
+int
+enable_monitoring(TracerObject* self)
+{
+    unsigned int all_events = 0;
+    PyObject* monitoring = PyObject_GetAttrString(sys_module, "monitoring");
+    if (!monitoring) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to access sys.monitoring");
+        goto cleanup;
+    }
+
+    PyObject* ret = PyObject_CallMethod(monitoring, "use_tool_id",
+                                        "is", SNAPTRACE_TOOL_ID, "viztracer");
+    if (!ret) {
+        PyErr_Clear();
+        PyObject_CallMethod(monitoring, "free_tool_id", "i", SNAPTRACE_TOOL_ID);
+        ret = PyObject_CallMethod(monitoring, "use_tool_id",
+                                  "is", SNAPTRACE_TOOL_ID, "viztracer");
+        if (!ret) {
+            goto cleanup;
+        }
+    }
+    Py_DECREF(ret);
+
+    for (int i = 0; callback_table[i].callback_method.ml_meth != 0; i++) {
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && 
+                (callback_table[i].event == PY_MONITORING_EVENT_CALL ||
+                 callback_table[i].event == PY_MONITORING_EVENT_C_RETURN ||
+                 callback_table[i].event == PY_MONITORING_EVENT_C_RAISE)) {
+            continue;
+        }
+        unsigned int event = (1 << callback_table[i].event);
+        PyObject* callback = PyCFunction_New(&callback_table[i].callback_method, (PyObject*)self);
+
+        PyObject* regsiter_result = PyObject_CallMethod(monitoring, "register_callback",
+                                                        "iiO", SNAPTRACE_TOOL_ID, event, callback);
+        Py_DECREF(callback);
+
+        if (!regsiter_result) {
+            goto cleanup;
+        }
+        Py_DECREF(regsiter_result);
+        all_events |= event;
+    }
+
+    PyObject* event_result = PyObject_CallMethod(monitoring, "set_events",
+                                                 "ii", SNAPTRACE_TOOL_ID, all_events);
+    if (!event_result) {
+        goto cleanup;
+    }
+    Py_DECREF(event_result);
+
+cleanup:
+
+    Py_XDECREF(monitoring);
+
+    if (PyErr_Occurred()) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int disable_monitoring(TracerObject* self)
+{
+    PyObject* monitoring = PyObject_GetAttrString(sys_module, "monitoring");
+    if (!monitoring) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to access sys.monitoring");
+        goto cleanup;
+    }
+
+    PyObject* curr_tool = PyObject_CallMethod(monitoring, "get_tool", "i", SNAPTRACE_TOOL_ID);
+
+    if (!curr_tool) {
+        goto cleanup;
+    }
+
+    if (curr_tool == Py_None) {
+        // No current tool, nothing to do
+        Py_DECREF(curr_tool);
+        goto cleanup;
+    }
+
+    PyObject* event_result = PyObject_CallMethod(monitoring, "set_events",
+                                                 "ii", SNAPTRACE_TOOL_ID, 0);
+    if (!event_result) {
+        goto cleanup;
+    }
+    Py_DECREF(event_result);
+
+    PyObject* ret = PyObject_CallMethod(monitoring, "free_tool_id",
+                                        "i", SNAPTRACE_TOOL_ID);
+    if (!ret) {
+        goto cleanup;
+    }
+    Py_DECREF(ret);
+
+cleanup:
+
+    Py_XDECREF(monitoring);
+
+    if (PyErr_Occurred()) {
+        return -1;
+    }
+
+    return 0;
 }
 
 // =============================================================================
@@ -802,7 +1016,13 @@ tracer_start(TracerObject* self, PyObject* Py_UNUSED(unused))
     }
 
     self->collecting = 1;
+#if PY_VERSION_HEX >= 0x030C0000
+    if (enable_monitoring(self) != 0) {
+        return NULL;
+    };
+#else
     PyEval_SetProfile(tracer_tracefunc, (PyObject*) self);
+#endif
 
     Py_RETURN_NONE;
 }
@@ -812,6 +1032,11 @@ tracer_stop(TracerObject* self, PyObject* stop_option)
 {
     if (self) {
         struct ThreadInfo* info = get_thread_info(self);
+        if (!info) {
+            self->collecting = 0;
+            PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
+            return NULL;
+        }
         self->collecting = 0;
 
         if (PyUnicode_CheckExact(stop_option) &&
@@ -826,7 +1051,13 @@ tracer_stop(TracerObject* self, PyObject* stop_option)
     }
 
     curr_tracer = NULL;
+#if PY_VERSION_HEX >= 0x030C0000
+    if (disable_monitoring(self) != 0) {
+        return NULL;
+    }
+#else
     PyEval_SetProfile(NULL, NULL);
+#endif
 
     Py_RETURN_NONE;
 }
@@ -835,18 +1066,27 @@ static PyObject*
 tracer_pause(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->collecting) {
-        PyGILState_STATE state = PyGILState_Ensure();
         struct ThreadInfo* info = get_thread_info((TracerObject*)self);
+        if (!info) {
+            self->collecting = 0;
+            PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
+            return NULL;
+        }
 
         if (!info->paused) {
-            PyEval_SetProfile(NULL, NULL);
             // When we enter this function, tracer.pause has been called.
             // We need to reduce the ignore_stack_depth to simulate the
             // returns from these two functions
             info->ignore_stack_depth -= 1;
             info->paused = 1;
+#if PY_VERSION_HEX >= 0x030C0000
+            if (disable_monitoring(self) != 0) {
+                return NULL;
+            }
+#else
+            PyEval_SetProfile(NULL, NULL);
+#endif
         }
-        PyGILState_Release(state);
     }
 
     Py_RETURN_NONE;
@@ -856,14 +1096,23 @@ static PyObject*
 tracer_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->collecting) {
-        PyGILState_STATE state = PyGILState_Ensure();
         struct ThreadInfo* info = get_thread_info(self);
+        if (!info) {
+            self->collecting = 0;
+            PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
+            return NULL;
+        }
 
         if (info->paused) {
-            PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
             info->paused = 0;
+#if PY_VERSION_HEX >= 0x030C0000
+            if (enable_monitoring(self) != 0) {
+                return NULL;
+            }
+#else
+            PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
+#endif
         }
-        PyGILState_Release(state);
     }
 
     Py_RETURN_NONE;
@@ -1395,6 +1644,10 @@ static PyObject*
 tracer_setcurrstack(TracerObject* self, PyObject* stack_depth)
 {
     struct ThreadInfo* info = get_thread_info(self);
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
+        return NULL;
+    }
 
     if (!PyLong_Check(stack_depth)) {
         PyErr_SetString(PyExc_TypeError, "stack_depth must be an integer");
@@ -1412,7 +1665,6 @@ tracer_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* name = NULL;
     PyObject* instant_args = NULL;
     PyObject* scope = NULL;
-    struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
     static char* kwlist[] = {"name", "args", "scope", NULL};
     const char* allowed_scope[] = {"g", "p", "t"};
@@ -1423,6 +1675,12 @@ tracer_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "O|OO", kwlist,
                                      &name, &instant_args, &scope)) {
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1466,13 +1724,18 @@ tracer_addfunctionarg(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* key = NULL;
     PyObject* value = NULL;
     static char* kwlist[] = {"key", "value", NULL};
-    struct ThreadInfo* info = get_thread_info(self);
 
     if (!self->collecting) {
         Py_RETURN_NONE;
     }
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "OO", kwlist, &key, &value)) {
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1492,7 +1755,6 @@ tracer_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* name = NULL;
     PyObject* counter_args = NULL;
     static char* kwlist[] = {"name", "args", NULL};
-    struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
 
     if (!self->collecting) {
@@ -1501,6 +1763,13 @@ tracer_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "OO", kwlist,
                                      &name, &counter_args)) {
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1522,7 +1791,6 @@ tracer_addobject(TracerObject* self, PyObject* args, PyObject* kw)
     PyObject* name = NULL;
     PyObject* object_args = NULL;
     static char* kwlist[] = {"ph", "obj_id", "name", "args", NULL};
-    struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
 
     if (!self->collecting) {
@@ -1531,6 +1799,13 @@ tracer_addobject(TracerObject* self, PyObject* args, PyObject* kw)
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "OOO|O", kwlist,
                                      &ph, &id, &name, &object_args)) {
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1555,10 +1830,16 @@ tracer_addraw(TracerObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* raw = NULL;
     static char* kwlist[] = {"raw", NULL};
-    struct ThreadInfo* info = get_thread_info(self);
     struct EventNode* node = NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "O", kwlist, &raw)) {
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1574,10 +1855,16 @@ static PyObject*
 tracer_setignorestackcounter(TracerObject* self, PyObject* value)
 {
     int current_value = 0;
-    struct ThreadInfo* info = get_thread_info(self);
 
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "value must be an integer");
+        return NULL;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
         return NULL;
     }
 
@@ -1593,6 +1880,11 @@ static PyObject*
 tracer_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
+        return NULL;
+    }
 
     struct FunctionNode* fnode = info->stack_top;
     if (!fnode->args) {
@@ -1681,7 +1973,8 @@ Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
     }
 #endif
 
-    snaptrace_createthreadinfo(self);
+#if PY_VERSION_HEX >= 0x030C0000
+#else
     // Python: threading.setprofile(tracefunc)
     {
         PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
@@ -1691,8 +1984,12 @@ Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
             exit(-1);
         }
     }
+#endif
 
+#if PY_VERSION_HEX >= 0x030C0000
+#else
     PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
+#endif
 
     return 0;
 }
@@ -1717,6 +2014,8 @@ Tracer_dealloc(TracerObject* self)
         PyMem_FREE(prev);
     }
 
+#if PY_VERSION_HEX >= 0x030C0000
+#else
     // threading.setprofile(None)
     // It's possible that during deallocation phase threading module has released setprofile
     // and we should be okay with that.
@@ -1724,6 +2023,7 @@ Tracer_dealloc(TracerObject* self)
     if (result != NULL) {
         Py_DECREF(result);
     }
+#endif
 
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
@@ -1764,6 +2064,7 @@ snaptrace_free(void* Py_UNUSED(unused)) {
     Py_CLEAR(trio_lowlevel_module);
     Py_CLEAR(curr_task_getters[1]);
     Py_CLEAR(json_module);
+    Py_CLEAR(sys_module);
 }
 
 // ================================================================
@@ -1822,6 +2123,13 @@ PyInit_snaptrace(void)
         PyErr_Clear();
     }
     json_module = PyImport_ImportModule("json");
+
+#if PY_VERSION_HEX >= 0x030C0000
+    sys_module = PyImport_ImportModule("sys");
+    PyObject* monitoring = PyObject_GetAttrString(sys_module, "monitoring");
+    sys_monitoring_missing = PyObject_GetAttrString(monitoring, "MISSING");
+    Py_DECREF(monitoring);
+#endif
 
     quicktime_init();
 

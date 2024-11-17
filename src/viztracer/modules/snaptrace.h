@@ -27,6 +27,29 @@
 #define SNAPTRACE_THREAD_PROTECT_END(self)
 #endif
 
+#ifndef Py_MONITORING_H
+// monitoring.h is only available after 3.13, this is a fix
+// to support the following events on 3.12 
+#define PY_MONITORING_EVENT_PY_START 0
+#define PY_MONITORING_EVENT_PY_RESUME 1
+#define PY_MONITORING_EVENT_PY_RETURN 2
+#define PY_MONITORING_EVENT_PY_YIELD 3
+#define PY_MONITORING_EVENT_CALL 4
+#define PY_MONITORING_EVENT_LINE 5
+#define PY_MONITORING_EVENT_INSTRUCTION 6
+#define PY_MONITORING_EVENT_JUMP 7
+#define PY_MONITORING_EVENT_BRANCH 8
+#define PY_MONITORING_EVENT_STOP_ITERATION 9
+#define PY_MONITORING_EVENT_RAISE 10
+#define PY_MONITORING_EVENT_EXCEPTION_HANDLED 11
+#define PY_MONITORING_EVENT_PY_UNWIND 12
+#define PY_MONITORING_EVENT_PY_THROW 13
+#define PY_MONITORING_EVENT_RERAISE 14
+#define PY_MONITORING_EVENT_C_RETURN 15
+#define PY_MONITORING_EVENT_C_RAISE 16
+#endif
+
+
 #define SNAPTRACE_MAX_STACK_DEPTH (1 << 0)
 #define SNAPTRACE_INCLUDE_FILES (1 << 1)
 #define SNAPTRACE_EXCLUDE_FILES (1 << 2)
@@ -41,6 +64,8 @@
 #define UNSET_FLAG(reg, flag) ((reg) &= (~(flag)))
 
 #define CHECK_FLAG(reg, flag) (((reg) & (flag)) != 0) 
+
+#define SNAPTRACE_TOOL_ID 2
 
 struct FunctionNode {
     struct FunctionNode* next;
