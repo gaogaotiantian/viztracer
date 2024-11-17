@@ -38,10 +38,14 @@ static PyObject* curr_task_getters[2] = {0};
 // Utility function
 // =============================================================================
 
+int64_t prev_ts = 0;
+
 static inline int64_t
-get_ts(struct ThreadInfo* info)
+get_ts()
 {
-    int64_t curr_ts = get_system_ts();
+#if defined(QUICKTIME_RDTSC)
+    return get_system_ts();
+#else
     if (curr_ts <= info->prev_ts) {
         // We use artificial timestamp to avoid timestamp conflict.
         // 20 ns should be a safe granularity because that's normally
@@ -49,13 +53,14 @@ get_ts(struct ThreadInfo* info)
         // It's possible to have three same timestamp in a row so we
         // need to check if curr_ts <= prev_ts instead of ==
 #if _WIN32 || defined(__APPLE__)
-        curr_ts = info->prev_ts + 1;
+        curr_ts = prev_ts + 1;
 #else
-        curr_ts = info->prev_ts + 20;
+        curr_ts = prev_ts + 20;
 #endif
     }
-    info->prev_ts = curr_ts;
+    prev_ts = curr_ts;
     return curr_ts;
+#endif
 }
 
 static inline struct EventNode*
