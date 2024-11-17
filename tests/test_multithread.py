@@ -189,7 +189,7 @@ class TestMultithreadCmdline(CmdlineTmpl):
 
             while not q1.empty() or not q2.empty():
                 pass
-            
+
             with VizTracer():
                 q1.put('start')
                 q2.put('start')
