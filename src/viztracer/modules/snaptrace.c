@@ -46,7 +46,7 @@ get_ts()
 #if defined(QUICKTIME_RDTSC)
     return get_system_ts();
 #else
-    uint64_t curr_ts = get_system_ts();
+    int64_t curr_ts = get_system_ts();
     if (curr_ts <= prev_ts) {
         // We use artificial timestamp to avoid timestamp conflict.
         // 20 ns should be a safe granularity because that's normally
