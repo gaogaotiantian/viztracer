@@ -59,7 +59,6 @@ struct ThreadInfo {
     struct FunctionNode* stack_top;
     PyObject* curr_task;
     PyFrameObject* curr_task_frame;
-    int64_t prev_ts;
     struct MetadataNode* metadata_node;
 };
 

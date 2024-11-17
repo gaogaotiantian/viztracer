@@ -269,7 +269,6 @@ snaptrace_createthreadinfo(TracerObject* self) {
 
     info->curr_task = NULL;
     info->curr_task_frame = NULL;
-    info->prev_ts = 0.0;
 
     SNAPTRACE_THREAD_PROTECT_END(self);
     PyGILState_Release(state);
@@ -389,7 +388,7 @@ tracer_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadIn
         info->stack_top->next->prev = info->stack_top;
     }
     info->stack_top = info->stack_top->next;
-    info->stack_top->ts = get_ts(info);
+    info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(code);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame, self->log_func_repr);
@@ -418,7 +417,7 @@ tracer_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInf
         info->stack_top->next->prev = info->stack_top;
     }
     info->stack_top = info->stack_top->next;
-    info->stack_top->ts = get_ts(info);
+    info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(arg);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, frame, self->log_func_repr);
@@ -433,7 +432,7 @@ tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thread
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
-        int64_t dur = get_ts(info) - info->stack_top->ts;
+        int64_t dur = get_ts() - info->stack_top->ts;
         int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
@@ -496,7 +495,7 @@ tracer_creturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadI
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
-        int64_t dur = get_ts(info) - info->stack_top->ts;
+        int64_t dur = get_ts() - info->stack_top->ts;
         int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
@@ -691,7 +690,7 @@ tracer__flush_unfinished(TracerObject* self, int flush_as_finish)
             fee_node->tid = meta_node->tid;
 
             if (flush_as_finish) {
-                fee_node->data.fee.dur = get_ts(info) - func_node->ts;
+                fee_node->data.fee.dur = get_ts() - func_node->ts;
             } else {
                 fee_node->data.fee.dur = 0;
             }
@@ -1329,8 +1328,7 @@ tracer_setpid(TracerObject* self, PyObject* args)
 static PyObject*
 tracer_getts(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
-    struct ThreadInfo* info = get_thread_info(self);
-    int64_t ts = get_ts(info);
+    int64_t ts = get_ts();
     double us = system_ts_to_us(ts);
 
     return PyFloat_FromDouble(us);
@@ -1403,7 +1401,7 @@ tracer_addinstant(TracerObject* self, PyObject* args, PyObject* kw)
     node = get_next_node(self);
     node->ntype = INSTANT_NODE;
     node->tid = info->tid;
-    node->ts = get_ts(info);
+    node->ts = get_ts();
     node->data.instant.name = Py_NewRef(name);
     node->data.instant.args = Py_NewRef(instant_args);
     node->data.instant.scope = scope;
@@ -1458,7 +1456,7 @@ tracer_addcounter(TracerObject* self, PyObject* args, PyObject* kw)
     node = get_next_node(self);
     node->ntype = COUNTER_NODE;
     node->tid = info->tid;
-    node->ts = get_ts(info);
+    node->ts = get_ts();
     node->data.counter.name = Py_NewRef(name);
     node->data.counter.args = Py_NewRef(counter_args);
 
@@ -1492,7 +1490,7 @@ tracer_addobject(TracerObject* self, PyObject* args, PyObject* kw)
     node = get_next_node(self);
     node->ntype = OBJECT_NODE;
     node->tid = info->tid;
-    node->ts = get_ts(info);
+    node->ts = get_ts();
     node->data.object.ph = Py_NewRef(ph);
     node->data.object.id = Py_NewRef(id);
     node->data.object.name = Py_NewRef(name);
