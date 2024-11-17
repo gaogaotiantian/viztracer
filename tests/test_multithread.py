@@ -1,8 +1,10 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import sys
 import threading
 import time
+import unittest
 
 from viztracer import VizTracer, get_tracer
 
@@ -79,6 +81,7 @@ class TestMultithread(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 300)
 
+    @unittest.skipIf(sys.version_info >= (3, 12), "We always enable threading trace in Python 3.12+")
     def test_manual_tracefunc(self):
         tracer = VizTracer(max_stack_depth=4, verbose=0)
         # Force disable threading trace
@@ -153,3 +156,52 @@ class TestMultithreadCmdline(CmdlineTmpl):
                       expected_output_file="result.json",
                       script=file_log_sparse,
                       expected_entries=2)
+
+    def test_trace_after_thread_start(self):
+        script = """
+            import queue
+            import sys
+            import threading
+            from viztracer import VizTracer, get_tracer
+            def fib(n):
+                if n <= 1:
+                    return n
+                return fib(n - 1) + fib(n - 2)
+
+            def target(q):
+                def inner():
+                    q.get()
+                    q.get()
+                inner()
+                if sys.version_info < (3, 12):
+                    get_tracer().enable_thread_tracing()
+                fib(10)
+
+            q1 = queue.Queue()
+            q2 = queue.Queue()
+            thread1 = threading.Thread(target=target, args=(q1,))
+            thread2 = threading.Thread(target=target, args=(q2,))
+
+            thread1.start()
+            thread2.start()
+            q1.put('check')
+            q2.put('check')
+
+            while not q1.empty() or not q2.empty():
+                pass
+
+            with VizTracer():
+                q1.put('start')
+                q2.put('start')
+                thread1.join()
+                thread2.join()
+            """
+
+        def check_func(data):
+            # Main thread on MacOS does not have the same id as pid
+            self.assertGreaterEqual(len(set(e["tid"] for e in data["traceEvents"])), 3)
+            self.assertTrue(any(e["name"] for e in data["traceEvents"] if e["name"].startswith("fib")))
+
+        self.template(["python", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script, check_func=check_func)

@@ -25,7 +25,9 @@ Just start ``VizTracer`` before you create threads and it will just work.
 other multi-thread
 ------------------
 
-If you are using multi-thread via other mechanism, for example, PyQt thread, VizTracer can't support it out of the box.
+For python3.12+, VizTracer supports all Python level multi-thread. You don't need to do anything.
+
+For the version before 3.12, if you are using multi-thread via other mechanism, for example, PyQt thread, VizTracer can't support it out of the box.
 However, you can notice VizTracer that you are in a separate thread and enable tracing in that thread with ``enable_thread_tracing``
 
 .. code-block:: python
