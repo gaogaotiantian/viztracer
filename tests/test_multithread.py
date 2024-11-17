@@ -198,7 +198,8 @@ class TestMultithreadCmdline(CmdlineTmpl):
             """
 
         def check_func(data):
-            self.assertEqual(len(set(e["tid"] for e in data["traceEvents"])), 3)
+            # Main thread on MacOS does not have the same id as pid
+            self.assertGreaterEqual(len(set(e["tid"] for e in data["traceEvents"])), 3)
             self.assertTrue(any(e["name"] for e in data["traceEvents"] if e["name"].startswith("fib")))
 
         self.template(["python", "cmdline_test.py"],
