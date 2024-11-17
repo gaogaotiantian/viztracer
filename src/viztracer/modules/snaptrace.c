@@ -311,9 +311,76 @@ snaptrace_threaddestructor(void* key) {
 // Tracing function, triggered when FEE
 // =============================================================================
 
+// This function is called before we actually start tracing.
+//   * Prepare the thread info and create one if not exist
+//   * Check if we should trace based on all the flags
+//     * -1: Error
+//     * 0: Not trace
+//     * 1: Trace
 int
-tracer_pycall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info)
+prepare_before_trace(TracerObject* self, int is_call, struct ThreadInfo** info_out) {
+
+    if (!self->collecting) {
+        return 0;
+    }
+
+    struct ThreadInfo* info = get_thread_info(self);
+
+    if (!info) {
+        info = snaptrace_createthreadinfo(self);
+        if (!info) {
+            self->collecting = 0;
+            PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to create thread info. This should not happen.");
+            return -1;
+        }
+    }
+
+    *info_out = info;
+
+    if (info->paused) {
+        return 0;
+    }
+
+    if (info->ignore_stack_depth > 0) {
+        if (is_call) {
+            info->ignore_stack_depth += 1;
+            return 0;
+        } else {
+            info->ignore_stack_depth -= 1;
+            return 0;
+        }
+    }
+
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
+        if (is_call) {
+            if (info->curr_stack_depth >= self->max_stack_depth) {
+                info->curr_stack_depth += 1;
+                return 0;
+            }
+        } else {
+            if (info->curr_stack_depth > 0) {
+                if (info->curr_stack_depth > self->max_stack_depth) {
+                    info->curr_stack_depth -= 1;
+                    return 0;
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
+int
+tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
 {
+    struct ThreadInfo* info = NULL;
+
+    if (prepare_before_trace(self, 1, &info) <= 0) {
+        // For now we think -1 and 0 should both return because we should not
+        // have the -1 case.
+        return 0;
+    }
+
     PyObject* co_filename = code->co_filename;
 
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
@@ -395,16 +462,27 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo
 
 cleanup:
 
+    info->curr_stack_depth += 1;
+
     return 0;
 }
 
 int
-tracer_ccall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
+tracer_ccall_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
 {
+    struct ThreadInfo* info = NULL;
+
+    if (prepare_before_trace(self, 1, &info) <= 0) {
+        // For now we think -1 and 0 should both return because we should not
+        // have the -1 case.
+        return 0;
+    }
+
     PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
 
     if (cfunc->m_self == (PyObject*)self) {
         info->ignore_stack_depth += 1;
+        info->curr_stack_depth += 1;
         return 0;
     }
 
@@ -420,12 +498,22 @@ tracer_ccall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo*
         log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
 
+    info->curr_stack_depth += 1;
+
     return 0;
 }
 
 int
-tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
+tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
 {
+    struct ThreadInfo* info = NULL;
+
+    if (prepare_before_trace(self, 0, &info) <= 0) {
+        // For now we think -1 and 0 should both return because we should not
+        // have the -1 case.
+        return 0;
+    }
+
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
@@ -483,12 +571,24 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadIn
         }
     }
 
+    if (info->curr_stack_depth > 0) {
+        info->curr_stack_depth -= 1;
+    } 
+
     return 0;
 }
 
 int
-tracer_creturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
+tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
 {
+    struct ThreadInfo* info = NULL;
+
+    if (prepare_before_trace(self, 0, &info) <= 0) {
+        // For now we think -1 and 0 should both return because we should not
+        // have the -1 case.
+        return 0;
+    }
+
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
@@ -538,6 +638,11 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadInf
         Py_CLEAR(stack_top->func);
     }
 
+
+    if (info->curr_stack_depth > 0) {
+        info->curr_stack_depth -= 1;
+    }
+
     return 0;
 }
 
@@ -546,82 +651,27 @@ tracer_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
 {
     TracerObject* self = (TracerObject*) obj;
     int ret = 0;
-
-    if (!self->collecting) {
-        return 0;
-    }
     
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) &&
             (what == PyTrace_C_CALL || what == PyTrace_C_RETURN || what == PyTrace_C_EXCEPTION)) {
         return 0;
     }
 
-    struct ThreadInfo* info = get_thread_info(self);
-
-    if (!info) {
-        self->collecting = 0;
-        PyErr_SetString(PyExc_RuntimeError, "VizTracer: Thread info not found. This should not happen.");
-        return -1;
-    }
-
-    // This is a crazy hack for
-    // is_call == (what == PyTrace_CALL || what == PyTrace_C_CALL)
-    // Because PyTrace_CALL == 0 and PyTrace_C_CALL == 4
-    int is_call = !(what & 0x3);
-
-    if (info->paused) {
-        return 0;
-    }
-
-    if (info->ignore_stack_depth > 0) {
-        if (is_call) {
-            info->ignore_stack_depth += 1;
-            return 0;
-        } else {
-            info->ignore_stack_depth -= 1;
-            return 0;
-        }
-    }
-
-    if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
-        if (is_call) {
-            if (info->curr_stack_depth >= self->max_stack_depth) {
-                info->curr_stack_depth += 1;
-                return 0;
-            }
-        } else {
-            if (info->curr_stack_depth > 0) {
-                if (info->curr_stack_depth > self->max_stack_depth) {
-                    info->curr_stack_depth -= 1;
-                    return 0;
-                }
-            }
-        }
-    }
-
     PyCodeObject* code = PyFrame_GetCode(frame);
 
     switch (what) {
     case PyTrace_CALL:
-        info->curr_stack_depth += 1;
-        ret = tracer_pycall_callback(self, code, info);
+        ret = tracer_pycall_callback(self, code);
         break;
     case PyTrace_C_CALL:
-        info->curr_stack_depth += 1;
-        ret = tracer_ccall_callback(self, code, info, arg);
+        ret = tracer_ccall_callback(self, code, arg);
         break;
     case PyTrace_RETURN:
-        ret = tracer_pyreturn_callback(self, code, info, arg);
-        if (info->curr_stack_depth > 0) {
-            info->curr_stack_depth -= 1;
-        }
+        ret = tracer_pyreturn_callback(self, code, arg);
         break;
     case PyTrace_C_RETURN:
     case PyTrace_C_EXCEPTION:
-        ret = tracer_creturn_callback(self, code, info, arg);
-        if (info->curr_stack_depth > 0) {
-            info->curr_stack_depth -= 1;
-        }
+        ret = tracer_creturn_callback(self, code, arg);
         break;
     default:
         return 0;
