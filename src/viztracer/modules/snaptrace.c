@@ -312,9 +312,8 @@ snaptrace_threaddestructor(void* key) {
 // =============================================================================
 
 int
-tracer_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info)
+tracer_pycall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info)
 {
-    PyCodeObject* code = PyFrame_GetCode(frame);
     PyObject* co_filename = code->co_filename;
 
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
@@ -379,7 +378,7 @@ tracer_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadIn
         }
         info->paused = 0;
         info->curr_task = Py_NewRef(curr_task);
-        info->curr_task_frame = (PyFrameObject*)Py_NewRef(frame);
+        info->curr_task_frame = (PyFrameObject*)Py_NewRef(PyEval_GetFrame());
     }
 
     // If it's a call, we need a new node, and we need to update the stack
@@ -391,18 +390,16 @@ tracer_pycall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadIn
     info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(code);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
-        log_func_args(info->stack_top, frame, self->log_func_repr);
+        log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
 
 cleanup:
-
-    Py_XDECREF(code);
 
     return 0;
 }
 
 int
-tracer_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_ccall_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
 {
     PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
 
@@ -420,14 +417,14 @@ tracer_ccall_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInf
     info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(arg);
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
-        log_func_args(info->stack_top, frame, self->log_func_repr);
+        log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
 
     return 0;
 }
 
 int
-tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
 {
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
@@ -436,9 +433,9 @@ tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thread
         int log_this_entry = self->min_duration == 0 || dur_ts_to_ns(dur) >= self->min_duration;
 
         if (log_this_entry) {
-            PyCodeObject* code = (PyCodeObject*) stack_top->func;
+            PyCodeObject* call_code = (PyCodeObject*) stack_top->func;
 
-            if (!PyCode_Check(code)) {
+            if (!PyCode_Check(call_code) || call_code != code) {
                 self->collecting = 0;
                 PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
                 return -1;
@@ -480,7 +477,7 @@ tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thread
 
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC) &&
                 info->curr_task &&
-                frame == info->curr_task_frame) {
+                PyEval_GetFrame() == info->curr_task_frame) {
             Py_CLEAR(info->curr_task);
             Py_CLEAR(info->curr_task_frame);
         }
@@ -490,7 +487,7 @@ tracer_pyreturn_callback(TracerObject* self, PyFrameObject* frame, struct Thread
 }
 
 int
-tracer_creturn_callback(TracerObject* self, PyFrameObject* frame, struct ThreadInfo* info, PyObject* arg)
+tracer_creturn_callback(TracerObject* self, PyCodeObject* code, struct ThreadInfo* info, PyObject* arg)
 {
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
@@ -602,24 +599,26 @@ tracer_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
         }
     }
 
+    PyCodeObject* code = PyFrame_GetCode(frame);
+
     switch (what) {
     case PyTrace_CALL:
         info->curr_stack_depth += 1;
-        ret = tracer_pycall_callback(self, frame, info);
+        ret = tracer_pycall_callback(self, code, info);
         break;
     case PyTrace_C_CALL:
         info->curr_stack_depth += 1;
-        ret = tracer_ccall_callback(self, frame, info, arg);
+        ret = tracer_ccall_callback(self, code, info, arg);
         break;
     case PyTrace_RETURN:
-        ret = tracer_pyreturn_callback(self, frame, info, arg);
+        ret = tracer_pyreturn_callback(self, code, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
         break;
     case PyTrace_C_RETURN:
     case PyTrace_C_EXCEPTION:
-        ret = tracer_creturn_callback(self, frame, info, arg);
+        ret = tracer_creturn_callback(self, code, info, arg);
         if (info->curr_stack_depth > 0) {
             info->curr_stack_depth -= 1;
         }
@@ -627,6 +626,8 @@ tracer_tracefunc(PyObject* obj, PyFrameObject* frame, int what, PyObject* arg)
     default:
         return 0;
     }
+
+    Py_DECREF(code);
 
     return ret;
 }
