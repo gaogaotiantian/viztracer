@@ -338,25 +338,17 @@ prepare_before_trace(TracerObject* self, int is_call, struct ThreadInfo** info_o
     }
 
     if (info->ignore_stack_depth > 0) {
-        if (is_call) {
-            info->ignore_stack_depth += 1;
-            return 0;
-        } else {
-            info->ignore_stack_depth -= 1;
-            return 0;
-        }
+        return 0;
     }
 
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_MAX_STACK_DEPTH)) {
         if (is_call) {
             if (info->curr_stack_depth >= self->max_stack_depth) {
-                info->curr_stack_depth += 1;
                 return 0;
             }
         } else {
             if (info->curr_stack_depth > 0) {
                 if (info->curr_stack_depth > self->max_stack_depth) {
-                    info->curr_stack_depth -= 1;
                     return 0;
                 }
             }
@@ -374,7 +366,7 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
     if (prepare_before_trace(self, 1, &info) <= 0) {
         // For now we think -1 and 0 should both return because we should not
         // have the -1 case.
-        return 0;
+        goto cleanup_ignore;
     }
 
     PyObject* co_filename = code->co_filename;
@@ -382,8 +374,7 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
     if (!CHECK_FLAG(self->check_flags, SNAPTRACE_TRACE_SELF)) {
         if (self->lib_file_path && co_filename && PyUnicode_Check(co_filename) &&
                 startswith(PyUnicode_AsUTF8(co_filename), self->lib_file_path)) {
-            info->ignore_stack_depth += 1;
-            goto cleanup;
+            goto cleanup_ignore;
         }
     }
 
@@ -408,18 +399,16 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
                 }
             }
             if (record == 0) {
-                info->ignore_stack_depth += 1;
-                goto cleanup;
+                goto cleanup_ignore;
             }
         } else {
-            goto cleanup;
+            goto cleanup_ignore;
         }
     }
 
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_FROZEN)) {
         if (startswith(PyUnicode_AsUTF8(co_filename), "<frozen")) {
-            info->ignore_stack_depth += 1;
-            goto cleanup;
+            goto cleanup_ignore;
         }
     }
 
@@ -456,10 +445,13 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
         log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
 
-cleanup:
-
     info->curr_stack_depth += 1;
+    return 0;
 
+cleanup_ignore:
+
+    info->ignore_stack_depth += 1;
+    info->curr_stack_depth += 1;
     return 0;
 }
 
@@ -471,15 +463,13 @@ tracer_ccall_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     if (prepare_before_trace(self, 1, &info) <= 0) {
         // For now we think -1 and 0 should both return because we should not
         // have the -1 case.
-        return 0;
+        goto cleanup_ignore;
     }
 
     PyCFunctionObject* cfunc = (PyCFunctionObject*) arg;
 
     if (cfunc->m_self == (PyObject*)self) {
-        info->ignore_stack_depth += 1;
-        info->curr_stack_depth += 1;
-        return 0;
+        goto cleanup_ignore;
     }
 
     // If it's a call, we need a new node, and we need to update the stack
@@ -495,6 +485,12 @@ tracer_ccall_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     }
 
     info->curr_stack_depth += 1;
+    return 0;
+
+cleanup_ignore:
+
+    info->ignore_stack_depth += 1;
+    info->curr_stack_depth += 1;
 
     return 0;
 }
@@ -507,7 +503,7 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     if (prepare_before_trace(self, 0, &info) <= 0) {
         // For now we think -1 and 0 should both return because we should not
         // have the -1 case.
-        return 0;
+        goto cleanup_ignore;
     }
 
     struct FunctionNode* stack_top = info->stack_top;
@@ -570,7 +566,17 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     if (info->curr_stack_depth > 0) {
         info->curr_stack_depth -= 1;
     } 
+    return 0;
 
+cleanup_ignore:
+
+    if (info->curr_stack_depth > 0) {
+        info->curr_stack_depth -= 1;
+    }
+
+    if (info->ignore_stack_depth > 0) {
+        info->ignore_stack_depth -= 1;
+    }
     return 0;
 }
 
@@ -582,7 +588,7 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     if (prepare_before_trace(self, 0, &info) <= 0) {
         // For now we think -1 and 0 should both return because we should not
         // have the -1 case.
-        return 0;
+        goto cleanup_ignore;
     }
 
     struct FunctionNode* stack_top = info->stack_top;
@@ -639,6 +645,17 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
         info->curr_stack_depth -= 1;
     }
 
+    return 0;
+
+cleanup_ignore:
+
+    if (info->curr_stack_depth > 0) {
+        info->curr_stack_depth -= 1;
+    }
+
+    if (info->ignore_stack_depth > 0) {
+        info->ignore_stack_depth -= 1;
+    }
     return 0;
 }
 
