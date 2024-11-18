@@ -446,6 +446,7 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
     }
 
     info->curr_stack_depth += 1;
+
     return 0;
 
 cleanup_ignore:
@@ -454,6 +455,7 @@ cleanup_ignore:
         info->ignore_stack_depth += 1;
         info->curr_stack_depth += 1;
     }
+
     return 0;
 }
 
@@ -487,6 +489,7 @@ tracer_ccall_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     }
 
     info->curr_stack_depth += 1;
+
     return 0;
 
 cleanup_ignore:
@@ -570,6 +573,7 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     if (info->curr_stack_depth > 0) {
         info->curr_stack_depth -= 1;
     } 
+
     return 0;
 
 cleanup_ignore:
@@ -583,6 +587,7 @@ cleanup_ignore:
             info->ignore_stack_depth -= 1;
         }
     }
+
     return 0;
 }
 
@@ -664,6 +669,7 @@ cleanup_ignore:
             info->ignore_stack_depth -= 1;
         }
     }
+
     return 0;
 }
 
