@@ -308,6 +308,30 @@ class TestIssue162(CmdlineTmpl):
                       script=issue162_code_os_popen, expected_stdout=r".*test_issue162.*")
 
 
+class TestIssue508(CmdlineTmpl):
+    def test_issue508(self):
+        script = """
+            import inspect
+            import os
+            import viztracer
+
+            exclude = os.path.dirname(inspect.__file__)
+
+            def call_self(n):
+                if n == 0:
+                    return
+                call_self(n - 1)
+
+            with viztracer.VizTracer(exclude_files=[exclude], max_stack_depth=6):
+                inspect.getsource(call_self)
+                call_self(10)
+        """
+
+        self.template(["python", "cmdline_test.py"], script=script,
+                      expected_output_file="result.json",
+                      expected_entries=6)
+
+
 file_timestamp_disorder = """
 def g():
     pass
