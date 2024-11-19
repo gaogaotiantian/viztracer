@@ -16,19 +16,16 @@ understanding of how different tasks consume the runtime.
 
     viztracer --log_async my_script.py
 
-threading
----------
-
-VizTracer supports python native ``threading`` module without the need to do any modification to your code. 
-Just start ``VizTracer`` before you create threads and it will just work.
-
-other multi-thread
-------------------
+Multi Thread
+------------
 
 For python3.12+, VizTracer supports all Python level multi-thread. You don't need to do anything.
 
-For the version before 3.12, if you are using multi-thread via other mechanism, for example, PyQt thread, VizTracer can't support it out of the box.
-However, you can notice VizTracer that you are in a separate thread and enable tracing in that thread with ``enable_thread_tracing``
+For versions before 3.12, VizTracer supports python native ``threading`` module without the need to do any modification to your code. 
+Just start ``VizTracer`` before you create threads and it will just work.
+
+If you are using multi-thread via other mechanism, for example, PyQt thread, VizTracer can't support it out of the box.
+However, you can inform VizTracer that you are in a separate thread and enable tracing in that thread with ``enable_thread_tracing``
 
 .. code-block:: python
 
@@ -48,7 +45,7 @@ VizTracer supports ``subprocess``. You need to make sure the main process exits 
 
     viztracer my_script_using_subprocess.py
 
-This will generate an HTML file for all processes. There are a couple of things you need to be aware though. 
+This will generate a report for all processes. There are a couple of things you need to be aware though. 
 
 VizTracer patches subprocess module(to be more specific, ``subprocess.Popen``) to make this work like a magic. However, it will only patch
 when the args passed to ``subprocess.Popen`` is a list(``subprocess.Popen(["python", "subscript.py"])``) and the first argument starts with
@@ -72,15 +69,10 @@ However, on Windows, ``multiprocessing.Pool`` won't work with VizTracer because 
 os.fork()
 ---------
 
-VizTracer supports ``os.fork``, with some caveats. 
-
-On Python3.8+, it works well, the main process will wait for
-forked processes to finish. You can even use ``os.exec()`` and its other forms after you fork the process. Of course
-VizTracer only records what happens before ``os.exec()``, you need :ref:`generic multi process support <generic_multi_process>` to record
-what happens after.
-
-On Python3.6/3.7, VizTracer is not able to wait for the forked process to finish. It would be user's responsibility
-to wait for the forked process to finish if they want to see both processes in the report.
+VizTracer supports ``os.fork``. The main process will wait for forked processes to finish.
+You can even use ``os.exec()`` and its other forms after you fork the process. Of course
+VizTracer only records what happens before ``os.exec()``, you need :ref:`generic multi process support <generic_multi_process>`
+to record what happens after.
 
 loky
 ----
@@ -133,4 +125,4 @@ After generating ``json`` files, you need to combine them
     
     viztracer --combine ./temp_dir/*.json
 
-This will generate the HTML report with all the process info. You can specify ``--output_file`` when using ``--combine``.
+This will generate the report with all the process info. You can specify ``--output_file`` when using ``--combine``.

@@ -11,17 +11,28 @@ VizTracer
                  ignore_frozen=False,\
                  log_func_retval=False,\
                  log_func_args=False,\
+                 log_func_repr=None,\
+                 log_func_with_objprint=None,\
                  log_print=False,\
                  log_gc=False,\
-                 log_torch=False,\
+                 log_sparse=False,\
                  log_async=False,\
+                 log_torch=False,\
+                 log_audit=False,\
                  pid_suffix=False,\
+                 file_info=True,\
                  register_global=True,\
+                 trace_self=False,\
                  min_duration=0,\
-                 output_file="result.json")
+                 minimize_memory=False,\
+                 dump_raw=False,\
+                 sanitize_function_name=False,\
+                 process_name=None,\
+                 output_file="result.json",\
+                 plugins=[])
 
     .. py:attribute:: tracer_entries
-        :type: integer
+        :type: int
         :value: 1000000
 
         Size of circular buffer. The user can only specify this value when instantiate ``VizTracer`` object or if they use command line
@@ -35,7 +46,7 @@ VizTracer
             viztracer --tracer_entries 500000
 
     .. py:attribute:: verbose
-        :type: integer
+        :type: int
         :value: 1
 
         Verbose level of VizTracer. Can be set to ``0`` so it won't print anything while tracing 
@@ -47,7 +58,7 @@ VizTracer
             viztracer --quiet
 
     .. py:attribute:: max_stack_depth
-        :type: integer
+        :type: int
         :value: -1
 
         Specify the maximum stack depth VizTracer will trace. ``-1`` means infinite.
@@ -59,7 +70,7 @@ VizTracer
             viztracer --max_stack_depth <val>
     
     .. py:attribute:: include_files
-        :type: list of string or None
+        :type: Optional[list[str]]
         :value: None
 
         Specify the files or folders that VizTracer will trace. If it's not empty, VizTracer will function in whitelist mode, any files/folders not included will be ignored.
@@ -83,7 +94,7 @@ VizTracer
             viztracer --include_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: exclude_files
-        :type: list of string or None
+        :type: Optional[list[str]]
         :value: None
 
         Specify the files or folders that VizTracer will not trace. If it's not empty, VizTracer will function in blacklist mode, any files/folders not included will be ignored.
@@ -107,7 +118,7 @@ VizTracer
             viztracer --exclude_files file1 file2 -- my_scrpit.py
 
     .. py:attribute:: ignore_c_function
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether trace c function
@@ -119,7 +130,7 @@ VizTracer
             viztracer --ignore_c_function
 
     .. py:attribute:: ignore_frozen
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether trace functions from frozen functions(mostly import stuff)
@@ -131,7 +142,7 @@ VizTracer
             viztracer --ignore_frozen
 
     .. py:attribute:: log_func_retval 
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether log the return value of the function as string in report entry
@@ -143,7 +154,7 @@ VizTracer
             viztracer --log_func_retval
     
     .. py:attribute:: log_func_args 
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether log the arguments of the function as string in report entry
@@ -155,14 +166,14 @@ VizTracer
             viztracer --log_func_args
 
     .. py:attribute:: log_func_repr
-        :type: Optional[Callable]
+        :type: Optional[Callable[..., str]]
         :value: None
 
         A custom repr function to log the function arguments and return value. The function should take
         a single argument and return a string.
 
     .. py:attribute:: log_func_with_objprint
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether log the arguments and return value of the function with ``objprint``.
@@ -175,7 +186,7 @@ VizTracer
             viztracer --log_func_with_objprint
     
     .. py:attribute:: log_print 
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether replace the ``print`` function to log in VizTracer report
@@ -187,7 +198,7 @@ VizTracer
             viztracer --log_print
 
     .. py:attribute:: log_gc 
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether log garbage collector
@@ -198,8 +209,29 @@ VizTracer
 
             viztracer --log_gc
 
+    .. py:attribute:: log_sparse
+        :type: bool
+        :value: False
+
+        Whether initialize the tracer in ``log_sparse`` mode. In this mode, the tracer
+        will start as a context.
+
+        This option should be used when you are using inline tracing with ``@log_sparse``
+
+    .. py:attribute:: log_async
+        :type: bool
+        :value: False
+
+        Whether log async tasks as separate "thread" in vizviewer
+
+        Setting it to ``True`` is equivalent to 
+
+        .. code-block::
+
+            viztracer --log_async
+
     .. py:attribute:: log_torch
-        :type: boolean
+        :type: bool
         :value: False
 
         Whether log native torch events
@@ -210,20 +242,38 @@ VizTracer
 
             viztracer --log_torch
 
-    .. py:attribute:: log_async
-        :type: boolean
-        :value: False
+    .. py:attribute:: log_audit
+        :type: Optional[Sequence[str]]
+        :value: None
 
-        Whether log async tasks as separate "thread" in vizviewer
+        The audit events to log.
 
-        Setting it to ``True`` is equivalent to 
+        Equivalent to
 
         .. code-block::
 
-            viztracer --log_async
+            viztracer --log_audit event1[ event2 [event3 ...]]
+
+    .. py:attribute:: pid_suffix
+        :type: bool
+        :value: False
+
+        Whether append pid to the output file name.
+
+        Equivalent to
+
+        .. code-block::
+
+            viztracer --pid_suffix
+
+    .. py:attribute:: file_info
+        :type: bool
+        :value: False
+
+        Whether save the file_info in the report.
     
     .. py:attribute:: register_global
-        :type: boolean
+        :type: bool
         :value: True
         
         whether register the tracer globally, so every file can use ``get_tracer()`` to get this tracer. When command line
@@ -238,11 +288,43 @@ VizTracer
 
             tracer = VizTracer(register_global=False)
 
+    .. py:attribute:: trace_self
+        :type: bool
+        :value: False
+        
+        whether trace the function calls of the tracer itself.
+
     .. py:attribute:: min_duration
         :type: float
         :value: 0
 
         Minimum duration of a function to be logged. The value is in unit of ``us``.
+
+    .. py:attribute:: minimize_memory
+        :type: bool
+        :value: False
+
+        Whether make effort to minimize the RAM usage when dumping the data.
+
+    .. py:attribute:: dump_raw
+        :type: bool
+        :value: False
+
+        Whether use the raw dump for json report. This is usually faster because it
+        dumps directly in C.
+
+    .. py:attribute:: sanitize_function_name
+        :type: bool
+        :value: False
+
+        Whether check the function name before dump. This is useful for dymanically
+        generated PyMethodDef.
+
+    .. py:attribute:: process_name
+        :type: Optional[str]
+        :value: None
+
+        The process name to display in the report.
 
     .. py:attribute:: output_file
         :type: string
@@ -255,12 +337,18 @@ VizTracer
         .. code-block::
 
             viztracer -o <filepath>
+
+    .. py:attribute:: plugins
+        :type: Sequence[Union[VizPluginBase, str]]
+        :value: []
+
+        List of plugins to use.
     
     .. py:method:: run(command, output_file=None)
 
         run ``command`` and save report to ``output_file``
     
-    .. py:method:: save(output_file=None)
+    .. py:method:: save(output_file=None, file_info=None, verbose=None)
 
         parse data and save report to ``output_file``. If ``output_file`` is ``None``, save to default path.
     
@@ -268,9 +356,10 @@ VizTracer
 
         start tracing
 
-    .. py:method:: stop()
+    .. py:method:: stop(stop_option=None)
 
-        stop tracing
+        stop tracing. The only valid value for ``stop_option`` is ``"flush_as_finish"``. When
+        defined, VizTracer will log all the unfinished functions.
 
     .. py:method:: clear()
 
@@ -282,14 +371,38 @@ VizTracer
 
     .. py:method:: enable_thread_tracing()
 
+        Not needed on Python3.12+.
+
         enable tracing in the current thread, useful when you use multi-thread without builtin threading module
 
-    .. py:method:: add_instant(name, scope="g")
+    .. py:method:: add_variable(name, var, event="instant")
+
+        :param str name: name of this variable
+        :param object var: variable to be added
+        :param str event: one of ``instant`` or ``counter``
+
+        Add variable to the report. ``event`` determines the logging type.
+
+    .. py:method:: add_instant(name, args, scope="g")
         
         :param str name: name of this instant event
-        :param str scope: one of ``g``, ``p`` or ``t`` for global, process or thread level event
+        :param object args: the arguments of this instant event
+        :param str scope: one of ``"g"``, ``"p"`` or ``"t"`` for global, process or thread level event
 
-        Add instant event to the report. 
+        Add instant event to the report.
+
+    .. py:method:: add_counter(name, args)
+        
+        :param str name: name of this counter event
+        :param object args: the arguments of this counter event
+
+        Add counter event to the report.
+
+    .. py:method:: add_raw(raw)
+        
+        :param object raw: the raw chrome trace event to add to the report
+
+        Add a raw event to the report.
 
     .. py:method:: add_func_args(name, key, value)
         
@@ -328,3 +441,17 @@ VizTracer
                 tracer.max_stack_depth = 10
             
             get_tracer().set_afterfork(afterfork_callback)
+
+    .. py:method:: getts()
+
+        :return: current timestamp in us
+        :rtype: int
+
+        Get current timestamp in us
+
+    .. py:method:: get_base_time()
+
+        :return: the base time of the tracer in ns
+        :rtype: int
+
+        Get the base time of the tracer

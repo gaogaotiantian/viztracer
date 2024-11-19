@@ -19,7 +19,7 @@ import os
 # -- Project information -----------------------------------------------------
 
 project = 'VizTracer'
-copyright = '2020, Tian Gao'
+copyright = '2020-2024, Tian Gao'
 author = 'Tian Gao'
 
 # The full version, including alpha/beta/rc tags

@@ -68,12 +68,6 @@ You can make viztracer to generate a unique name for the output file by using ``
     viztracer -u my_script.py
     viztracer --output_dir ./my_reports -u my_script.py
 
-You can also show flamegraph from ``result.json`` file
-
-.. code-block::
-
-    vizviewer --flamegraph result.json
-
 Inline
 ------
 
@@ -192,12 +186,6 @@ You can serve your HTTP server on a different port with ``--port`` or its equiva
 
     vizviewer --port 10000 result.json
 
-You can also show flamegraph of the result
-
-.. code-block::
-
-    vizviewer --flamegraph result.json
-
 You can use the external trace processor with ``--use_external_processor``, which does not have the
 RAM limits as the browser. This is helpful when you try to open a large trace file.
 
@@ -222,12 +210,8 @@ Circular Buffer Size
 --------------------
 
 VizTracer uses a circular buffer to store the entries. When there are too many entries, it will only store the latest ones so you know what happened
-recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB disk space. You can specify this when you instantiate a ``VizTracer`` object
-
-Notice it also takes a significant amount of RAM when VizTracer is tracing the program.
-
-VizTracer will preallocate about ``tracer_entries * 100B`` RAM for circular buffer. It also requires about ``1-2MB`` per 10k entries to
-dump the json file.
+recently. The default buffer size is 1,000,000(number of entries), which takes about 150MiB disk space.
+You can specify this when you instantiate a ``VizTracer`` object or through CLI.
 
 .. code-block:: python
 
@@ -238,6 +222,11 @@ OR
 .. code-block:: python
 
     tracer = VizTracer(tracer_entries=500000)
+
+Notice it also takes a significant amount of RAM when VizTracer is tracing the program.
+
+VizTracer will preallocate about ``tracer_entries * 100B`` RAM for circular buffer. It also requires about ``1-2MB`` per 10k entries to
+dump the json file.
 
 Configuration file
 ------------------

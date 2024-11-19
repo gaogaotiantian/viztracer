@@ -5,6 +5,9 @@ VizTracer features with many extra log possibilities **without even changing you
 You can start VizTracer from command line and use command line arguments to control what
 you need to log.
 
+Most of the features analyzes the AST generated from the source code and add nodes into it, so
+the overhead is minimal. However, some features like ``log_func_args`` will introduce a large overhead.
+
 Log Variable
 ------------
 

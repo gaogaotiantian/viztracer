@@ -28,6 +28,9 @@ Decorator
     something periodically. You won't drain your memory and the parsing/dumping will be done in a new process,
     which can minimize the performance impact to your main process.
 
+    This decorator will use ``fork`` if the start method is ``"fork"``. Otherwise it will use the same process
+    to dump the report.
+
     You can pass any argument you want to ``VizTracer`` by giving it to the decorator
 
     .. code-block:: python
