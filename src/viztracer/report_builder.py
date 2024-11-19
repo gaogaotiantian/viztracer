@@ -124,6 +124,8 @@ class ReportBuilder:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
         self.combined_json = self.jsons[0]
+        if "viztracer_metadata" not in self.combined_json:
+            self.combined_json["viztracer_metadata"] = {}
         for one in self.jsons[1:]:
             if "traceEvents" in one:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
