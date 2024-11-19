@@ -42,8 +42,8 @@ OR
 
     tracer = VizTracer(max_stack_depth=10)
 
-Include Files
----------------
+Include and Exclude Files
+-------------------------
 
 You can include only certain files/folders to trace by
 
@@ -58,9 +58,6 @@ OR
 
     tracer = VizTracer(include_files=["./src"])
 
-Exclude Files
----------------
-
 Similarly, you can exclude certain files/folders to trace by
 
 .. code-block::
@@ -73,6 +70,9 @@ OR
 .. code-block:: python
 
     tracer = VizTracer(exclude_files=["./not_interested.py"])
+
+Notice this will have a significant negative impact on performance,
+as VizTracer needs to check every function entry to see if it's in the list.
 
 Ignore C Function
 -----------------
