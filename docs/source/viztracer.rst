@@ -29,7 +29,7 @@ VizTracer
                  sanitize_function_name=False,\
                  process_name=None,\
                  output_file="result.json",\
-                 plugins=[])
+                 plugins=None)
 
     .. py:attribute:: tracer_entries
         :type: int
@@ -339,8 +339,8 @@ VizTracer
             viztracer -o <filepath>
 
     .. py:attribute:: plugins
-        :type: Sequence[Union[VizPluginBase, str]]
-        :value: []
+        :type: Optional[Sequence[Union[VizPluginBase, str]]]
+        :value: None
 
         List of plugins to use.
     

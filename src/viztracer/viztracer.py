@@ -51,7 +51,7 @@ class VizTracer(Tracer):
                  sanitize_function_name: bool = False,
                  process_name: Optional[str] = None,
                  output_file: str = "result.json",
-                 plugins: Sequence[Union[VizPluginBase, str]] = []) -> None:
+                 plugins: Optional[Sequence[Union[VizPluginBase, str]]] = None) -> None:
         super().__init__(tracer_entries)
 
         # Members of C Tracer object
