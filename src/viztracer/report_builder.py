@@ -124,6 +124,8 @@ class ReportBuilder:
             for one in self.jsons:
                 self.align_events(one["traceEvents"])
         self.combined_json = self.jsons[0]
+        if "viztracer_metadata" not in self.combined_json:
+            self.combined_json["viztracer_metadata"] = {}
         for one in self.jsons[1:]:
             if "traceEvents" in one:
                 self.combined_json["traceEvents"].extend(one["traceEvents"])
@@ -132,6 +134,11 @@ class ReportBuilder:
             if one.get("viztracer_metadata", {}).get("baseTimeNanoseconds") is not None:
                 self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = \
                     one["viztracer_metadata"]["baseTimeNanoseconds"]
+            if "file_info" in one:
+                if "file_info" not in self.combined_json:
+                    self.combined_json["file_info"] = {"files": {}, "functions": {}}
+                self.combined_json["file_info"]["files"].update(one["file_info"]["files"])
+                self.combined_json["file_info"]["functions"].update(one["file_info"]["functions"])
 
     def align_events(self, original_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -166,7 +173,8 @@ class ReportBuilder:
             self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = self.base_time
 
         if file_info:
-            self.combined_json["file_info"] = {"files": {}, "functions": {}}
+            if "file_info" not in self.combined_json:
+                self.combined_json["file_info"] = {"files": {}, "functions": {}}
             pattern = re.compile(r".*\((.*):([0-9]*)\)")
             file_dict = self.combined_json["file_info"]["files"]
             func_dict = self.combined_json["file_info"]["functions"]

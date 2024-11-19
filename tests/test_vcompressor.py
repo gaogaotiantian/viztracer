@@ -337,7 +337,8 @@ test_counter_events = """
 import threading
 import time
 import sys
-from viztracer import VizTracer, VizCounter
+from viztracer import VizTracer
+from viztracer.vizcounter import VizCounter
 
 tracer = VizTracer()
 tracer.start()
@@ -396,7 +397,8 @@ tracer.save(output_file='%s')
 
 test_non_frequent_events = """
 import threading
-from viztracer import VizTracer, VizObject
+from viztracer import VizTracer
+from viztracer.vizobject import VizObject
 
 tracer = VizTracer()
 tracer.start()

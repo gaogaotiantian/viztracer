@@ -34,7 +34,7 @@ PyObject* trio_lowlevel_module = NULL;
 PyObject* sys_module = NULL;
 PyObject* sys_monitoring_missing = NULL;
 
-static PyObject* curr_task_getters[2] = {0};
+PyObject* curr_task_getters[2] = {0};
 
 // =============================================================================
 // Utility function
@@ -2142,11 +2142,6 @@ PyInit_snaptrace(void)
 
     threading_module = PyImport_ImportModule("threading");
     multiprocessing_module = PyImport_ImportModule("multiprocessing");
-    asyncio_module = PyImport_ImportModule("asyncio");
-    asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
-    if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
-        curr_task_getters[0] = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
-    }
     if ((trio_module = PyImport_ImportModule("trio"))) {
         trio_lowlevel_module = PyImport_AddModule("trio.lowlevel");
         curr_task_getters[1] = PyObject_GetAttrString(trio_lowlevel_module, "current_task");

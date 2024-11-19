@@ -1,4 +1,6 @@
-from viztracer import VizCounter, VizObject, VizTracer
+from viztracer import VizTracer
+from viztracer.vizcounter import VizCounter
+from viztracer.vizobject import VizObject
 
 
 def h(a):

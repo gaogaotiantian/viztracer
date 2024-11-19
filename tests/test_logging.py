@@ -3,7 +3,8 @@
 
 import logging
 
-from viztracer import VizLoggingHandler, VizTracer
+from viztracer import VizTracer
+from viztracer.vizlogging import VizLoggingHandler
 
 from .base_tmpl import BaseTmpl
 

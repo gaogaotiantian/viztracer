@@ -65,7 +65,8 @@ Custom Event
 
     .. code-block:: python
 
-        from viztracer import VizTracer, VizCounter
+        from viztracer import VizTracer
+        from viztracer.vizcounter import VizCounter
         tracer = VizTracer()
         tracer.start()
         counter = VizCounter(tracer, "counter name")

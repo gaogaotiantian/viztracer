@@ -5,7 +5,6 @@ import argparse
 import atexit
 import base64
 import builtins
-import configparser
 import io
 import json
 import multiprocessing.util  # type: ignore
@@ -23,7 +22,6 @@ from types import CodeType
 from typing import Any, Optional, Union
 
 from . import __version__
-from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
@@ -166,6 +164,7 @@ class VizUI:
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
         ret = argparse.Namespace()
         if os.path.exists(filename):
+            import configparser
             cfg_parser = configparser.ConfigParser()
             cfg_parser.read(filename)
             if "default" not in cfg_parser:
@@ -531,6 +530,8 @@ class VizUI:
         return True, None
 
     def attach(self) -> VizProcedureResult:
+        from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
+
         pid = self.options.attach
         interval = self.options.t
 
@@ -570,6 +571,8 @@ class VizUI:
         return True, None
 
     def uninstall(self) -> VizProcedureResult:
+        from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
+
         pid = self.options.uninstall
 
         success, err_msg = self._check_attach_availability()

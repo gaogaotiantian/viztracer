@@ -36,8 +36,8 @@ Documentation = "https://viztracer.readthedocs.io"
 full = ["orjson"]
 
 [project.scripts]
-viztracer = "viztracer:main"
-vizviewer = "viztracer:viewer_main"
+viztracer = "viztracer.main:main"
+vizviewer = "viztracer.viewer:viewer_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "viztracer.__version__"}

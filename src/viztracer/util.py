@@ -7,7 +7,6 @@ import errno
 import os
 import re
 import sys
-import ctypes
 from typing import Union
 
 # Windows macros
@@ -137,6 +136,7 @@ def pid_exists(pid):
         raise ValueError('invalid PID 0')
     if sys.platform == "win32":
         # Windows
+        import ctypes
         kernel32 = ctypes.windll.kernel32
 
         process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)

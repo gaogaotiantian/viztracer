@@ -1,6 +1,7 @@
 import logging
 
-from viztracer import VizLoggingHandler, get_tracer
+from viztracer import get_tracer
+from viztracer.vizlogging import VizLoggingHandler
 
 
 def fib(n):
