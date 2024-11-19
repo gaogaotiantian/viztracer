@@ -118,6 +118,17 @@ class TestReportBuilder(BaseTmpl):
                 data = json.loads(s.getvalue())
                 self.assertTrue(data["viztracer_metadata"]["overflow"])
 
+            # Try to combine with an empty file
+            empty_file = os.path.join(tmpdir, "empty.json")
+            with open(empty_file, "w") as f:
+                f.write(json.dumps({"traceEvents": []}))
+
+            rb = ReportBuilder([empty_file, file_path1], verbose=0)
+            with io.StringIO() as s:
+                rb.save(output_file=s)
+                data = json.loads(s.getvalue())
+                self.assertEqual(len([e for e in data["traceEvents"] if e["name"] == "list.append"]), 10)
+
 
 class TestReportBuilderCmdline(CmdlineTmpl):
     @package_matrix(["~orjson", "orjson"])
