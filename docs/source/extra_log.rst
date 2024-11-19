@@ -217,7 +217,8 @@ data as Instant Events.
 
 .. code-block:: python
 
-    from viztracer import VizTracer, VizLoggingHandler
+    from viztracer import VizTracer
+    from viztracer.vizlogging import VizLoggingHandler
 
     tracer = VizTracer()
     handler = VizLoggingHandler()

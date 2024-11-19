@@ -367,7 +367,9 @@ class TestTimestampDisorder(CmdlineTmpl):
 
 issue285_code = """
 import threading
-from viztracer import get_tracer, VizCounter, VizObject
+from viztracer import get_tracer
+from viztracer.vizcounter import VizCounter
+from viztracer.vizobject import VizObject
 
 
 def fib(n):

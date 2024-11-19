@@ -5,7 +5,8 @@ import os
 
 import numpy
 
-from viztracer import VizCounter, VizTracer
+from viztracer import VizTracer
+from viztracer.vizcounter import VizCounter
 
 # List of input, output pairs
 train_data = (

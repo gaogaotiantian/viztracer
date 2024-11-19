@@ -1,5 +1,12 @@
+// Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
+// For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
+
 #include "pythoncapi_compat.h"
 #include "snaptrace.h"
+
+extern PyObject* asyncio_module;
+extern PyObject* asyncio_tasks_module;
+extern PyObject* curr_task_getters[2];
 
 // ================================================================
 // Tracer members
@@ -368,6 +375,14 @@ Tracer_log_async_setter(TracerObject* self, PyObject* value, void* closure)
     }
 
     if (value == Py_True) {
+        // Lazy import asyncio because it's slow
+        if (asyncio_module == NULL) {
+            asyncio_module = PyImport_ImportModule("asyncio");
+            asyncio_tasks_module = PyImport_AddModule("asyncio.tasks");
+            if (PyObject_HasAttrString(asyncio_tasks_module, "current_task")) {
+                curr_task_getters[0] = PyObject_GetAttrString(asyncio_tasks_module, "current_task");
+            }
+        }
         SET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);
     } else {
         UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC);

@@ -12,8 +12,6 @@ import sys
 from typing import Any, Callable, Literal, Optional, Sequence, Union
 from viztracer.snaptrace import Tracer
 
-import objprint  # type: ignore
-
 from . import __version__
 from .report_builder import ReportBuilder
 from .vizevent import VizEvent
@@ -80,6 +78,7 @@ class VizTracer(Tracer):
             self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
 
         if log_func_with_objprint:
+            import objprint  # type: ignore
             if log_func_repr:
                 raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
             log_func_repr = objprint.objstr
@@ -200,6 +199,7 @@ class VizTracer(Tracer):
             if isinstance(var, (float, int)):
                 self.add_counter(name, {"value": var})
             else:
+                import objprint  # type: ignore
                 self.add_instant(name, args={"object": objprint.objstr(var, color=False)}, scope="t")
 
     def log_event(self, event_name: str) -> VizEvent:

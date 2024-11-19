@@ -26,7 +26,8 @@ You can do things like:
 
 .. code-block:: python
 
-    from viztracer import VizLoggingHandler, get_tracer
+    from viztracer import get_tracer
+    from viztracer.vizlogging import VizLoggingHandler
 
     handler = VizLoggingHandler()
 
@@ -34,6 +35,7 @@ You can do things like:
 
 .. code-block:: python
 
-    from viztracer import get_tracer, VizObject
+    from viztracer import get_tracer
+    from viztracer.vizobject import VizObject
 
     obj = VizObject(get_tracer(), "my variable")
