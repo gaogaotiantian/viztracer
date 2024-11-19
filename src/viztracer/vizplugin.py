@@ -51,23 +51,24 @@ class VizPluginBase:
 
 
 class VizPluginManager:
-    def __init__(self, tracer: "VizTracer", plugins: Sequence[Union[VizPluginBase, str]]):
+    def __init__(self, tracer: "VizTracer", plugins: Optional[Sequence[Union[VizPluginBase, str]]]):
         self._tracer = tracer
         self._plugins = []
-        for plugin in plugins:
-            if isinstance(plugin, VizPluginBase):
-                plugin_instance = plugin
-            elif isinstance(plugin, str):
-                plugin_instance = self._get_plugin_from_string(plugin)
-            else:
-                raise TypeError("Invalid plugin!")
-            self._plugins.append(plugin_instance)
+        if plugins:
+            for plugin in plugins:
+                if isinstance(plugin, VizPluginBase):
+                    plugin_instance = plugin
+                elif isinstance(plugin, str):
+                    plugin_instance = self._get_plugin_from_string(plugin)
+                else:
+                    raise TypeError("Invalid plugin!")
+                self._plugins.append(plugin_instance)
 
-            support_version = plugin_instance.support_version()
-            if compare_version(support_version, __version__) > 0:
-                color_print("WARNING", "The plugin support version is higher than "
-                                       "viztracer version. Consider update your viztracer")
-            self._send_message(plugin_instance, "event", {"when": "initialize"})
+                support_version = plugin_instance.support_version()
+                if compare_version(support_version, __version__) > 0:
+                    color_print("WARNING", "The plugin support version is higher than "
+                                           "viztracer version. Consider update your viztracer")
+                self._send_message(plugin_instance, "event", {"when": "initialize"})
 
     def _get_plugin_from_string(self, plugin: str) -> VizPluginBase:
         args = plugin.split()
