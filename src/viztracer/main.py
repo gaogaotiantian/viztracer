@@ -676,7 +676,7 @@ class VizUI:
                 self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
-                    subprocess.run(["vizviewer", "--once", os.path.abspath(self.ofile)])
+                    subprocess.run([sys.executable, "-m", "vizviewer.viewer", "--once", os.path.abspath(self.ofile)])
 
 
 def main():
