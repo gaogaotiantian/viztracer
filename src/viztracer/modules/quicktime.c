@@ -142,12 +142,24 @@ quicktime_init()
         start_ns[i] = get_system_ns();
         int64_t start_after = get_system_ts();
         start_ts[i] = start_before + (start_after - start_before) / 2;
-        t0_ts += start_ts[i];
-        t0_ns += start_ns[i];
     }
 
-    t0_ts /= CALIBRATE_SIZE;
-    t0_ns /= CALIBRATE_SIZE;
+    // Do the expensive average calculation outside the measurement loop
+    int64_t ts_remainder = 0;
+    int64_t ns_remainder = 0;
+    for (int i = 0; i < CALIBRATE_SIZE; i++)
+    {
+        // Divide by CALIBRATE_SIZE at each step instead of accumulate-and-divide to avoid overflow
+        t0_ts += start_ts[i] / CALIBRATE_SIZE;
+        t0_ns += start_ns[i] / CALIBRATE_SIZE;
+
+        // Also accumulate the remainders, which are unlikely to overflow
+        ts_remainder += start_ts[i] % CALIBRATE_SIZE;
+        ns_remainder += start_ns[i] % CALIBRATE_SIZE;
+    }
+    // Then finally add the average remainder
+    t0_ts += ts_remainder / CALIBRATE_SIZE;
+    t0_ns += ns_remainder / CALIBRATE_SIZE;
 
     // Now let's find the base time
 
