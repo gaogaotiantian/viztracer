@@ -17,6 +17,7 @@ import unittest.mock
 import urllib.request
 import webbrowser
 
+import viztracer
 from viztracer.viewer import viewer_main
 
 from .cmdline_tmpl import CmdlineTmpl
@@ -229,6 +230,23 @@ class TestViewer(CmdlineTmpl):
                 v.stop()
         finally:
             os.remove(f.name)
+
+    def test_external_processor_version(self):
+        root_path = os.path.dirname(viztracer.__file__)
+        web_dist_path = os.path.join(root_path, "web_dist")
+        for path in os.listdir(web_dist_path):
+            # match the version number in the file name (v47.0-deadbeef)
+            if (match := re.match(r"v(\d+\.\d+)-[0-9a-f]+$", path)) is not None:
+                perfetto_version = match.group(1)
+                with open(os.path.join(web_dist_path, "trace_processor")) as f:
+                    match = re.search(r"tools/roll-prebuilts v(\d+\.\d+)", f.read())
+                if match is None:
+                    self.fail("Can't find perfetto version in trace_processor")
+                processor_version = match.group(1)
+                # The trace processor version is usually a version before the perfetto version
+                # So we allow a 1.0 difference
+                self.assertAlmostEqual(float(perfetto_version), float(processor_version), delta=1.0)
+                break
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_port_in_use_error(self):
