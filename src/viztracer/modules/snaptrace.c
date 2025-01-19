@@ -1612,7 +1612,16 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
 
     self->buffer_tail_idx = self->buffer_head_idx;
     fseek(fptr, -1, SEEK_CUR);
-    fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s}}", overflowed? "true": "false");
+    fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s", overflowed? "true": "false");
+
+    if (self->sync_marker > 0)
+    {
+        long long ts_sync_marker = system_ts_to_ns(self->sync_marker);
+        fprintf(fptr, ",\"sync_marker\":%lld.%03lld", ts_sync_marker / 1000, ts_sync_marker % 1000);
+
+    }
+
+    fprintf(fptr, "}}");
     fclose(fptr);
     SNAPTRACE_THREAD_PROTECT_END(self);
     Py_RETURN_NONE;

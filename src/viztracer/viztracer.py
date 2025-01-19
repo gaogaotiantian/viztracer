@@ -254,6 +254,10 @@ class VizTracer(Tracer):
                     "overflow": False,
                 },
             }
+            sync_marker = self.get_sync_marker()
+            if sync_marker > 0:
+                self.data['viztracer_metadata']['sync_marker'] = sync_marker
+
             metadata_count = 0
             for d in self.data["traceEvents"]:
                 if d["ph"] == "M":
