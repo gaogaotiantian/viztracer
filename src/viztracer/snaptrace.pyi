@@ -67,3 +67,11 @@ class Tracer:
 
     def add_instant(self, name: str, args: Any = None, scope: Literal["g", "p", "t"] = "g") -> None:
         ...
+
+    def set_sync_marker(self) -> None:
+        """put current timestamp to synchronization marker"""
+        ...
+
+    def get_sync_marker(self) -> float:
+        """get synchronization marker"""
+        ...

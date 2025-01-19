@@ -121,6 +121,7 @@ typedef struct {
     long buffer_size;
     long buffer_head_idx;
     long buffer_tail_idx;
+    int64_t sync_marker;
     struct MetadataNode* metadata_head;
 } TracerObject;
 

@@ -1925,6 +1925,29 @@ tracer_getfunctionarg(TracerObject* self, PyObject* Py_UNUSED(unused))
     return Py_NewRef(fnode->args);
 }
 
+static PyObject*
+tracer_set_sync_marker(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    if (self->sync_marker != 0)
+    {
+        PyErr_WarnFormat(PyExc_RuntimeWarning, 1, "Synchronization warning already set");
+    }
+    self->sync_marker = get_ts();
+    Py_RETURN_NONE;
+}
+
+static PyObject*
+tracer_get_sync_marker(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    if (self->sync_marker == 0)
+    {
+        return PyLong_FromInt64(self->sync_marker);
+    }
+
+    double ts_sync_marker = system_ts_to_us(self->sync_marker);
+    return PyFloat_FromDouble(ts_sync_marker);
+}
+
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)tracer_threadtracefunc, METH_VARARGS, "trace function"},
     {"start", (PyCFunction)tracer_start, METH_NOARGS, "start profiling"},
@@ -1945,6 +1968,8 @@ static PyMethodDef Tracer_methods[] = {
     {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},
     {"setignorestackcounter", (PyCFunction)tracer_setignorestackcounter, METH_O, "reset ignore stack depth"},
+    {"set_sync_marker", (PyCFunction)tracer_set_sync_marker, METH_NOARGS, "put current timestamp to synchronization marker"},
+    {"get_sync_marker", (PyCFunction)tracer_get_sync_marker, METH_NOARGS, "get synchronization marker"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1970,6 +1995,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->buffer = NULL;
         self->buffer_head_idx = 0;
         self->buffer_tail_idx = 0;
+        self->sync_marker = 0;
         self->metadata_head = NULL;
     }
 
