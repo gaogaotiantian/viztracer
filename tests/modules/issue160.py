@@ -1,3 +1,4 @@
 import subprocess
+import sys
 
-subprocess.run(["python", "-u", "-c", "lst=[]; lst.append(1)"])
+subprocess.run([sys.executable, "-u", "-c", "lst=[]; lst.append(1)"])

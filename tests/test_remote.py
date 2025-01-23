@@ -86,7 +86,7 @@ class TestRemote(CmdlineTmpl):
             f.write(file_to_attach)
 
         # Run the process to attach first
-        script_cmd = cmd_with_coverage(["python", "attached_script.py"])
+        script_cmd = cmd_with_coverage([sys.executable, "attached_script.py"])
         p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try:
             pid_to_attach = p_script.pid
@@ -160,7 +160,7 @@ class TestRemote(CmdlineTmpl):
             f.write(file_to_attach)
 
         # Run the process to attach first
-        script_cmd = cmd_with_coverage(["python", "attached_script.py"])
+        script_cmd = cmd_with_coverage([sys.executable, "attached_script.py"])
         p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         try:
             out = p_script.stdout.readline()
@@ -239,7 +239,7 @@ class TestAttachSanity(CmdlineTmpl):
             f.write(file_to_attach)
 
         # Run the process to attach first
-        script_cmd = cmd_with_coverage(["python", "attached_script.py"])
+        script_cmd = cmd_with_coverage([sys.executable, "attached_script.py"])
         p_script = subprocess.Popen(script_cmd, stdout=subprocess.PIPE)
         try:
             out = p_script.stdout.readline()
@@ -278,7 +278,7 @@ class TestAttachScript(CmdlineTmpl):
             print(viztracer.attach.attach_status.created_tracer, flush=True)
         """)
 
-        self.template(["python", "cmdline_test.py"],
+        self.template([sys.executable, "cmdline_test.py"],
                       script=attach_script,
                       expected_output_file="attach_test.json",
                       expected_stdout=re.compile(r".*?False.*?True.*?False.*?False.*?", re.DOTALL),

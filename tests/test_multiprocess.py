@@ -14,15 +14,17 @@ from .cmdline_tmpl import CmdlineTmpl
 
 file_grandparent = """
 import subprocess
-subprocess.run(["python", "parent.py"])
+import sys
+subprocess.run([sys.executable, "parent.py"])
 """
 
 
 file_parent = """
 import subprocess
-subprocess.run(["python", "child.py"])
-subprocess.run(("python", "child.py"))
-subprocess.run("python child.py")
+import sys
+subprocess.run([sys.executable, "child.py"])
+subprocess.run((sys.executable, "child.py"))
+subprocess.run(f"{sys.executable} child.py")
 """
 
 
@@ -43,22 +45,25 @@ while True:
 
 file_subprocess_module = """
 import subprocess
-print(subprocess.call(["python", "-m", "timeit", "-n", "100", "'1+1'"]))
+import sys
+print(subprocess.call([sys.executable, "-m", "timeit", "-n", "100", "'1+1'"]))
 """
 
 file_subprocess_code_string = """
 import subprocess
-p = subprocess.Popen(['python', '-c', 'import time;time.sleep(0.5)'])
+import sys
+p = subprocess.Popen([sys.executable, '-c', 'import time;time.sleep(0.5)'])
 p.wait()
 """
 
 file_subprocess_shell = """
-import subprocess
 import os
+import subprocess
+import sys
 with open(os.path.join(os.path.dirname(__file__), "sub.py"), "w") as f:
     f.write("print('hello')")
 path = os.path.join(os.path.dirname(__file__), "sub.py")
-print(subprocess.call(f"python {path}", shell=True))
+print(subprocess.call(f"{sys.executable} {path}", shell=True))
 """
 
 file_fork = """
