@@ -57,7 +57,8 @@ class CmdlineTmpl(BaseTmpl):
                  check_func=None,
                  concurrency=None,
                  send_sig=None):
-        assert "python" not in cmd_list, "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
+        assert "python" not in cmd_list, \
+            "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
         if os.getenv("COVERAGE_RUN"):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")

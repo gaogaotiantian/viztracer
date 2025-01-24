@@ -44,7 +44,8 @@ def get_tests_data_file_path(filename):
 
 
 def cmd_with_coverage(cmd):
-    assert "python" not in cmd, "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
+    assert "python" not in cmd, \
+        "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
     if os.getenv("COVERAGE_RUN"):
         if cmd[0] == sys.executable:
             return ["coverage", "run", "--source", "viztracer", "--parallel-mode"] + cmd[1:]
