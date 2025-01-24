@@ -294,13 +294,18 @@ class TestCommandLineBasic(CmdlineTmpl):
         result = self.template([sys.executable, "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"],
                                expected_output_file=None)
         self.assertIn("help", result.stdout.decode("utf8"))
-        py_exec = sys.executable
-        self.template([py_exec, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--run", "cmdline_test.py"],
-                      expected_output_file="result.json", expected_entries=17)
-        self.template([py_exec, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--", "cmdline_test.py"],
-                      expected_output_file="result.json", expected_entries=17)
-        self.template([py_exec, "-m", "viztracer", "--include_files", "./", "--max_stack_depth", "5", "cmdline_test.py"])
-        self.template([py_exec, "-m", "viztracer", "--include_files", "./abcd", "--run", "cmdline_test.py"])
+        self.template(
+            [sys.executable, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--run", "cmdline_test.py"],
+            expected_output_file="result.json", expected_entries=17
+        )
+        self.template(
+            [sys.executable, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--", "cmdline_test.py"],
+            expected_output_file="result.json", expected_entries=17
+        )
+        self.template(
+            [sys.executable, "-m", "viztracer", "--include_files", "./", "--max_stack_depth", "5", "cmdline_test.py"]
+        )
+        self.template([sys.executable, "-m", "viztracer", "--include_files", "./abcd", "--run", "cmdline_test.py"])
 
     def test_exclude_files(self):
         result = self.template([sys.executable, "-m", "viztracer", "--exclude_files", "./abcd", "cmdline_test.py"],

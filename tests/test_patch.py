@@ -72,19 +72,20 @@ import sys
 with open("check_output_echo.py", "w") as f:
     f.write("import sys; print(sys.argv)")
 
-py_exec = sys.executable
-print(subprocess.check_output([py_exec, "--version"], text=True).strip())
-print(subprocess.check_output([py_exec, "-cprint(5)"]))
-print(subprocess.check_output([py_exec, "check_output_echo.py"], text=True))
-print(subprocess.check_output([py_exec, "-v", "--", "check_output_echo.py", "-a", "42"]))
-print(subprocess.check_output([py_exec, "-Es", "check_output_echo.py", "-v", "--my_arg=foo bar"], text=True))
-print(subprocess.check_output([py_exec, "-Esm", "check_output_echo", "-abc"]))
-print(subprocess.check_output([py_exec, "-c", r"import sys; sys.stdout.buffer.write(b'\0\1\2\3\4')"]))
-print(subprocess.check_output([py_exec, "-", "foo"], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output([py_exec], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output([py_exec, "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output([py_exec, "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
-print(subprocess.check_output([py_exec, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output([sys.executable, "--version"], text=True).strip())
+print(subprocess.check_output([sys.executable, "-cprint(5)"]))
+print(subprocess.check_output([sys.executable, "check_output_echo.py"], text=True))
+print(subprocess.check_output([sys.executable, "-v", "--", "check_output_echo.py", "-a", "42"]))
+print(subprocess.check_output([sys.executable, "-Es", "check_output_echo.py", "-v", "--my_arg=foo bar"], text=True))
+print(subprocess.check_output([sys.executable, "-Esm", "check_output_echo", "-abc"]))
+print(subprocess.check_output([sys.executable, "-c", r"import sys; sys.stdout.buffer.write(b'\0\1\2\3\4')"]))
+print(subprocess.check_output([sys.executable, "-", "foo"], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable, "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable, "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output(
+    [sys.executable, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]
+))
 
 os.remove("check_output_echo.py")
 """
