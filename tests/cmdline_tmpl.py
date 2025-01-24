@@ -71,8 +71,11 @@ class CmdlineTmpl(BaseTmpl):
                 idx = cmd_list.index("vizviewer")
                 cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + ["viztracer.viewer"] \
                     + cmd_list[idx + 1:]
-            elif "python" in cmd_list:
-                idx = cmd_list.index("python")
+            elif "python" in cmd_list or sys.executable in cmd_list:
+                if "python" in cmd_list:
+                    idx = cmd_list.index("python")
+                else:
+                    idx = cmd_list.index(sys.executable)
                 cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode"] \
                     + cmd_list[idx + 1:]
 
