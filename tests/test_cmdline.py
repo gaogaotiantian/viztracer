@@ -3,7 +3,9 @@
 
 import configparser
 import importlib.util
+import json
 import os
+import pathlib
 import re
 import signal
 import sys
@@ -346,6 +348,87 @@ class TestCommandLineBasic(CmdlineTmpl):
                        os.path.join(example_json_dir, "multithread.json"),
                        os.path.join(example_json_dir, "different_sorts.json")],
                       expected_output_file="result.json")
+
+    @package_matrix(["~orjson", "orjson"])
+    def test_align_combine_sync_marker(self):
+        test_script = """
+from viztracer import get_tracer
+
+if get_tracer() is not None:
+    get_tracer().set_sync_marker()
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+fib(5)
+"""
+
+        def expect_sync_marker(data):
+            self.assertIsNotNone(data['viztracer_metadata'].get('sync_marker'))
+            self.assertGreater(data['viztracer_metadata'].get('sync_marker'), 0)
+
+        def expect_aligned_to_sync_marker(data, res1_filename, res2_filename):
+            with open(res1_filename, 'r') as f:
+                result1 = json.load(f)
+            with open(res2_filename, 'r') as f:
+                result2 = json.load(f)
+
+            self.assertIn('sync_marker', result1['viztracer_metadata'])
+            self.assertIn('sync_marker', result2['viztracer_metadata'])
+
+            sync_marker_1 = result1['viztracer_metadata']['sync_marker']
+            sync_marker_2 = result1['viztracer_metadata']['sync_marker']
+
+            self.assertGreater(sync_marker_1, 0)
+            self.assertGreater(sync_marker_2, 0)
+
+            offset_ts_1 = min((event["ts"] for event in result1["traceEvents"] if "ts" in event))
+            offset_ts_2 = min((event["ts"] for event in result2["traceEvents"] if "ts" in event))
+
+            diff_1 = abs(sync_marker_1 - offset_ts_1)
+            diff_2 = abs(sync_marker_2 - offset_ts_2)
+
+            offset_ts = min((event["ts"] for event in data["traceEvents"] if "ts" in event))
+
+            if round(diff_1, 7) == 0 or round(diff_2, 7) == 0:
+                self.assertAlmostEqual(0, offset_ts)
+            else:
+                self.assertNotAlmostEqual(0, offset_ts)
+
+        def create_results(tmpdir, extra_args):
+            res1_filename = pathlib.Path(tmpdir, 'res1.json').as_posix()
+            res2_filename = pathlib.Path(tmpdir, 'res2.json').as_posix()
+
+            common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen", "--output_dir", tmpdir] + extra_args
+            self.template(
+                common_cmd_line + ["-o", "res1.json", "cmdline_test.py"],
+                expected_output_file=res1_filename,
+                script=test_script,
+                cleanup=False,
+                check_func=expect_sync_marker,
+            )
+            self.template(
+                common_cmd_line + ["-o", "res2.json", "cmdline_test.py"],
+                expected_output_file=res2_filename,
+                script=test_script,
+                cleanup=False,
+                check_func=expect_sync_marker,
+            )
+
+            return res1_filename, res2_filename
+
+        for extra_args in [[], ["--dump_raw"]]:
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                res1_filename, res2_filename = create_results(tmpdir, extra_args)
+
+                self.template(
+                    [sys.executable, "-m", "viztracer", "--align_combine", res1_filename, res2_filename],
+                    expected_output_file="result.json",
+                    check_func=lambda data: expect_aligned_to_sync_marker(data, res1_filename, res2_filename),
+                )
+
 
     def test_tracer_entries(self):
         self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
