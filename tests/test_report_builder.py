@@ -6,6 +6,7 @@ import io
 import json
 import os
 import shutil
+import sys
 import tempfile
 import textwrap
 from unittest.mock import patch
@@ -155,4 +156,4 @@ class TestReportBuilderCmdline(CmdlineTmpl):
                     assert False
             """)
 
-            self.template(["python", "cmdline_test.py"], script=script, expected_output_file=None)
+            self.template([sys.executable, "cmdline_test.py"], script=script, expected_output_file=None)

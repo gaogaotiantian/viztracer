@@ -6,6 +6,7 @@ import json
 import logging
 import lzma
 import os
+import sys
 import tempfile
 import unittest
 import zlib
@@ -273,7 +274,7 @@ class TestVCompressorPerformance(CmdlineTmpl):
             origin_json_path = os.path.join(tmpdir, "large_fib.json")
             run_script = test_large_fib % (origin_json_path.replace("\\", "/"))
             self.template(
-                ["python", "cmdline_test.py"], script=run_script, cleanup=False,
+                [sys.executable, "cmdline_test.py"], script=run_script, cleanup=False,
                 expected_output_file=origin_json_path,
             )
             original_size = os.path.getsize(origin_json_path)
@@ -490,7 +491,7 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
             dup_json_path = os.path.join(tmpdir, "recovery.json")
             run_script = run_script % (origin_json_path.replace("\\", "/"))
             self.template(
-                ["python", "cmdline_test.py"],
+                [sys.executable, "cmdline_test.py"],
                 script=run_script,
                 cleanup=False,
                 expected_output_file=origin_json_path)

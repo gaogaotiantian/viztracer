@@ -40,7 +40,7 @@ assert multiprocessing.spawn._main.__qualname__ == "_main"
 assert multiprocessing.spawn._main.__module__ == "multiprocessing.spawn"
 
 argv = sys.argv
-sys.argv = ["python", "--multiprocessing-fork"]
+sys.argv = [sys.executable, "--multiprocessing-fork"]
 
 with open(parent_w, 'wb', closefd=False) as f:
     f.write(fp.getbuffer())
@@ -67,22 +67,25 @@ def foo():
 check_output = r"""
 import os
 import subprocess
+import sys
 
 with open("check_output_echo.py", "w") as f:
     f.write("import sys; print(sys.argv)")
 
-print(subprocess.check_output(["python", "--version"], text=True).strip())
-print(subprocess.check_output(["python", "-cprint(5)"]))
-print(subprocess.check_output(["python", "check_output_echo.py"], text=True))
-print(subprocess.check_output(["python", "-v", "--", "check_output_echo.py", "-a", "42"]))
-print(subprocess.check_output(["python", "-Es", "check_output_echo.py", "-v", "--my_arg=foo bar"], text=True))
-print(subprocess.check_output(["python", "-Esm", "check_output_echo", "-abc"]))
-print(subprocess.check_output(["python", "-c", r"import sys; sys.stdout.buffer.write(b'\0\1\2\3\4')"]))
-print(subprocess.check_output(["python", "-", "foo"], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output(["python"], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output(["python", "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
-print(subprocess.check_output(["python", "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
-print(subprocess.check_output(["python", "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output([sys.executable, "--version"], text=True).strip())
+print(subprocess.check_output([sys.executable, "-cprint(5)"]))
+print(subprocess.check_output([sys.executable, "check_output_echo.py"], text=True))
+print(subprocess.check_output([sys.executable, "-v", "--", "check_output_echo.py", "-a", "42"]))
+print(subprocess.check_output([sys.executable, "-Es", "check_output_echo.py", "-v", "--my_arg=foo bar"], text=True))
+print(subprocess.check_output([sys.executable, "-Esm", "check_output_echo", "-abc"]))
+print(subprocess.check_output([sys.executable, "-c", r"import sys; sys.stdout.buffer.write(b'\0\1\2\3\4')"]))
+print(subprocess.check_output([sys.executable, "-", "foo"], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable, "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
+print(subprocess.check_output([sys.executable, "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output(
+    [sys.executable, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]
+))
 
 os.remove("check_output_echo.py")
 """
@@ -102,7 +105,7 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
         tmpdir = tempfile.mkdtemp()
-        self.template(["python", "cmdline_test.py"],
+        self.template([sys.executable, "cmdline_test.py"],
                       expected_output_file=None,
                       script=file_spawn_tmpl.substitute(foo=foo_normal, tmpdir=tmpdir))
 
@@ -114,7 +117,7 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
         tmpdir = tempfile.mkdtemp()
-        self.template(["python", "cmdline_test.py"],
+        self.template([sys.executable, "cmdline_test.py"],
                       expected_output_file=None,
                       script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
                       send_sig=(signal.SIGTERM, "ready"))
@@ -125,7 +128,7 @@ class TestPatchSpawn(CmdlineTmpl):
         shutil.rmtree(tmpdir)
 
     def test_patch_args(self):
-        a = self.template(["python", "cmdline_test.py"],
+        a = self.template([sys.executable, "cmdline_test.py"],
                           expected_output_file=None,
                           script=check_output)
         b = self.template(["viztracer", "--quiet", "cmdline_test.py"],

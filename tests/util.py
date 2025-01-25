@@ -5,6 +5,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 
 
 def generate_json(filename):
@@ -12,7 +13,7 @@ def generate_json(filename):
     cwd = os.getcwd()
     os.chdir(data_dir)
     path = os.path.join(os.path.dirname(__file__), "data", filename)
-    subprocess.run(["python", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run([sys.executable, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     os.chdir(cwd)
 
 
@@ -43,8 +44,10 @@ def get_tests_data_file_path(filename):
 
 
 def cmd_with_coverage(cmd):
+    assert "python" not in cmd, \
+        "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
     if os.getenv("COVERAGE_RUN"):
-        if cmd[0] == "python":
+        if cmd[0] == sys.executable:
             return ["coverage", "run", "--source", "viztracer", "--parallel-mode"] + cmd[1:]
         elif cmd[0] == "viztracer":
             return ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + cmd

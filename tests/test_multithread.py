@@ -202,6 +202,6 @@ class TestMultithreadCmdline(CmdlineTmpl):
             self.assertGreaterEqual(len(set(e["tid"] for e in data["traceEvents"])), 3)
             self.assertTrue(any(e["name"] for e in data["traceEvents"] if e["name"].startswith("fib")))
 
-        self.template(["python", "cmdline_test.py"],
+        self.template([sys.executable, "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=script, check_func=check_func)

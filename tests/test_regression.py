@@ -327,7 +327,7 @@ class TestIssue508(CmdlineTmpl):
                 call_self(10)
         """
 
-        self.template(["python", "cmdline_test.py"], script=script,
+        self.template([sys.executable, "cmdline_test.py"], script=script,
                       expected_output_file="result.json",
                       expected_entries=6)
 

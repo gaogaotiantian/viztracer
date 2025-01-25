@@ -4,6 +4,7 @@
 import functools
 import multiprocessing
 import os
+import sys
 
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -203,8 +204,8 @@ class TestLogSparse(CmdlineTmpl):
                       check_func=functools.partial(self.check_func, target=['f', 'g', 'f', 'g']))
 
     def test_without_tracer(self):
-        self.template(["python", "cmdline_test.py"], script=file_basic, expected_output_file=None)
-        self.template(["python", "cmdline_test.py"], script=file_stack, expected_output_file=None)
+        self.template([sys.executable, "cmdline_test.py"], script=file_basic, expected_output_file=None)
+        self.template([sys.executable, "cmdline_test.py"], script=file_stack, expected_output_file=None)
 
     def test_multiprocess(self):
         if multiprocessing.get_start_method() == "fork":
@@ -229,14 +230,14 @@ class TestLogSparse(CmdlineTmpl):
                       concurrency="multiprocessing")
 
     def test_context_manager(self):
-        self.template(["python", "cmdline_test.py"], script=file_context_manager,
+        self.template([sys.executable, "cmdline_test.py"], script=file_context_manager,
                       expected_output_file="result.json", expected_entries=4,
                       check_func=functools.partial(self.check_func, target=['f', 'g', 'h', 'q']))
 
-        self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse,
+        self.template([sys.executable, "cmdline_test.py"], script=file_context_manager_logsparse,
                       expected_output_file="result.json", expected_entries=2,
                       check_func=functools.partial(self.check_func, target=['f', 'q']))
 
-        self.template(["python", "cmdline_test.py"], script=file_context_manager_logsparse_stack,
+        self.template([sys.executable, "cmdline_test.py"], script=file_context_manager_logsparse_stack,
                       expected_output_file="result.json", expected_entries=2,
                       check_func=functools.partial(self.check_func, target=['g', 'h']))

@@ -59,14 +59,14 @@ class TestTorch(CmdlineTmpl):
                         # Mac is pure crazy and we don't care about it
                         pass
 
-            self.template(["python", "cmdline_test.py"], script=script,
+            self.template([sys.executable, "cmdline_test.py"], script=script,
                           check_func=check_func)
         else:
             script = """
                 from viztracer import VizTracer
                 _ = VizTracer(log_torch=True, verbose=0)
             """
-            self.template(["python", "cmdline_test.py"], script=script,
+            self.template([sys.executable, "cmdline_test.py"], script=script,
                           expected_output_file=None, success=False,
                           expected_stderr=".*ModuleNotFoundError.*")
 
