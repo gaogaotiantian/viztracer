@@ -1939,7 +1939,7 @@ tracer_set_sync_marker(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->sync_marker != 0)
     {
-        PyErr_WarnFormat(PyExc_RuntimeWarning, 1, "Synchronization warning already set");
+        PyErr_WarnFormat(PyExc_RuntimeWarning, 1, "Synchronization marker already set");
     }
     self->sync_marker = get_ts();
     Py_RETURN_NONE;
