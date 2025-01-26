@@ -32,7 +32,10 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
                 json_str = f.read()
             ret = json.loads(json_str)
             base_offset = args['base_offset']
-            torch_offset = ret['baseTimeNanoseconds']
+            # torch 2.4.0+ uses baseTimeNanoseconds to store the offset
+            # before that they simply use the absolute timestamp which is
+            # equivalent to baseTimeNanoseconds = 0
+            torch_offset = ret.get('baseTimeNanoseconds', 0)
             # convert to us
             offset_diff = (torch_offset - base_offset) / 1000
 
@@ -44,8 +47,8 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
                     # process and thread names
                     event.pop('ts', None)
 
-            ret.pop("baseTimeNanoseconds")
-            ret.pop("displayTimeUnit")
+            ret.pop("baseTimeNanoseconds", None)
+            ret.pop("displayTimeUnit", None)
             ret.pop("traceName")
             ret.pop("deviceProperties")
             ret.pop("schemaVersion")
