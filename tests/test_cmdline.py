@@ -350,22 +350,22 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json")
 
     def test_set_sync_marker(self):
-        test_script = """
-from viztracer import get_tracer
+        test_script = textwrap.dedent("""
+            from viztracer import get_tracer
 
-if get_tracer() is not None:
-    get_tracer().set_sync_marker()
+            if get_tracer() is not None:
+                get_tracer().set_sync_marker()
 
-def fib(n):
-    if n < 2:
-        return 1
-    return fib(n-1) + fib(n-2)
-fib(5)
+            def fib(n):
+                if n < 2:
+                    return 1
+                return fib(n-1) + fib(n-2)
+            fib(5)
 
-if get_tracer() is not None:
-    get_tracer().set_sync_marker()
+            if get_tracer() is not None:
+                get_tracer().set_sync_marker()
 
-"""
+        """)
 
         def expect_sync_marker(data):
             self.assertIsNotNone(data['viztracer_metadata'].get('sync_marker'))
@@ -381,18 +381,18 @@ if get_tracer() is not None:
 
     @package_matrix(["~orjson", "orjson"])
     def test_align_combine_sync_marker(self):
-        test_script = """
-from viztracer import get_tracer
+        test_script = textwrap.dedent("""
+            from viztracer import get_tracer
 
-if get_tracer() is not None:
-    get_tracer().set_sync_marker()
+            if get_tracer() is not None:
+                get_tracer().set_sync_marker()
 
-def fib(n):
-    if n < 2:
-        return 1
-    return fib(n-1) + fib(n-2)
-fib(5)
-"""
+            def fib(n):
+                if n < 2:
+                    return 1
+                return fib(n-1) + fib(n-2)
+            fib(5)
+        """)
 
         def expect_aligned_to_sync_marker(data, res1_filename, res2_filename):
             with open(res1_filename, 'r') as f:
