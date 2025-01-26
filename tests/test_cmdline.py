@@ -368,7 +368,6 @@ class TestCommandLineBasic(CmdlineTmpl):
         """)
 
         def expect_sync_marker(data):
-            self.assertIsNotNone(data['viztracer_metadata'].get('sync_marker'))
             self.assertGreater(data['viztracer_metadata'].get('sync_marker'), 0)
 
         self.template(
