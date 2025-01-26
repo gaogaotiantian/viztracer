@@ -349,6 +349,36 @@ class TestCommandLineBasic(CmdlineTmpl):
                        os.path.join(example_json_dir, "different_sorts.json")],
                       expected_output_file="result.json")
 
+    def test_set_sync_marker(self):
+        test_script = """
+from viztracer import get_tracer
+
+if get_tracer() is not None:
+    get_tracer().set_sync_marker()
+
+def fib(n):
+    if n < 2:
+        return 1
+    return fib(n-1) + fib(n-2)
+fib(5)
+
+if get_tracer() is not None:
+    get_tracer().set_sync_marker()
+
+"""
+
+        def expect_sync_marker(data):
+            self.assertIsNotNone(data['viztracer_metadata'].get('sync_marker'))
+            self.assertGreater(data['viztracer_metadata'].get('sync_marker'), 0)
+
+        self.template(
+            [sys.executable, "-m", "viztracer", "--ignore_frozen", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            expected_stderr="Synchronization marker already set",
+            script=test_script,
+            check_func=expect_sync_marker,
+        )
+
     @package_matrix(["~orjson", "orjson"])
     def test_align_combine_sync_marker(self):
         test_script = """
@@ -363,10 +393,6 @@ def fib(n):
     return fib(n-1) + fib(n-2)
 fib(5)
 """
-
-        def expect_sync_marker(data):
-            self.assertIsNotNone(data['viztracer_metadata'].get('sync_marker'))
-            self.assertGreater(data['viztracer_metadata'].get('sync_marker'), 0)
 
         def expect_aligned_to_sync_marker(data, res1_filename, res2_filename):
             with open(res1_filename, 'r') as f:
@@ -396,38 +422,34 @@ fib(5)
             else:
                 self.assertNotAlmostEqual(0, offset_ts)
 
-        def create_results(tmpdir, extra_args):
-            res1_filename = pathlib.Path(tmpdir, 'res1.json').as_posix()
-            res2_filename = pathlib.Path(tmpdir, 'res2.json').as_posix()
-
-            common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen", "--output_dir", tmpdir] + extra_args
-            self.template(
-                common_cmd_line + ["-o", "res1.json", "cmdline_test.py"],
-                expected_output_file=res1_filename,
-                script=test_script,
-                cleanup=False,
-                check_func=expect_sync_marker,
-            )
-            self.template(
-                common_cmd_line + ["-o", "res2.json", "cmdline_test.py"],
-                expected_output_file=res2_filename,
-                script=test_script,
-                cleanup=False,
-                check_func=expect_sync_marker,
-            )
-
-            return res1_filename, res2_filename
-
-        for extra_args in [[], ["--dump_raw"]]:
-
+        def test_align(extra_args):
             with tempfile.TemporaryDirectory() as tmpdir:
-                res1_filename, res2_filename = create_results(tmpdir, extra_args)
+                res1_filename = pathlib.Path(tmpdir, 'res1.json').as_posix()
+                res2_filename = pathlib.Path(tmpdir, 'res2.json').as_posix()
+
+                common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen", "--output_dir", tmpdir] + extra_args
+                self.template(
+                    common_cmd_line + ["-o", "res1.json", "cmdline_test.py"],
+                    expected_output_file=res1_filename,
+                    script=test_script,
+                    cleanup=False,
+                )
+                self.template(
+                    common_cmd_line + ["-o", "res2.json", "cmdline_test.py"],
+                    expected_output_file=res2_filename,
+                    script=test_script,
+                    cleanup=False,
+                )
 
                 self.template(
                     [sys.executable, "-m", "viztracer", "--align_combine", res1_filename, res2_filename],
                     expected_output_file="result.json",
+                    script='',
                     check_func=lambda data: expect_aligned_to_sync_marker(data, res1_filename, res2_filename),
                 )
+
+        test_align([])
+        test_align(['--dump_raw'])
 
     def test_tracer_entries(self):
         self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
