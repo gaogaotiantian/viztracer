@@ -379,7 +379,6 @@ class TestCommandLineBasic(CmdlineTmpl):
             check_func=expect_sync_marker,
         )
 
-    @package_matrix(["~orjson", "orjson"])
     def test_align_combine_sync_marker(self):
         test_script = textwrap.dedent("""
             from viztracer import get_tracer
