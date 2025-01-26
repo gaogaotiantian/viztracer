@@ -100,6 +100,10 @@ class Viewer(unittest.TestCase):
                 self.process.stderr.close()
                 self.stopped = True
 
+    def wait(self, timeout=20):
+        assert self.process is not None
+        self.process.wait(timeout=timeout)
+
     def _wait_until_stdout_ready(self):
         while True:
             line = self.process.stdout.readline()
@@ -276,7 +280,7 @@ class TestViewer(CmdlineTmpl):
             with Viewer(f.name, once=True) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
-                v.process.wait(timeout=20)
+                v.wait()
                 self.assertTrue(resp.code == 200)
                 self.assertTrue(v.process.returncode == 0)
         finally:
@@ -294,6 +298,7 @@ class TestViewer(CmdlineTmpl):
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                v.wait()
         finally:
             os.remove(f.name)
 
@@ -307,20 +312,11 @@ class TestViewer(CmdlineTmpl):
             self.template(["vizviewer", "--once", "--use_external_processor", f.name],
                           success=False, expected_output_file=None)
 
-            v = Viewer(f.name, once=True, timeout=3)
-            v.run()
-            try:
-                v.process.wait(timeout=6)
-            except subprocess.TimeoutExpired:
-                v.stop()
-                self.fail("--once did not timeout correctly")
-            finally:
+            with Viewer(f.name, once=True, timeout=3) as v:
                 try:
-                    v.process.wait(timeout=20)
-                    v.stop()
+                    v.wait(timeout=6)
                 except subprocess.TimeoutExpired:
-                    v.stop()
-                    v.process.kill()
+                    self.fail("--once did not timeout correctly")
         finally:
             os.remove(f.name)
 
@@ -351,6 +347,7 @@ class TestViewer(CmdlineTmpl):
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                v.wait()
         finally:
             os.remove(f.name)
 
