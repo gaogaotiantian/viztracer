@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import gzip
 import json
 import multiprocessing
 import os
@@ -196,6 +197,27 @@ class TestViewer(CmdlineTmpl):
                 v.stop()
         finally:
             os.remove(f.name)
+
+    @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
+    def test_gz(self):
+        json_script = '{"file_info": {}, "traceEvents": []}'
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = os.path.join(tmpdir, "test.json.gz")
+            with gzip.open(filename, "wt") as f:
+                f.write(json_script)
+            v = Viewer(filename)
+            try:
+                v.run()
+                time.sleep(0.5)
+                resp = urllib.request.urlopen(v.url())
+                self.assertTrue(resp.code == 200)
+                resp = urllib.request.urlopen(f"{v.url()}/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                resp = urllib.request.urlopen(f"{v.url()}/localtrace")
+                self.assertEqual(json.loads(gzip.decompress(resp.read()).decode("utf-8")),
+                                 json.loads(json_script))
+            finally:
+                v.stop()
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_html(self):
