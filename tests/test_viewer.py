@@ -268,7 +268,6 @@ class TestViewer(CmdlineTmpl):
                 # We need processor version to match exactly. The release branch of perfetto
                 # does not have the trace_processor at the same version and we need to
                 # dig it up.
-                self.dbgPrint(processor_version, perfetto_version)
                 self.assertEqual(perfetto_version, processor_version)
                 break
 
