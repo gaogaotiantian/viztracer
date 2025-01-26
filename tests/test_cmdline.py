@@ -429,7 +429,6 @@ fib(5)
                     check_func=lambda data: expect_aligned_to_sync_marker(data, res1_filename, res2_filename),
                 )
 
-
     def test_tracer_entries(self):
         self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
         self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "50", "cmdline_test.py"])
