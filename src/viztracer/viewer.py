@@ -7,6 +7,7 @@ import contextlib
 import functools
 import html
 import http.server
+import gzip
 import io
 import json
 import os
@@ -301,15 +302,19 @@ class ServerThread(threading.Thread):
         filename = os.path.basename(self.path)
 
         Handler: Callable[..., HttpHandler]
-        if filename.endswith("json"):
+        if filename.endswith("json") or filename.endswith("gz"):
             trace_data = None
             if self.use_external_procesor:
                 Handler = functools.partial(ExternalProcessorHandler, self)
                 self.externel_processor_process = ExternalProcessorProcess(self.path)
             else:
-                with open(self.path, encoding="utf-8", errors="ignore") as f:
-                    trace_data = json.load(f)
-                    self.file_info = trace_data.get("file_info", {})
+                if filename.endswith("gz"):
+                    with gzip.open(self.path, "rt", encoding="utf-8", errors="ignore") as f:
+                        trace_data = json.load(f)
+                else:
+                    with open(self.path, encoding="utf-8", errors="ignore") as f:
+                        trace_data = json.load(f)
+                self.file_info = trace_data.get("file_info", {})
                 Handler = functools.partial(PerfettoHandler, self)
         elif filename.endswith("html"):
             Handler = functools.partial(HtmlHandler, self)
