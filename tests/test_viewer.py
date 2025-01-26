@@ -100,6 +100,10 @@ class Viewer(unittest.TestCase):
                 self.process.stderr.close()
                 self.stopped = True
 
+    def wait(self, timeout=20):
+        assert self.process is not None
+        self.process.wait(timeout=timeout)
+
     def _wait_until_stdout_ready(self):
         while True:
             line = self.process.stdout.readline()
@@ -162,9 +166,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, port=self._find_a_free_port())
-            try:
-                v.run()
+            with Viewer(f.name, port=self._find_a_free_port()) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
@@ -172,8 +174,6 @@ class TestViewer(CmdlineTmpl):
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
-            finally:
-                v.stop()
         finally:
             os.remove(f.name)
 
@@ -183,9 +183,7 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name)
-            try:
-                v.run()
+            with Viewer(f.name) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
@@ -193,8 +191,6 @@ class TestViewer(CmdlineTmpl):
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
-            finally:
-                v.stop()
         finally:
             os.remove(f.name)
 
@@ -205,9 +201,7 @@ class TestViewer(CmdlineTmpl):
             filename = os.path.join(tmpdir, "test.json.gz")
             with gzip.open(filename, "wt") as f:
                 f.write(json_script)
-            v = Viewer(filename)
-            try:
-                v.run()
+            with Viewer(filename) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
@@ -216,8 +210,6 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(gzip.decompress(resp.read()).decode("utf-8")),
                                  json.loads(json_script))
-            finally:
-                v.stop()
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_html(self):
@@ -225,14 +217,10 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-            v = Viewer(f.name)
-            try:
-                v.run()
+            with Viewer(f.name) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
-            finally:
-                v.stop()
         finally:
             os.remove(f.name)
 
@@ -242,14 +230,10 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, use_external_processor=True)
-            try:
-                v.run()
+            with Viewer(f.name, use_external_processor=True) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url(), timeout=10)
                 self.assertTrue(resp.code == 200)
-            finally:
-                v.stop()
         finally:
             os.remove(f.name)
 
@@ -277,22 +261,14 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name)
-            try:
-                v.run()
+            with Viewer(f.name) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
-                v2 = Viewer(f.name, expect_success=False, port=v.port)
-                try:
-                    v2.run()
+                with Viewer(f.name, expect_success=False, port=v.port) as v2:
                     self.assertNotEqual(v2.process.returncode, 0)
                     stdout = v2.process.stdout.read()
                     self.assertIn("Error", stdout)
-                finally:
-                    v2.stop()
-            finally:
-                v.stop()
         finally:
             os.remove(f.name)
 
@@ -301,24 +277,20 @@ class TestViewer(CmdlineTmpl):
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
                 f.write(html)
-            v = Viewer(f.name, once=True)
-            v.run()
-            time.sleep(0.5)
-            resp = urllib.request.urlopen(v.url())
-            v.process.wait(timeout=20)
-            self.assertTrue(resp.code == 200)
-            self.assertTrue(v.process.returncode == 0)
+            with Viewer(f.name, once=True) as v:
+                time.sleep(0.5)
+                resp = urllib.request.urlopen(v.url())
+                v.wait()
+                self.assertTrue(resp.code == 200)
+                self.assertTrue(v.process.returncode == 0)
         finally:
-            v.stop()
             os.remove(f.name)
 
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
-            v = Viewer(f.name, once=True)
-            v.run()
-            try:
+            with Viewer(f.name, once=True) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
@@ -326,16 +298,7 @@ class TestViewer(CmdlineTmpl):
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
-            except Exception:
-                v.stop()
-                raise
-            finally:
-                try:
-                    v.process.wait(timeout=20)
-                    v.stop()
-                except subprocess.TimeoutExpired:
-                    v.stop()
-                    v.process.kill()
+                v.wait()
         finally:
             os.remove(f.name)
 
@@ -349,20 +312,11 @@ class TestViewer(CmdlineTmpl):
             self.template(["vizviewer", "--once", "--use_external_processor", f.name],
                           success=False, expected_output_file=None)
 
-            v = Viewer(f.name, once=True, timeout=3)
-            v.run()
-            try:
-                v.process.wait(timeout=6)
-            except subprocess.TimeoutExpired:
-                v.stop()
-                self.fail("--once did not timeout correctly")
-            finally:
+            with Viewer(f.name, once=True, timeout=3) as v:
                 try:
-                    v.process.wait(timeout=20)
-                    v.stop()
+                    v.wait(timeout=6)
                 except subprocess.TimeoutExpired:
-                    v.stop()
-                    v.process.kill()
+                    self.fail("--once did not timeout correctly")
         finally:
             os.remove(f.name)
 
@@ -386,25 +340,14 @@ class TestViewer(CmdlineTmpl):
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 f.write(json_script)
 
-            v = Viewer(f.name, once=True)
-            v.run()
-            try:
+            with Viewer(f.name, once=True) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(f"{v.url()}/vizviewer_info")
                 self.assertTrue(resp.code == 200)
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
-            except Exception:
-                v.stop()
-                raise
-            finally:
-                try:
-                    v.process.wait(timeout=20)
-                    v.stop()
-                except subprocess.TimeoutExpired:
-                    v.stop()
-                    v.process.kill()
+                v.wait()
         finally:
             os.remove(f.name)
 
