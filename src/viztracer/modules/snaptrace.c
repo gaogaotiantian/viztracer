@@ -1618,7 +1618,6 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
     {
         long long ts_sync_marker = system_ts_to_ns(self->sync_marker);
         fprintf(fptr, ",\"sync_marker\":%lld.%03lld", ts_sync_marker / 1000, ts_sync_marker % 1000);
-
     }
 
     fprintf(fptr, "}}");
@@ -1950,7 +1949,7 @@ tracer_get_sync_marker(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     if (self->sync_marker == 0)
     {
-        return PyLong_FromInt64(self->sync_marker);
+        Py_RETURN_NONE;
     }
 
     double ts_sync_marker = system_ts_to_us(self->sync_marker);
@@ -1977,8 +1976,8 @@ static PyMethodDef Tracer_methods[] = {
     {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},
     {"setignorestackcounter", (PyCFunction)tracer_setignorestackcounter, METH_O, "reset ignore stack depth"},
-    {"set_sync_marker", (PyCFunction)tracer_set_sync_marker, METH_NOARGS, "put current timestamp to synchronization marker"},
-    {"get_sync_marker", (PyCFunction)tracer_get_sync_marker, METH_NOARGS, "get synchronization marker"},
+    {"set_sync_marker", (PyCFunction)tracer_set_sync_marker, METH_NOARGS, "set current timestamp to synchronization marker"},
+    {"get_sync_marker", (PyCFunction)tracer_get_sync_marker, METH_NOARGS, "get synchronization marker or None if not set"},
     {NULL, NULL, 0, NULL}
 };
 

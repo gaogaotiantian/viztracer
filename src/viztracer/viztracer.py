@@ -255,7 +255,7 @@ class VizTracer(Tracer):
                 },
             }
             sync_marker = self.get_sync_marker()
-            if sync_marker > 0:
+            if sync_marker is not None:
                 self.data['viztracer_metadata']['sync_marker'] = sync_marker
 
             metadata_count = 0

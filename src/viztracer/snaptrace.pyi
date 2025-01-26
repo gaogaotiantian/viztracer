@@ -69,9 +69,9 @@ class Tracer:
         ...
 
     def set_sync_marker(self) -> None:
-        """put current timestamp to synchronization marker"""
+        """set current timestamp to synchronization marker"""
         ...
 
-    def get_sync_marker(self) -> float:
-        """get synchronization marker"""
+    def get_sync_marker(self) -> Optional[float]:
+        """get synchronization marker or None if not set"""
         ...

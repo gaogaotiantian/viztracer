@@ -152,9 +152,10 @@ class ReportBuilder:
 
         This function will change the timestamp in place, and return the original list
         """
-        offset_ts = sync_marker
-        if offset_ts is None:
+        if sync_marker is None:
             offset_ts = min((event["ts"] for event in original_events if "ts" in event))
+        else:
+            offset_ts = sync_marker
 
         for event in original_events:
             if "ts" in event:
