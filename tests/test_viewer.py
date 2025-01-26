@@ -265,9 +265,10 @@ class TestViewer(CmdlineTmpl):
                 if match is None:
                     self.fail("Can't find perfetto version in trace_processor")
                 processor_version = match.group(1)
-                # The trace processor version is usually a version before the perfetto version
-                # So we allow a 1.0 difference
-                self.assertAlmostEqual(float(perfetto_version), float(processor_version), delta=1.0)
+                # We need processor version to match exactly. The release branch of perfetto
+                # does not have the trace_processor at the same version and we need to
+                # dig it up.
+                self.assertEqual(perfetto_version, processor_version)
                 break
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
