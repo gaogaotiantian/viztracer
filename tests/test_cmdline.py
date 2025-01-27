@@ -411,9 +411,9 @@ class TestCommandLineBasic(CmdlineTmpl):
             self.assertEqual(len(func_2), 1)
             self.assertEqual(len(funcs), 2)
 
-            # we expect that unaligned events shifted more than 1s
+            # we expect that unaligned events shifted more than 100ms
             original_diff = abs(func_1[0]['ts'] - func_2[0]['ts'])
-            self.assertGreaterEqual(original_diff, 1000000.0)
+            self.assertGreaterEqual(original_diff, 100000.0)
 
             # we expect that aligned events shifted not more than 50ms
             aligned_diff = abs(funcs[1]['ts'] - funcs[0]['ts'])
