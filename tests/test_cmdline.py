@@ -4,7 +4,6 @@
 import configparser
 import importlib.util
 import os
-import pathlib
 import re
 import signal
 import sys
@@ -352,17 +351,8 @@ class TestCommandLineBasic(CmdlineTmpl):
         test_script = textwrap.dedent("""
             from viztracer import get_tracer
 
-            if get_tracer() is not None:
-                get_tracer().set_sync_marker()
-
-            def fib(n):
-                if n < 2:
-                    return 1
-                return fib(n-1) + fib(n-2)
-            fib(5)
-
-            if get_tracer() is not None:
-                get_tracer().set_sync_marker()
+            get_tracer().set_sync_marker()
+            get_tracer().set_sync_marker()
 
         """)
 
@@ -383,18 +373,14 @@ class TestCommandLineBasic(CmdlineTmpl):
             import time
             from viztracer import get_tracer
 
-            tracer = get_tracer()
-            assert tracer is not None
-
-            def func(a, b):
-                return a * b
+            def func():
+                return 2 * 4
 
             # will should sleep from 50ms to 100ms
-            rnd = random.random()
-            time.sleep(0.05 + 0.05 * rnd)
+            time.sleep(random.uniform(0.05, 0.1))
 
             get_tracer().set_sync_marker()
-            func(rnd, rnd)
+            func()
         """)
 
         def expect_aligned_to_sync_marker(data):
@@ -408,18 +394,18 @@ class TestCommandLineBasic(CmdlineTmpl):
 
         def test_align(extra_args):
             with tempfile.TemporaryDirectory() as tmpdir:
-                res1_filename = pathlib.Path(tmpdir, 'res1.json').as_posix()
-                res2_filename = pathlib.Path(tmpdir, 'res2.json').as_posix()
+                res1_filename = os.path.join(tmpdir, 'res1.json')
+                res2_filename = os.path.join(tmpdir, 'res2.json')
 
-                common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen", "--output_dir", tmpdir] + extra_args
+                common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen"] + extra_args
                 self.template(
-                    common_cmd_line + ["-o", "res1.json", "cmdline_test.py"],
+                    common_cmd_line + ["-o", res1_filename, "cmdline_test.py"],
                     expected_output_file=res1_filename,
                     script=test_script,
                     cleanup=False,
                 )
                 self.template(
-                    common_cmd_line + ["-o", "res2.json", "cmdline_test.py"],
+                    common_cmd_line + ["-o", res2_filename, "cmdline_test.py"],
                     expected_output_file=res2_filename,
                     script=test_script,
                     cleanup=False,
