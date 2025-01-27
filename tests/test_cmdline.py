@@ -384,40 +384,28 @@ class TestCommandLineBasic(CmdlineTmpl):
             import time
             from viztracer import get_tracer
 
-            # will sleep from 50ms to 100ms
-            time.sleep(0.05 + 0.05 * random.random())
-            if get_tracer() is not None:
-                get_tracer().set_sync_marker()
+            tracer = get_tracer()
+            assert tracer is not None
 
-            def func():
-                a = pow(2, 3)
-                b = pow(3, 2)
+            def func(a, b):
                 return a * b
 
-            func()
+            # will should sleep from 50ms to 100ms
+            rnd = random.random()
+            time.sleep(0.05 + 0.05 * rnd)
+
+            get_tracer().set_sync_marker()
+            func(rnd, rnd)
         """)
 
-        def expect_aligned_to_sync_marker(data, res1_filename, res2_filename):
-            with open(res1_filename, 'r') as f:
-                result1 = json.load(f)
-            with open(res2_filename, 'r') as f:
-                result2 = json.load(f)
+        def expect_aligned_to_sync_marker(data):
 
-            func_1 = [event for event in result1['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
-            func_2 = [event for event in result2['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
             funcs = [event for event in data['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
-
-            self.assertEqual(len(func_1), 1)
-            self.assertEqual(len(func_2), 1)
             self.assertEqual(len(funcs), 2)
 
-            # we expect that unaligned events shifted more than 100ms
-            original_diff = abs(func_1[0]['ts'] - func_2[0]['ts'])
-            self.assertGreaterEqual(original_diff, 100000.0)
-
-            # we expect that aligned events shifted not more than 50ms
+            # we expect that aligned events shifted not more than 1ms
             aligned_diff = abs(funcs[1]['ts'] - funcs[0]['ts'])
-            self.assertLessEqual(aligned_diff, 50000.0, str(data))
+            self.assertLessEqual(aligned_diff, 1000.0, str(data))
 
         def test_align(extra_args):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -442,7 +430,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                     [sys.executable, "-m", "viztracer", "--align_combine", res1_filename, res2_filename],
                     expected_output_file="result.json",
                     script='',
-                    check_func=lambda data: expect_aligned_to_sync_marker(data, res1_filename, res2_filename),
+                    check_func=expect_aligned_to_sync_marker,
                 )
 
         test_align([])
