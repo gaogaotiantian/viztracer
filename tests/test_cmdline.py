@@ -380,16 +380,21 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_align_combine_sync_marker(self):
         test_script = textwrap.dedent("""
+            import random
+            import time
             from viztracer import get_tracer
 
+            # will sleep from 50ms to 100ms
+            time.sleep(0.05 + 0.05 * random.random())
             if get_tracer() is not None:
                 get_tracer().set_sync_marker()
 
-            def fib(n):
-                if n < 2:
-                    return 1
-                return fib(n-1) + fib(n-2)
-            fib(5)
+            def func():
+                a = pow(2, 3)
+                b = pow(3, 2)
+                return a * b
+
+            func()
         """)
 
         def expect_aligned_to_sync_marker(data, res1_filename, res2_filename):
@@ -398,27 +403,21 @@ class TestCommandLineBasic(CmdlineTmpl):
             with open(res2_filename, 'r') as f:
                 result2 = json.load(f)
 
-            self.assertIn('sync_marker', result1['viztracer_metadata'])
-            self.assertIn('sync_marker', result2['viztracer_metadata'])
+            func_1 = [event for event in result1['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
+            func_2 = [event for event in result2['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
+            funcs = [event for event in data['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
 
-            sync_marker_1 = result1['viztracer_metadata']['sync_marker']
-            sync_marker_2 = result1['viztracer_metadata']['sync_marker']
+            self.assertEqual(len(func_1), 1)
+            self.assertEqual(len(func_2), 1)
+            self.assertEqual(len(funcs), 2)
 
-            self.assertGreater(sync_marker_1, 0)
-            self.assertGreater(sync_marker_2, 0)
+            # we expect that unaligned events shifted more than 100ms
+            original_diff = abs(func_1[0]['ts'] - func_2[0]['ts'])
+            self.assertGreaterEqual(original_diff, 100000.0)
 
-            offset_ts_1 = min((event["ts"] for event in result1["traceEvents"] if "ts" in event))
-            offset_ts_2 = min((event["ts"] for event in result2["traceEvents"] if "ts" in event))
-
-            diff_1 = abs(sync_marker_1 - offset_ts_1)
-            diff_2 = abs(sync_marker_2 - offset_ts_2)
-
-            offset_ts = min((event["ts"] for event in data["traceEvents"] if "ts" in event))
-
-            if round(diff_1, 7) == 0 or round(diff_2, 7) == 0:
-                self.assertAlmostEqual(0, offset_ts)
-            else:
-                self.assertNotAlmostEqual(0, offset_ts)
+            # we expect that aligned events shifted not more than 0.1ms
+            aligned_diff = abs(funcs[1]['ts'] - funcs[0]['ts'])
+            self.assertLessEqual(aligned_diff, 100.0)
 
         def test_align(extra_args):
             with tempfile.TemporaryDirectory() as tmpdir:
