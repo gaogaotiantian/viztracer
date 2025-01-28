@@ -392,7 +392,7 @@ class TestCommandLineBasic(CmdlineTmpl):
             aligned_diff = abs(funcs[1]['ts'] - funcs[0]['ts'])
             self.assertLessEqual(aligned_diff, 1000.0, str(data))
 
-        def test_align(extra_args):
+        for extra_args in [[], ["--dump_raw"]]:
             with tempfile.TemporaryDirectory() as tmpdir:
                 res1_filename = os.path.join(tmpdir, 'res1.json')
                 res2_filename = os.path.join(tmpdir, 'res2.json')
@@ -414,12 +414,8 @@ class TestCommandLineBasic(CmdlineTmpl):
                 self.template(
                     [sys.executable, "-m", "viztracer", "--align_combine", res1_filename, res2_filename],
                     expected_output_file="result.json",
-                    script='',
                     check_func=expect_aligned_to_sync_marker,
                 )
-
-        test_align([])
-        test_align(['--dump_raw'])
 
     def test_tracer_entries(self):
         self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
