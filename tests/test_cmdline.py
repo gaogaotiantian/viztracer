@@ -373,19 +373,19 @@ class TestCommandLineBasic(CmdlineTmpl):
             import time
             from viztracer import get_tracer
 
-            def func():
+            def test_func():
                 return 2 * 4
 
-            # will should sleep from 50ms to 100ms
+            # should sleep from 50ms to 100ms
             time.sleep(random.uniform(0.05, 0.1))
 
             get_tracer().set_sync_marker()
-            func()
+            test_func()
         """)
 
         def expect_aligned_to_sync_marker(data):
 
-            funcs = [event for event in data['traceEvents'] if 'ts' in event and event['name'].startswith('func ')]
+            funcs = [event for event in data['traceEvents'] if 'ts' in event and event['name'].startswith('test_func')]
             self.assertEqual(len(funcs), 2)
 
             # we expect that aligned events shifted not more than 1ms
