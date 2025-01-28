@@ -126,3 +126,18 @@ After generating ``json`` files, you need to combine them
     viztracer --combine ./temp_dir/*.json
 
 This will generate the report with all the process info. You can specify ``--output_file`` when using ``--combine``.
+
+Another usage of combining reports would be to compare between different runs of the same program. Unlike combining from multiple
+sources, this requires a pre-alignment of all the trace data. VizTracer also provides a way to align the start of all reports for
+this usage.
+
+.. code-block::
+
+    viztracer --align_combine run1.json run2.json -o compare_report.json
+
+You can also set a sync-marker from your source code, and VizTracer will align both reports to this particular timestamp.
+
+.. code-block::
+
+    from viztracer import get_tracer
+    get_tracer().set_sync_marker()
