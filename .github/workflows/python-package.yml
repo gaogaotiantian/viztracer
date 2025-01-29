@@ -11,7 +11,7 @@ on:
       - "tests/**"
       - "setup.py"
       - ".github/workflows/python-package.yml"
-  pull_request:
+  pull_request_target:
     paths:
       - "src/viztracer/**"
       - "tests/**"
@@ -82,8 +82,8 @@ jobs:
       env:
         COVERAGE_RUN: True
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v4.0.1
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: gaogaotiantian/viztracer
-        file: ./coverage.xml
+        files: ./coverage.xml
