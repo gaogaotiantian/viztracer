@@ -166,6 +166,15 @@ class TestVizTracerBasic(BaseTmpl):
         self.assertAlmostEqual(time_events[0]["dur"], end - start, delta=0.003e6)
         self.assertAlmostEqual(end - start, end_real - start_real, delta=0.003e6)
 
+    def test_sync_marker(self):
+        tracer = VizTracer()
+        tracer.start()
+        tracer.set_sync_marker()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        self.assertIn("sync_marker", tracer.data["viztracer_metadata"])
+
 
 class TestInstant(BaseTmpl):
     def test_addinstant(self):
