@@ -19,7 +19,9 @@ jobs:
 
       - name: Set up QEMU
         if: ${{ matrix.arch == 'aarch64' }}
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
+        with:
+          image: tonistiigi/binfmt:master
 
       - name: Set up Python
         uses: actions/setup-python@v5
