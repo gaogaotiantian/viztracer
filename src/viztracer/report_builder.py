@@ -49,7 +49,7 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
 
             ret.pop("baseTimeNanoseconds", None)
             ret.pop("displayTimeUnit", None)
-            ret.pop("traceName")
+            ret.pop("traceName", None)
             ret.pop("deviceProperties")
             ret.pop("schemaVersion")
 
