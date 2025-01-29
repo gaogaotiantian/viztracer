@@ -125,7 +125,7 @@ class ReportBuilder:
                 raise ValueError("Can't get report of nothing")
         if self.align:
             for one in self.jsons:
-                self.align_events(one["traceEvents"])
+                self.align_events(one["traceEvents"], one['viztracer_metadata'].get('sync_marker', None))
         self.combined_json = self.jsons[0]
         if "viztracer_metadata" not in self.combined_json:
             self.combined_json["viztracer_metadata"] = {}
@@ -143,14 +143,20 @@ class ReportBuilder:
                 self.combined_json["file_info"]["files"].update(one["file_info"]["files"])
                 self.combined_json["file_info"]["functions"].update(one["file_info"]["functions"])
 
-    def align_events(self, original_events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def align_events(self, original_events: list[dict[str, Any]], sync_marker: Optional[float] = None) -> list[dict[str, Any]]:
         """
         Apply an offset to all the trace events, making the start timestamp 0
         This is useful when comparing multiple runs of the same script
 
+        If sync_marker is not None then sync_marker  be used as an offset
+
         This function will change the timestamp in place, and return the original list
         """
-        offset_ts = min((event["ts"] for event in original_events if "ts" in event))
+        if sync_marker is None:
+            offset_ts = min((event["ts"] for event in original_events if "ts" in event))
+        else:
+            offset_ts = sync_marker
+
         for event in original_events:
             if "ts" in event:
                 event["ts"] -= offset_ts

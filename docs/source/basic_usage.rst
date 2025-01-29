@@ -271,6 +271,14 @@ this usage.
 
     viztracer --align_combine run1.json run2.json -o compare_report.json
 
+You can also set a sync-marker from your source code, and VizTracer will align both reports to this particular timestamp.
+
+.. code-block::
+
+    from viztracer import get_tracer
+    get_tracer().set_sync_marker()
+
+
 Compress Your Report
 --------------------
 
