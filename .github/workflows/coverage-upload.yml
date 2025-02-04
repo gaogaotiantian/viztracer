@@ -1,0 +1,27 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: coverage
+
+on:
+  workflow_run:
+    workflows: ["build"]
+    types:
+      - completed
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download coverage reports
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage.xml
+        github-token: ${{ secrets.GH_WORKFLOW_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: gaogaotiantian/viztracer
+        files: ./coverage.xml
