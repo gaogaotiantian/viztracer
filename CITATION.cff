@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+title: >-
+  VizTracer - A debugging and profiling tool that can trace
+  and visualize python code execution
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Tian
+    family-names: Gao
+    email: gaogaotiantian@hotmail.com
+    orcid: 'https://orcid.org/0009-0006-9702-7067'
+repository-code: 'https://github.com/gaogaotiantian/viztracer'
+license: Apache-2.0
