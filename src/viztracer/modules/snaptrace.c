@@ -765,6 +765,12 @@ PyObject* get_cfunc_from_callable(PyObject* callable, PyObject* self_arg)
         if (PyCFunction_Check(meth)) {
             return (PyObject*)((PyCFunctionObject*)meth);
         }
+    } else if (Py_TYPE(callable) == &PyMethod_Type) {
+        PyObject* func = PyMethod_GET_FUNCTION(callable);
+        if (func && PyCFunction_Check(func)) {
+            Py_INCREF(func);
+            return func;
+        }
     }
     return NULL;
 }
