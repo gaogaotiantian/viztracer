@@ -333,6 +333,7 @@ class TestIssue508(CmdlineTmpl):
                       expected_entries=6)
 
 
+@unittest.skipIf(sys.version_info < (3, 12), "We only care about monitoring backend")
 class TestIssue552(CmdlineTmpl):
     def test_issue552(self):
         script = textwrap.dedent("""
