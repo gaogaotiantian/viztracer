@@ -89,6 +89,6 @@ jobs:
     - name: Upload coverage as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage/coverage_${{ matrix.os }}_${{ matrix-python-version }}.xml
+        name: coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}.xml
         path: coverage.xml
         retention-days: 1
