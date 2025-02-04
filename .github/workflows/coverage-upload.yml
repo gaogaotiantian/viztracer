@@ -16,7 +16,8 @@ jobs:
     - name: Download coverage reports
       uses: actions/download-artifact@v4
       with:
-        name: coverage.xml
+        pattern: coverage/*.xml
+        path: coverage/
         github-token: ${{ secrets.GH_WORKFLOW_TOKEN }}
         run-id: ${{ github.event.workflow_run.id }}
     - name: Upload coverage reports to Codecov
@@ -24,4 +25,4 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: gaogaotiantian/viztracer
-        files: ./coverage.xml
+        directory: coverage/
