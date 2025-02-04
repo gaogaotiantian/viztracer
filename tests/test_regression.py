@@ -7,6 +7,7 @@ import os
 import signal
 import sys
 import tempfile
+import textwrap
 import unittest
 
 import viztracer
@@ -330,6 +331,21 @@ class TestIssue508(CmdlineTmpl):
         self.template([sys.executable, "cmdline_test.py"], script=script,
                       expected_output_file="result.json",
                       expected_entries=6)
+
+
+class TestIssue552(CmdlineTmpl):
+    def test_issue552(self):
+        script = textwrap.dedent("""
+            from viztracer import VizTracer
+            class A:
+                f = classmethod(repr)
+            with VizTracer():
+                A().f()
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"], script=script,
+                      expected_output_file="result.json",
+                      expected_entries=1)
 
 
 file_timestamp_disorder = """
