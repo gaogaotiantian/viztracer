@@ -22,3 +22,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: coverage/
+          override_pr: ${{ github.event.workflow_run.pull_requests[0].number }}
+          override_commit: ${{ github.event.workflow_run.head_commit.id }}
