@@ -1,0 +1,25 @@
+name: coverage
+
+on:
+  workflow_run:
+    workflows: ["build"]
+    types:
+      - completed
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage_*.xml
+          path: coverage/
+          github-token: ${{ secrets.GH_WORKFLOW_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: gaogaotiantian/viztracer
+          directory: coverage/

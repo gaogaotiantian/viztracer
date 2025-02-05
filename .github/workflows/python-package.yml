@@ -11,12 +11,14 @@ on:
       - "tests/**"
       - "setup.py"
       - ".github/workflows/python-package.yml"
-  pull_request_target:
+      - ".github/workflows/coverage-upload.yml"
+  pull_request:
     paths:
       - "src/viztracer/**"
       - "tests/**"
       - "setup.py"
       - ".github/workflows/python-package.yml"
+      - ".github/workflows/coverage-upload.yml"
   schedule:
     - cron: '0 10 * * *'
 
@@ -84,9 +86,9 @@ jobs:
         coverage xml -i
       env:
         COVERAGE_RUN: True
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
+    - name: Upload coverage as artifact
+      uses: actions/upload-artifact@v4
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        slug: gaogaotiantian/viztracer
-        files: ./coverage.xml
+        name: coverage_${{ matrix.os }}_${{ matrix.python-version }}.xml
+        path: coverage.xml
+        retention-days: 1
