@@ -211,15 +211,12 @@ also subject to the terms and conditions of the following licenses.
 
 BSD-3-Clause (src/viztracer/html/LICENSE):
 
-   src/viztracer/html/trace_viewer_*.html
-      from - https://github.com/catapult-project/catapult
+  src/viztracer/html/trace_viewer_*.html
 
 Apache License V2 (src/viztracer/web_dist/LICENSE):
 
-   src/viztracer/web_dist/*
-      from - https://github.com/google/perfetto
+  src/viztracer/web_dist/*
 
 Eclipse Public License v1.0 (src/viztracer/attach_process/LICENSE)
 
-   src/viztracer/attach_process/*
-      from - https://github.com/fabioz/PyDev.Debugger
+  src/viztracer/attach_process/*
