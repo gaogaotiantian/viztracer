@@ -70,8 +70,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
         try:
             with open(real_path, "rb") as f:
                 if f.read(2) == b"#!":
-                    executable = f.readline()
-                    executable = executable.decode("utf-8").strip()
+                    executable = f.readline().decode("utf-8").strip()
                     if "python" in executable.split('/')[-1]:
                         return True
         except Exception:  # pragma: no cover
