@@ -6,6 +6,7 @@ from __future__ import annotations
 import functools
 import os
 import re
+import shutil
 import sys
 import textwrap
 from multiprocessing import Process
@@ -62,6 +63,21 @@ def patch_subprocess(viz_args: list[str]) -> None:
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, "--", *args_iter]
         return None
 
+    def is_python_entry(path: str) -> bool:
+        real_path = shutil.which(path)
+        if real_path is None:
+            return False
+        try:
+            with open(real_path, "rb") as f:
+                if f.read(2) == b"#!":
+                    executable = f.readline()
+                    executable = executable.decode("utf-8").strip()
+                    if "python" in executable.split('/')[-1]:
+                        return True
+        except Exception:  # pragma: no cover
+            pass
+        return False
+
     @functools.wraps(subprocess.Popen.__init__)
     def subprocess_init(self: subprocess.Popen[Any], args: Union[str, Sequence[Any], Any], **kwargs: Any) -> None:
         new_args = args
@@ -70,13 +86,15 @@ def patch_subprocess(viz_args: list[str]) -> None:
         if isinstance(new_args, Sequence):
             if "python" in os.path.basename(new_args[0]):
                 new_args = build_command(new_args)
-                if new_args is not None and kwargs.get("shell") and isinstance(args, str):
-                    # For shell=True, we should convert the commands back to string
-                    # if it was passed as string
-                    # This is mostly for Unix shell
-                    new_args = " ".join(new_args)
+            elif is_python_entry(new_args[0]):
+                new_args = ["python", "-m", "viztracer", "--quiet", *viz_args, "--", *new_args]
             else:
                 new_args = None
+            if new_args is not None and kwargs.get("shell") and isinstance(args, str):
+                # For shell=True, we should convert the commands back to string
+                # if it was passed as string
+                # This is mostly for Unix shell
+                new_args = " ".join(new_args)
 
         if new_args is None:
             new_args = args
