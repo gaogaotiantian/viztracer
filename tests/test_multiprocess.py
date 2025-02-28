@@ -313,6 +313,7 @@ class TestSubprocess(CmdlineTmpl):
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 self.assertSubprocessName("python -c", json.load(f))
 
+    @unittest.skipIf(sys.platform == "win32", "Windows uses exe for python entries")
     def test_python_entries(self):
         script = textwrap.dedent("""
             import subprocess
