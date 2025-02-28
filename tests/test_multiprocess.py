@@ -313,7 +313,6 @@ class TestSubprocess(CmdlineTmpl):
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 self.assertSubprocessName("python -c", json.load(f))
 
-    @unittest.skipIf(sys.platform == "win32", "Windows uses exe for python entries")
     def test_python_entries(self):
         script = textwrap.dedent("""
             import subprocess
@@ -325,7 +324,11 @@ class TestSubprocess(CmdlineTmpl):
             pids = set()
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
-            self.assertEqual(len(pids), 2)
+            if sys.platform == "win32":
+                # Windows uses exe for python entries and we can't hook that
+                self.assertEqual(len(pids), 1)
+            else:
+                self.assertEqual(len(pids), 2)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "result.json")
