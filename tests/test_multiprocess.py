@@ -318,6 +318,10 @@ class TestSubprocess(CmdlineTmpl):
             import subprocess
             subprocess.check_output(["vizviewer", "-h"])
             subprocess.check_output(["ls", "./"])
+            try:
+                subprocess.check_output(["nonexist"])
+            except Exception:
+                pass
         """)
 
         def check_func(data):
