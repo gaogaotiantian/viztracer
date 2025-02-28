@@ -6,6 +6,7 @@ import os
 import signal
 import sys
 import tempfile
+import textwrap
 import unittest
 import json
 
@@ -311,6 +312,34 @@ class TestSubprocess(CmdlineTmpl):
             self.assertEqual(len(os.listdir(tmpdir)), 1)
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 self.assertSubprocessName("python -c", json.load(f))
+
+    def test_python_entries(self):
+        script = textwrap.dedent("""
+            import subprocess
+            subprocess.check_output(["vizviewer", "-h"])
+            subprocess.check_output(["ls", "./"])
+            try:
+                subprocess.check_output(["nonexist"])
+            except Exception:
+                pass
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            if sys.platform == "win32":
+                # Windows uses exe for python entries and we can't hook that
+                self.assertEqual(len(pids), 1)
+            else:
+                self.assertEqual(len(pids), 2)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "result.json")
+            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
+                          expected_output_file=output_path,
+                          script=script,
+                          check_func=check_func)
 
     def test_subprocess_shell_true(self):
         def check_func(data):
