@@ -81,10 +81,7 @@ def trace_and_save(method: Optional[Callable[..., R]] = None,
             if not os.path.exists(output_dir):
                 os.mkdir(output_dir)
             file_name = os.path.join(output_dir, f"result_{func.__name__}_{int(100000 * time.time())}.json")
-            if (
-                multiprocessing.get_start_method() == "fork"
-                and not multiprocessing.process.current_process().daemon
-            ):
+            if multiprocessing.get_start_method() == "fork" and not multiprocessing.current_process().daemon:
                 tracer.fork_save(file_name)
             else:
                 tracer.save(file_name)
