@@ -528,6 +528,32 @@ class TestMultiprocessing(CmdlineTmpl):
                           check_func=check_func,
                           concurrency="multiprocessing")
 
+    @unittest.skipIf(multiprocessing.get_start_method() != "fork", "Only need to test fork")
+    def test_multiprocessing_daemon(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = f"""
+                import multiprocessing
+                from viztracer import trace_and_save
+                @trace_and_save(output_dir={repr(tmpdir)})
+                def foo():
+                    pass
+                p = multiprocessing.Process(target=foo, daemon=True)
+                p.start()
+                p.join()
+            """
+
+            self.template([sys.executable, "cmdline_test.py"],
+                          expected_output_file=None,
+                          script=script,
+                          concurrency="multiprocessing")
+
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+                data = json.load(f)
+                events = [event for event in data["traceEvents"] if event["ph"] == "X"]
+                self.assertEqual(len(events), 1)
+                self.assertIn("foo", events[0]["name"])
+
 
 class TestLoky(CmdlineTmpl):
     def test_loky_basic(self):
