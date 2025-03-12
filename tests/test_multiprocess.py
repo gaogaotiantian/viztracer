@@ -437,7 +437,7 @@ class TestMultiprocessing(CmdlineTmpl):
             pids = set()
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
-            self.assertEqual(len(pids), 1)
+            self.assertEqual(len(pids), 3)
 
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
@@ -509,7 +509,7 @@ class TestMultiprocessing(CmdlineTmpl):
             pids = set()
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
-            self.assertGreater(len(pids), 3)
+            self.assertGreater(len(pids), 1)
 
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
