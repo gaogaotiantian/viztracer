@@ -9,6 +9,9 @@ flake8
 mypy
 coverage
 
+# Test
+coredumpy
+
 # 3rd party packages for test
 ipywidgets>8.0.5
 loky>=3.0.0
