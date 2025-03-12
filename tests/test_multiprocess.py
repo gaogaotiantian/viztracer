@@ -436,7 +436,7 @@ class TestMultiprocessing(CmdlineTmpl):
     def test_multiprocessing_forkserver(self):
         script = """
             import multiprocessing
-            from multiprocessing import get_context 
+            from multiprocessing import get_context
             def foo():
                 pass
             if __name__ == "__main__":

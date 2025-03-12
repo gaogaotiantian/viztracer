@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import sys
+import textwrap
 from multiprocessing import Process
 from typing import Any, Callable, Sequence, Union, no_type_check
 
@@ -127,42 +128,69 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
             # to start it after it forks a child
             tracer.start()
 
+    import multiprocessing.spawn
     import multiprocessing.util
     from multiprocessing.util import register_after_fork  # type: ignore
 
     register_after_fork(tracer, func_after_fork)
 
-    _spanwv_passfds = multiprocessing.util.spawnv_passfds
-
-    @functools.wraps(_spanwv_passfds)
-    def spawnv_passfds(path, args, passfds):
-        if "-c" in args:
-            idx = args.index("-c")
-            cmd = args[idx + 1]
-            if "resource_tracker" in cmd:
-                # We don't trace the resource tracker process
-                pass
-            elif "forkserver" in cmd:
-                # forkserver will not end before main process, avoid deadlock by --patch_only
-                args = (
-                    args[:idx]
-                    + ["-m", "viztracer", "--patch_only", *viz_args]
-                    + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
-                    + args[idx:]
-                )
-                pass
+    if sys.platform == "win32":
+        # For spawn process on Windows
+        @functools.wraps(multiprocessing.spawn.get_command_line)
+        def get_command_line(**kwds) -> list[str]:
+            """
+            Returns prefix of command line used for spawning a child process
+            """
+            if getattr(sys, 'frozen', False):  # pragma: no cover
+                return ([sys.executable, '--multiprocessing-fork']
+                        + ['%s=%r' % item for item in kwds.items()])
             else:
-                # This is for normal spawn process
-                args = (
-                    args[:idx]
-                    + ["-m", "viztracer", *viz_args]
-                    + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
-                    + args[idx:]
-                )
-        ret = _spanwv_passfds(path, args, passfds)
-        return ret
+                prog = textwrap.dedent(f"""
+                        from multiprocessing.spawn import spawn_main;
+                        from viztracer.patch import patch_spawned_process;
+                        patch_spawned_process({tracer.init_kwargs}, {viz_args});
+                        spawn_main(%s)
+                        """)
+                prog %= ', '.join('%s=%r' % item for item in kwds.items())
+                opts = multiprocessing.util._args_from_interpreter_flags()  # type: ignore
+                return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
 
-    multiprocessing.util.spawnv_passfds = spawnv_passfds  # type: ignore
+        multiprocessing.spawn.get_command_line = get_command_line
+    else:
+        # POSIX
+        # For forkserver process and spawned process
+        # We patch spawnv_passfds to trace forkserver parent process so the forked
+        # children can be traced
+        _spawnv_passfds = multiprocessing.util.spawnv_passfds
+
+        @functools.wraps(_spawnv_passfds)
+        def spawnv_passfds(path, args, passfds):
+            if "-c" in args:
+                idx = args.index("-c")
+                cmd = args[idx + 1]
+                if "forkserver" in cmd:
+                    # forkserver will not end before main process, avoid deadlock by --patch_only
+                    args = (
+                        args[:idx]
+                        + ["-m", "viztracer", "--patch_only", *viz_args]
+                        + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
+                        + args[idx:]
+                    )
+                elif "resource_tracker" not in cmd:
+                    # We don't trace resource_tracker as it does not quit before the main process
+                    # This is a normal spawned process. Only one of spawnv_passfds and spawn._main
+                    # can be patched. forkserver process will use spawn._main after forking a child,
+                    # so on POSIX we patch spawnv_passfds which has a similar effect on spawned processes.
+                    args = (
+                        args[:idx]
+                        + ["-m", "viztracer", *viz_args]
+                        + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
+                        + args[idx:]
+                    )
+            ret = _spawnv_passfds(path, args, passfds)
+            return ret
+
+        multiprocessing.util.spawnv_passfds = spawnv_passfds  # type: ignore
 
 
 class SpawnProcess:
