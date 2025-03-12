@@ -93,6 +93,7 @@ jobs:
         files: coverage.xml
     - name: Upload coredumpy data if applicable
       uses: actions/upload-artifact@v4
+      if: failure()
       with:
         name: coredumpy_data_${{ matrix.os }}_${{ matrix.python-version }}
         path: ${{ env.COREDUMPY_DUMP_DIR }}
