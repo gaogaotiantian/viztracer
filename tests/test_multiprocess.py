@@ -368,7 +368,7 @@ class TestSubprocess(CmdlineTmpl):
                       expected_output_file="result.json", script=file_grandparent, check_func=check_func)
         os.remove("parent.py")
 
-    def test_nested_multiproessing(self):
+    def test_nested_multiprocessing(self):
         def check_func(data):
             pids = set()
             for entry in data["traceEvents"]:
@@ -432,6 +432,51 @@ class TestMultiprocessing(CmdlineTmpl):
                       check_func=check_func,
                       concurrency="multiprocessing")
 
+    @unittest.skipIf("forkserver" not in multiprocessing.get_all_start_methods(), "Only works on supported platform")
+    def test_multiprocessing_forkserver(self):
+        script = """
+            import multiprocessing
+            from multiprocessing import get_context 
+            def foo():
+                pass
+            if __name__ == "__main__":
+                p = get_context('forkserver').Process(target=foo)
+                p.start()
+                p.join()
+        """
+        script_pool = """
+            from multiprocessing import get_context
+            def foo(arg):
+                pass
+            if __name__ == '__main__':
+                with get_context('forkserver').Pool(1) as pool:
+                    _ = list(pool.imap_unordered(foo, [1]))
+        """
+
+        def check_func(data):
+            pids = set()
+            has_foo = False
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+                if "foo" in entry["name"]:
+                    has_foo = True
+            self.assertGreater(len(pids), 1)
+            self.assertTrue(has_foo)
+
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            check_func=check_func,
+        )
+
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script_pool,
+            check_func=check_func,
+        )
+
     def test_nested_multiprosessing(self):
         def check_func(data):
             pids = set()
@@ -453,7 +498,7 @@ class TestMultiprocessing(CmdlineTmpl):
                                concurrency="multiprocessing")
         self.assertIn("buffer is full", result.stdout.decode())
 
-    def test_ignore_multiprosessing(self):
+    def test_ignore_multiprocessing(self):
         def check_func(data):
             pids = set()
             for entry in data["traceEvents"]:
