@@ -35,6 +35,8 @@ jobs:
             os: macos-latest
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      COREDUMPY_DUMP_DIR: ${{ github.workspace }}/coredumpy_data
     steps:
     - uses: actions/checkout@v4
       with:
@@ -89,3 +91,10 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.xml
+    - name: Upload coredumpy data if applicable
+      uses: actions/upload-artifact@v4
+      with:
+        name: coredumpy_data_${{ matrix.os }}_${{ matrix.python-version }}
+        path: ${{ env.COREDUMPY_DUMP_DIR }}
+        if-no-files-found: ignore
+        retention-days: 7
