@@ -259,6 +259,7 @@ def install_all_hooks(
                 if event == "os.exec":
                     tracer.exit_routine()
             sys.addaudithook(audit_hook)  # type: ignore
+
             def callback():
                 if "--patch_only" in args:
                     # We use --patch_only for forkserver process so we need to
