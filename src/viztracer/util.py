@@ -187,3 +187,11 @@ def pid_exists(pid):
                 raise
         else:
             return True
+
+
+def frame_stack_has_func(frame, funcs):
+    while frame:
+        if any(frame.f_code == func.__code__ for func in funcs):
+            return True
+        frame = frame.f_back
+    return False
