@@ -139,6 +139,8 @@ class VizUI:
                                   "Will by default generate json files"))
         parser.add_argument("--module", "-m", nargs="?", default=None,
                             help="run module with VizTracer")
+        parser.add_argument("--patch_only", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--compress", nargs="?", default=None,
                             help="Compress a json report to a compact cvf format")
         parser.add_argument("--decompress", nargs="?", default=None,
@@ -356,6 +358,10 @@ class VizUI:
         install_all_hooks(tracer,
                           self.args,
                           patch_multiprocess=not options.ignore_multiprocess)
+
+        if options.patch_only:
+            exec(code, global_dict)
+            return True, None
 
         def term_handler(signalnum, frame):
             # Exit if we are not already doing exit routine
