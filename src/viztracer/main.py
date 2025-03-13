@@ -140,7 +140,7 @@ class VizUI:
         parser.add_argument("--module", "-m", nargs="?", default=None,
                             help="run module with VizTracer")
         parser.add_argument("--patch_only", action="store_true", default=False,
-                            help="Only patch the process, do not trace it")
+                            help=argparse.SUPPRESS)
         parser.add_argument("--compress", nargs="?", default=None,
                             help="Compress a json report to a compact cvf format")
         parser.add_argument("--decompress", nargs="?", default=None,
