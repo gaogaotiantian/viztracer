@@ -138,6 +138,7 @@ class TestPatchSpawn(CmdlineTmpl):
 
 
 class TestPatchOnly(CmdlineTmpl):
+    @unittest.skipIf(sys.platform == "win32", "Windows does not have fork")
     def test_patch_only(self):
         script = """
             import os
