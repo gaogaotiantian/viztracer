@@ -490,6 +490,23 @@ class TestMultiprocessing(CmdlineTmpl):
                       check_func=check_func,
                       concurrency="multiprocessing")
 
+    def test_multiprocessing_unique_name(self):
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.template(["viztracer", "--output_dir", tmpdir, "--unique_output_file", "cmdline_test.py"],
+                          expected_output_file=None,
+                          script=file_multiprocessing,
+                          concurrency="multiprocessing")
+            self.assertEqual(len(os.listdir(tmpdir)), 1)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+                data = json.load(f)
+                check_func(data)
+
     def test_multiprocessing_entry_limit(self):
         result = self.template(["viztracer", "-o", "result.json", "--tracer_entries", "10", "cmdline_test.py"],
                                expected_output_file="result.json",

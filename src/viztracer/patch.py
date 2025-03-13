@@ -239,10 +239,28 @@ def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[s
     multiprocessing.spawn._main = _main  # type: ignore
 
 
+def filter_args(args: list[str]) -> list[str]:
+    new_args = []
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-u" or arg == "--unique_output_file":
+            i += 1
+            continue
+        elif arg == "-o" or arg == "--output_file":
+            i += 2
+            continue
+        new_args.append(arg)
+        i += 1
+    return new_args
+
+
 def install_all_hooks(
         tracer: VizTracer,
         args: list[str],
         patch_multiprocess: bool = True) -> None:
+
+    args = filter_args(args)
 
     # multiprocess hook
     if patch_multiprocess:
