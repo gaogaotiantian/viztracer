@@ -123,11 +123,6 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
-        if "--patch_only" in viz_args:
-            # We do not start the tracer on the forkserver process so we need
-            # to start it after it forks a child
-            tracer.start()
-
     import multiprocessing.spawn
     import multiprocessing.util
     from multiprocessing.util import register_after_fork  # type: ignore
@@ -264,7 +259,19 @@ def install_all_hooks(
                 if event == "os.exec":
                     tracer.exit_routine()
             sys.addaudithook(audit_hook)  # type: ignore
-            os.register_at_fork(after_in_child=lambda: tracer.label_file_to_write())  # type: ignore
+            def callback():
+                if "--patch_only" in args:
+                    # We use --patch_only for forkserver process so we need to
+                    # turn on tracer in the forked child process and register
+                    # for exit routine
+                    tracer.register_exit()
+                    tracer.start()
+                else:
+                    # otherwise just make sure to label the file because it's a
+                    # new process
+                    tracer.label_file_to_write()
+            os.register_at_fork(after_in_child=callback)  # type: ignore
+
         if tracer.log_audit is not None:
             audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
 

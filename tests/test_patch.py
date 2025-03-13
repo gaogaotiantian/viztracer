@@ -137,6 +137,32 @@ class TestPatchSpawn(CmdlineTmpl):
         self.assertEqual(a.stdout, b.stdout)
 
 
+class TestPatchOnly(CmdlineTmpl):
+    def test_patch_only(self):
+        script = """
+            import os
+            import sys
+            import time
+            import viztracer
+            pid = os.fork()
+            if pid > 0:
+                tracer = viztracer.get_tracer()
+                output_dir = os.path.dirname(tracer.output_file)
+                print(output_dir)
+                for _ in range(5):
+                    if any(f.endswith(".json") for f in os.listdir(output_dir)):
+                        print(os.listdir(output_dir))
+                        break
+                    else:
+                        print(os.listdir(output_dir))
+                    time.sleep(0.5)
+                else:
+                    sys.exit(1)
+        """
+        self.template(["viztracer", "--patch_only", "cmdline_test.py"],
+                      expected_output_file=None,
+                      script=script)
+
 class TestPatchSideEffect(CmdlineTmpl):
     def test_func_names(self):
         self.template(["viztracer", "cmdline_test.py"],
