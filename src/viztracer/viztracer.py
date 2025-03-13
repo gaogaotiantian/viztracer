@@ -14,6 +14,7 @@ from viztracer.snaptrace import Tracer
 
 from . import __version__
 from .report_builder import ReportBuilder
+from .util import frame_stack_has_func
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
 
@@ -365,13 +366,10 @@ class VizTracer(Tracer):
         def term_handler(sig, frame):
             # For multiprocessing.pool, it's possible we receive SIGTERM
             # in util._exit_function(), but before tracer.exit_routine()
-            # executes. In this case, sys.exit() or util._exit_function()
-            # won't trigger trace collection. We have to explicitly run
-            # exit_routine()
-            # Notice that exit_rountine() won't be executed multiple times
-            # as it was protected my self._exiting
-            self.exit_routine()
-            sys.exit(0)
+            # executes. In this case, we can just let the exit finish
+            if not frame_stack_has_func(frame, (self.exit_routine,
+                                                multiprocessing.util._exit_function)):
+                sys.exit(0)
 
         self.label_file_to_write()
 
@@ -381,8 +379,6 @@ class VizTracer(Tracer):
         Finalize(self, self.exit_routine, exitpriority=-1)
 
     def exit_routine(self) -> None:
-        # We need to avoid SIGTERM terminate our process when we dump data
-        signal.signal(signal.SIGTERM, lambda sig, frame: 0)
         self.stop(stop_option="flush_as_finish")
         if not self._exiting:
             self._exiting = True

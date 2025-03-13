@@ -25,7 +25,7 @@ from . import __version__
 from .code_monkey import CodeMonkey
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
-from .util import color_print, pid_exists, same_line_print, time_str_to_us, unique_file_name
+from .util import color_print, frame_stack_has_func, pid_exists, same_line_print, time_str_to_us, unique_file_name
 from .viztracer import VizTracer
 
 # For all the procedures in VizUI, return a tuple as the result
@@ -358,7 +358,11 @@ class VizUI:
                           patch_multiprocess=not options.ignore_multiprocess)
 
         def term_handler(signalnum, frame):
-            sys.exit(0)
+            # Exit if we are not already doing exit routine
+            if not frame_stack_has_func(frame, (self.exit_routine,
+                                                tracer.exit_routine,
+                                                multiprocessing.util._exit_function)):
+                sys.exit(0)
 
         signal.signal(signal.SIGTERM, term_handler)
 
