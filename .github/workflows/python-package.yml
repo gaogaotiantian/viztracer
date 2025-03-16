@@ -92,7 +92,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: coverage.xml
     - name: Upload coredumpy data if applicable
-      uses: gaogaotiantian/upload-coredumpy@v0.1.1
+      uses: gaogaotiantian/upload-coredumpy@v0.1.2
       if: failure()
       with:
         name: coredumpy_data_${{ matrix.os }}_${{ matrix.python-version }}
