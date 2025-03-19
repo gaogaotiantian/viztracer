@@ -44,7 +44,6 @@ class FuncTreeNode:
                 and all(t[0].is_same(t[1]) for t in zip(self.children, other.children)))
 
     def adopt(self, other: "FuncTreeNode") -> None:
-        new_children = []
         if self.is_ancestor(other):
             # Build a list is slow
             # In almost all cases, end_idx should be the last, because that's
@@ -69,12 +68,12 @@ class FuncTreeNode:
                 else:
                     end_array = [n.end for n in self.children]
                     end_idx = bisect.bisect(end_array, other.end)
-            if (start_idx == end_idx + 1):
+            if start_idx == end_idx + 1:
                 self.children[end_idx].adopt(other)
-            elif (start_idx == end_idx):
+            elif start_idx == end_idx:
                 other.parent = self
                 self.children.insert(start_idx, other)
-            elif (start_idx < end_idx):
+            elif start_idx < end_idx:
                 def change_parent(node):
                     node.parent = other
                 new_children = self.children[start_idx:end_idx]
