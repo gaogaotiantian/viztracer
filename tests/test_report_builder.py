@@ -46,6 +46,12 @@ class TestReportBuilder(BaseTmpl):
             result2 = s.getvalue()
         self.assertEqual(result1, result2)
 
+    def test_get_source_from_filename(self):
+        self.assertIsNotNone(ReportBuilder.get_source_from_filename("<frozen importlib._bootstrap>"))
+        self.assertIsNotNone(ReportBuilder.get_source_from_filename(__file__))
+        self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen nonexistmodule>"))
+        self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen incomplete"))
+
     def test_invalid(self):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)

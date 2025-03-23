@@ -207,13 +207,17 @@ class ReportBuilder:
             for func in unknown_func_dict:
                 del func_dict[func]
 
-    def get_source_from_filename(self, filename: str) -> Optional[str]:
+    @classmethod
+    def get_source_from_filename(cls, filename: str) -> Optional[str]:
         if filename.startswith("<frozen "):
             m = re.match(r"<frozen (.*)>", filename)
             if not m:
                 return None
             module_name = m.group(1)
-            module = importlib.import_module(module_name)
+            try:
+                module = importlib.import_module(module_name)
+            except ImportError:
+                return None
             if hasattr(module, "__file__") and module.__file__ is not None:
                 filename = module.__file__
             else:
