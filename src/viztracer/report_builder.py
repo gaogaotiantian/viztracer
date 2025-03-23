@@ -7,8 +7,10 @@ except ImportError:
     import json  # type: ignore
 
 import gzip
+import importlib
 import os
 import re
+import tokenize
 from string import Template
 from typing import Any, Optional, Sequence, TextIO, Union
 
@@ -190,18 +192,41 @@ class ReportBuilder:
             for event in self.combined_json["traceEvents"]:
                 if event["ph"] == 'X':
                     if event["name"] not in func_dict:
-                        try:
-                            m = pattern.match(event["name"])
-                            if m is not None:
-                                file_name = m.group(1)
-                                lineno = int(m.group(2))
-                                if file_name not in file_dict:
-                                    with open(file_name, "r", encoding="utf-8") as f:
-                                        content = f.read()
-                                        file_dict[file_name] = [content, content.count("\n")]
-                                func_dict[event["name"]] = [file_name, lineno]
-                        except Exception:
-                            pass
+                        func_dict[event["name"]] = None
+                        m = pattern.match(event["name"])
+                        if m is not None:
+                            file_name = m.group(1)
+                            lineno = int(m.group(2))
+                            if file_name not in file_dict:
+                                content = self.get_source_from_filename(file_name)
+                                if content is None:
+                                    continue
+                                file_dict[file_name] = [content, content.count("\n")]
+                            func_dict[event["name"]] = [file_name, lineno]
+            unknown_func_dict = set(func for func in func_dict if func_dict[func] is None)
+            for func in unknown_func_dict:
+                del func_dict[func]
+
+    @classmethod
+    def get_source_from_filename(cls, filename: str) -> Optional[str]:
+        if filename.startswith("<frozen "):
+            m = re.match(r"<frozen (.*)>", filename)
+            if not m:
+                return None
+            module_name = m.group(1)
+            try:
+                module = importlib.import_module(module_name)
+            except ImportError:
+                return None
+            if hasattr(module, "__file__") and module.__file__ is not None:
+                filename = module.__file__
+            else:
+                return None
+        try:
+            with tokenize.open(filename) as f:
+                return f.read()
+        except Exception:
+            return None
 
     def generate_report(
             self,
