@@ -100,7 +100,7 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload wheelhouse/*.whl
+          twine upload --skip-existing wheelhouse/*.whl
 
       - name: Publish wheels to PyPI Windows
         if: matrix.os == 'windows-latest' 
@@ -109,7 +109,7 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload (Get-ChildItem wheelhouse/*.whl)
+          twine upload --skip-existing (Get-ChildItem wheelhouse/*.whl)
 
   deploy-tar:
     runs-on: ubuntu-latest
