@@ -390,11 +390,6 @@ class VizUI:
             # This is helpful for some deadlock issues.
             global_dict.clear()
 
-        # The user code may forked, check it because Finalize won't execute
-        # if the pid is not the same
-        if os.getpid() != self.parent_pid and not options.ignore_multiprocess:
-            multiprocessing.util.Finalize(self.tracer, self.tracer.exit_routine, exitpriority=-1)
-
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
         # release the resource in the code
