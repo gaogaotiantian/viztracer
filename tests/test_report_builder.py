@@ -138,7 +138,7 @@ class TestReportBuilder(BaseTmpl):
 
 
 class TestReportBuilderCmdline(CmdlineTmpl):
-    @package_matrix(["~orjson", "orjson"])
+    @package_matrix(["~orjson", "orjson"] if "free-threading" not in sys.version else None)
     def test_package_matrix(self):
         """
         The module will be imported only once so flipping the package matrix will only
