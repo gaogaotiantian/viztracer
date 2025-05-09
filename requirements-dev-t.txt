@@ -2,7 +2,7 @@
 build
 setuptools
 wheel
-twine
+# twine # twine does not support 3.13t
 
 # Lint & Coverage
 flake8
@@ -13,5 +13,6 @@ coverage
 coredumpy
 
 # 3rd party packages for test
+ipywidgets>8.0.5
 loky>=3.0.0,<3.5.0 # loky 3.5.0 has a bug that breaks the tests
 jaxlib; sys_platform != 'win32' and python_version < '3.11'
