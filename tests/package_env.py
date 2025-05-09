@@ -100,7 +100,9 @@ def package_matrix(pkg_matrix):
         return cls
 
     def inner(func_or_cls):
-        if inspect.isfunction(func_or_cls):
+        if not pkg_matrix:
+            return func_or_cls
+        elif inspect.isfunction(func_or_cls):
             return inner_func(func_or_cls)
         elif inspect.isclass(func_or_cls):
             return inner_cls(func_or_cls)
