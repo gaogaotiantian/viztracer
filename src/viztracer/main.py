@@ -386,9 +386,9 @@ class VizUI:
         if not options.log_exit:
             tracer.stop(stop_option="flush_as_finish")
 
-        # Clear to global_dict to release all references.
-        # This is helpful for some deadlock issues.
-        global_dict.clear()
+            # Clear to global_dict to release all references.
+            # This is helpful for some deadlock issues.
+            global_dict.clear()
 
         # The user code may forked, check it because Finalize won't execute
         # if the pid is not the same
