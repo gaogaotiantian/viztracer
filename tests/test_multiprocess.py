@@ -419,6 +419,29 @@ class TestMultiprocessing(CmdlineTmpl):
                                send_sig=(signal.SIGINT, 3.5), expected_output_file="result.json", script=file_fork_wait,
                                check_func=check_func_wrapper(1))
 
+    @unittest.skipIf(sys.platform not in ["linux", "linux2"], "Only works on Linux")
+    def test_os_fork_exit(self):
+        script = textwrap.dedent("""
+            import os
+            import sys
+
+            pid = os.fork()
+            if pid == 0:
+                sys.exit(0)
+            else:
+                os.waitpid(pid, 0)
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json", script=script,
+                      check_func=check_func)
+
     def test_multiprosessing(self):
         def check_func(data):
             pids = set()

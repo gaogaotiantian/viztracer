@@ -286,8 +286,11 @@ def install_all_hooks(
                     tracer.register_exit()
                     tracer.start()
                 else:
-                    # otherwise just make sure to label the file because it's a
-                    # new process
+                    # otherwise we need to add a new exit_routine callback because the one
+                    # from parent won't be executed as it has a different pid.
+                    # Also make sure to label the file because it's a new process
+                    import multiprocessing.util
+                    multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
                     tracer.label_file_to_write()
             os.register_at_fork(after_in_child=callback)  # type: ignore
 
