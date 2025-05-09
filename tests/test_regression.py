@@ -497,3 +497,37 @@ class TestWaitForChild(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", expected_stdout=r"Wait",
                       script=wait_for_terminated_child)
+
+
+class TestDeadlock(CmdlineTmpl):
+    def test_dataloader(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            def worker(q):
+                _ = q.get()
+
+            class Sentinel:
+                def __init__(self, q):
+                    self.q = q
+
+                def __del__(self):
+                    self.q.put(None)
+
+            if __name__ == "__main__":
+                q = multiprocessing.Queue()
+                p = multiprocessing.Process(target=worker, args=(q,))
+                p.start()
+                sentinel = Sentinel(q)
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script,
+                      check_func=check_func)
