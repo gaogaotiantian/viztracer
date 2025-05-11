@@ -286,6 +286,12 @@ def install_all_hooks(
                     tracer.register_exit()
                     tracer.start()
                 else:
+                    import multiprocessing.popen_fork
+                    call_frame = sys._getframe(1)
+                    if call_frame.f_code == multiprocessing.popen_fork.Popen._launch.__code__:
+                        # We are in os.fork() for multiprocessing Process, nothing to do here
+                        # because we will patch it in patch_multiprocessing
+                        return
                     # otherwise we need to add a new exit_routine callback because the one
                     # from parent won't be executed as it has a different pid.
                     # Also make sure to label the file because it's a new process
