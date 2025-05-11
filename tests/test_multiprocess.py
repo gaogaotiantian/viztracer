@@ -640,6 +640,7 @@ class TestMultiprocessing(CmdlineTmpl):
                 self.assertIn("foo", events[0]["name"])
 
 
+@unittest.skipIf("free-threading" in sys.version, "loky does not support free-threading now")
 class TestLoky(CmdlineTmpl):
     def test_loky_basic(self):
         def check_func(data):
