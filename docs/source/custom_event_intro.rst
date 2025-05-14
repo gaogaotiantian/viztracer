@@ -19,7 +19,7 @@ argument ``args``. They will be displayed in the report
 ``args`` has to be a jsonifiable object, normally a string, or a combination
 of dict, list, string and number.
 
-``scope`` can be set to ``t``(default), ``p`` or ``g``, for thread, process and
+``scope`` can be set to ``t`` (default), ``p`` or ``g``, for thread, process and
 global.
 
 .. code-block:: python
