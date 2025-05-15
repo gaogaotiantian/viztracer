@@ -118,7 +118,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
         tracer.register_exit()
 
         tracer.clear()
-        tracer._set_curr_stack_depth(1)
+        tracer._set_curr_stack_depth(0)
 
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
