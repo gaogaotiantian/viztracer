@@ -395,7 +395,7 @@ class VizUI:
         # release the resource in the code
         # Python 3.9+ has this issue
         if threading._threading_atexits:  # type: ignore
-            for atexit_call in threading._threading_atexits:  # type: ignore
+            for atexit_call in reversed(threading._threading_atexits):  # type: ignore
                 atexit_call()
             threading._threading_atexits = []  # type: ignore
 
