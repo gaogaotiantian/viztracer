@@ -513,6 +513,8 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
         goto cleanup_ignore;
     }
 
+    if (info->curr_stack_depth == 0) goto cleanup_ignore;
+
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
         // if stack_top has prev, it's not the fake node so it's at least root
@@ -601,6 +603,8 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
         // have the -1 case.
         goto cleanup_ignore;
     }
+
+    if (info->curr_stack_depth == 0) goto cleanup_ignore;
 
     struct FunctionNode* stack_top = info->stack_top;
     if (stack_top->prev) {
@@ -1700,6 +1704,7 @@ tracer_setcurrstack(TracerObject* self, PyObject* stack_depth)
     }
 
     info->curr_stack_depth = PyLong_AsLong(stack_depth);
+    info->ignore_stack_depth = info->curr_stack_depth;
 
     Py_RETURN_NONE;
 }
