@@ -174,25 +174,30 @@ clear_stack(struct FunctionNode** stack_top) {
 // Thread info related functions
 // =============================================================================
 
-static struct ThreadInfo*
-snaptrace_createthreadinfo(TracerObject* self) {
-    struct ThreadInfo* info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
-    info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
-
+static unsigned long 
+get_thread_id() {
 #if _WIN32  
-    info->tid = GetCurrentThreadId();
+    return GetCurrentThreadId();
 #elif defined(__APPLE__)
     __uint64_t tid = 0;
     if (pthread_threadid_np(NULL, &tid)) {
-        info->tid = (unsigned long)pthread_self();
-    } else {
-        info->tid = tid;
+        tid = (unsigned long)pthread_self();
     }
+    return tid;
 #elif defined(__FreeBSD__)
     info->tid = pthread_getthreadid_np();
 #else
     info->tid = syscall(SYS_gettid);
 #endif
+
+}
+
+static struct ThreadInfo*
+snaptrace_createthreadinfo(TracerObject* self) {
+    struct ThreadInfo* info = PyMem_Calloc(1, sizeof(struct ThreadInfo));
+    info->stack_top = (struct FunctionNode*) PyMem_Calloc(1, sizeof(struct FunctionNode));
+
+    info->tid = get_thread_id();
 
 #if _WIN32
     TlsSetValue(self->dwTlsIndex, info);
@@ -1467,7 +1472,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
         }
 
         fprintf(fptr, "{\"ph\":\"M\",\"pid\":%lu,\"tid\":%lu,\"name\":\"process_name\",\"args\":{\"name\":\"",
-                pid, pid);
+                pid, get_thread_id());
         fprint_escape(fptr, PyUnicode_AsUTF8(process_name));
         fprintf(fptr, "\"}},");
         Py_DECREF(process_name);
