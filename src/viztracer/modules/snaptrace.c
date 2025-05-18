@@ -185,11 +185,10 @@ get_thread_id() {
     }
     return tid;
 #elif defined(__FreeBSD__)
-    info->tid = pthread_getthreadid_np();
+    return pthread_getthreadid_np();
 #else
-    info->tid = syscall(SYS_gettid);
+    return syscall(SYS_gettid);
 #endif
-
 }
 
 static struct ThreadInfo*
