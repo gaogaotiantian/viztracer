@@ -344,6 +344,8 @@ class VizUI:
 
     def run_code(self, code: Union[CodeType, str], global_dict: dict[str, Any]) -> VizProcedureResult:
         options = self.options
+        # So we can delete it after exec
+        global_dict = global_dict.copy()
         self.parent_pid = os.getpid()
 
         if options.subprocess_child:
@@ -383,12 +385,10 @@ class VizUI:
 
         exec(code, global_dict)
 
+        del global_dict
+
         if not options.log_exit:
             tracer.stop(stop_option="flush_as_finish")
-
-            # Clear to global_dict to release all references.
-            # This is helpful for some deadlock issues.
-            global_dict.clear()
 
         # issue141 - concurrent.future requires a proper release by executing
         # threading._threading_atexits or it will deadlock if not explicitly
