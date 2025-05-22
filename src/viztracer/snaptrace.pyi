@@ -38,7 +38,7 @@ class Tracer:
     def setignorestackcounter(self, value: int) -> int:
         ...
 
-    def _set_curr_stack_depth(self, stack_depth: int) -> None:
+    def reset_stack(self) -> None:
         ...
 
     def getts(self) -> float:
