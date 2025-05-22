@@ -639,6 +639,34 @@ class TestMultiprocessing(CmdlineTmpl):
                 self.assertEqual(len(events), 1)
                 self.assertIn("foo", events[0]["name"])
 
+    @unittest.skipIf("fork" not in multiprocessing.get_all_start_methods(), "Only need to test fork")
+    def test_multiprocessing_stack_depth(self):
+        script = """
+            import multiprocessing
+            def factorial(n):
+                if n == 0:
+                    return 1
+                else:
+                    return n * factorial(n - 1)
+            if __name__ == "__main__":
+                p = multiprocessing.get_context("fork").Process(target=factorial, args=(15,))
+                p.start()
+                p.join()
+        """
+
+        def check_func(data):
+            count = 0
+            for entry in data["traceEvents"]:
+                if "factorial" in entry["name"]:
+                    count += 1
+            self.assertEqual(count, 9)
+
+        self.template(["viztracer", "--max_stack_depth", "10", "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script,
+                      check_func=check_func,
+                      concurrency="multiprocessing")
+
 
 @unittest.skipIf("free-threading" in sys.version, "loky does not support free-threading now")
 class TestLoky(CmdlineTmpl):
