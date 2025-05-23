@@ -499,38 +499,24 @@ class TestWaitForChild(CmdlineTmpl):
                       script=wait_for_terminated_child)
 
 
-class TestDeadlock(CmdlineTmpl):
-    def test_dataloader(self):
+class TestFinalizerReference(CmdlineTmpl):
+    def test_finalizer(self):
         script = textwrap.dedent("""
-            import multiprocessing
+            import atexit
+            import sys
 
-            def worker(q):
-                _ = q.get()
-
-            class Sentinel:
-                def __init__(self, q):
-                    self.q = q
-
-                def __del__(self):
-                    self.q.put(None)
+            def task():
+                sys.getsizeof([1, 2, 3])
+                print("success")
 
             if __name__ == "__main__":
-                q = multiprocessing.Queue()
-                p = multiprocessing.Process(target=worker, args=(q,))
-                p.start()
-                sentinel = Sentinel(q)
+                atexit.register(task)
         """)
-
-        def check_func(data):
-            pids = set()
-            for entry in data["traceEvents"]:
-                pids.add(entry["pid"])
-            self.assertEqual(len(pids), 2)
 
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=script,
-                      check_func=check_func)
+                      expected_stdout="success")
 
 
 threading_exit_order = """

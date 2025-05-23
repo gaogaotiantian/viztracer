@@ -164,9 +164,11 @@ verbose_printf(TracerObject* self, int v, const char* fmt, ...)
 void
 clear_stack(struct FunctionNode** stack_top) {
     Py_CLEAR((*stack_top)->args);
+    Py_CLEAR((*stack_top)->func);
     while ((*stack_top)->prev) {
         (*stack_top) = (*stack_top) -> prev;
         Py_CLEAR((*stack_top)->args);
+        Py_CLEAR((*stack_top)->func);
     }
 }
 
@@ -1686,7 +1688,7 @@ tracer_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
-tracer_setcurrstack(TracerObject* self, PyObject* stack_depth)
+tracer_resetstack(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
     if (!info) {
@@ -1694,12 +1696,12 @@ tracer_setcurrstack(TracerObject* self, PyObject* stack_depth)
         return NULL;
     }
 
-    if (!PyLong_Check(stack_depth)) {
-        PyErr_SetString(PyExc_TypeError, "stack_depth must be an integer");
-        return NULL;
-    }
+    info->curr_stack_depth = 0;
+    info->ignore_stack_depth = 0;
 
-    info->curr_stack_depth = PyLong_AsLong(stack_depth);
+    struct FunctionNode* stack_top = info->stack_top;
+    clear_stack(&stack_top);
+    info->stack_top = stack_top;
 
     Py_RETURN_NONE;
 }
@@ -1978,7 +1980,7 @@ static PyMethodDef Tracer_methods[] = {
     {"get_func_args", (PyCFunction)tracer_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)tracer_getts, METH_NOARGS, "get timestamp"},
     {"get_base_time", (PyCFunction)tracer_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
-    {"_set_curr_stack_depth", (PyCFunction)tracer_setcurrstack, METH_O, "set current stack depth"},
+    {"reset_stack", (PyCFunction)tracer_resetstack, METH_NOARGS, "reset stack"},
     {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},
     {"setignorestackcounter", (PyCFunction)tracer_setignorestackcounter, METH_O, "reset ignore stack depth"},
