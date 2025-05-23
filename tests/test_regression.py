@@ -531,3 +531,26 @@ class TestDeadlock(CmdlineTmpl):
                       expected_output_file="result.json",
                       script=script,
                       check_func=check_func)
+
+
+threading_exit_order = """
+import threading
+
+
+def print_data(arg):
+    print(arg)
+
+
+if __name__ == "__main__":
+    threading._register_atexit(print_data, "2")
+    threading._register_atexit(print_data, "1")
+"""
+
+
+class TestThreadingExitOrder(CmdlineTmpl):
+    def test_threading_exit_order(self):
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=threading_exit_order,
+            expected_stdout=r"1\n2\n"
+        )
