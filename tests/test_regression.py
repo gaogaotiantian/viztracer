@@ -524,7 +524,7 @@ import threading
 
 
 def print_data(arg):
-    print(arg)
+    print(arg, end="")
 
 
 if __name__ == "__main__":
@@ -538,5 +538,5 @@ class TestThreadingExitOrder(CmdlineTmpl):
         self.template(
             ["viztracer", "cmdline_test.py"],
             script=threading_exit_order,
-            expected_stdout=r"1\n2\n"
+            expected_stdout=r"12"
         )
