@@ -531,5 +531,5 @@ class TestThreadingExitOrder(CmdlineTmpl):
         self.template(
             ["viztracer", "cmdline_test.py"],
             script=threading_exit_order,
-            expected_stdout=r"hello world"
+            expected_stdout="hello world"
         )
