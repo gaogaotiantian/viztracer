@@ -516,4 +516,20 @@ class TestFinalizerReference(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json",
                       script=script,
-                      expected_stdout="success",)
+                      expected_stdout="success")
+
+
+class TestThreadingExitOrder(CmdlineTmpl):
+    def test_threading_exit_order(self):
+        threading_exit_order = """
+            import threading
+
+            if __name__ == "__main__":
+                threading._register_atexit(print, " world")
+                threading._register_atexit(print, "hello", end="")
+            """
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=threading_exit_order,
+            expected_stdout="hello world"
+        )
