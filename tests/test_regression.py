@@ -519,24 +519,17 @@ class TestFinalizerReference(CmdlineTmpl):
                       expected_stdout="success")
 
 
-threading_exit_order = """
-import threading
-
-
-def print_data(arg):
-    print(arg, end="")
-
-
-if __name__ == "__main__":
-    threading._register_atexit(print_data, "2")
-    threading._register_atexit(print_data, "1")
-"""
-
-
 class TestThreadingExitOrder(CmdlineTmpl):
     def test_threading_exit_order(self):
+        threading_exit_order = """
+            import threading
+
+            if __name__ == "__main__":
+                threading._register_atexit(print, " world", end="")
+                threading._register_atexit(print, "hello", end="")
+            """
         self.template(
             ["viztracer", "cmdline_test.py"],
             script=threading_exit_order,
-            expected_stdout=r"12"
+            expected_stdout=r"hello world"
         )
