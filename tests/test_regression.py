@@ -525,7 +525,7 @@ class TestThreadingExitOrder(CmdlineTmpl):
             import threading
 
             if __name__ == "__main__":
-                threading._register_atexit(print, " world", end="")
+                threading._register_atexit(print, " world")
                 threading._register_atexit(print, "hello", end="")
             """
         self.template(
