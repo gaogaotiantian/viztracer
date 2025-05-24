@@ -75,3 +75,6 @@ class Tracer:
     def get_sync_marker(self) -> Optional[float]:
         """get synchronization marker or None if not set"""
         ...
+
+    def update_tls(self) -> None:
+        ...
