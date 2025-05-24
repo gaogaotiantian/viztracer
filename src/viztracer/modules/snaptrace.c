@@ -175,6 +175,24 @@ clear_stack(struct FunctionNode** stack_top) {
 // =============================================================================
 // Thread info related functions
 // =============================================================================
+static unsigned long
+get_thread_id()
+{
+#if _WIN32  
+    return GetCurrentThreadId();
+#elif defined(__APPLE__)
+    __uint64_t tid = 0;
+    if (pthread_threadid_np(NULL, &tid)) {
+        return (unsigned long)pthread_self();
+    } else {
+        return tid;
+    }
+#elif defined(__FreeBSD__)
+    return pthread_getthreadid_np();
+#else
+    return syscall(SYS_gettid);
+#endif
+}
 
 static struct ThreadInfo*
 snaptrace_createthreadinfo(TracerObject* self) {
@@ -1964,6 +1982,35 @@ tracer_get_sync_marker(TracerObject* self, PyObject* Py_UNUSED(unused))
     return PyFloat_FromDouble(ts_sync_marker);
 }
 
+static PyObject* 
+tracer_update_tls(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    struct ThreadInfo* info = get_thread_info(self);
+    unsigned long old_tid = info->tid;
+    info->tid = get_thread_id();
+
+    struct EventNode* curr = self->buffer + self->buffer_head_idx;
+    while (curr != self->buffer + self->buffer_tail_idx) {
+        struct EventNode* node = curr;
+        if (node->tid == old_tid) {
+            node->tid = info->tid;
+        }
+        curr = curr + 1;
+        if (curr == self->buffer + self->buffer_size) {
+            curr = self->buffer;
+        }
+    }
+
+    struct MetadataNode* node = self->metadata_head;
+    while (node != NULL) {
+        if (node->tid == old_tid) {
+            node->tid = info->tid;
+        }
+        node = node->next;
+    }
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef Tracer_methods[] = {
     {"threadtracefunc", (PyCFunction)tracer_threadtracefunc, METH_VARARGS, "trace function"},
     {"start", (PyCFunction)tracer_start, METH_NOARGS, "start profiling"},
@@ -1986,6 +2033,7 @@ static PyMethodDef Tracer_methods[] = {
     {"setignorestackcounter", (PyCFunction)tracer_setignorestackcounter, METH_O, "reset ignore stack depth"},
     {"set_sync_marker", (PyCFunction)tracer_set_sync_marker, METH_NOARGS, "set current timestamp to synchronization marker"},
     {"get_sync_marker", (PyCFunction)tracer_get_sync_marker, METH_NOARGS, "get synchronization marker or None if not set"},
+    {"update_tls", (PyCFunction)tracer_update_tls, METH_NOARGS, "fix thread local storage"},
     {NULL, NULL, 0, NULL}
 };
 
