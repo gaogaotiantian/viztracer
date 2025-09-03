@@ -326,7 +326,7 @@ class VizUI:
             return self.uninstall()
         elif self.options.cmd_string is not None:
             return self.run_string()
-        elif self.options.module:
+        elif self.options.module is not None:
             return self.run_module()
         elif self.command:
             return self.run_command()
