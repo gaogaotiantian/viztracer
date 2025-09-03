@@ -9,7 +9,6 @@ import html
 import http.server
 import gzip
 import io
-import json
 import os
 import socket
 import socketserver
@@ -22,6 +21,7 @@ import urllib.parse
 from http import HTTPStatus
 from typing import Any, Callable, Optional
 
+from .json import to_json_bytes, from_json
 
 dir_lock = threading.Lock()
 
@@ -80,13 +80,13 @@ class PerfettoHandler(HttpHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(info).encode("utf-8"))
+            self.wfile.write(to_json_bytes(info))
             self.wfile.flush()
         elif self.path.endswith("file_info"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(self.server_thread.file_info).encode("utf-8"))
+            self.wfile.write(to_json_bytes(self.server_thread.file_info))
             self.wfile.flush()
         elif self.path.endswith("localtrace"):
             # self.directory is used after 3.8
@@ -309,11 +309,11 @@ class ServerThread(threading.Thread):
                 self.externel_processor_process = ExternalProcessorProcess(self.path)
             else:
                 if filename.endswith("gz"):
-                    with gzip.open(self.path, "rt", encoding="utf-8", errors="ignore") as f:
-                        trace_data = json.load(f)
+                    with gzip.open(self.path, "rb") as f:
+                        trace_data = from_json(f.read())
                 else:
-                    with open(self.path, encoding="utf-8", errors="ignore") as f:
-                        trace_data = json.load(f)
+                    with open(self.path, "rb") as f:
+                        trace_data = from_json(f.read())
                 self.file_info = trace_data.get("file_info", {})
                 Handler = functools.partial(PerfettoHandler, self)
         elif filename.endswith("html"):

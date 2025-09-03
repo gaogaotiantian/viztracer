@@ -1,11 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-try:
-    import orjson as json  # type: ignore
-except ImportError:
-    import json  # type: ignore
-
 import gzip
 import importlib
 import os
@@ -15,6 +10,7 @@ from string import Template
 from typing import Any, Optional, Sequence, TextIO, Union
 
 from . import __version__
+from .json import from_json, json_decode_error_types, to_json_str
 from .util import color_print, same_line_print
 
 
@@ -25,14 +21,13 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
         # This is an object already
         return data
     elif isinstance(data, str):
-        with open(data, encoding="utf-8") as f:
-            json_str = f.read()
+        with open(data, "rb") as f:
+            return from_json(f.read())
     elif isinstance(data, tuple):
         path, args = data
         if args['type'] == 'torch':
-            with open(path, encoding="utf-8") as f:
-                json_str = f.read()
-            ret = json.loads(json_str)
+            with open(path, "rb") as f:
+                ret = from_json(f.read())
             base_offset = args['base_offset']
             # torch 2.4.0+ uses baseTimeNanoseconds to store the offset
             # before that they simply use the absolute timestamp which is
@@ -58,8 +53,7 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
             ret['viztracer_metadata'] = {}
 
             return ret
-
-    return json.loads(json_str)
+    raise TypeError("Invalid data type for get_json")  # pragma: no cover
 
 
 class ReportBuilder:
@@ -109,7 +103,7 @@ class ReportBuilder:
                         same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
                     try:
                         self.jsons.append(get_json(j))
-                    except json.JSONDecodeError:
+                    except json_decode_error_types:
                         assert isinstance(j, str)
                         self.invalid_json_paths.append(j)
                 if len(self.invalid_json_paths) > 0:
@@ -240,23 +234,15 @@ class ReportBuilder:
                 tmpl = f.read()
             with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
                 sub["trace_viewer_full"] = f.read()
-            if json.__name__ == "orjson":
-                sub["json_data"] = json.dumps(self.combined_json) \
-                                       .decode("utf-8") \
-                                       .replace("</script>", "<\\/script>")
-            else:
-                sub["json_data"] = json.dumps(self.combined_json) \
-                                       .replace("</script>", "<\\/script>")  # type: ignore
+            sub["json_data"] = to_json_str(self.combined_json).replace("</script>", "<\\/script>")
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
             self.prepare_json(file_info=file_info)
-            if json.__name__ == "orjson":
-                output_file.write(json.dumps(self.combined_json).decode("utf-8"))
+            if self.minimize_memory:
+                import json
+                json.dump(self.combined_json, output_file)  # type: ignore
             else:
-                if self.minimize_memory:
-                    json.dump(self.combined_json, output_file)  # type: ignore
-                else:
-                    output_file.write(json.dumps(self.combined_json))  # type: ignore
+                output_file.write(to_json_str(self.combined_json))
 
     def save(self, output_file: Union[str, TextIO] = "result.html", file_info: bool = True) -> None:
         if isinstance(output_file, str):
