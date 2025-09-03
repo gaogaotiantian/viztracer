@@ -2,9 +2,8 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import json
-
 from viztracer.functree import FuncTree
+from viztracer.json import from_json
 
 from .base_tmpl import BaseTmpl
 
@@ -15,8 +14,8 @@ test_str = '{"traceEvents":[{"pid":7761,"tid":7761,"ts":23668655769.443,"dur":0.
 class TestFuncTree(BaseTmpl):
     def test_random(self):
         import random
-        test_obj1 = json.loads(test_str)
-        test_obj2 = json.loads(test_str)
+        test_obj1 = from_json(test_str)
+        test_obj2 = from_json(test_str)
         random.shuffle(test_obj2["traceEvents"])
 
         tree1 = FuncTree()

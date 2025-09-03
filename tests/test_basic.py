@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import builtins
-import json
 import multiprocessing
 import os
 import subprocess
@@ -12,6 +11,7 @@ import time
 import unittest
 
 from viztracer import VizTracer, get_tracer, ignore_function, trace_and_save
+from viztracer.json import from_json
 
 from .base_tmpl import BaseTmpl
 
@@ -343,8 +343,8 @@ class TestForkSave(BaseTmpl):
             path = str(i) + ".json"
             processes[i].join()
             self.assertFileExists(path, timeout=10)
-            with open(path) as f:
-                data = json.load(f)
+            with open(path, "rb") as f:
+                data = from_json(f.read())
             os.remove(path)
             self.assertEventNumber(data, expected[i])
             if pid is None:

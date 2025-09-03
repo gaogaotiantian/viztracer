@@ -3,13 +3,13 @@
 
 import gc
 import io
-import json
 import logging
 import os
 import sys
 import time
 from unittest import TestCase
 
+from viztracer.json import from_json, to_json_bytes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,14 +30,14 @@ class BaseTmpl(TestCase):
     def tearDownClass(cls):
         if cls.trace_test_time:
             if os.path.exists("test_time_trace.json"):
-                with open("test_time_trace.json", "r") as f:
-                    trace = json.load(f)
+                with open("test_time_trace.json", "rb") as f:
+                    trace = from_json(f.read())
             else:
                 trace = {"traceEvents": []}
             trace["traceEvents"].extend(cls._test_time_events)
 
-            with open("test_time_trace.json", "w") as f:
-                json.dump(trace, f)
+            with open("test_time_trace.json", "wb") as f:
+                f.write(to_json_bytes(trace))
 
     def setUp(self):
         logging.info("=" * 60)

@@ -3,7 +3,6 @@
 
 
 import base64
-import json
 import os
 import platform
 import re
@@ -16,6 +15,7 @@ import unittest
 
 from viztracer import VizTracer
 from viztracer.attach_process.add_code_to_python_process import run_python_code  # type: ignore
+from viztracer.json import to_json_bytes
 from viztracer.util import pid_exists
 
 from .cmdline_tmpl import CmdlineTmpl
@@ -261,8 +261,8 @@ class TestAttachScript(CmdlineTmpl):
         # Isolate the attach stuff in a separate process
         kwargs = {"output_file": "attach_test.json"}
         kwargs_non_exist = {"output_file": "non_exist.json"}
-        kwargs_b64 = base64.urlsafe_b64encode(json.dumps(kwargs).encode("ascii")).decode("ascii")
-        kwargs_non_exist_b64 = base64.urlsafe_b64encode(json.dumps(kwargs_non_exist).encode("ascii")).decode("ascii")
+        kwargs_b64 = base64.urlsafe_b64encode(to_json_bytes(kwargs)).decode("ascii")
+        kwargs_non_exist_b64 = base64.urlsafe_b64encode(to_json_bytes(kwargs_non_exist)).decode("ascii")
         attach_script = textwrap.dedent(f"""
             import viztracer.attach
             print(viztracer.attach.attach_status.created_tracer, flush=True)

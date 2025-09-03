@@ -8,7 +8,8 @@ import sys
 import tempfile
 import textwrap
 import unittest
-import json
+
+from viztracer.json import from_json
 
 from .cmdline_tmpl import CmdlineTmpl
 
@@ -286,8 +287,8 @@ class TestSubprocess(CmdlineTmpl):
             self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
                           expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
-                self.assertSubprocessName("child.py", json.load(f))
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0]), "rb") as f:
+                self.assertSubprocessName("child.py", from_json(f.read()))
 
     def test_module(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -310,8 +311,8 @@ class TestSubprocess(CmdlineTmpl):
             self.template(['viztracer', '-o', os.path.join(tmpdir, "result.json"), '--subprocess_child',
                            '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
-                self.assertSubprocessName("python -c", json.load(f))
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0]), "rb") as f:
+                self.assertSubprocessName("python -c", from_json(f.read()))
 
     def test_python_entries(self):
         script = textwrap.dedent("""
@@ -526,8 +527,8 @@ class TestMultiprocessing(CmdlineTmpl):
                           script=file_multiprocessing,
                           concurrency="multiprocessing")
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
-                data = json.load(f)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0]), "rb") as f:
+                data = from_json(f.read())
                 check_func(data)
 
     def test_multiprocessing_entry_limit(self):
@@ -633,8 +634,8 @@ class TestMultiprocessing(CmdlineTmpl):
                           concurrency="multiprocessing")
 
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
-                data = json.load(f)
+            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0]), "rb") as f:
+                data = from_json(f.read())
                 events = [event for event in data["traceEvents"] if event["ph"] == "X"]
                 self.assertEqual(len(events), 1)
                 self.assertIn("foo", events[0]["name"])

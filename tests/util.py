@@ -1,11 +1,12 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import json
 import os
 import re
 import subprocess
 import sys
+
+from viztracer.json import to_json_bytes, from_json
 
 
 def generate_json(filename):
@@ -23,8 +24,8 @@ def adapt_json_file(filename):
     py_path_lst = path.split(".")
     py_path_lst[-1] = "py"
     py_path = ".".join(py_path_lst)
-    with open(path) as f:
-        data = json.loads(f.read())
+    with open(path, "rb") as f:
+        data = from_json(f.read())
         name_regex = re.compile(r"(.*) \((.*):([0-9]*)\)")
         for event in data["traceEvents"]:
             if event["ph"] == "X":
@@ -35,8 +36,8 @@ def adapt_json_file(filename):
                 except ValueError:
                     pass
 
-    with open(path, "w") as f:
-        f.write(json.dumps(data))
+    with open(path, "wb") as f:
+        f.write(to_json_bytes(data))
 
 
 def get_tests_data_file_path(filename):

@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import json
 import logging
 import lzma
 import os
@@ -14,6 +13,8 @@ from collections import namedtuple
 from functools import wraps
 from shutil import copyfileobj
 from typing import Callable, List, Optional, Tuple, overload
+
+from viztracer.json import from_json
 
 from .cmdline_tmpl import CmdlineTmpl
 from .test_performance import Timer
@@ -478,10 +479,10 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 expected_output_file=dup_json_path,
                 cleanup=False)
 
-            with open(origin_json_path, "r") as f:
-                origin_json_data = json.load(f)
-            with open(dup_json_path, "r") as f:
-                dup_json_data = json.load(f)
+            with open(origin_json_path, "rb") as f:
+                origin_json_data = from_json(f.read())
+            with open(dup_json_path, "rb") as f:
+                dup_json_data = from_json(f.read())
         return origin_json_data, dup_json_data
 
     def _generate_test_data_by_script(self, run_script):
@@ -503,10 +504,10 @@ class TestVCompressorCorrectness(CmdlineTmpl, VCompressorCompare):
                 ["viztracer", "-o", dup_json_path, "--decompress", cvf_path],
                 expected_output_file=dup_json_path,
                 cleanup=False)
-            with open(origin_json_path, "r") as f:
-                origin_json_data = json.load(f)
-            with open(dup_json_path, "r") as f:
-                dup_json_data = json.load(f)
+            with open(origin_json_path, "rb") as f:
+                origin_json_data = from_json(f.read())
+            with open(dup_json_path, "rb") as f:
+                dup_json_data = from_json(f.read())
         return origin_json_data, dup_json_data
 
     def test_file_info(self):
