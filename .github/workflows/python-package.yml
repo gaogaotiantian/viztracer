@@ -27,12 +27,18 @@ concurrency:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.13t']
         os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        extra-packages: ["", "orjson"]
         exclude:
           - python-version: '3.9'
             os: macos-latest
+          - python-version: '3.13t'
+            extra-packages: 'orjson'
+            os: windows-latest
+
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -65,18 +71,18 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         python -m build
-        pip install dist/*.whl
+        pip install dist/*.whl ${{ matrix.extra-packages }}
         python -m unittest
     - name: Build dist and test with unittest on Windows
       if: matrix.os == 'windows-latest'
       run: |
         python -m build
-        pip install (Get-ChildItem dist/*.whl)
+        pip install (Get-ChildItem dist/*.whl) ${{ matrix.extra-packages }}
         python -m unittest
     - name: Upload the test time artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: test_time_trace_${{ matrix.os }}_${{ matrix.python-version }}
+        name: test_time_trace_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.extra-packages || 'noextra' }}
         path: test_time_trace.json
         retention-days: 7
     - name: Generate coverage report
@@ -95,6 +101,6 @@ jobs:
       uses: gaogaotiantian/upload-coredumpy@v0.2
       if: failure()
       with:
-        name: coredumpy_data_${{ matrix.os }}_${{ matrix.python-version }}
+        name: coredumpy_data_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.extra-packages || 'noextra' }}
         path: ${{ env.COREDUMPY_DUMP_DIR }}
         retention-days: 7
