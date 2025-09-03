@@ -188,7 +188,6 @@ PyObject*
 json_dumps_to_bytes(PyObject* json_data)
 {
     PyObject* json_ret      = NULL;
-    PyObject* json_args     = NULL;
     PyObject* bytes_data    = NULL;
     PyObject* dumps_func    = NULL;
 
@@ -202,11 +201,7 @@ json_dumps_to_bytes(PyObject* json_data)
     }
 
     // json dumps json_data
-    json_args = PyTuple_New(1);
-    PyTuple_SetItem(json_args, 0, json_data);
-    Py_INCREF(json_data); 
-    json_ret = PyObject_CallObject(dumps_func, json_args);
-    Py_DECREF(json_args);
+    json_ret = PyObject_CallOneArg(dumps_func, json_data);
     if (!json_ret) {
         goto clean_exit;
     }
@@ -240,7 +235,6 @@ json_loads_from_bytes(PyObject* bytes_data)
 {
     PyObject* loads_func    = NULL;
     PyObject* string_data   = NULL;
-    PyObject* json_args     = NULL;
     PyObject* json_data     = NULL;
 
     if (!PyBytes_Check(bytes_data)) {
@@ -261,10 +255,7 @@ json_loads_from_bytes(PyObject* bytes_data)
     }
 
     // convert string to json
-    json_args = PyTuple_New(1);
-    PyTuple_SetItem(json_args, 0, string_data);
-    json_data = PyObject_CallObject(loads_func, json_args);
-    Py_DECREF(json_args);
+    json_data = PyObject_CallOneArg(loads_func, string_data);
     if (!json_data) {
         goto clean_exit;
     }
@@ -283,7 +274,6 @@ clean_exit:
 PyObject*
 compress_bytes(PyObject* bytes_data)
 {
-    PyObject* zlib_args         = NULL;
     PyObject* compress_func     = NULL;
     PyObject* compressed_data   = NULL;
 
@@ -298,12 +288,7 @@ compress_bytes(PyObject* bytes_data)
         goto clean_exit;
     }
 
-    zlib_args = PyTuple_New(1);
-    PyTuple_SetItem(zlib_args, 0, bytes_data);
-    Py_INCREF(bytes_data);
-    compressed_data = PyObject_CallObject(compress_func, zlib_args);
-    // zlib_args steals bytes_data, so release zlib_args will release bytes_data
-    Py_DECREF(zlib_args);
+    compressed_data = PyObject_CallOneArg(compress_func, bytes_data);
     if (!compressed_data) {
         goto clean_exit;
     }
@@ -328,7 +313,6 @@ PyObject*
 decompress_bytes(PyObject* bytes_data)
 {
     // decompress data
-    PyObject* zlib_args = NULL;
     PyObject* decompressed_data = NULL;
     PyObject* decompress_func = NULL;
 
@@ -343,11 +327,7 @@ decompress_bytes(PyObject* bytes_data)
         goto clean_exit;
     }
 
-    zlib_args = PyTuple_New(1);
-    PyTuple_SetItem(zlib_args, 0, bytes_data);
-    Py_INCREF(bytes_data);
-    decompressed_data = PyObject_CallObject(decompress_func, zlib_args);
-    Py_DECREF(zlib_args);
+    decompressed_data = PyObject_CallOneArg(decompress_func, bytes_data);
     if (!decompressed_data) {
         goto clean_exit;
     }
