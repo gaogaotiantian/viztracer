@@ -6,6 +6,7 @@
 #include "vc_dump.h"
 
 PyObject* json_module = NULL;
+PyObject* orjson_module = NULL;
 PyObject* zlib_module = NULL;
 
 static PyObject* 
@@ -340,12 +341,21 @@ static PyMethodDef Vcompressor_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+
+void
+Vcompressor_free(void* Py_UNUSED(unused)) {
+    Py_CLEAR(orjson_module);
+    Py_CLEAR(json_module);
+    Py_CLEAR(zlib_module);
+}
+
+
 static struct PyModuleDef compressormodule = {
-    PyModuleDef_HEAD_INIT,
-    "viztracer.vcompressor",
-    NULL,
-    -1,
-    Vcompressor_methods
+    .m_base = PyModuleDef_HEAD_INIT,
+    .m_name = "viztracer.vcompressor",
+    .m_size = -1,
+    .m_methods = Vcompressor_methods,
+    .m_free = Vcompressor_free,
 };
 
 static PyTypeObject VcompressorType = {
@@ -389,8 +399,12 @@ PyInit_vcompressor(void)
         return NULL;
     }
 
+    // We expect these imports to always succeed
     zlib_module = PyImport_ImportModule("zlib");
     json_module = PyImport_ImportModule("json");
+    // But this one is optional
+    orjson_module = PyImport_ImportModule("orjson");
+    PyErr_Clear(); // If orjson is not installed, we can still use json
 
     return m;
 }

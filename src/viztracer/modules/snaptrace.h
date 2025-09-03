@@ -128,6 +128,7 @@ typedef struct {
 extern PyObject* threading_module;
 extern PyObject* multiprocessing_module;
 extern PyObject* json_module;
+extern PyObject* orjson_module;
 extern PyObject* asyncio_module;
 extern PyObject* asyncio_tasks_module;
 

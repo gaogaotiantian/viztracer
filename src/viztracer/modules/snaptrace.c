@@ -27,6 +27,7 @@ TracerObject* curr_tracer = NULL;
 PyObject* threading_module = NULL;
 PyObject* multiprocessing_module = NULL;
 PyObject* json_module = NULL;
+PyObject* orjson_module = NULL;
 PyObject* asyncio_module = NULL;
 PyObject* asyncio_tasks_module = NULL;
 PyObject* trio_module = NULL;
@@ -2136,6 +2137,7 @@ snaptrace_free(void* Py_UNUSED(unused)) {
     Py_CLEAR(curr_task_getters[0]);
     Py_CLEAR(trio_lowlevel_module);
     Py_CLEAR(curr_task_getters[1]);
+    Py_CLEAR(orjson_module);
     Py_CLEAR(json_module);
     Py_CLEAR(sys_module);
 }
@@ -2182,15 +2184,21 @@ PyInit_snaptrace(void)
         return NULL;
     }
 
+    // We expect these imports to always succeed
     threading_module = PyImport_ImportModule("threading");
     multiprocessing_module = PyImport_ImportModule("multiprocessing");
+    json_module = PyImport_ImportModule("json");
+
     if ((trio_module = PyImport_ImportModule("trio"))) {
         trio_lowlevel_module = PyImport_AddModule("trio.lowlevel");
         curr_task_getters[1] = PyObject_GetAttrString(trio_lowlevel_module, "current_task");
     } else {
         PyErr_Clear();
     }
-    json_module = PyImport_ImportModule("json");
+    if (!(orjson_module = PyImport_ImportModule("orjson"))) {
+        orjson_module = NULL;
+        PyErr_Clear(); // If orjson is not installed, we can still use json
+    }
 
 #if PY_VERSION_HEX >= 0x030C0000
     sys_module = PyImport_ImportModule("sys");

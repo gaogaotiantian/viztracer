@@ -184,18 +184,38 @@ dump_metadata(FILE* fptr)
 }
 
 
-PyObject*
-json_dumps_to_bytes(PyObject* json_data)
+static PyObject*
+json_dumps_to_bytes_orjson(PyObject* json_data)
+{
+    PyObject* bytes_data    = NULL;
+    PyObject* dumps_func    = NULL;
+
+    dumps_func = PyObject_GetAttrString(orjson_module, "dumps");
+    if (!dumps_func) {
+        goto clean_exit;
+    }
+
+    bytes_data = PyObject_CallOneArg(dumps_func, json_data);
+
+clean_exit:
+    Py_XDECREF(dumps_func);
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return bytes_data;
+}
+
+
+static PyObject*
+json_dumps_to_bytes_vanilla(PyObject* json_data)
 {
     PyObject* json_ret      = NULL;
     PyObject* json_args     = NULL;
     PyObject* bytes_data    = NULL;
     PyObject* dumps_func    = NULL;
 
-    if (!json_data) {
-        PyErr_SetString(PyExc_ValueError, "json_data can not be NULL");
-        goto clean_exit;
-    }
     dumps_func = PyObject_GetAttrString(json_module, "dumps");
     if (!dumps_func) {
         goto clean_exit;
@@ -235,19 +255,40 @@ clean_exit:
 }
 
 
-PyObject*
-json_loads_from_bytes(PyObject* bytes_data)
+static PyObject*
+json_loads_from_bytes_orjson(PyObject* bytes_data)
+{
+    PyObject* loads_func    = NULL;
+    PyObject* json_data     = NULL;
+
+    loads_func = PyObject_GetAttrString(orjson_module, "loads");
+    if (!loads_func) {
+        goto clean_exit;
+    }
+
+    json_data = PyObject_CallOneArg(loads_func, bytes_data);
+    if (!json_data) {
+        goto clean_exit;
+    }
+
+clean_exit:
+    Py_XDECREF(loads_func);
+
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    return json_data;
+}
+
+
+static PyObject*
+json_loads_from_bytes_vanilla(PyObject* bytes_data)
 {
     PyObject* loads_func    = NULL;
     PyObject* string_data   = NULL;
     PyObject* json_args     = NULL;
     PyObject* json_data     = NULL;
-
-    if (!PyBytes_Check(bytes_data)) {
-        Py_DECREF(bytes_data);
-        PyErr_SetString(PyExc_ValueError, "expect a bytes object to decode");
-        goto clean_exit;
-    }
 
     loads_func = PyObject_GetAttrString(json_module, "loads");
     if (!loads_func) {
@@ -277,6 +318,37 @@ clean_exit:
     }
 
     return json_data;
+}
+
+
+PyObject*
+json_dumps_to_bytes(PyObject* json_data)
+{
+    if (!json_data) {
+        PyErr_SetString(PyExc_ValueError, "json_data can not be NULL");
+        return NULL;
+    }
+    if (orjson_module != NULL) {
+        return json_dumps_to_bytes_orjson(json_data);
+    } else {
+        return json_dumps_to_bytes_vanilla(json_data);
+    }
+}
+
+
+PyObject*
+json_loads_from_bytes(PyObject* bytes_data)
+{
+    if (!PyBytes_Check(bytes_data)) {
+        Py_DECREF(bytes_data);
+        PyErr_SetString(PyExc_ValueError, "expect a bytes object to decode");
+        return NULL;
+    }
+    if (orjson_module != NULL) {
+        return json_loads_from_bytes_orjson(bytes_data);
+    } else {
+        return json_loads_from_bytes_vanilla(bytes_data);
+    }
 }
 
 
