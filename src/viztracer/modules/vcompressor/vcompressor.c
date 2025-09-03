@@ -95,17 +95,17 @@ parse_trace_events(PyObject* trace_events)
                 Py_INCREF(pid);
                 Py_INCREF(tid);
                 Py_INCREF(name);
-                PyTuple_SetItem(key, 0, pid);
-                PyTuple_SetItem(key, 1, tid);
-                PyTuple_SetItem(key, 2, name);
+                PyTuple_SET_ITEM(key, 0, pid);
+                PyTuple_SET_ITEM(key, 1, tid);
+                PyTuple_SET_ITEM(key, 2, name);
 
                 // This indicates that if there's args in fee
                 fee_args = PyDict_GetItemString(event, "args");
                 if (fee_args) {
-                    PyTuple_SetItem(key, 3, Py_True);
+                    PyTuple_SET_ITEM(key, 3, Py_True);
                     Py_INCREF(Py_True);
                 } else {
-                    PyTuple_SetItem(key, 3, Py_False);
+                    PyTuple_SET_ITEM(key, 3, Py_False);
                     Py_INCREF(Py_False);
                 }
 
@@ -126,11 +126,11 @@ parse_trace_events(PyObject* trace_events)
                 
                 Py_INCREF(ts);
                 Py_INCREF(dur);
-                PyTuple_SetItem(ts_dur_tuple, 0, ts);
-                PyTuple_SetItem(ts_dur_tuple, 1, dur);
+                PyTuple_SET_ITEM(ts_dur_tuple, 0, ts);
+                PyTuple_SET_ITEM(ts_dur_tuple, 1, dur);
 
                 if (fee_args) {
-                    PyTuple_SetItem(ts_dur_tuple, 2, fee_args);
+                    PyTuple_SET_ITEM(ts_dur_tuple, 2, fee_args);
                     Py_INCREF(fee_args);
                 }
                 
@@ -154,8 +154,8 @@ parse_trace_events(PyObject* trace_events)
                 // PyTuple_SetItem steals reference
                 Py_INCREF(pid);
                 Py_INCREF(tid);
-                PyTuple_SetItem(id_key, 0, pid);
-                PyTuple_SetItem(id_key, 1, tid);
+                PyTuple_SET_ITEM(id_key, 0, pid);
+                PyTuple_SET_ITEM(id_key, 1, tid);
 
                 if (PyUnicode_CompareWithASCIIString(name, "process_name") == 0) {
                     PyDict_SetItem(process_names, id_key, args_name);
@@ -185,9 +185,9 @@ parse_trace_events(PyObject* trace_events)
                 Py_INCREF(name);
                 Py_INCREF(pid);
                 Py_INCREF(tid);
-                PyTuple_SetItem(counter_id_key, 0, pid);
-                PyTuple_SetItem(counter_id_key, 1, tid);
-                PyTuple_SetItem(counter_id_key, 2, name);
+                PyTuple_SET_ITEM(counter_id_key, 0, pid);
+                PyTuple_SET_ITEM(counter_id_key, 1, tid);
+                PyTuple_SET_ITEM(counter_id_key, 2, name);
                 if (!PyDict_Contains(counter_events, counter_id_key)){
                     counter_event_dict = PyDict_New();
                     PyDict_SetItem(counter_events, counter_id_key, counter_event_dict);
