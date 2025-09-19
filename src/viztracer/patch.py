@@ -28,7 +28,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
     def build_command(args: Sequence[str]) -> list[str] | None:
         py_args: list[str] = []
-        mode = []
+        mode: list[str] | None = []
         script = None
         args_iter = iter(args[1:])
         for arg in args_iter:
@@ -51,7 +51,11 @@ def patch_subprocess(viz_args: list[str]) -> None:
                         py_args.append(f"-{cm_py_args}")
                     mode = [f"-{cm}"]
                     # -m mod | -mmod
-                    mode.append(cm_arg or next(args_iter, None))
+                    cm_arg = cm_arg or next(args_iter, None)
+                    if cm_arg is not None:
+                        mode.append(cm_arg)
+                    else:
+                        mode = None
                 break
 
             # -pyopts
@@ -59,7 +63,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
         if script:
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, "--", script, *args_iter]
-        elif mode and mode[-1] is not None:
+        elif mode:
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, *mode, "--", *args_iter]
         return None
 
