@@ -421,7 +421,7 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
         info->paused = 1;
         for (size_t i = 0; i < sizeof(curr_task_getters)/sizeof(curr_task_getters[0]); i++) {
             if (curr_task_getters[i] != NULL) {
-                curr_task = PyObject_CallObject(curr_task_getters[i], NULL);
+                curr_task = PyObject_CallNoArgs(curr_task_getters[i]);
                 if (!curr_task) {
                     PyErr_Clear();  // RuntimeError, probably
                     curr_task = Py_None;
@@ -1204,7 +1204,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 perror("Failed to access multiprocessing.current_process()");
                 exit(-1);
             }
-            PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+            PyObject* current_process = PyObject_CallNoArgs(current_process_method);
             if (!current_process_method) {
                 perror("Failed to access multiprocessing.current_process()");
                 exit(-1);
@@ -1272,7 +1272,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                     PyObject* task_name = NULL;
                     if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
                         PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
-                        task_name = PyObject_CallObject(task_name_method, NULL);
+                        task_name = PyObject_CallNoArgs(task_name_method);
                         Py_DECREF(task_name_method);
                     } else if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "name")) {
                         task_name = PyObject_GetAttrString(curr->data.fee.asyncio_task, "name");
@@ -1458,7 +1458,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
                 perror("Failed to access multiprocessing.current_process()");
                 exit(-1);
             }
-            PyObject* current_process = PyObject_CallObject(current_process_method, NULL);
+            PyObject* current_process = PyObject_CallNoArgs(current_process_method);
             if (!current_process_method) {
                 perror("Failed to access multiprocessing.current_process()");
                 exit(-1);
@@ -1504,7 +1504,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
                     PyObject* task_name = NULL;
                     if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
                         PyObject* task_name_method = PyObject_GetAttrString(curr->data.fee.asyncio_task, "get_name");
-                        task_name = PyObject_CallObject(task_name_method, NULL);
+                        task_name = PyObject_CallNoArgs(task_name_method);
                         Py_DECREF(task_name_method);
                     } else if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "name")) {
                         task_name = PyObject_GetAttrString(curr->data.fee.asyncio_task, "name");
