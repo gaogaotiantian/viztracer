@@ -558,6 +558,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json",
                       expected_entries=2)
 
+    @skipIf(hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(), "trio does not support free-threaded Python")
     @package_matrix(["~trio", "trio"])
     def test_log_async(self):
         def check_func(data):
@@ -571,6 +572,7 @@ class TestCommandLineBasic(CmdlineTmpl):
                       expected_output_file="result.json",
                       check_func=check_func)
 
+    @skipIf(hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(), "trio does not support free-threaded Python")
     @package_matrix(["~trio", "trio"])
     @skipIf(importlib.util.find_spec("trio") is None, reason="Trio-specific test")
     def test_log_trio(self):
