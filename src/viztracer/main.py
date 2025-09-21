@@ -6,7 +6,6 @@ import atexit
 import base64
 import builtins
 import io
-import json
 import multiprocessing.util  # type: ignore
 import os
 import platform
@@ -23,6 +22,7 @@ from typing import Any, Optional, Union
 
 from . import __version__
 from .code_monkey import CodeMonkey
+from .json import from_json, to_json_bytes
 from .patch import install_all_hooks
 from .report_builder import ReportBuilder
 from .util import color_print, frame_stack_has_func, pid_exists, same_line_print, time_str_to_us, unique_file_name
@@ -480,8 +480,8 @@ class VizUI:
 
         compressor = VCompressor()
 
-        with open(file_to_compress) as f:
-            data = json.load(f)
+        with open(file_to_compress, "rb") as f:
+            data = from_json(f.read())
             compressor.compress(data, output_file)
 
         return True, None
@@ -502,8 +502,8 @@ class VizUI:
 
         data = compressor.decompress(file_to_decompress)
 
-        with open(output_file, "w") as f:
-            json.dump(data, f)
+        with open(output_file, "wb") as f:
+            f.write(to_json_bytes(data))
 
         return True, None
 
@@ -557,7 +557,7 @@ class VizUI:
             "dump_raw": False,
             "verbose": 1 if self.verbose != 0 else 0,
         })
-        b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
+        b64s = base64.urlsafe_b64encode(to_json_bytes(self.init_kwargs)).decode("ascii")
         start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
         stop_code = "viztracer.attach.stop_attach()"
         retcode, _, _, = run_python_code(pid, start_code)

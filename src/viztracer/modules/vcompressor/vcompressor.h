@@ -10,6 +10,7 @@ typedef struct {
 } VcompressorObject;
 
 extern PyObject* json_module;
+extern PyObject* orjson_module;
 extern PyObject* zlib_module;
 
 #endif

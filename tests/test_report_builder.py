@@ -3,7 +3,6 @@
 
 
 import io
-import json
 import os
 import shutil
 import sys
@@ -12,6 +11,7 @@ import textwrap
 from unittest.mock import patch
 
 import viztracer
+from viztracer.json import from_json
 from viztracer.report_builder import ReportBuilder
 
 from .base_tmpl import BaseTmpl
@@ -22,8 +22,8 @@ from .package_env import package_matrix
 class TestReportBuilder(BaseTmpl):
     def test_file(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
-        with open(json_path) as f:
-            rb = ReportBuilder(json.loads(f.read()), verbose=0)
+        with open(json_path, "rb") as f:
+            rb = ReportBuilder(from_json(f.read()), verbose=0)
         with io.StringIO() as s:
             rb.save(s)
             result1 = s.getvalue()
@@ -34,17 +34,17 @@ class TestReportBuilder(BaseTmpl):
 
     def test_minimize_memory(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
-        with open(json_path) as f:
-            rb = ReportBuilder(json.loads(f.read()), verbose=0, minimize_memory=True)
+        with open(json_path, "rb") as f:
+            rb = ReportBuilder(from_json(f.read()), verbose=0, minimize_memory=True)
         with io.StringIO() as s:
             rb.save(s)
             result1 = s.getvalue()
-        with open(json_path) as f:
-            rb = ReportBuilder(json.loads(f.read()), verbose=0, minimize_memory=False)
+        with open(json_path, "rb") as f:
+            rb = ReportBuilder(from_json(f.read()), verbose=0, minimize_memory=False)
         with io.StringIO() as s:
             rb.save(s)
             result2 = s.getvalue()
-        self.assertEqual(result1, result2)
+        self.assertEqual(from_json(result1), from_json(result2))
 
     def test_get_source_from_filename(self):
         self.assertIsNotNone(ReportBuilder.get_source_from_filename("<frozen importlib._bootstrap>"))
@@ -70,8 +70,8 @@ class TestReportBuilder(BaseTmpl):
 
     def test_too_many_entry(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
-        with open(json_path) as f:
-            rb = ReportBuilder(json.loads(f.read()), verbose=1)
+        with open(json_path, "rb") as f:
+            rb = ReportBuilder(from_json(f.read()), verbose=1)
         rb.entry_number_threshold = 20
         # Coverage only
         with io.StringIO() as s:
@@ -122,18 +122,18 @@ class TestReportBuilder(BaseTmpl):
             rb = ReportBuilder([file_path1, file_path2], verbose=0)
             with io.StringIO() as s:
                 rb.save(output_file=s)
-                data = json.loads(s.getvalue())
+                data = from_json(s.getvalue())
                 self.assertTrue(data["viztracer_metadata"]["overflow"])
 
             # Try to combine with an empty file
             empty_file = os.path.join(tmpdir, "empty.json")
-            with open(empty_file, "w") as f:
-                f.write(json.dumps({"traceEvents": []}))
+            with open(empty_file, "wb") as f:
+                f.write(b'{"traceEvents": []}')
 
             rb = ReportBuilder([empty_file, file_path1], verbose=0)
             with io.StringIO() as s:
                 rb.save(output_file=s)
-                data = json.loads(s.getvalue())
+                data = from_json(s.getvalue())
                 self.assertEqual(len([e for e in data["traceEvents"] if e["name"] == "list.append"]), 10)
 
 

@@ -41,3 +41,7 @@ vizviewer = "viztracer.viewer:viewer_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "viztracer.__version__"}
+
+[[tool.mypy.overrides]]
+module = ["orjson"]
+ignore_missing_imports = true

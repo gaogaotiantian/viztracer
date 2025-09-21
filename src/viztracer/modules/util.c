@@ -19,15 +19,27 @@ Print_Py(PyObject* o)
 void
 fprintjson(FILE* fptr, PyObject* obj)
 {
-    PyObject* json_dumps = PyObject_GetAttrString(json_module, "dumps");
-    PyObject* call_args = PyTuple_New(1);
-    PyTuple_SetItem(call_args, 0, obj);
-    Py_INCREF(obj);
-    PyObject* args_str = PyObject_CallObject(json_dumps, call_args);
-    fprintf(fptr, "%s", PyUnicode_AsUTF8(args_str));
-    Py_DECREF(json_dumps);
-    Py_DECREF(call_args);
-    Py_DECREF(args_str);
+    if (orjson_module != NULL) {
+      PyObject* orjson_dumps = PyObject_GetAttrString(orjson_module, "dumps");
+      PyObject* args_bytes = PyObject_CallOneArg(orjson_dumps, obj);
+      char* data;
+      Py_ssize_t size;
+      if (PyBytes_AsStringAndSize(args_bytes, &data, &size) == 0) {
+          fwrite(data, 1, size, fptr);
+      }
+      Py_DECREF(args_bytes);
+      Py_DECREF(orjson_dumps);
+    } else {
+      PyObject* json_dumps = PyObject_GetAttrString(json_module, "dumps");
+      PyObject* args_str = PyObject_CallOneArg(json_dumps, obj);
+      Py_ssize_t size;
+      const char* utf8_data = PyUnicode_AsUTF8AndSize(args_str, &size);
+      if (utf8_data) {
+        fwrite(utf8_data, 1, size, fptr);
+      }
+      Py_DECREF(args_str);
+      Py_DECREF(json_dumps);
+    }
 }
 
 void

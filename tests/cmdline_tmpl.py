@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import json
 import logging
 import os
 import shutil
@@ -10,6 +9,8 @@ import sys
 import textwrap
 import time
 from typing import Optional
+
+from viztracer.json import from_json
 
 from .base_tmpl import BaseTmpl
 
@@ -138,8 +139,8 @@ class CmdlineTmpl(BaseTmpl):
 
             if success and expected_entries:
                 assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
-                with open(expected_output_file) as f:
-                    data = json.load(f)
+                with open(expected_output_file, "rb") as f:
+                    data = from_json(f.read())
                     self.assertEventNumber(data, expected_entries)
 
             if expected_stdout is not None:
@@ -150,8 +151,8 @@ class CmdlineTmpl(BaseTmpl):
 
             if check_func:
                 assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
-                with open(expected_output_file) as f:
-                    data = json.load(f)
+                with open(expected_output_file, "rb") as f:
+                    data = from_json(f.read())
                     check_func(data)
 
         if cleanup:

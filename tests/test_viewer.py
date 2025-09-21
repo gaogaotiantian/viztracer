@@ -3,7 +3,6 @@
 
 
 import gzip
-import json
 import multiprocessing
 import os
 import re
@@ -19,6 +18,7 @@ import urllib.request
 import webbrowser
 
 import viztracer
+from viztracer.json import from_json, to_json_bytes
 from viztracer.viewer import viewer_main
 
 from .cmdline_tmpl import CmdlineTmpl
@@ -171,9 +171,9 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                self.assertEqual(from_json(resp.read()), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(from_json(resp.read()), from_json(json_script))
         finally:
             os.remove(f.name)
 
@@ -188,9 +188,9 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                self.assertEqual(from_json(resp.read()), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(from_json(resp.read()), from_json(json_script))
         finally:
             os.remove(f.name)
 
@@ -206,10 +206,10 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                self.assertEqual(from_json(resp.read()), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(gzip.decompress(resp.read()).decode("utf-8")),
-                                 json.loads(json_script))
+                self.assertEqual(from_json(gzip.decompress(resp.read()).decode("utf-8")),
+                                 from_json(json_script))
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_html(self):
@@ -295,9 +295,9 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                self.assertEqual(from_json(resp.read()), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(from_json(resp.read()), from_json(json_script))
                 v.wait()
         finally:
             os.remove(f.name)
@@ -344,9 +344,9 @@ class TestViewer(CmdlineTmpl):
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(f"{v.url()}/vizviewer_info")
                 self.assertTrue(resp.code == 200)
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
+                self.assertEqual(from_json(resp.read()), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(from_json(resp.read()), from_json(json_script))
                 v.wait()
         finally:
             os.remove(f.name)
@@ -405,8 +405,8 @@ class TestViewer(CmdlineTmpl):
             tmp_dir = tempfile.mkdtemp()
             json_data = {"traceEvents": []}
             for i in range(15):
-                with open(os.path.join(tmp_dir, f"{i}.json"), "w") as f:
-                    json.dump(json_data, f)
+                with open(os.path.join(tmp_dir, f"{i}.json"), "wb") as f:
+                    f.write(to_json_bytes(json_data))
             with Viewer(tmp_dir) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
