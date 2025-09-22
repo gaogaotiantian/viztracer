@@ -87,6 +87,10 @@ print(subprocess.check_output(
     [sys.executable, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]
 ))
 
+# Invalid invocations
+print("No module named" in subprocess.run([sys.executable, "-m", ""], stdout=subprocess.PIPE, text=True).stdout)
+print("usage:" in subprocess.run([sys.executable, "-m"], stdout=subprocess.PIPE, text=True).stdout)
+
 os.remove("check_output_echo.py")
 """
 
