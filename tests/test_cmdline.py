@@ -238,6 +238,12 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template([sys.executable, "-m", "viztracer", "cmdline_test.py"])
         self.template(["viztracer", "cmdline_test.py"])
 
+    def test_invalid_output(self):
+        self.template(["viztracer", "cmdline_test.py", "-o", "result.txt"],
+                      success=False,
+                      expected_output_file=None,
+                      expected_stderr='Only html, json and gz are supported')
+
     def test_cmd_string(self):
         self.template(["viztracer", "-c", "lst=[]; lst.append(1)"], expected_entries=3)
 

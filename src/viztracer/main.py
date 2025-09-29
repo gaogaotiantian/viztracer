@@ -228,6 +228,8 @@ class VizUI:
                 exec_name = command[0]
             self.ofile = unique_file_name(exec_name)
         if options.output_file:
+            if not options.output_file.endswith((".json", ".html", ".gz")):
+                raise rcfile_parser.error("Only html, json and gz are supported")
             self.ofile = options.output_file
         elif options.pid_suffix:
             self.ofile = "result.json"
