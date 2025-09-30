@@ -681,7 +681,7 @@ class VizUI:
                 self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
-                    subprocess.run([sys.executable, "-m", "viztracer.viewer", "--once", os.path.abspath(self.ofile)])
+                    subprocess.run([sys.executable, "-m", "viztracer.viewer", "--once", os.path.abspath(self.ofile)],env={**os.environ, "VIZTRACER_DISABLE_PATCH": "1"})
 
 
 def main():
