@@ -44,7 +44,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
-          CIBW_FREE_THREADED_SUPPORT: 1
+          CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Publish wheels to PyPI Unix
         continue-on-error: true
@@ -83,7 +83,7 @@ jobs:
         env:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
-          CIBW_FREE_THREADED_SUPPORT: 1
+          CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Build wheels
         if: matrix.os != 'macos-latest'
@@ -91,7 +91,7 @@ jobs:
         env:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
-          CIBW_FREE_THREADED_SUPPORT: 1
+          CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Publish wheels to PyPI Unix
         if: matrix.os != 'windows-latest' 
