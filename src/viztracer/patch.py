@@ -83,6 +83,12 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
     @functools.wraps(subprocess.Popen.__init__)
     def subprocess_init(self: subprocess.Popen[Any], args: Union[str, Sequence[Any], Any], **kwargs: Any) -> None:
+        # At runtime: if the child process’s env requests disabling, skip
+        # rewriting the command.
+        child_env = kwargs.get("env") or {}
+        if child_env.get("VIZTRACER_DISABLE_PATCH") == "1":
+            return subprocess_init.__wrapped__(self, args, **kwargs)
+
         new_args = args
         if isinstance(new_args, str):
             new_args = shlex.split(new_args, posix=sys.platform != "win32")
