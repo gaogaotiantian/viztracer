@@ -7,7 +7,6 @@ import errno
 import os
 import re
 import sys
-from typing import Union
 
 # Windows macros
 STILL_ACTIVE = 0x103
@@ -15,7 +14,7 @@ ERROR_ACCESS_DENIED = 0x5
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
-def size_fmt(num: Union[int, float], suffix: str = 'B') -> str:
+def size_fmt(num: int | float, suffix: str = 'B') -> str:
     for unit in ['', 'Ki', 'Mi', 'Gi']:
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"

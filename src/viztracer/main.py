@@ -19,7 +19,7 @@ import time
 import types
 import re
 from types import CodeType
-from typing import Any, Optional, Union
+from typing import Any
 
 from . import __version__
 from .code_monkey import CodeMonkey
@@ -31,12 +31,12 @@ from .viztracer import VizTracer
 # For all the procedures in VizUI, return a tuple as the result
 # The first element bool indicates whether the procedure succeeds
 # The second element is the error message if it fails.
-VizProcedureResult = tuple[bool, Optional[str]]
+VizProcedureResult = tuple[bool, str | None]
 
 
 class VizUI:
     def __init__(self) -> None:
-        self.tracer: Optional[VizTracer] = None
+        self.tracer: VizTracer | None = None
         self.parser: argparse.ArgumentParser = self.create_parser()
         self.verbose: int = 1
         self.ofile: str = "result.json"
@@ -199,7 +199,7 @@ class VizUI:
     def parse(self, argv: list[str]) -> VizProcedureResult:
         # If -- or --run exists, all the commands after --/--run are the commands we need to run
         # We need to filter those out, they might conflict with our arguments
-        idx: Optional[int] = None
+        idx: int | None = None
         if "--" in argv[1:]:
             idx = argv.index("--")
         elif "--run" in argv[1:]:
@@ -295,7 +295,7 @@ class VizUI:
 
         return True, None
 
-    def search_file(self, file_name: str) -> Optional[str]:
+    def search_file(self, file_name: str) -> str | None:
         if os.path.isfile(file_name):
             return file_name
 
@@ -342,7 +342,7 @@ class VizUI:
             self.parser.print_help()
             return True, None
 
-    def run_code(self, code: Union[CodeType, str], global_dict: dict[str, Any]) -> VizProcedureResult:
+    def run_code(self, code: CodeType | str, global_dict: dict[str, Any]) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
 
@@ -522,7 +522,7 @@ class VizUI:
         print(__version__)
         return True, None
 
-    def _check_attach_availability(self) -> tuple[bool, Optional[str]]:
+    def _check_attach_availability(self) -> tuple[bool, str | None]:
         if sys.platform == "win32":
             return False, "VizTracer does not support this feature on Windows"
 

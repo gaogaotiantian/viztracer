@@ -3,7 +3,7 @@
 
 
 import sys
-from typing import TYPE_CHECKING, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Sequence
 
 from . import __version__
 from .util import color_print, compare_version
@@ -51,7 +51,7 @@ class VizPluginBase:
 
 
 class VizPluginManager:
-    def __init__(self, tracer: "VizTracer", plugins: Optional[Sequence[Union[VizPluginBase, str]]]):
+    def __init__(self, tracer: "VizTracer", plugins: Sequence[VizPluginBase | str] | None):
         self._tracer = tracer
         self._plugins = []
         if plugins:
@@ -132,7 +132,7 @@ class VizPluginManager:
             del plugin
         self._plugins = []
 
-    def assert_success(self, plugin: VizPluginBase, cmd: dict, ret: Optional[dict]) -> None:
+    def assert_success(self, plugin: VizPluginBase, cmd: dict, ret: dict | None) -> None:
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 

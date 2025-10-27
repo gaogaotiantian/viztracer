@@ -2,7 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Literal
 
 from .viztracer import VizTracer
 
@@ -59,7 +59,7 @@ class _EventBase:
         self._viztracer_log()
 
     @staticmethod
-    def triggerlog(method: Optional[Callable] = None,
+    def triggerlog(method: Callable | None = None,
                    when: Literal["after", "before", "both"] = "after") -> Callable:
         if when not in ["after", "before", "both"]:
             raise ValueError(f"when has to be one of 'after', 'before' or 'both', not {when}")
