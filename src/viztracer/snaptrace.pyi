@@ -2,14 +2,14 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Literal
 
 
 class Tracer:
     threadtracefunc: Callable
 
-    include_files: Optional[list[str]]
-    exclude_files: Optional[list[str]]
+    include_files: list[str] | None
+    exclude_files: list[str] | None
 
     def __init__(self, tracer_entries: int, /) -> None:
         ...
@@ -17,7 +17,7 @@ class Tracer:
     def start(self) -> None:
         ...
 
-    def stop(self, stop_option: Optional[str]) -> None:
+    def stop(self, stop_option: str | None) -> None:
         ...
 
     def resume(self) -> None:
@@ -53,13 +53,13 @@ class Tracer:
     def add_func_args(self, key: str, value: Any) -> None:
         ...
 
-    def get_func_args(self) -> Optional[dict[str, Any]]:
+    def get_func_args(self) -> dict[str, Any] | None:
         ...
 
     def add_raw(self, raw: dict[str, Any]) -> None:
         ...
 
-    def add_object(self, ph: str, obj_id: str, name: str, args: Optional[dict[str, Any]] = None) -> None:
+    def add_object(self, ph: str, obj_id: str, name: str, args: dict[str, Any] | None = None) -> None:
         ...
 
     def add_counter(self, name: str, args: dict[str, Any]) -> None:
@@ -72,6 +72,6 @@ class Tracer:
         """set current timestamp to synchronization marker"""
         ...
 
-    def get_sync_marker(self) -> Optional[float]:
+    def get_sync_marker(self) -> float | None:
         """get synchronization marker or None if not set"""
         ...

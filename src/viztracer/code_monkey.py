@@ -5,7 +5,7 @@ import ast
 import copy
 import re
 from functools import reduce
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable
 
 from .util import color_print
 
@@ -18,13 +18,13 @@ class AstTransformer(ast.NodeTransformer):
         self.curr_lineno: int = 0
         self.log_func_exec_enable: bool = False
 
-    def visit_Assign(self, node: ast.Assign) -> Union[ast.stmt, list[ast.stmt]]:
+    def visit_Assign(self, node: ast.Assign) -> ast.stmt | list[ast.stmt]:
         return self._visit_generic_assign(node)
 
-    def visit_AugAssign(self, node: ast.AugAssign) -> Union[ast.stmt, list[ast.stmt]]:
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.stmt | list[ast.stmt]:
         return self._visit_generic_assign(node)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> Union[ast.stmt, list[ast.stmt]]:
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.stmt | list[ast.stmt]:
         return self._visit_generic_assign(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
@@ -69,13 +69,13 @@ class AstTransformer(ast.NodeTransformer):
                 node.body = instrumented_nodes + node.body
         return node
 
-    def visit_Raise(self, node: ast.Raise) -> Union[ast.AST, list[ast.AST]]:
+    def visit_Raise(self, node: ast.Raise) -> ast.AST | list[ast.AST]:
         if self.inst_type == "log_exception":
             instrument_node = self.get_instrument_node_by_node("Exception", node.exc)
             return [instrument_node, node]
         return node
 
-    def _visit_generic_assign(self, node: Union[ast.Assign, ast.AugAssign, ast.AnnAssign]) -> list[ast.stmt]:
+    def _visit_generic_assign(self, node: ast.Assign | ast.AugAssign | ast.AnnAssign) -> list[ast.stmt]:
         self.generic_visit(node)
         ret: list[ast.stmt] = [node]
         self.curr_lineno = node.lineno
@@ -174,7 +174,7 @@ class AstTransformer(ast.NodeTransformer):
         else:
             raise ValueError(f"{name} is not supported")
 
-    def get_instrument_node_by_node(self, trigger: str, node: Optional[ast.expr]) -> ast.Expr:
+    def get_instrument_node_by_node(self, trigger: str, node: ast.expr | None) -> ast.Expr:
         var_node: ast.expr
         if node is None:
             name = f"{trigger}"
@@ -235,7 +235,7 @@ class AstTransformer(ast.NodeTransformer):
                 n.ctx = ast.Load()  # type: ignore
         return new_node
 
-    def get_string_of_expr(self, node: Union[ast.expr, ast.slice]) -> str:
+    def get_string_of_expr(self, node: ast.expr | ast.slice) -> str:
         """
         Try to do "unparse" of the node
         """
@@ -330,7 +330,7 @@ class CodeMonkey:
     def __init__(self, file_name: str) -> None:
         self.file_name: str = file_name
         self._compile: Callable = compile
-        self.source_processor: Optional[SourceProcessor] = None
+        self.source_processor: SourceProcessor | None = None
         self.ast_transformers: list[AstTransformer] = []
 
     def add_instrument(self, inst_type: str, inst_args: dict[str, dict]) -> None:
