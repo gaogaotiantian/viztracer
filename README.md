@@ -269,6 +269,15 @@ normal sampling profilers.
 
 </details>
 
+## Sponsors
+
+We thank our sponsors to support VizTracer. If you want to put your logo here,
+check our [sponsor page](https://github.com/sponsors/gaogaotiantian) or contact me directly.
+
+<a href="https://www.lambdatest.com/?utm_source=viztracer&utm_medium=sponsor" target="_blank">
+    <img src="https://www.lambdatest.com/blue-logo.png" style="vertical-align: middle;" width="250" height="45" />
+</a>
+
 ## Documentation
 
 For full documentation, please see [https://viztracer.readthedocs.io/en/stable](https://viztracer.readthedocs.io/en/stable)

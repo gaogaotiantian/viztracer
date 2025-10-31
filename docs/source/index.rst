@@ -44,6 +44,7 @@ VizTracer can display every function executed and the corresponding entry/exit t
    :maxdepth: 1
    :caption: About
    
+   sponsor
    contact
    license
 
