@@ -60,6 +60,12 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
             # -pyopts
             py_args.append(arg)
+            if arg in ("-X", "-W", "--check-hash-based-pycs"):
+                arg_next = next(args_iter, None)
+                if arg_next is not None:
+                    py_args.append(arg_next)
+                else:
+                    return None
 
         if script:
             return [sys.executable, *py_args, "-m", "viztracer", "--quiet", *viz_args, "--", script, *args_iter]
