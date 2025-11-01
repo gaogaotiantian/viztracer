@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.13t', '3.14', '3.14t']
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, macos-15-intel, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -50,7 +50,7 @@ jobs:
         sudo apt-get install gdb
         echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
     - name: Setup lldb
-      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: latest-stable
