@@ -260,6 +260,11 @@ class TestCommandLineBasic(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
         self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
 
+        self.template(["viztracer", "cmdline_test.py", "-o", "result.txt"],
+                      success=False,
+                      expected_output_file=None,
+                      expected_stdout='Only html, json and gz are supported')
+
     def test_unique_outputfile(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             self.template(["viztracer", "--output_dir", tmpdir, "-u", "cmdline_test.py"],
