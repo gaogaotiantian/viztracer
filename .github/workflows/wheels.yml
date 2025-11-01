@@ -62,7 +62,6 @@ jobs:
         if: ${{ inputs.upload_artifacts || false }}
         uses: actions/upload-artifact@v4
         with:
-          # Upload all wheels built in wheelhouse/*
           name: wheels-${{ matrix.os }}-${{ matrix.arch }}
           path: wheelhouse/*.whl
           retention-days: 1
