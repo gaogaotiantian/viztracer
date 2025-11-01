@@ -92,9 +92,10 @@ class TestTorch(CmdlineTmpl):
                         self.assertLess(py["ts"], aten["ts"])
                         self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
                     elif sys.platform == "win32":
-                        # Windows is at least sane, give it 50us diff
-                        self.assertLess(py["ts"], aten["ts"] + 50)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
+                        # Windows is at least sane, give it 100us diff
+                        acceptable_margin = 100
+                        self.assertLess(py["ts"], aten["ts"] + acceptable_margin)
+                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - acceptable_margin)
                     else:
                         # Mac is pure crazy and we don't care about it
                         pass

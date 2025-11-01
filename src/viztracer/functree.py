@@ -4,18 +4,18 @@
 import bisect
 import copy
 import re
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 
 class FuncTreeNode:
     name_regex = r"(.*) \((.*?):([0-9]+)\)"
 
-    def __init__(self, event: Optional[dict[str, Any]] = None) -> None:
-        self.filename: Optional[str] = None
-        self.lineno: Optional[int] = None
-        self.is_python: Optional[bool] = False
-        self.funcname: Optional[str] = None
-        self.parent: Optional[FuncTreeNode] = None
+    def __init__(self, event: dict[str, Any] | None = None) -> None:
+        self.filename: str | None = None
+        self.lineno: int | None = None
+        self.is_python: bool | None = False
+        self.funcname: str | None = None
+        self.parent: FuncTreeNode | None = None
         self.children: list[FuncTreeNode] = []
         self.start: float = - (2 ** 64)
         self.end: float = 2 ** 64

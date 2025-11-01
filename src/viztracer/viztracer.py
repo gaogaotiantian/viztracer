@@ -9,7 +9,7 @@ import os
 import platform
 import signal
 import sys
-from typing import Any, Callable, Literal, Optional, Sequence, Union
+from typing import Any, Callable, Literal, Sequence
 from viztracer.snaptrace import Tracer
 
 from . import __version__
@@ -26,20 +26,20 @@ class VizTracer(Tracer):
                  tracer_entries: int = 1000000,
                  verbose: int = 1,
                  max_stack_depth: int = -1,
-                 include_files: Optional[list[str]] = None,
-                 exclude_files: Optional[list[str]] = None,
+                 include_files: list[str] | None = None,
+                 exclude_files: list[str] | None = None,
                  ignore_c_function: bool = False,
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
                  log_func_args: bool = False,
-                 log_func_repr: Optional[Callable[..., str]] = None,
+                 log_func_repr: Callable[..., str] | None = None,
                  log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
                  log_sparse: bool = False,
                  log_async: bool = False,
                  log_torch: bool = False,
-                 log_audit: Optional[Sequence[str]] = None,
+                 log_audit: Sequence[str] | None = None,
                  pid_suffix: bool = False,
                  file_info: bool = True,
                  register_global: bool = True,
@@ -48,9 +48,9 @@ class VizTracer(Tracer):
                  minimize_memory: bool = False,
                  dump_raw: bool = False,
                  sanitize_function_name: bool = False,
-                 process_name: Optional[str] = None,
+                 process_name: str | None = None,
                  output_file: str = "result.json",
-                 plugins: Optional[Sequence[Union[VizPluginBase, str]]] = None) -> None:
+                 plugins: Sequence[VizPluginBase | str] | None = None) -> None:
         super().__init__(tracer_entries)
 
         # Members of C Tracer object
@@ -112,9 +112,9 @@ class VizTracer(Tracer):
 
         self.cwd = os.getcwd()
 
-        self.viztmp: Optional[str] = None
+        self.viztmp: str | None = None
 
-        self._afterfork_cb: Optional[Callable] = None
+        self._afterfork_cb: Callable | None = None
         self._afterfork_args: tuple = tuple()
         self._afterfork_kwargs: dict = {}
 
@@ -232,7 +232,7 @@ class VizTracer(Tracer):
             self._plugin_manager.event("pre-start")
             super().start()
 
-    def stop(self, stop_option: Optional[str] = None) -> None:
+    def stop(self, stop_option: str | None = None) -> None:
         if self.enable:
             self.enable = False
             if self.log_print:
@@ -272,7 +272,7 @@ class VizTracer(Tracer):
 
         return self.total_entries
 
-    def run(self, command: str, output_file: Optional[str] = None) -> None:
+    def run(self, command: str, output_file: str | None = None) -> None:
         self.start()
         exec(command)
         self.stop()
@@ -280,9 +280,9 @@ class VizTracer(Tracer):
 
     def save(
             self,
-            output_file: Optional[str] = None,
-            file_info: Optional[bool] = None,
-            verbose: Optional[int] = None) -> None:
+            output_file: str | None = None,
+            file_info: bool | None = None,
+            verbose: int | None = None) -> None:
         if file_info is None:
             file_info = self.file_info
         enabled = False
@@ -329,7 +329,7 @@ class VizTracer(Tracer):
         if enabled:
             self.start()
 
-    def fork_save(self, output_file: Optional[str] = None) -> multiprocessing.Process:
+    def fork_save(self, output_file: str | None = None) -> multiprocessing.Process:
         if multiprocessing.get_start_method() != "fork":
             raise RuntimeError("fork_save is only supported in fork start method")
 
@@ -468,5 +468,5 @@ class VizTracer(Tracer):
                 })
 
 
-def get_tracer() -> Optional[VizTracer]:
+def get_tracer() -> VizTracer | None:
     return builtins.__dict__.get("__viz_tracer__", None)

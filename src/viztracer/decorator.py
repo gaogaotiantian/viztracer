@@ -5,7 +5,7 @@ import functools
 import multiprocessing
 import os
 import time
-from typing import Any, Callable, Optional, TypeVar, Union, overload
+from typing import Any, Callable, TypeVar, overload
 
 from .viztracer import VizTracer, get_tracer
 
@@ -15,19 +15,18 @@ R = TypeVar("R")
 
 @overload
 def ignore_function(method: None,
-                    tracer: Optional[VizTracer] = None) -> Callable[[Callable[..., R]], Callable[..., R]]:
+                    tracer: VizTracer | None = None) -> Callable[[Callable[..., R]], Callable[..., R]]:
     pass  # pragma: no cover
 
 
 @overload
 def ignore_function(method: Callable[..., R],
-                    tracer: Optional[VizTracer] = None) -> Callable[..., R]:
+                    tracer: VizTracer | None = None) -> Callable[..., R]:
     pass  # pragma: no cover
 
 
-def ignore_function(method: Optional[Callable[..., R]] = None,
-                    tracer: Optional[VizTracer] = None) -> Union[Callable[..., R],
-                                                                 Callable[[Callable[..., R]], Callable[..., R]]]:
+def ignore_function(method: Callable[..., R] | None = None,
+                    tracer: VizTracer | None = None) -> Callable[..., R] | Callable[[Callable[..., R]], Callable[..., R]]:
 
     def inner(func: Callable[..., R]) -> Callable[..., R]:
 
@@ -65,10 +64,9 @@ def trace_and_save(method: Callable[..., R],
     pass  # pragma: no cover
 
 
-def trace_and_save(method: Optional[Callable[..., R]] = None,
+def trace_and_save(method: Callable[..., R] | None = None,
                    output_dir: str = "./",
-                   **viztracer_kwargs) -> Union[Callable[..., R],
-                                                Callable[[Callable[..., R]], Callable[..., R]]]:
+                   **viztracer_kwargs) -> Callable[..., R] | Callable[[Callable[..., R]], Callable[..., R]]:
 
     def inner(func: Callable[..., R]) -> Callable[..., R]:
 
@@ -158,10 +156,9 @@ def log_sparse(func: Callable[..., R],
     pass  # pragma: no cover
 
 
-def log_sparse(func: Optional[Callable[..., R]] = None,
+def log_sparse(func: Callable[..., R] | None = None,
                stack_depth: int = 0,
-               dynamic_tracer_check: bool = False) -> Union[Callable[..., R],
-                                                            Callable[[Callable[..., R]], Callable[..., R]]]:
+               dynamic_tracer_check: bool = False) -> Callable[..., R] | Callable[[Callable[..., R]], Callable[..., R]]:
     if func is None:
         return functools.partial(_log_sparse_wrapper, stack_depth=stack_depth, dynamic_tracer_check=dynamic_tracer_check)
     return _log_sparse_wrapper(func=func, stack_depth=stack_depth, dynamic_tracer_check=dynamic_tracer_check)

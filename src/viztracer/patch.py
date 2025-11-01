@@ -10,7 +10,7 @@ import shutil
 import sys
 import textwrap
 from multiprocessing import Process
-from typing import Any, Callable, Sequence, Union, no_type_check
+from typing import Any, Callable, Sequence, no_type_check
 
 from .viztracer import VizTracer
 
@@ -82,7 +82,7 @@ def patch_subprocess(viz_args: list[str]) -> None:
         return False
 
     @functools.wraps(subprocess.Popen.__init__)
-    def subprocess_init(self: subprocess.Popen[Any], args: Union[str, Sequence[Any], Any], **kwargs: Any) -> None:
+    def subprocess_init(self: subprocess.Popen[Any], args: str | Sequence[Any] | Any, **kwargs: Any) -> None:
         new_args = args
         if isinstance(new_args, str):
             new_args = shlex.split(new_args, posix=sys.platform != "win32")

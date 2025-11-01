@@ -160,7 +160,7 @@ async def print_sum(x, y):
     await t1
     await t2
 
-loop = asyncio.get_event_loop()
+loop = asyncio.new_event_loop()
 loop.run_until_complete(print_sum(1, 2))
 loop.close()
 """

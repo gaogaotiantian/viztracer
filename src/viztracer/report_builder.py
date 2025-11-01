@@ -12,13 +12,13 @@ import os
 import re
 import tokenize
 from string import Template
-from typing import Any, Optional, Sequence, TextIO, Union
+from typing import Any, Sequence, TextIO
 
 from . import __version__
 from .util import color_print, same_line_print
 
 
-def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
+def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
     # This function will return a json object if data is already json object
     # or a opened file or a file path
     if isinstance(data, dict):
@@ -65,11 +65,11 @@ def get_json(data: Union[dict, str, tuple[str, dict]]) -> dict[str, Any]:
 class ReportBuilder:
     def __init__(
             self,
-            data: Union[Sequence[Union[str, dict, tuple[str, dict]]], dict],
+            data: Sequence[str | dict | tuple[str, dict]] | dict[str, Any],
             verbose: int = 1,
             align: bool = False,
             minimize_memory: bool = False,
-            base_time: Optional[int] = None) -> None:
+            base_time: int | None = None) -> None:
         self.data = data
         self.verbose = verbose
         self.combined_json: dict = {}
@@ -145,7 +145,7 @@ class ReportBuilder:
                 self.combined_json["file_info"]["files"].update(one["file_info"]["files"])
                 self.combined_json["file_info"]["functions"].update(one["file_info"]["functions"])
 
-    def align_events(self, original_events: list[dict[str, Any]], sync_marker: Optional[float] = None) -> list[dict[str, Any]]:
+    def align_events(self, original_events: list[dict[str, Any]], sync_marker: float | None = None) -> list[dict[str, Any]]:
         """
         Apply an offset to all the trace events, making the start timestamp 0
         This is useful when comparing multiple runs of the same script
@@ -164,7 +164,7 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def prepare_json(self, file_info: bool = True, display_time_unit: Optional[str] = None) -> None:
+    def prepare_json(self, file_info: bool = True, display_time_unit: str | None = None) -> None:
         # This will prepare self.combined_json to be ready to output
         self.load_jsons()
         self.combine_json()
@@ -208,7 +208,7 @@ class ReportBuilder:
                 del func_dict[func]
 
     @classmethod
-    def get_source_from_filename(cls, filename: str) -> Optional[str]:
+    def get_source_from_filename(cls, filename: str) -> str | None:
         if filename.startswith("<frozen "):
             m = re.match(r"<frozen (.*)>", filename)
             if not m:
@@ -258,7 +258,7 @@ class ReportBuilder:
                 else:
                     output_file.write(json.dumps(self.combined_json))  # type: ignore
 
-    def save(self, output_file: Union[str, TextIO] = "result.html", file_info: bool = True) -> None:
+    def save(self, output_file: str | TextIO = "result.html", file_info: bool = True) -> None:
         if isinstance(output_file, str):
             file_type = output_file.split(".")[-1]
 
