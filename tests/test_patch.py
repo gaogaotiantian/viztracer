@@ -83,6 +83,7 @@ print(subprocess.check_output([sys.executable, "-", "foo"], input=b"import sys; 
 print(subprocess.check_output([sys.executable], input=b"import sys; print(sys.argv)"))
 print(subprocess.check_output([sys.executable, "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
 print(subprocess.check_output([sys.executable, "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
+print(subprocess.check_output([sys.executable, "-X", "dev", "check_output_echo.py", "-abc"]))
 print(subprocess.check_output(
     [sys.executable, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]
 ))
@@ -90,6 +91,7 @@ print(subprocess.check_output(
 # Invalid invocations
 print("No module named" in subprocess.run([sys.executable, "-m", ""], stdout=subprocess.PIPE, text=True).stdout)
 print("usage:" in subprocess.run([sys.executable, "-m"], stdout=subprocess.PIPE, text=True).stdout)
+print("Argument expected:" in subprocess.run([sys.executable, "-W"], stdout=subprocess.PIPE, text=True).stdout)
 
 os.remove("check_output_echo.py")
 """
