@@ -526,8 +526,9 @@ tracer_pyreturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
 
             if (!PyCode_Check(call_code) || call_code != code) {
                 self->collecting = 0;
-                PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
-                return -1;
+                PyErr_WarnEx(PyExc_RuntimeWarning,
+                    "VizTracer: Unexpected function return, tracing is stopped", 1);
+                return 0;
             }
 
             struct EventNode* node = get_next_node(self);
@@ -615,8 +616,9 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
 
             if (!PyCFunction_Check(cfunc)) {
                 self->collecting = 0;
-                PyErr_SetString(PyExc_RuntimeError, "VizTracer: Unexpected type. Might be an event mismatch.");
-                return -1;
+                PyErr_WarnEx(PyExc_RuntimeWarning,
+                    "VizTracer: Unexpected function return, tracing is stopped", 1);
+                return 0;
             }
 
             struct EventNode* node = get_next_node(self);
