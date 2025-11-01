@@ -5,120 +5,19 @@ on:
     types: [created]
 
 jobs:
-  deploy-wheels-linux:
-    name: Deploy wheels on Linux for ${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        manylinux-image: [manylinux2014]
-        arch: [auto, aarch64]
+  build-wheels:
+    uses: ./.github/workflows/wheels.yml
+    with:
+      upload_artifacts: true
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        if: ${{ matrix.arch == 'aarch64' }}
-        uses: docker/setup-qemu-action@v3
-        with:
-          image: tonistiigi/binfmt:master
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine flake8 setuptools wheel
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel -U
-
-      - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
-          CIBW_SKIP: '*musllinux*'
-          CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
-          CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
-          CIBW_ENABLE: 'cpython-freethreading'
-
-      - name: Publish wheels to PyPI Unix
-        continue-on-error: true
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload wheelhouse/*.whl
-
-  deploy-wheels-macos-windows:
-    name: Deploy wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, macos-13, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine flake8 setuptools wheel
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel -U
-
-      - name: Build wheels
-        if: matrix.os == 'macos-latest'
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
-          CIBW_ENABLE: 'cpython-freethreading'
-
-      - name: Build wheels
-        if: matrix.os != 'macos-latest'
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
-          CIBW_ENABLE: 'cpython-freethreading'
-
-      - name: Publish wheels to PyPI Unix
-        if: matrix.os != 'windows-latest' 
-        continue-on-error: true
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload --skip-existing wheelhouse/*.whl
-
-      - name: Publish wheels to PyPI Windows
-        if: matrix.os == 'windows-latest' 
-        continue-on-error: true
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload --skip-existing (Get-ChildItem wheelhouse/*.whl)
-
-  deploy-tar:
+  deploy-wheels:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.13
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -126,10 +25,15 @@ jobs:
       - name: Build source tar
         run: |
           python -m build
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: wheelhouse
+          merge-multiple: true
       - name: Publish wheels to PyPI
         continue-on-error: true
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload dist/*tar*
+          twine upload --skip-existing dist/*tar* wheelhouse/*.whl
