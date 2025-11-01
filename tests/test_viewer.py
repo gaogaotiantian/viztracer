@@ -294,10 +294,10 @@ class TestViewer(CmdlineTmpl):
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
-                resp = urllib.request.urlopen(f"{v.url()}/file_info")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                resp = urllib.request.urlopen(f"{v.url()}/file_info")
+                self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 v.wait()
         finally:
             os.remove(f.name)

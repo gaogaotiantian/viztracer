@@ -88,6 +88,8 @@ class PerfettoHandler(HttpHandler):
             self.end_headers()
             self.wfile.write(json.dumps(self.server_thread.file_info).encode("utf-8"))
             self.wfile.flush()
+            # Since v1.1, file_info is the last request from the frontend
+            self.server.trace_served = True
         elif self.path.endswith("localtrace"):
             # self.directory is used after 3.8
             # os.getcwd() is used on 3.6
@@ -95,7 +97,6 @@ class PerfettoHandler(HttpHandler):
             with chdir_temp(self.directory):
                 filename = os.path.basename(self.server_thread.path)
                 self.path = f"/{filename}"
-                self.server.trace_served = True
                 return super().do_GET()
         else:
             self.directory = os.path.join(os.path.dirname(__file__), "web_dist")
