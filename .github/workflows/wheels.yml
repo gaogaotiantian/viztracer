@@ -12,6 +12,12 @@ on:
       - "src/viztracer/**"
       - "setup.py"
       - ".github/workflows/wheels.yml"
+  workflow_call:
+    inputs:
+      upload_artifacts:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-wheels-linux:
@@ -52,6 +58,14 @@ jobs:
           CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux-image }}
           CIBW_ENABLE: 'cpython-freethreading'
 
+      - name: Upload wheels
+        if: ${{ inputs.upload_artifacts || false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse/*.whl
+          retention-days: 1
+
   build-wheels-macos-windows:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -88,3 +102,12 @@ jobs:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
           CIBW_ENABLE: 'cpython-freethreading'
+
+      - name: Upload wheels
+        if: ${{ inputs.upload_artifacts || false }}
+        uses: actions/upload-artifact@v4
+        with:
+          # Upload all wheels built in wheelhouse/*
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          retention-days: 1
