@@ -53,6 +53,10 @@ def patch_subprocess(viz_args: list[str]) -> None:
                     # -m mod | -mmod
                     cm_arg = cm_arg or next(args_iter, None)
                     if cm_arg is not None:
+                        if cm_arg.split('.')[0] == "viztracer":
+                            # Avoid tracing viztracer subprocess
+                            # This is mainly used to avoid tracing --open
+                            return None
                         mode.append(cm_arg)
                     else:
                         mode = None

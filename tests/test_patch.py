@@ -84,6 +84,7 @@ print(subprocess.check_output([sys.executable], input=b"import sys; print(sys.ar
 print(subprocess.check_output([sys.executable, "-im", "check_output_echo", "asdf"], input=b"import sys; print(sys.argv)"))
 print(subprocess.check_output([sys.executable, "check_output_echo.py", "test.py", "--output_dir", "test", "--other", "abc"]))
 print(subprocess.check_output([sys.executable, "-X", "dev", "check_output_echo.py", "-abc"]))
+print(subprocess.check_output([sys.executable, "-m", "viztracer", "check_output_echo.py"]))
 print(subprocess.check_output(
     [sys.executable, "-m", "check_output_echo", "test.py", "--output_dir", "test", "--other", "abc"]
 ))
