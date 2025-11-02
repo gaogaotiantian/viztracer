@@ -12,3 +12,6 @@ may conflict with code that check for top module or have other structural requir
 For example, ``unittest.main()`` won't work if you use VizTracer from command line. 
 There are ways to avoid it. You can use inline VizTracer, which will always work.
 Or you can specify modules to ``unittest.main()``, which is not a general solution but could work without too much code changes.
+
+If your code uses ``os._exit`` then VizTracer cannot save data before exiting. Consider using ``sys.exit`` instead.
+See `this issue <https://github.com/gaogaotiantian/viztracer/issues/340>`_ for details.
