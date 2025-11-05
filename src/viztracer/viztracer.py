@@ -7,6 +7,7 @@ import io
 import multiprocessing
 import os
 import platform
+import socket
 import signal
 import sys
 from typing import Any, Callable, Literal, Sequence
@@ -14,7 +15,8 @@ from viztracer.snaptrace import Tracer
 
 from . import __version__
 from .report_builder import ReportBuilder
-from .util import frame_stack_has_func
+from .report_server import ReportServer
+from .util import frame_stack_has_func, unique_path
 from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
 
@@ -36,6 +38,7 @@ class VizTracer(Tracer):
                  log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
+                 log_multiprocess: bool = True,
                  log_sparse: bool = False,
                  log_async: bool = False,
                  log_torch: bool = False,
@@ -43,6 +46,7 @@ class VizTracer(Tracer):
                  pid_suffix: bool = False,
                  file_info: bool = True,
                  register_global: bool = True,
+                 report_endpoint: str | None = None,
                  trace_self: bool = False,
                  min_duration: float = 0,
                  minimize_memory: bool = False,
@@ -88,15 +92,23 @@ class VizTracer(Tracer):
         # Members of VizTracer object
         self.pid_suffix = pid_suffix
         self.file_info = file_info
-        self.output_file = output_file
         self.log_sparse = log_sparse
         self.log_audit = log_audit
         self.log_torch = log_torch
+        self.log_multiprocess = log_multiprocess
         self.torch_profile = None
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
+        self.report_endpoint = report_endpoint
         self.system_print = builtins.print
+
+        if self.pid_suffix:
+            output_file_parts = output_file.split(".")
+            output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
+            output_file = ".".join(output_file_parts)
+
+        self.output_file = output_file
 
         # Members for the collected data
         self.enable = False
@@ -118,12 +130,23 @@ class VizTracer(Tracer):
         self._afterfork_args: tuple = tuple()
         self._afterfork_kwargs: dict = {}
 
+        self._report_server: ReportServer | None = None
+        self._report_directory: str | None = None
+        self._report_socket: socket.socket | None = None
+
         # load in plugins
         self._plugin_manager = VizPluginManager(self, plugins)
 
         if log_torch:
             # To generate an import error if torch is not installed
             import torch  # type: ignore  # noqa: F401
+
+    def __del__(self):
+        if self._report_socket is not None:
+            self._report_socket.close()
+
+        if self._report_server is not None:
+            del self._report_server
 
     @property
     def pid_suffix(self) -> bool:
@@ -229,6 +252,23 @@ class VizTracer(Tracer):
                 self.overload_print()
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
+
+            if self.log_multiprocess and self.report_endpoint is None and self._report_server is None:
+                self._report_server = ReportServer(
+                    output_file=self.output_file,
+                    minimize_memory=self.minimize_memory,
+                    verbose=self.verbose
+                )
+                self._report_server.start()
+                self.report_endpoint = self._report_server.endpoint
+                # If we hold the report server, we need to dump data to a temp file
+
+            if self.report_endpoint is not None and self._report_socket is None:
+                self._report_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                addr, port, directory = self.report_endpoint.split(":")[:2]
+                self._report_socket.connect((addr, int(port)))
+                self.output_file = unique_path(directory)
+
             self._plugin_manager.event("pre-start")
             super().start()
 
@@ -288,12 +328,15 @@ class VizTracer(Tracer):
         enabled = False
         if output_file is None:
             output_file = self.output_file
+            final_output_file = None
+        else:
+            final_output_file = output_file
+
         if verbose is None:
             verbose = self.verbose
-        if self.pid_suffix:
-            output_file_parts = output_file.split(".")
-            output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
-            output_file = ".".join(output_file_parts)
+
+        if self.report_endpoint is not None:
+            verbose = 0
 
         if isinstance(output_file, str):
             output_file = os.path.abspath(output_file)
@@ -303,6 +346,11 @@ class VizTracer(Tracer):
         if self.enable:
             enabled = True
             self.stop()
+
+        if self._report_server is not None:
+            # We need to always save the temp file in json format
+            assert self._report_directory is not None
+            output_file = unique_path(self._report_directory, suffix=".json")
 
         # If there are plugins, we can't do dump raw because it will skip the data
         # manipulation phase
@@ -325,6 +373,18 @@ class VizTracer(Tracer):
             else:
                 rb = ReportBuilder(self.data, verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                 rb.save(output_file=output_file, file_info=file_info)
+
+        if self._report_socket is not None:
+            try:
+                self._report_socket.sendall(f"{output_file}\n".encode("utf-8"))
+                self._report_socket.close()
+                self._report_socket = None
+            except Exception:
+                pass
+
+        if self._report_server is not None:
+            self._report_server.collect()
+            self._report_server.save(final_output_file)
 
         if enabled:
             self.start()
