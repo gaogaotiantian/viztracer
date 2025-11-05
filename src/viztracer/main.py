@@ -23,7 +23,6 @@ from typing import Any
 
 from . import __version__
 from .code_monkey import CodeMonkey
-from .patch import install_all_hooks
 from .report_builder import ReportBuilder
 from .util import color_print, frame_stack_has_func, pid_exists, same_line_print, time_str_to_us, unique_file_name
 from .viztracer import VizTracer
@@ -118,6 +117,8 @@ class VizUI:
         parser.add_argument("--log_subprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--subprocess_child", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
+        parser.add_argument("--report_endpoint", default=None,
                             help=argparse.SUPPRESS)
         parser.add_argument("--dump_raw", action="store_true", default=False,
                             help=argparse.SUPPRESS)
@@ -239,14 +240,7 @@ class VizUI:
                 os.mkdir(options.output_dir)
             self.ofile = os.path.join(options.output_dir, self.ofile)
 
-        if options.subprocess_child:
-            # If it's a subprocess, we need to store the FEE data to the
-            # directory from the parent process.
-            # It's not practical to cover this line as it requires coverage
-            # instrumentation on subprocess.
-            output_file = self.ofile  # pragma: no cover
-        else:
-            output_file = os.path.join(self.multiprocess_output_dir, "result.json")
+        output_file = os.path.join(self.multiprocess_output_dir, "result.json")
 
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
@@ -286,6 +280,7 @@ class VizUI:
             "pid_suffix": True,
             "file_info": False,
             "register_global": True,
+            "report_endpoint": options.report_endpoint,
             "plugins": options.plugins,
             "trace_self": options.trace_self,
             "min_duration": min_duration,
@@ -357,10 +352,6 @@ class VizUI:
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
-        install_all_hooks(tracer,
-                          self.args,
-                          patch_multiprocess=not options.ignore_multiprocess)
-
         if options.patch_only:
             exec(code, global_dict)
             return True, None
@@ -375,7 +366,6 @@ class VizUI:
         signal.signal(signal.SIGTERM, term_handler)
 
         if options.subprocess_child:
-            tracer.label_file_to_write()
             multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
         else:
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)

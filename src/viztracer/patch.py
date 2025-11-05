@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import os
 import re
 import shutil
@@ -129,6 +130,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
+        tracer.report_server = None
         tracer.register_exit()
 
         tracer.clear()
@@ -182,7 +184,6 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
                     args = (
                         args[:idx]
                         + ["-m", "viztracer", "--patch_only", *viz_args]
-                        + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
                         + args[idx:]
                     )
                 elif "resource_tracker" not in cmd:
@@ -193,7 +194,6 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
                     args = (
                         args[:idx]
                         + ["-m", "viztracer", *viz_args]
-                        + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file]
                         + args[idx:]
                     )
             ret = _spawnv_passfds(path, args, passfds)
@@ -223,7 +223,7 @@ class SpawnProcess:
         import viztracer
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
-        install_all_hooks(tracer, self._cmdline_args)
+        install_all_hooks(tracer)
         tracer.register_exit()
         if not self._viztracer_kwargs.get("log_sparse"):
             tracer.start()
@@ -269,24 +269,39 @@ def filter_args(args: list[str]) -> list[str]:
     return new_args
 
 
-def install_all_hooks(
-        tracer: VizTracer,
-        args: list[str],
-        patch_multiprocess: bool = True) -> None:
+def get_args_from_tracer(tracer: VizTracer) -> list[str]:
+    args = []
+    signature = inspect.signature(VizTracer)
+    for name, param in signature.parameters.items():
+        if (attr := getattr(tracer, name)) != param.default:
+            if isinstance(attr, bool):
+                if attr:
+                    args.append(f"--{name}")
+            elif isinstance(attr, (int, str)):
+                args.append(f"--{name}")
+                args.append(str(attr))
+            elif isinstance(attr, list):
+                args.append(f"--{name}")
+                for item in attr:
+                    args.append(str(item))
+    return args
 
-    args = filter_args(args)
+
+def install_all_hooks(tracer: VizTracer) -> None:
+
+    args = get_args_from_tracer(tracer)
 
     # multiprocess hook
-    if patch_multiprocess:
+    if not tracer.ignore_multiprocess:
         patch_multiprocessing(tracer, args)
-        patch_subprocess(args + ["--subprocess_child", "--dump_raw", "-o", tracer.output_file])
+        patch_subprocess(args)
 
     # If we want to hook fork correctly with file waiter, we need to
     # use os.register_at_fork to write the file, and make sure
     # os.exec won't clear viztracer so that the file lives forever.
     # This is basically equivalent to py3.8 + Linux
     if hasattr(sys, "addaudithook"):
-        if hasattr(os, "register_at_fork") and patch_multiprocess:
+        if hasattr(os, "register_at_fork") and not tracer.ignore_multiprocess:
             def audit_hook(event, _):  # pragma: no cover
                 if event == "os.exec":
                     tracer.exit_routine()

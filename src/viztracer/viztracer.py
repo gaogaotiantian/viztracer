@@ -14,6 +14,7 @@ from typing import Any, Callable, Literal, Sequence
 from viztracer.snaptrace import Tracer
 
 from . import __version__
+from .patch import install_all_hooks
 from .report_builder import ReportBuilder
 from .report_server import ReportServer
 from .util import frame_stack_has_func, unique_path
@@ -38,11 +39,11 @@ class VizTracer(Tracer):
                  log_func_with_objprint: bool = False,
                  log_print: bool = False,
                  log_gc: bool = False,
-                 log_multiprocess: bool = True,
                  log_sparse: bool = False,
                  log_async: bool = False,
                  log_torch: bool = False,
                  log_audit: Sequence[str] | None = None,
+                 ignore_multiprocess: bool = False,
                  pid_suffix: bool = False,
                  file_info: bool = True,
                  register_global: bool = True,
@@ -82,6 +83,7 @@ class VizTracer(Tracer):
         else:
             self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
 
+        self.log_func_with_objprint = log_func_with_objprint
         if log_func_with_objprint:
             import objprint  # type: ignore
             if log_func_repr:
@@ -95,7 +97,7 @@ class VizTracer(Tracer):
         self.log_sparse = log_sparse
         self.log_audit = log_audit
         self.log_torch = log_torch
-        self.log_multiprocess = log_multiprocess
+        self.ignore_multiprocess = ignore_multiprocess
         self.torch_profile = None
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
@@ -130,11 +132,12 @@ class VizTracer(Tracer):
         self._afterfork_args: tuple = tuple()
         self._afterfork_kwargs: dict = {}
 
-        self._report_server: ReportServer | None = None
+        self.report_server: ReportServer | None = None
         self._report_directory: str | None = None
         self._report_socket: socket.socket | None = None
 
         # load in plugins
+        self.plugins = plugins
         self._plugin_manager = VizPluginManager(self, plugins)
 
         if log_torch:
@@ -145,8 +148,8 @@ class VizTracer(Tracer):
         if self._report_socket is not None:
             self._report_socket.close()
 
-        if self._report_server is not None:
-            del self._report_server
+        if self.report_server is not None:
+            del self.report_server
 
     @property
     def pid_suffix(self) -> bool:
@@ -253,15 +256,16 @@ class VizTracer(Tracer):
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
 
-            if self.log_multiprocess and self.report_endpoint is None and self._report_server is None:
-                self._report_server = ReportServer(
-                    output_file=self.output_file,
-                    minimize_memory=self.minimize_memory,
-                    verbose=self.verbose
-                )
-                self._report_server.start()
-                self.report_endpoint = self._report_server.endpoint
-                # If we hold the report server, we need to dump data to a temp file
+            if not self.ignore_multiprocess:
+                install_all_hooks(self)
+                if self.report_endpoint is None and self.report_server is None:
+                    self.report_server = ReportServer(
+                        output_file=self.output_file,
+                        minimize_memory=self.minimize_memory,
+                        verbose=self.verbose
+                    )
+                    self.report_server.start()
+                    self.report_endpoint = self.report_server.endpoint
 
             if self.report_endpoint is not None and self._report_socket is None:
                 self._report_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -347,7 +351,7 @@ class VizTracer(Tracer):
             enabled = True
             self.stop()
 
-        if self._report_server is not None:
+        if self.report_server is not None:
             # We need to always save the temp file in json format
             assert self._report_directory is not None
             output_file = unique_path(self._report_directory, suffix=".json")
@@ -382,9 +386,9 @@ class VizTracer(Tracer):
             except Exception:
                 pass
 
-        if self._report_server is not None:
-            self._report_server.collect()
-            self._report_server.save(final_output_file)
+        if self.report_server is not None:
+            self.report_server.collect()
+            self.report_server.save(final_output_file)
 
         if enabled:
             self.start()
@@ -430,8 +434,6 @@ class VizTracer(Tracer):
             if not frame_stack_has_func(frame, (self.exit_routine,
                                                 multiprocessing.util._exit_function)):
                 sys.exit(0)
-
-        self.label_file_to_write()
 
         signal.signal(signal.SIGTERM, term_handler)
 
