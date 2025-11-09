@@ -130,7 +130,15 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
-        tracer.report_server = None
+        if tracer.report_server is not None:
+            # Discard the report server in the forked child process
+            # to avoid deleting the temporary report directory or conflicting socket
+            tracer.report_server.discard()
+            tracer.report_server = None
+        if tracer.report_socket is not None:
+            # Reconnect to report server in the forked child process
+            # otherwise it conflicts with the parent's connection
+            tracer.connect_report_server()
         tracer.register_exit()
 
         tracer.clear()
@@ -223,7 +231,6 @@ class SpawnProcess:
         import viztracer
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
-        install_all_hooks(tracer)
         tracer.register_exit()
         if not self._viztracer_kwargs.get("log_sparse"):
             tracer.start()
@@ -274,13 +281,20 @@ def get_args_from_tracer(tracer: VizTracer) -> list[str]:
     signature = inspect.signature(VizTracer)
     for name, param in signature.parameters.items():
         if (attr := getattr(tracer, name)) != param.default:
+            if name == "verbose" and attr == 0:
+                args.append("--quiet")
+                continue
+
+            if name in ("process_name",):
+                continue
+
             if isinstance(attr, bool):
                 if attr:
                     args.append(f"--{name}")
             elif isinstance(attr, (int, str)):
                 args.append(f"--{name}")
                 args.append(str(attr))
-            elif isinstance(attr, list):
+            elif isinstance(attr, list) and attr and all(isinstance(i, (int, str)) for i in attr):
                 args.append(f"--{name}")
                 for item in attr:
                     args.append(str(item))
@@ -308,19 +322,9 @@ def install_all_hooks(tracer: VizTracer) -> None:
             sys.addaudithook(audit_hook)  # type: ignore
 
             def callback():
-                if "--patch_only" in args:
-                    # We use --patch_only for forkserver process so we need to
-                    # turn on tracer in the forked child process and register
-                    # for exit routine
-                    tracer.register_exit()
-                    tracer.start()
-                else:
-                    # otherwise we need to add a new exit_routine callback because the one
-                    # from parent won't be executed as it has a different pid.
-                    # Also make sure to label the file because it's a new process
-                    import multiprocessing.util
-                    multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
-                    tracer.label_file_to_write()
+                tracer.register_exit()
+                tracer.start()
+
             os.register_at_fork(after_in_child=callback)  # type: ignore
 
         if tracer.log_audit is not None:

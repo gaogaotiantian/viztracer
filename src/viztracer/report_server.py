@@ -11,7 +11,10 @@ from .report_builder import ReportBuilder
 
 
 class ReportServer:
-    def __init__(self, output_file: str, minimize_memory: bool = False, verbose: int = 1) -> None:
+    def __init__(self,
+                 output_file: str,
+                 minimize_memory: bool = False,
+                 verbose: int = 1) -> None:
         self._host = None
         self._port = None
         self._socket: socket.socket | None = None
@@ -22,6 +25,9 @@ class ReportServer:
         self.report_directory: str | None = None
 
     def __del__(self) -> None:
+        self.clear()
+
+    def clear(self) -> None:
         if self._socket is not None:
             self._socket.close()
         if self.report_directory and os.path.exists(self.report_directory):
@@ -29,6 +35,8 @@ class ReportServer:
                 shutil.rmtree(self.report_directory)
             except OSError:
                 pass
+        self.report_directory = None
+        self.paths = []
 
     def start(self) -> None:
         if self.report_directory is None:
@@ -60,6 +68,15 @@ class ReportServer:
             except BlockingIOError:
                 break
 
+    def __enter__(self) -> "ReportServer":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.collect()
+        self.save()
+        self.clear()
+
     def _recv_info(self, conn: socket.socket) -> None:
         raw_data = b""
         conn.setblocking(True)
@@ -80,5 +97,13 @@ class ReportServer:
             output_file = self.output_file
 
         builder.save(output_file=output_file)
-        print("Saved report to {}".format(output_file))
+        self.paths = []
+
+    def discard(self) -> None:
+        # Discard this server, without removing the temporary files
+        # This is useful for forked child processes
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
+        self.report_directory = None
         self.paths = []
