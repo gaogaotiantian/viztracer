@@ -213,6 +213,7 @@ class VizTracer(Tracer):
             "log_audit": self.log_audit,
             "log_torch": self.log_torch,
             "pid_suffix": self.pid_suffix,
+            "ignore_multiprocess": self.ignore_multiprocess,
             "report_endpoint": self.report_endpoint,
             "min_duration": self.min_duration,
             "dump_raw": self.dump_raw,
