@@ -3,6 +3,7 @@
 
 import builtins
 import gc
+import inspect
 import io
 import multiprocessing
 import os
@@ -14,6 +15,7 @@ from typing import Any, Callable, Literal, Sequence
 from viztracer.snaptrace import Tracer
 
 from . import __version__
+from .patch import install_all_hooks, uninstall_all_hooks
 from .report_builder import ReportBuilder
 from .report_server import ReportServer
 from .util import frame_stack_has_func, unique_path
@@ -42,7 +44,7 @@ class VizTracer(Tracer):
                  log_async: bool = False,
                  log_torch: bool = False,
                  log_audit: Sequence[str] | None = None,
-                 ignore_multiprocess: bool = False,
+                 ignore_multiprocess: bool = True,
                  pid_suffix: bool = False,
                  file_info: bool = True,
                  register_global: bool = True,
@@ -82,14 +84,6 @@ class VizTracer(Tracer):
         else:
             self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
 
-        self.log_func_with_objprint = log_func_with_objprint
-        if log_func_with_objprint:
-            import objprint  # type: ignore
-            if log_func_repr:
-                raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
-            log_func_repr = objprint.objstr
-        self.log_func_repr = log_func_repr
-
         # Members of VizTracer object
         self.pid_suffix = pid_suffix
         self.file_info = file_info
@@ -125,7 +119,13 @@ class VizTracer(Tracer):
 
         self.cwd = os.getcwd()
 
-        self.viztmp: str | None = None
+        self.log_func_with_objprint = log_func_with_objprint
+        if log_func_with_objprint:
+            import objprint  # type: ignore
+            if log_func_repr:
+                raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
+            log_func_repr = objprint.objstr
+        self.log_func_repr = log_func_repr
 
         self._afterfork_cb: Callable | None = None
         self._afterfork_args: tuple = tuple()
@@ -152,11 +152,35 @@ class VizTracer(Tracer):
             import torch  # type: ignore  # noqa: F401
 
     def __del__(self):
-        if self.report_socket is not None:
-            self.report_socket.close()
+        if (report_socket := getattr(self, "report_socket", None)) is not None:
+            report_socket.close()
 
-        if self.report_server is not None:
-            del self.report_server
+        if not self.ignore_multiprocess:
+            uninstall_all_hooks()
+
+    def get_args(self) -> list[str]:
+        args = []
+        signature = inspect.signature(VizTracer)
+        for name, param in signature.parameters.items():
+            if (attr := getattr(self, name)) != param.default:
+                if name == "verbose" and attr == 0:
+                    args.append("--quiet")
+                    continue
+
+                if name in ("process_name",):
+                    continue
+
+                if isinstance(attr, bool):
+                    if attr:
+                        args.append(f"--{name}")
+                elif isinstance(attr, (int, str)):
+                    args.append(f"--{name}")
+                    args.append(str(attr))
+                elif isinstance(attr, list) and attr and all(isinstance(i, (int, str)) for i in attr):
+                    args.append(f"--{name}")
+                    for item in attr:
+                        args.append(str(item))
+        return args
 
     @property
     def pid_suffix(self) -> bool:
@@ -196,18 +220,17 @@ class VizTracer(Tracer):
         }
 
     def __enter__(self) -> "VizTracer":
-        if not self.log_sparse:
-            self.start()
+        self.start()
         return self
 
     def __exit__(self, type, value, trace) -> None:
-        if not self.log_sparse:
-            self.stop()
+        self.stop()
         self.save()
         self.terminate()
+        builtins.__dict__.pop("__viz_tracer__", None)
 
     @property
-    def _report_directory(self) -> str | None:
+    def report_directory(self) -> str | None:
         if self.report_endpoint is not None:
             return self.report_endpoint.split(":")[2]
         return None
@@ -268,7 +291,6 @@ class VizTracer(Tracer):
 
     def start(self) -> None:
         if not self.enable:
-            self.enable = True
             self.parsed = False
             if self.log_torch:
                 from torch.profiler import profile, supported_activities  # type: ignore
@@ -285,21 +307,25 @@ class VizTracer(Tracer):
                 self.connect_report_server()
 
             if not self.ignore_multiprocess:
-                from .patch import install_all_hooks
                 install_all_hooks(self)
 
             self._plugin_manager.event("pre-start")
-            super().start()
+            if not self.log_sparse:
+                self.enable = True
+                super().start()
 
     def stop(self, stop_option: str | None = None) -> None:
         if self.enable:
-            self.enable = False
             if self.log_print:
                 self.restore_print()
-            super().stop(stop_option)
+            if not self.log_sparse:
+                self.enable = False
+                super().stop(stop_option)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
             self._plugin_manager.event("post-stop")
+            if not self.ignore_multiprocess:
+                uninstall_all_hooks()
 
     def parse(self) -> int:
         # parse() is also performance sensitive. We could have a lot of entries
@@ -352,8 +378,8 @@ class VizTracer(Tracer):
             verbose = self.verbose
 
         if self.report_endpoint is not None:
-            assert self._report_directory is not None
-            tmp_output_file = unique_path(self._report_directory)
+            assert self.report_directory is not None
+            tmp_output_file = unique_path(self.report_directory)
         else:
             tmp_output_file = output_file
 
@@ -447,11 +473,7 @@ class VizTracer(Tracer):
         if not self._exiting:
             self._exiting = True
             os.chdir(self.cwd)
-            try:
-                self.save()
-            finally:
-                if self.viztmp is not None and os.path.exists(self.viztmp):
-                    os.remove(self.viztmp)
+            self.save()
             self.terminate()
 
     def enable_thread_tracing(self) -> None:

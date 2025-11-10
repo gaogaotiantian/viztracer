@@ -4,16 +4,22 @@
 from __future__ import annotations
 
 import functools
-import inspect
+import multiprocessing.spawn
+import multiprocessing.util
 import os
+import subprocess
 import re
 import shutil
 import sys
 import textwrap
-from multiprocessing import Process
-from typing import Any, Callable, Sequence, no_type_check
+import weakref
 
-from .viztracer import VizTracer
+from multiprocessing import Process
+from typing import Any, Callable, Sequence, TYPE_CHECKING, no_type_check
+
+
+if TYPE_CHECKING:
+    from .viztracer import VizTracer
 
 
 def patch_subprocess(viz_args: list[str]) -> None:
@@ -147,8 +153,6 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
 
-    import multiprocessing.spawn
-    import multiprocessing.util
     from multiprocessing.util import register_after_fork  # type: ignore
 
     register_after_fork(tracer, func_after_fork)
@@ -174,6 +178,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
                 opts = multiprocessing.util._args_from_interpreter_flags()  # type: ignore
                 return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
 
+        multiprocessing.spawn.get_command_line_orig = multiprocessing.spawn.get_command_line
         multiprocessing.spawn.get_command_line = get_command_line
     else:
         # POSIX
@@ -207,6 +212,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
             ret = _spawnv_passfds(path, args, passfds)
             return ret
 
+        multiprocessing.util.spawnv_passfds_orig = multiprocessing.util.spawnv_passfds  # type: ignore
         multiprocessing.util.spawnv_passfds = spawnv_passfds  # type: ignore
 
 
@@ -238,7 +244,6 @@ class SpawnProcess:
 
 
 def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[str]):
-    import multiprocessing.spawn
     from multiprocessing import process, reduction  # type: ignore
     from multiprocessing.spawn import prepare
 
@@ -257,6 +262,7 @@ def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[s
                 del process.current_process()._inheriting
         return self._bootstrap(parent_sentinel)
 
+    multiprocessing.spawn._main_orig = multiprocessing.spawn._main  # type: ignore
     multiprocessing.spawn._main = _main  # type: ignore
 
 
@@ -276,34 +282,9 @@ def filter_args(args: list[str]) -> list[str]:
     return new_args
 
 
-def get_args_from_tracer(tracer: VizTracer) -> list[str]:
-    args = []
-    signature = inspect.signature(VizTracer)
-    for name, param in signature.parameters.items():
-        if (attr := getattr(tracer, name)) != param.default:
-            if name == "verbose" and attr == 0:
-                args.append("--quiet")
-                continue
-
-            if name in ("process_name",):
-                continue
-
-            if isinstance(attr, bool):
-                if attr:
-                    args.append(f"--{name}")
-            elif isinstance(attr, (int, str)):
-                args.append(f"--{name}")
-                args.append(str(attr))
-            elif isinstance(attr, list) and attr and all(isinstance(i, (int, str)) for i in attr):
-                args.append(f"--{name}")
-                for item in attr:
-                    args.append(str(item))
-    return args
-
-
 def install_all_hooks(tracer: VizTracer) -> None:
 
-    args = get_args_from_tracer(tracer)
+    args = tracer.get_args()
 
     # multiprocess hook
     if not tracer.ignore_multiprocess:
@@ -316,21 +297,54 @@ def install_all_hooks(tracer: VizTracer) -> None:
     # This is basically equivalent to py3.8 + Linux
     if hasattr(sys, "addaudithook"):
         if hasattr(os, "register_at_fork") and not tracer.ignore_multiprocess:
+            tracer_ref = weakref.ref(tracer)
+
             def audit_hook(event, _):  # pragma: no cover
                 if event == "os.exec":
-                    tracer.exit_routine()
+                    if tracer := tracer_ref():
+                        tracer.exit_routine()
             sys.addaudithook(audit_hook)  # type: ignore
 
             def callback():
-                tracer.register_exit()
-                tracer.start()
+                if tracer := tracer_ref():
+                    if tracer.report_server is not None:
+                        # Discard the report server in the forked child process
+                        # to avoid deleting the temporary report directory or conflicting socket
+                        tracer.report_server.discard()
+                        tracer.report_server = None
+                    if tracer.report_socket is not None:
+                        # Reconnect to report server in the forked child process
+                        # otherwise it conflicts with the parent's connection
+                        tracer.connect_report_server()
+                    tracer.register_exit()
+                    tracer.start()
 
             os.register_at_fork(after_in_child=callback)  # type: ignore
 
         if tracer.log_audit is not None:
+            tracer_ref = weakref.ref(tracer)
             audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
 
             def audit_hook(event, _):  # pragma: no cover
-                if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
-                    tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
+                if tracer := tracer_ref():
+                    if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
+                        tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
             sys.addaudithook(audit_hook)  # type: ignore
+
+
+def uninstall_all_hooks() -> None:
+    if hasattr(subprocess.Popen, "__originit__"):
+        setattr(subprocess.Popen, "__init__", subprocess.Popen.__originit__)  # type: ignore
+        delattr(subprocess.Popen, "__originit__")
+
+    if hasattr(multiprocessing.spawn, "_main_orig"):
+        setattr(multiprocessing.spawn, "_main", multiprocessing.spawn._main_orig)
+        delattr(multiprocessing.spawn, "_main_orig")
+
+    if hasattr(multiprocessing.spawn, "get_command_line_orig"):
+        setattr(multiprocessing.spawn, "get_command_line", multiprocessing.spawn.get_command_line_orig)
+        delattr(multiprocessing.spawn, "get_command_line_orig")
+
+    if hasattr(multiprocessing.util, "spawnv_passfds_orig"):
+        setattr(multiprocessing.util, "spawnv_passfds", multiprocessing.util.spawnv_passfds_orig)
+        delattr(multiprocessing.util, "spawnv_passfds_orig")

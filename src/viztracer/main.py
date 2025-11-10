@@ -369,8 +369,7 @@ class VizUI:
         else:
             multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
-        if not options.log_sparse:
-            tracer.start()
+        tracer.start()
 
         exec(code, global_dict)
 

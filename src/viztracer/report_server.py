@@ -76,6 +76,7 @@ class ReportServer:
     def _recv_info(self, conn: socket.socket) -> None:
         raw_data = b""
         conn.setblocking(True)
+        conn.settimeout(120)
         while d := conn.recv(1024):
             raw_data += d
             if b"\n" in raw_data:

@@ -949,6 +949,23 @@ int disable_monitoring(TracerObject* self)
     }
     Py_DECREF(event_result);
 
+    for (int i = 0; callback_table[i].callback_method.ml_meth != 0; i++) {
+        if (CHECK_FLAG(self->check_flags, SNAPTRACE_IGNORE_C_FUNCTION) && 
+                (callback_table[i].event == PY_MONITORING_EVENT_CALL ||
+                 callback_table[i].event == PY_MONITORING_EVENT_C_RETURN ||
+                 callback_table[i].event == PY_MONITORING_EVENT_C_RAISE)) {
+            continue;
+        }
+        unsigned int event = (1 << callback_table[i].event);
+
+        PyObject* regsiter_result = PyObject_CallMethod(monitoring, "register_callback",
+                                                        "iiO", SNAPTRACE_TOOL_ID, event, Py_None);
+        if (!regsiter_result) {
+            goto cleanup;
+        }
+        Py_DECREF(regsiter_result);
+    }
+
     PyObject* ret = PyObject_CallMethod(monitoring, "free_tool_id",
                                         "i", SNAPTRACE_TOOL_ID);
     if (!ret) {
