@@ -131,8 +131,17 @@ class VizTracer(Tracer):
         self._afterfork_args: tuple = tuple()
         self._afterfork_kwargs: dict = {}
 
-        self.report_server: ReportServer | None = None
         self.report_socket: socket.socket | None = None
+        self.report_server: ReportServer | None
+        if self.report_endpoint is None:
+            self.report_server = ReportServer(
+                output_file=self.output_file,
+                minimize_memory=self.minimize_memory,
+                verbose=self.verbose
+            )
+            self.report_endpoint = self.report_server.endpoint
+        else:
+            self.report_server = None
 
         # load in plugins
         self.plugins = plugins
@@ -180,6 +189,7 @@ class VizTracer(Tracer):
             "log_audit": self.log_audit,
             "log_torch": self.log_torch,
             "pid_suffix": self.pid_suffix,
+            "report_endpoint": self.report_endpoint,
             "min_duration": self.min_duration,
             "dump_raw": self.dump_raw,
             "minimize_memory": self.minimize_memory,
@@ -268,16 +278,10 @@ class VizTracer(Tracer):
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
 
-            if self.report_endpoint is None and self.report_server is None:
-                self.report_server = ReportServer(
-                    output_file=self.output_file,
-                    minimize_memory=self.minimize_memory,
-                    verbose=self.verbose
-                )
+            if self.report_server is not None:
                 self.report_server.start()
-                self.report_endpoint = self.report_server.endpoint
 
-            if self.report_endpoint is not None and self.report_socket is None:
+            if self.report_socket is None:
                 self.connect_report_server()
 
             if not self.ignore_multiprocess:
@@ -384,13 +388,17 @@ class VizTracer(Tracer):
                 rb = ReportBuilder(self.data, 0, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                 rb.save(output_file=tmp_output_file, file_info=file_info)
 
-        if self.report_socket is not None:
-            try:
-                self.report_socket.sendall(f"{tmp_output_file}\n".encode("utf-8"))
-                self.report_socket.close()
-                self.report_socket = None
-            except Exception:
-                pass
+        if self.report_socket is None:
+            self.connect_report_server()
+
+        assert self.report_socket is not None
+
+        try:
+            self.report_socket.sendall(f"{tmp_output_file}\n".encode("utf-8"))
+            self.report_socket.close()
+            self.report_socket = None
+        except Exception:
+            pass
 
         if self.report_server is not None:
             self.report_server.collect()

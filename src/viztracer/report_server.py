@@ -17,12 +17,14 @@ class ReportServer:
                  verbose: int = 1) -> None:
         self._host = None
         self._port = None
-        self._socket: socket.socket | None = None
         self.paths: list[str] = []
         self.output_file = output_file
         self.minimize_memory = minimize_memory
         self.verbose = verbose
-        self.report_directory: str | None = None
+        self.report_directory: str | None = tempfile.mkdtemp(prefix="viztracer_report_")
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.bind(("127.0.0.1", 0))
+        self._host, self._port = self._socket.getsockname()
 
     def __del__(self) -> None:
         self.clear()
@@ -39,12 +41,6 @@ class ReportServer:
         self.paths = []
 
     def start(self) -> None:
-        if self.report_directory is None:
-            self.report_directory = tempfile.mkdtemp(prefix="viztracer_report_")
-
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.bind(("127.0.0.1", 0))
-        self._host, self._port = self._socket.getsockname()
         self._socket.listen()
 
     @property
@@ -102,8 +98,6 @@ class ReportServer:
     def discard(self) -> None:
         # Discard this server, without removing the temporary files
         # This is useful for forked child processes
-        if self._socket is not None:
-            self._socket.close()
-            self._socket = None
+        self._socket.close()
         self.report_directory = None
         self.paths = []
