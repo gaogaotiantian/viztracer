@@ -133,6 +133,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
 
         tracer.clear()
         tracer.reset_stack()
+        tracer.update_tls()
 
         if tracer._afterfork_cb:
             tracer._afterfork_cb(tracer, *tracer._afterfork_args, **tracer._afterfork_kwargs)
@@ -306,6 +307,7 @@ def install_all_hooks(
                     import multiprocessing.util
                     multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
                     tracer.label_file_to_write()
+                    tracer.update_tls()
             os.register_at_fork(after_in_child=callback)  # type: ignore
 
         if tracer.log_audit is not None:
