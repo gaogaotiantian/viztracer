@@ -155,7 +155,8 @@ class TestPatchOnly(CmdlineTmpl):
             pid = os.fork()
             if pid > 0:
                 tracer = viztracer.get_tracer()
-                output_dir = os.path.dirname(tracer.output_file)
+                tracer.report_server.start()
+                output_dir = tracer.report_directory
                 for _ in range(5):
                     if any(f.endswith(".json") for f in os.listdir(output_dir)):
                         break

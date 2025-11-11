@@ -488,15 +488,23 @@ if __name__ == '__main__':
 
 
 class TestWaitForChild(CmdlineTmpl):
+    def checkfunc(self, data):
+        pids = set()
+        for entry in data["traceEvents"]:
+            pids.add(entry["pid"])
+        self.assertEqual(len(pids), 2)
+
     def test_child_process_exits_normally(self):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", expected_stdout=r"Wait",
-                      script=wait_for_child)
+                      expected_output_file="result.json",
+                      script=wait_for_child,
+                      check_func=self.checkfunc)
 
     def test_child_process_exits_abnormally(self):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", expected_stdout=r"Wait",
-                      script=wait_for_terminated_child)
+                      expected_output_file="result.json",
+                      script=wait_for_terminated_child,
+                      check_func=self.checkfunc)
 
 
 class TestFinalizerReference(CmdlineTmpl):

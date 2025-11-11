@@ -10,6 +10,8 @@ import textwrap
 import unittest
 import json
 
+from viztracer.report_server import ReportServer
+
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -283,10 +285,11 @@ class TestSubprocess(CmdlineTmpl):
 
     def test_child_process(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
-                          expected_output_file=None)
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+            output_path = os.path.join(tmpdir, "result.json")
+            with ReportServer(output_path) as server:
+                self.template(["viztracer", "-o", output_path, "--report_endpoint", server.endpoint, "child.py"],
+                              expected_output_file=None)
+            with open(output_path) as f:
                 self.assertSubprocessName("child.py", json.load(f))
 
     def test_module(self):
@@ -306,11 +309,12 @@ class TestSubprocess(CmdlineTmpl):
                           script=file_subprocess_code_string,
                           check_func=lambda data: self.assertSubprocessName("python -c", data))
 
-            # this is for coverage
-            self.template(['viztracer', '-o', os.path.join(tmpdir, "result.json"), '--subprocess_child',
-                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+            with ReportServer(output_path) as server:
+                # this is for coverage
+                self.template(['viztracer', '-o', output_path, '--report_endpoint', server.endpoint,
+                               '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+
+            with open(output_path) as f:
                 self.assertSubprocessName("python -c", json.load(f))
 
     def test_python_entries(self):

@@ -260,6 +260,10 @@ class ReportBuilder:
 
     def save(self, output_file: str | TextIO = "result.html", file_info: bool = True) -> None:
         if isinstance(output_file, str):
+            output_file = os.path.abspath(output_file)
+            if not os.path.isdir(os.path.dirname(output_file)):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
             file_type = output_file.split(".")[-1]
 
             if file_type == "html":

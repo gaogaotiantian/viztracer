@@ -112,9 +112,11 @@ def _log_sparse_wrapper(func: Callable, stack_depth: int = 0,
             if stack_depth > 0:
                 orig_max_stack_depth = local_tracer.max_stack_depth
                 local_tracer.max_stack_depth = stack_depth
+                local_tracer.log_sparse = False
                 local_tracer.start()
                 ret = func(*args, **kwargs)
                 local_tracer.stop()
+                local_tracer.log_sparse = True
                 local_tracer.max_stack_depth = orig_max_stack_depth
                 return ret
             else:
