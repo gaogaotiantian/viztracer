@@ -48,7 +48,7 @@ class VizUI:
 
     def create_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog="python -m viztracer")
-        parser.add_argument("--version", action="store_true", default=False,
+        parser.add_argument("-V", "--version", action="version", version=__version__,
                             help="show version of viztracer")
         parser.add_argument("-c", "--cmd_string", nargs="?", default=None,
                             help="program passed in as string")
@@ -318,9 +318,7 @@ class VizUI:
         return None
 
     def run(self) -> VizProcedureResult:
-        if self.options.version:
-            return self.show_version()
-        elif self.options.attach > 0:
+        if self.options.attach > 0:
             return self.attach()
         elif self.options.attach_installed > 0:
             return self.attach_installed()
@@ -518,10 +516,6 @@ class VizUI:
             ofile = "result.json"
         builder.save(output_file=ofile)
 
-        return True, None
-
-    def show_version(self) -> VizProcedureResult:
-        print(__version__)
         return True, None
 
     def _check_attach_availability(self) -> tuple[bool, str | None]:
