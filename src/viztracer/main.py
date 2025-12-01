@@ -48,7 +48,7 @@ class VizUI:
 
     def create_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog="python -m viztracer")
-        parser.add_argument("-V", "--version", action="version", version=__version__,
+        parser.add_argument("--version", action="version", version=__version__,
                             help="show version of viztracer")
         parser.add_argument("-c", "--cmd_string", nargs="?", default=None,
                             help="program passed in as string")
