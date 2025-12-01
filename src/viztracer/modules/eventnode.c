@@ -11,10 +11,11 @@ void
 clear_node(struct EventNode* node) {
     switch (node->ntype) {
     case FEE_NODE:
+        // Clear common optional fields
+        Py_CLEAR(node->data.fee.args);
+        Py_CLEAR(node->data.fee.retval);
         if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
             Py_CLEAR(node->data.fee.code);
-            Py_CLEAR(node->data.fee.args);
-            Py_CLEAR(node->data.fee.retval);
         } else {
             node->data.fee.ml_name = NULL;
             if (node->data.fee.m_module) {

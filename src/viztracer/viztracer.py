@@ -32,6 +32,7 @@ class VizTracer(Tracer):
                  ignore_frozen: bool = False,
                  log_func_retval: bool = False,
                  log_func_args: bool = False,
+                 log_callsite: bool = False,
                  log_func_repr: Callable[..., str] | None = None,
                  log_func_with_objprint: bool = False,
                  log_print: bool = False,
@@ -60,6 +61,7 @@ class VizTracer(Tracer):
         self.ignore_frozen = ignore_frozen
         self.log_func_args = log_func_args
         self.log_func_retval = log_func_retval
+        self.log_callsite = log_callsite
         self.log_async = log_async
         self.log_gc = log_gc
         self.log_print = log_print
@@ -149,6 +151,7 @@ class VizTracer(Tracer):
             "ignore_frozen": self.ignore_frozen,
             "log_func_retval": self.log_func_retval,
             "log_func_args": self.log_func_args,
+            "log_callsite": self.log_callsite,
             "log_print": self.log_print,
             "log_gc": self.log_gc,
             "log_sparse": self.log_sparse,

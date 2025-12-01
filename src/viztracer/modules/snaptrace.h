@@ -59,6 +59,7 @@
 #define SNAPTRACE_IGNORE_FROZEN (1 << 7)
 #define SNAPTRACE_LOG_ASYNC (1 << 8)
 #define SNAPTRACE_TRACE_SELF (1 << 9)
+#define SNAPTRACE_LOG_CALLSITE (1 << 10)
 
 #define SET_FLAG(reg, flag) ((reg) |= (flag))
 #define UNSET_FLAG(reg, flag) ((reg) &= (~(flag)))

@@ -464,6 +464,9 @@ Tracer_log_func_repr_getter(TracerObject* self, void* closure)
     return Py_NewRef(self->log_func_repr);
 }
 
+static int Tracer_log_callsite_setter(TracerObject* self, PyObject* value, void* closure);
+static PyObject* Tracer_log_callsite_getter(TracerObject* self, void* closure);
+
 PyGetSetDef Tracer_getsetters[] = {
     {"max_stack_depth", (getter)Tracer_max_stack_depth_getter, (setter)Tracer_max_stack_depth_setter, "max_stack_depth", NULL},
     {"include_files", (getter)Tracer_include_files_getter, (setter)Tracer_include_files_setter, "include_files", NULL},
@@ -476,8 +479,40 @@ PyGetSetDef Tracer_getsetters[] = {
     {"min_duration", (getter)Tracer_min_duration_getter, (setter)Tracer_min_duration_setter, "min_duration", NULL},
     {"log_func_retval", (getter)Tracer_log_func_retval_getter, (setter)Tracer_log_func_retval_setter, "log_func_retval", NULL},
     {"log_func_args", (getter)Tracer_log_func_args_getter, (setter)Tracer_log_func_args_setter, "log_func_args", NULL},
+    {"log_callsite", (getter)Tracer_log_callsite_getter, (setter)Tracer_log_callsite_setter, "log_callsite", NULL},
     {"log_async", (getter)Tracer_log_async_getter, (setter)Tracer_log_async_setter, "log_async", NULL},
     {"trace_self", (getter)Tracer_trace_self_getter, (setter)Tracer_trace_self_setter, "trace_self", NULL},
     {"log_func_repr", (getter)Tracer_log_func_repr_getter, (setter)Tracer_log_func_repr_setter, "log_func_repr", NULL},
     {NULL}
 };
+
+static int
+Tracer_log_callsite_setter(TracerObject* self, PyObject* value, void* closure)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the attribute");
+        return -1;
+    }
+
+    if (!PyBool_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "log_callsite must be a boolean");
+        return -1;
+    }
+
+    if (value == Py_True) {
+        SET_FLAG(self->check_flags, SNAPTRACE_LOG_CALLSITE);
+    } else {
+        UNSET_FLAG(self->check_flags, SNAPTRACE_LOG_CALLSITE);
+    }
+    return 0;
+}
+
+static PyObject*
+Tracer_log_callsite_getter(TracerObject* self, void* closure)
+{
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_CALLSITE)) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}

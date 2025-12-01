@@ -443,6 +443,30 @@ tracer_pycall_callback(TracerObject* self, PyCodeObject* code)
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(code);
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_CALLSITE)) {
+        PyFrameObject* curr_frame = PyEval_GetFrame();
+        PyFrameObject* caller_frame = PyFrame_GetBack(curr_frame);
+        if (caller_frame) {
+            PyCodeObject* caller_code = PyFrame_GetCode(caller_frame);
+            if (!info->stack_top->args) {
+                info->stack_top->args = PyDict_New();
+            }
+            if (caller_code && caller_code->co_filename) {
+                int lineno = PyFrame_GetLineNumber(caller_frame);
+                PyObject* colon = PyUnicode_FromString(":");
+                PyObject* lineno_str = PyUnicode_FromFormat("%d", lineno);
+                PyObject* info_str = PyUnicode_Concat(caller_code->co_filename, colon);
+                Py_DECREF(colon);
+                PyObject* info_full = PyUnicode_Concat(info_str, lineno_str);
+                Py_DECREF(info_str);
+                Py_DECREF(lineno_str);
+                PyDict_SetItemString(info->stack_top->args, "caller_info", info_full);
+                Py_DECREF(info_full);
+            }
+            Py_XDECREF(caller_code);
+            Py_XDECREF(caller_frame);
+        }
+    }
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
@@ -486,6 +510,30 @@ tracer_ccall_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
     info->stack_top = info->stack_top->next;
     info->stack_top->ts = get_ts();
     info->stack_top->func = Py_NewRef(arg);
+    if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_CALLSITE)) {
+        PyFrameObject* curr_frame = PyEval_GetFrame();
+        PyFrameObject* caller_frame = PyFrame_GetBack(curr_frame);
+        if (caller_frame) {
+            PyCodeObject* caller_code = PyFrame_GetCode(caller_frame);
+            if (!info->stack_top->args) {
+                info->stack_top->args = PyDict_New();
+            }
+            if (caller_code && caller_code->co_filename) {
+                int lineno = PyFrame_GetLineNumber(caller_frame);
+                PyObject* colon = PyUnicode_FromString(":");
+                PyObject* lineno_str = PyUnicode_FromFormat("%d", lineno);
+                PyObject* info_str = PyUnicode_Concat(caller_code->co_filename, colon);
+                Py_DECREF(colon);
+                PyObject* info_full = PyUnicode_Concat(info_str, lineno_str);
+                Py_DECREF(info_str);
+                Py_DECREF(lineno_str);
+                PyDict_SetItemString(info->stack_top->args, "caller_info", info_full);
+                Py_DECREF(info_full);
+            }
+            Py_XDECREF(caller_code);
+            Py_XDECREF(caller_frame);
+        }
+    }
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_FUNCTION_ARGS)) {
         log_func_args(info->stack_top, PyEval_GetFrame(), self->log_func_repr);
     }
@@ -629,6 +677,8 @@ tracer_creturn_callback(TracerObject* self, PyCodeObject* code, PyObject* arg)
             node->tid = info->tid;
             node->data.fee.type = PyTrace_C_RETURN;
             node->data.fee.ml_name = cfunc->m_ml->ml_name;
+            // steal the reference when return
+            node->data.fee.args = Py_XNewRef(stack_top->args);
             if (cfunc->m_module) {
                 // The function belongs to a module
                 node->data.fee.m_module = Py_NewRef(cfunc->m_module);
@@ -1314,6 +1364,15 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                     arg_dict = PyDict_New();
                 }
                 PyDict_SetItemString(arg_dict, "return_value", node->data.fee.retval);
+            }
+            // Promote callsite info as top-level field for convenience
+            if (arg_dict) {
+                PyObject* caller_info = PyDict_GetItemString(arg_dict, "caller_info");
+                if (caller_info) {
+                    PyDict_SetItemString(dict, "caller_info", caller_info);
+                    // Ensure args also contains caller_info for downstream tools
+                    PyDict_SetItemString(arg_dict, "caller_info", caller_info);
+                }
             }
             if (arg_dict) {
                 PyDict_SetItemString(dict, "args", arg_dict);
