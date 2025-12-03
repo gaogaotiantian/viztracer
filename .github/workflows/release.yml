@@ -11,6 +11,7 @@ jobs:
       upload_artifacts: true
 
   deploy-wheels:
+    needs: build-wheels
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

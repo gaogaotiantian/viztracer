@@ -130,12 +130,24 @@ fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name
 {
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
 #if PY_VERSION_HEX >= 0x030B0000
+    if (PyUnicode_Check(node->data.fee.code->co_qualname)) {
         fputs(PyUnicode_AsUTF8(node->data.fee.code->co_qualname), fptr);
+    } else {
+        fputs("<unknown>", fptr);
+    }
 #else
+    if (PyUnicode_Check(node->data.fee.code->co_name)) {
         fputs(PyUnicode_AsUTF8(node->data.fee.code->co_name), fptr);
+    } else {
+        fputs("<unknown>", fptr);
+    }
 #endif
         fputs(" (", fptr);
-        fputs_escape(PyUnicode_AsUTF8(node->data.fee.code->co_filename), fptr);
+        if (PyUnicode_Check(node->data.fee.code->co_filename)) {
+            fputs_escape(PyUnicode_AsUTF8(node->data.fee.code->co_filename), fptr);
+        } else {
+            fputs("<unknown>", fptr);
+        }
         fprintf(fptr, ":%d)", node->data.fee.code->co_firstlineno);
     } else {
         const char* ml_name = node->data.fee.ml_name;
@@ -152,7 +164,11 @@ fprintfeename(FILE* fptr, struct EventNode* node, uint8_t sanitize_function_name
         }
         if (node->data.fee.m_module) {
             // The function belongs to a module
-            fputs(PyUnicode_AsUTF8(node->data.fee.m_module), fptr);
+            if (PyUnicode_Check(node->data.fee.m_module)) {
+                fputs(PyUnicode_AsUTF8(node->data.fee.m_module), fptr);
+            } else {
+                fputs("<unknown>", fptr);
+            }
             fputc('.', fptr);
         } else {
             // The function is a class method
