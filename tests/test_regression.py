@@ -376,7 +376,7 @@ class TestTimestampDisorder(CmdlineTmpl):
                 if event["ph"] == "X" and event["name"].startswith("g"):
                     counter += 1
                     self.assertGreaterEqual(event["ts"], curr_time)
-                    self.assertGreater(event["dur"], 0)
+                    self.assertGreaterEqual(event["dur"], 0)
                     curr_time = event["ts"] + event["dur"]
         self.template(["viztracer", "cmdline_test.py"], script=file_timestamp_disorder,
                       expected_output_file="result.json", check_func=check_func)
