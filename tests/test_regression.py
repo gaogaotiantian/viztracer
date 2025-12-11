@@ -382,6 +382,28 @@ class TestTimestampDisorder(CmdlineTmpl):
                       expected_output_file="result.json", check_func=check_func)
 
 
+class TestTimestampSkew(CmdlineTmpl):
+    """
+    Ensure that we are not accumulating timestamp too much with artificial
+    increments.
+    """
+    def test_timestamp_skew(self):
+        script = textwrap.dedent("""
+            import time
+            for _ in range(1000000):
+                len([])
+            time.sleep(0.002)
+        """)
+
+        def check_func(data):
+            for event in reversed(data["traceEvents"]):
+                if event["ph"] == "X" and "time.sleep" in event["name"]:
+                    self.assertGreater(event["dur"], 1500)
+
+        self.template(["viztracer", "--tracer_entries", "100", "cmdline_test.py"],
+                      script=script, check_func=check_func)
+
+
 issue285_code = """
 import threading
 from viztracer import get_tracer
