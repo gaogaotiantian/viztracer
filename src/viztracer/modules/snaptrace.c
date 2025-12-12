@@ -55,9 +55,8 @@ get_ts()
         // how long clock_gettime() takes.
         // It's possible to have three same timestamp in a row so we
         // need to check if curr_ts <= prev_ts instead of ==
-#if _WIN32 || defined(__APPLE__)
-        curr_ts = prev_ts + 1;
-#else
+#if !defined(_WIN32)
+        // Win32's time unit is too coarse, we can't even add 1.
         curr_ts = prev_ts + 20;
 #endif
     }

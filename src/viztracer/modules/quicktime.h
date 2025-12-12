@@ -58,7 +58,7 @@ get_system_ts(void)
     QueryPerformanceCounter(&counter);
     return counter.QuadPart;
 #elif defined(__APPLE__)
-    return mach_absolute_time();
+    return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
@@ -75,7 +75,7 @@ get_system_ns(void)
     QueryPerformanceCounter(&counter);
     return counter.QuadPart * 1e9 / qpc_freq.QuadPart;
 #elif defined(__APPLE__)
-    return mach_absolute_time() * timebase_info.numer / timebase_info.denom;
+    return clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
 #else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
