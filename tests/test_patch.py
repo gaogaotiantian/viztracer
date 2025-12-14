@@ -72,6 +72,7 @@ import sys
 with open("check_output_echo.py", "w") as f:
     f.write("import sys; print(sys.argv)")
 
+print("PATCH TEST START")
 print(subprocess.check_output([sys.executable, "--version"], text=True).strip())
 print(subprocess.check_output([sys.executable, "-cprint(5)"]))
 print(subprocess.check_output([sys.executable, "check_output_echo.py"], text=True))
@@ -93,6 +94,7 @@ print(subprocess.check_output(
 print("No module named" in subprocess.run([sys.executable, "-m", ""], stdout=subprocess.PIPE, text=True).stdout)
 print("usage:" in subprocess.run([sys.executable, "-m"], stdout=subprocess.PIPE, text=True).stdout)
 print("Argument expected:" in subprocess.run([sys.executable, "-W"], stdout=subprocess.PIPE, text=True).stdout)
+print("PATCH TEST END")
 
 os.remove("check_output_echo.py")
 """
@@ -141,7 +143,19 @@ class TestPatchSpawn(CmdlineTmpl):
         b = self.template(["viztracer", "--quiet", "cmdline_test.py"],
                           expected_output_file="result.json",
                           script=check_output)
-        self.assertEqual(a.stdout.strip(), b.stdout.strip())
+        a_content = re.search(
+            r"PATCH TEST START\n(.*)PATCH TEST END",
+            a.stdout.decode("utf-8"),
+            re.DOTALL
+        ).group(1)
+
+        b_content = re.search(
+            r"PATCH TEST START\n(.*)PATCH TEST END",
+            b.stdout.decode("utf-8"),
+            re.DOTALL
+        ).group(1)
+
+        self.assertEqual(a_content, b_content)
 
 
 class TestPatchOnly(CmdlineTmpl):
