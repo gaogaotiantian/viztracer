@@ -364,40 +364,28 @@ class VizTracer(Tracer):
         self.stop()
         self.save(output_file)
 
-    def save(
-            self,
-            output_file: str | None = None,
-            file_info: bool | None = None,
-            verbose: int | None = None) -> None:
+    def save_report(
+        self,
+        output_file: str,
+        file_info: bool | None = None,
+        verbose: int | None = None
+    ) -> None:
         if file_info is None:
             file_info = self.file_info
-        enabled = False
-        if output_file is None:
-            output_file = self.output_file
 
         if verbose is None:
             verbose = self.verbose
-
-        if self.report_endpoint is not None:
-            assert self.report_directory is not None
-            tmp_output_file = unique_path(self.report_directory)
-        else:
-            tmp_output_file = output_file
 
         if isinstance(output_file, str):
             output_file = os.path.abspath(output_file)
             if not os.path.isdir(os.path.dirname(output_file)):
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        if self.enable:
-            enabled = True
-            self.stop()
-
         # If there are plugins, we can't do dump raw because it will skip the data
         # manipulation phase
         # If we want to dump torch profile, we can't do dump raw either
         if not self._plugin_manager.has_plugin and not self.log_torch and self.dump_raw:
-            self.dump(tmp_output_file, sanitize_function_name=self.sanitize_function_name)
+            self.dump(output_file, sanitize_function_name=self.sanitize_function_name)
         else:
             if not self.parsed:
                 self.parse()
@@ -410,10 +398,41 @@ class VizTracer(Tracer):
                     self.torch_profile.export_chrome_trace(tmpfile.name)
                     rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'base_offset': self.get_base_time()}), self.data],
                                        0, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
-                    rb.save(output_file=tmp_output_file, file_info=file_info)
+                    rb.save(output_file=output_file, file_info=file_info)
             else:
                 rb = ReportBuilder(self.data, 0, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
-                rb.save(output_file=tmp_output_file, file_info=file_info)
+                rb.save(output_file=output_file, file_info=file_info)
+
+    def save(
+            self,
+            output_file: str | None = None,
+            file_info: bool | None = None,
+            verbose: int | None = None) -> None:
+        enabled = False
+
+        if self.enable:
+            enabled = True
+            self.stop()
+
+        if output_file is None:
+            output_file = self.output_file
+
+        if self.report_endpoint is not None:
+            assert self.report_directory is not None
+            tmp_output_file = unique_path(self.report_directory)
+        else:
+            tmp_output_file = output_file
+
+        if isinstance(output_file, str):
+            output_file = os.path.abspath(output_file)
+            if not os.path.isdir(os.path.dirname(output_file)):
+                os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+        self.save_report(
+            output_file=tmp_output_file,
+            file_info=file_info,
+            verbose=verbose
+        )
 
         if self.report_socket is None:
             self.connect_report_server()
@@ -441,7 +460,7 @@ class VizTracer(Tracer):
         # Fix the current pid so it won't give new pid when parsing
         self.setpid()
 
-        p = multiprocessing.Process(target=self.save, daemon=False,
+        p = multiprocessing.Process(target=self.save_report, daemon=False,
                                     kwargs={"output_file": output_file})
         p.start()
 
