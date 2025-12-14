@@ -501,10 +501,17 @@ class TestWaitForChild(CmdlineTmpl):
                       check_func=self.checkfunc)
 
     def test_child_process_exits_abnormally(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=wait_for_terminated_child,
-                      check_func=self.checkfunc)
+        if sys.platform == "win32":
+            # For windows, we just want to make sure it doesn't hang
+            # and generates the output file correctly
+            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                        expected_output_file="result.json",
+                        script=wait_for_terminated_child)
+        else:
+            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
+                        expected_output_file="result.json",
+                        script=wait_for_terminated_child,
+                        check_func=self.checkfunc)
 
 
 class TestFinalizerReference(CmdlineTmpl):

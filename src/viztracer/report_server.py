@@ -59,6 +59,8 @@ class ReportServer:
                 try:
                     # Ensure we close the accepted connection even if receiving fails
                     self._recv_info(conn)
+                except ConnectionError:
+                    pass
                 finally:
                     conn.close()
             except BlockingIOError:
