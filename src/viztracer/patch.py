@@ -121,13 +121,6 @@ def patch_subprocess(viz_args: list[str]) -> None:
         assert hasattr(subprocess_init, "__wrapped__")  # for mypy
         subprocess_init.__wrapped__(self, new_args, **kwargs)
 
-    # We need to filter the arguments as there are something we may not want
-    if "-m" in viz_args:
-        # If it's a module run, we don't want to use that module for subprocess
-        idx = viz_args.index("-m")
-        viz_args.pop(idx)
-        viz_args.pop(idx)
-
     setattr(subprocess.Popen, "__originit__", subprocess.Popen.__init__)
     setattr(subprocess.Popen, "__init__", subprocess_init)
 
@@ -264,22 +257,6 @@ def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[s
 
     multiprocessing.spawn._main_orig = multiprocessing.spawn._main  # type: ignore
     multiprocessing.spawn._main = _main  # type: ignore
-
-
-def filter_args(args: list[str]) -> list[str]:
-    new_args = []
-    i = 0
-    while i < len(args):
-        arg = args[i]
-        if arg == "-u" or arg == "--unique_output_file":
-            i += 1
-            continue
-        elif arg == "-o" or arg == "--output_file":
-            i += 2
-            continue
-        new_args.append(arg)
-        i += 1
-    return new_args
 
 
 def install_all_hooks(tracer: VizTracer) -> None:
