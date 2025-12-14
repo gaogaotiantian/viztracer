@@ -6,9 +6,11 @@ import os
 import selectors
 import shutil
 import socket
+import sys
 import tempfile
 
 from .report_builder import ReportBuilder
+from .util import same_line_print
 
 
 class ReportServer:
@@ -64,17 +66,39 @@ class ReportServer:
             except BlockingIOError:
                 break
 
-        while conns:
-            events = sel.select()
-            for key, _ in events:
-                try:
-                    self._recv_info(key.fileobj)
-                except ConnectionError:
-                    pass
-                finally:
-                    sel.unregister(key.fileobj)
-                    key.fileobj.close()
-                    conns.remove(key.fileobj)
+        if len(conns) >= 2:
+            same_line_print("Wait for child processes to finish, Ctrl+C/Enter to skip")
+            sel.register(sys.stdin, selectors.EVENT_READ)
+
+        try:
+            while conns:
+                events = sel.select()
+                for key, _ in events:
+                    if key.fileobj is sys.stdin:
+                        data = key.fileobj.readline()
+                        if data == "\n":
+                            raise KeyboardInterrupt()
+                        else:
+                            print(repr(data))
+                            continue
+                    try:
+                        self._recv_info(key.fileobj)
+                    except ConnectionError:
+                        pass
+                    finally:
+                        sel.unregister(key.fileobj)
+                        key.fileobj.close()
+                        conns.remove(key.fileobj)
+        except KeyboardInterrupt:
+            same_line_print("Skipping remaining child processes")
+        finally:
+            try:
+                sel.unregister(sys.stdin)
+            except KeyError:
+                pass
+            for conn in conns:
+                sel.unregister(conn)
+                conn.close()
 
     def __enter__(self) -> "ReportServer":
         self.start()

@@ -419,6 +419,9 @@ class VizTracer(Tracer):
 
         if self.report_endpoint is not None:
             assert self.report_directory is not None
+            if not os.path.exists(self.report_directory):
+                # Report server report directory is gone, skip saving
+                return
             tmp_output_file = unique_path(self.report_directory)
         else:
             tmp_output_file = output_file
