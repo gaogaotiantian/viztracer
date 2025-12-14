@@ -144,13 +144,13 @@ class TestPatchSpawn(CmdlineTmpl):
                           expected_output_file="result.json",
                           script=check_output)
         a_content = re.search(
-            r"PATCH TEST START\n(.*)PATCH TEST END",
+            r"PATCH TEST START(.*)PATCH TEST END",
             a.stdout.decode("utf-8"),
             re.DOTALL
         ).group(1)
 
         b_content = re.search(
-            r"PATCH TEST START\n(.*)PATCH TEST END",
+            r"PATCH TEST START(.*)PATCH TEST END",
             b.stdout.decode("utf-8"),
             re.DOTALL
         ).group(1)
