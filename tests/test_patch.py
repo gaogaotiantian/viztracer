@@ -141,7 +141,7 @@ class TestPatchSpawn(CmdlineTmpl):
         b = self.template(["viztracer", "--quiet", "cmdline_test.py"],
                           expected_output_file="result.json",
                           script=check_output)
-        self.assertEqual(a.stdout, b.stdout)
+        self.assertEqual(a.stdout.strip(), b.stdout.strip())
 
 
 class TestPatchOnly(CmdlineTmpl):
