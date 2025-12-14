@@ -66,10 +66,12 @@ class ReportServer:
             except BlockingIOError:
                 break
 
-        if len(conns) >= 2:
-            if self.verbose > 0:
+        if len(conns) >= 2 and self.verbose > 0:
+            if sys.platform == "win32":
+                same_line_print("Wait for child processes to finish, Ctrl+C to skip")
+            else:
                 same_line_print("Wait for child processes to finish, Ctrl+C/Enter to skip")
-            sel.register(sys.stdin, selectors.EVENT_READ)
+                sel.register(sys.stdin, selectors.EVENT_READ)
 
         try:
             while conns:
@@ -80,7 +82,6 @@ class ReportServer:
                         if data == "\n":
                             raise KeyboardInterrupt()
                         else:
-                            print(repr(data))
                             continue
                     try:
                         self._recv_info(key.fileobj)

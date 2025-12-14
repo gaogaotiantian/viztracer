@@ -81,7 +81,8 @@ def unique_file_name(exec_name: str) -> str:
 
 def unique_path(directory: str, suffix=".json") -> str:
     """Generate a unique file path in the specified directory."""
-    return tempfile.NamedTemporaryFile(dir=directory, suffix=suffix, delete=False).name
+    with tempfile.NamedTemporaryFile(dir=directory, suffix=suffix) as f:
+        return f.name
 
 
 def compare_version(ver1: str, ver2: str) -> int:
