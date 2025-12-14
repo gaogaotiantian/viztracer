@@ -67,7 +67,8 @@ class ReportServer:
                 break
 
         if len(conns) >= 2:
-            same_line_print("Wait for child processes to finish, Ctrl+C/Enter to skip")
+            if self.verbose > 0:
+                same_line_print("Wait for child processes to finish, Ctrl+C/Enter to skip")
             sel.register(sys.stdin, selectors.EVENT_READ)
 
         try:
@@ -90,11 +91,12 @@ class ReportServer:
                         key.fileobj.close()
                         conns.remove(key.fileobj)
         except KeyboardInterrupt:
-            same_line_print("Skipping remaining child processes")
+            if self.verbose > 0:
+                same_line_print("Skipping remaining child processes")
         finally:
             try:
                 sel.unregister(sys.stdin)
-            except KeyError:
+            except Exception:
                 pass
             for conn in conns:
                 sel.unregister(conn)
