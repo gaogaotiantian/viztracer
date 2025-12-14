@@ -505,13 +505,13 @@ class TestWaitForChild(CmdlineTmpl):
             # For windows, we just want to make sure it doesn't hang
             # and generates the output file correctly
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                        expected_output_file="result.json",
-                        script=wait_for_terminated_child)
+                          expected_output_file="result.json",
+                          script=wait_for_terminated_child)
         else:
             self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                        expected_output_file="result.json",
-                        script=wait_for_terminated_child,
-                        check_func=self.checkfunc)
+                          expected_output_file="result.json",
+                          script=wait_for_terminated_child,
+                          check_func=self.checkfunc)
 
 
 class TestFinalizerReference(CmdlineTmpl):
