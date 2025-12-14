@@ -3,6 +3,7 @@
 
 
 import os
+import selectors
 import shutil
 import socket
 import tempfile
@@ -53,18 +54,27 @@ class ReportServer:
         if self._socket is None:
             raise RuntimeError("ReportServer is not started")
         self._socket.setblocking(False)
+        sel = selectors.DefaultSelector()
+        conns = set()
         while True:
             try:
                 conn, _ = self._socket.accept()
+                conns.add(conn)
+                sel.register(conn, selectors.EVENT_READ)
+            except BlockingIOError:
+                break
+
+        while conns:
+            events = sel.select()
+            for key, _ in events:
                 try:
-                    # Ensure we close the accepted connection even if receiving fails
-                    self._recv_info(conn)
+                    self._recv_info(key.fileobj)
                 except ConnectionError:
                     pass
                 finally:
-                    conn.close()
-            except BlockingIOError:
-                break
+                    sel.unregister(key.fileobj)
+                    key.fileobj.close()
+                    conns.remove(key.fileobj)
 
     def __enter__(self) -> "ReportServer":
         self.start()
