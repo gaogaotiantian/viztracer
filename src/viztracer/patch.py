@@ -139,7 +139,7 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
         # TODO: Python 3.11 on MacOS somehow closes the socket in fork, we need to reconnect
         # getpeername() will raise an exception if the socket is already closed
         try:
-            tracer.report_socket.getpeername()
+            tracer.report_socket.getpeername()  # type: ignore
         except Exception:
             tracer.connect_report_server()
 
