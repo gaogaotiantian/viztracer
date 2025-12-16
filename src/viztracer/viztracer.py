@@ -239,7 +239,10 @@ class VizTracer(Tracer):
     def connect_report_server(self) -> None:
         assert self.report_endpoint is not None
         if self.report_socket is not None:
-            self.report_socket.close()
+            try:
+                self.report_socket.close()
+            except Exception:
+                pass
         self.report_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         addr, port = self.report_endpoint.split(":")[:2]
         self.report_socket.connect((addr, int(port)))
