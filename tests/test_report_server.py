@@ -14,6 +14,7 @@ class TestReportServer(BaseTmpl):
     def test_before_start(self):
         with tempfile.NamedTemporaryFile() as tmpfile:
             rs = ReportServer(output_file=tmpfile.name)
+            rs.clear()
             with self.assertRaises(RuntimeError):
                 _ = rs.endpoint
 

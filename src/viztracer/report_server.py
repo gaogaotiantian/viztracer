@@ -25,7 +25,7 @@ class ReportServer:
         self.minimize_memory = minimize_memory
         self.verbose = verbose
         self.report_directory: str | None = tempfile.mkdtemp(prefix="viztracer_report_")
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.bind(("127.0.0.1", 0))
         self._host, self._port = self._socket.getsockname()
 
@@ -35,6 +35,7 @@ class ReportServer:
     def clear(self) -> None:
         if self._socket is not None:
             self._socket.close()
+            self._socket = None
         if self.report_directory and os.path.exists(self.report_directory):
             try:
                 shutil.rmtree(self.report_directory)
@@ -44,17 +45,19 @@ class ReportServer:
         self.paths = []
 
     def start(self) -> None:
+        if self._socket is None:
+            raise RuntimeError("ReportServer has been cleared")
         self._socket.listen()
 
     @property
     def endpoint(self) -> str:
         if self._host is None or self._port is None or self.report_directory is None:
-            raise RuntimeError("ReportServer is not started")
+            raise RuntimeError("ReportServer has been cleared")
         return f"{self._host}:{self._port}:{self.report_directory}"
 
     def collect(self):
         if self._socket is None:
-            raise RuntimeError("ReportServer is not started")
+            raise RuntimeError("ReportServer has been cleared")
         self._socket.setblocking(False)
         sel = selectors.DefaultSelector()
         conns = set()
@@ -138,6 +141,8 @@ class ReportServer:
     def discard(self) -> None:
         # Discard this server, without removing the temporary files
         # This is useful for forked child processes
-        self._socket.close()
+        if self._socket is not None:
+            self._socket.close()
+            self._socket = None
         self.report_directory = None
         self.paths = []
