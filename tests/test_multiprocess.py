@@ -672,6 +672,81 @@ class TestMultiprocessing(CmdlineTmpl):
                       concurrency="multiprocessing")
 
 
+class TestInlineSupport(CmdlineTmpl):
+    def test_inline_basic(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            from viztracer import VizTracer
+
+            def target():
+                return 1
+
+            if __name__ == "__main__":
+                with VizTracer(ignore_multiprocess=False):
+                    p = multiprocessing.Process(target=target)
+                    p.start()
+                    p.join()
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script,
+                      check_func=check_func)
+
+    def test_multiple_instances(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            from viztracer import VizTracer
+
+            def foo():
+                return 1
+
+            if __name__ == "__main__":
+                with VizTracer(output_file="result1.json", ignore_multiprocess=False):
+                    p = multiprocessing.Process(target=foo)
+                    p.start()
+                    p.join()
+
+                with VizTracer(output_file="result2.json", ignore_multiprocess=False):
+                    p = multiprocessing.Process(target=foo)
+                    p.start()
+                    p.join()
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file=["result1.json", "result2.json"],
+                      script=script,
+                      check_func=check_func)
+
+    def test_uninstall(self):
+        script = textwrap.dedent("""
+            import subprocess
+            from viztracer import VizTracer
+            original_init = subprocess.Popen.__init__
+            with VizTracer(ignore_multiprocess=False) as tracer:
+                assert subprocess.Popen.__init__ != original_init
+            assert subprocess.Popen.__init__ == original_init
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script)
+
+
 @unittest.skipIf("free-threading" in sys.version, "loky does not support free-threading now")
 class TestLoky(CmdlineTmpl):
     def test_loky_basic(self):

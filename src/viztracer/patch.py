@@ -129,17 +129,10 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
 
     # For fork process
     def func_after_fork(tracer: VizTracer):
-        if tracer.report_server is not None:
-            # Discard the report server in the forked child process
-            # to avoid deleting the temporary report directory or conflicting socket
-            tracer.report_server.discard()
-            tracer.report_server = None
-        if tracer.report_socket is not None:
-            # Reconnect to report server in the forked child process
-            # otherwise it conflicts with the parent's connection
-            tracer.connect_report_server()
+        # This is the callback specifically for multiprocessing
+        # We have to re-register exit handler here because multiprocessing clears it
+        # We also want to reset the stack so it believes the current frame is the root
         tracer.register_exit()
-
         tracer.clear()
         tracer.reset_stack()
 
@@ -271,42 +264,40 @@ def install_all_hooks(tracer: VizTracer) -> None:
     # If we want to hook fork correctly with file waiter, we need to
     # use os.register_at_fork to write the file, and make sure
     # os.exec won't clear viztracer so that the file lives forever.
-    # This is basically equivalent to py3.8 + Linux
-    if hasattr(sys, "addaudithook"):
-        if hasattr(os, "register_at_fork") and not tracer.ignore_multiprocess:
-            tracer_ref = weakref.ref(tracer)
+    if hasattr(os, "register_at_fork") and not tracer.ignore_multiprocess:
+        tracer_ref = weakref.ref(tracer)
 
-            def audit_hook(event, _):  # pragma: no cover
-                if event == "os.exec":
-                    if tracer := tracer_ref():
-                        tracer.exit_routine()
-            sys.addaudithook(audit_hook)  # type: ignore
-
-            def callback():
+        def audit_hook(event, _):  # pragma: no cover
+            if event == "os.exec":
                 if tracer := tracer_ref():
-                    if tracer.report_server is not None:
-                        # Discard the report server in the forked child process
-                        # to avoid deleting the temporary report directory or conflicting socket
-                        tracer.report_server.discard()
-                        tracer.report_server = None
-                    if tracer.report_socket is not None:
-                        # Reconnect to report server in the forked child process
-                        # otherwise it conflicts with the parent's connection
-                        tracer.connect_report_server()
-                    tracer.register_exit()
-                    tracer.start()
+                    tracer.exit_routine()
+        sys.addaudithook(audit_hook)  # type: ignore
 
-            os.register_at_fork(after_in_child=callback)  # type: ignore
+        def callback():
+            if tracer := tracer_ref():
+                if tracer.report_server is not None:
+                    # Discard the report server in the forked child process
+                    # to avoid deleting the temporary report directory or conflicting socket
+                    tracer.report_server.discard()
+                    tracer.report_server = None
+                if tracer.report_socket is not None:
+                    # Reconnect to report server in the forked child process
+                    # otherwise it conflicts with the parent's connection
+                    tracer.connect_report_server()
+                tracer.register_exit()
+                tracer.start()
 
-        if tracer.log_audit is not None:
-            tracer_ref = weakref.ref(tracer)
-            audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
+        os.register_at_fork(after_in_child=callback)  # type: ignore
 
-            def audit_hook(event, _):  # pragma: no cover
-                if tracer := tracer_ref():
-                    if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
-                        tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
-            sys.addaudithook(audit_hook)  # type: ignore
+    if tracer.log_audit is not None:
+        tracer_ref = weakref.ref(tracer)
+        audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
+
+        def audit_hook(event, _):  # pragma: no cover
+            if tracer := tracer_ref():
+                if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
+                    tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
+        sys.addaudithook(audit_hook)  # type: ignore
 
 
 def uninstall_all_hooks() -> None:

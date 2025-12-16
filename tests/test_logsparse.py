@@ -211,10 +211,10 @@ class TestLogSparse(CmdlineTmpl):
     def test_with_disabled_tracer(self):
         script = textwrap.dedent("""
             from viztracer import VizTracer, log_sparse
+            tracer = VizTracer()
             @log_sparse
             def f():
                 return 1
-            tracer = VizTracer()
             assert f() == 1
         """)
         self.template([sys.executable, "cmdline_test.py"], script=script, expected_output_file=None)

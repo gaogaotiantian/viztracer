@@ -38,7 +38,7 @@ class ReportServer:
         if self.report_directory and os.path.exists(self.report_directory):
             try:
                 shutil.rmtree(self.report_directory)
-            except OSError:
+            except OSError:  # pragma: no cover
                 pass
         self.report_directory = None
         self.paths = []
