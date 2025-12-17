@@ -711,12 +711,14 @@ class TestInlineSupport(CmdlineTmpl):
 
             if __name__ == "__main__":
                 with VizTracer(output_file="result1.json", ignore_multiprocess=False):
-                    p = multiprocessing.Process(target=foo)
+                    ctx = multiprocessing.get_context("spawn")
+                    p = ctx.Process(target=foo)
                     p.start()
                     p.join()
 
                 with VizTracer(output_file="result2.json", ignore_multiprocess=False):
-                    p = multiprocessing.Process(target=foo)
+                    ctx = multiprocessing.get_context("spawn")
+                    p = ctx.Process(target=foo)
                     p.start()
                     p.join()
         """)

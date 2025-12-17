@@ -259,7 +259,56 @@ def patch_spawned_process(viztracer_kwargs: dict[str, Any], cmdline_args: list[s
     multiprocessing.spawn._main = _main  # type: ignore
 
 
+class HookManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._tracer = None
+            cls._installed = False
+        return cls._instance
+
+    def set_tracer(self, tracer: VizTracer | None) -> None:
+        self._tracer = weakref.ref(tracer) if tracer is not None else None
+        self.install_hooks()
+
+    def install_hooks(self):
+        if not self._installed:
+            if hasattr(os, "register_at_fork"):
+                os.register_at_fork(after_in_child=self._after_fork)
+            sys.addaudithook(self._audit_callback)
+            self._installed = True
+
+    def _after_fork(self):
+        if self._tracer and (tracer := self._tracer()) and not tracer.ignore_multiprocess:
+            if tracer.report_server is not None:
+                # Discard the report server in the forked child process
+                # to avoid deleting the temporary report directory or conflicting socket
+                tracer.report_server.discard()
+                tracer.report_server = None
+            if tracer.report_socket is not None:
+                # Reconnect to report server in the forked child process
+                # otherwise it conflicts with the parent's connection
+                tracer.connect_report_server()
+            tracer.register_exit()
+            tracer.start()
+
+    def _audit_callback(self, event: str, args: Any) -> None:
+        if self._tracer and (tracer := self._tracer()) and not tracer.ignore_multiprocess:
+            if event == "os.exec":
+                tracer.exit_routine()
+
+            if tracer.log_audit is not None:
+                audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
+                if len(audit_regex_list) == 0 or any(
+                    (regex.fullmatch(event) for regex in audit_regex_list)
+                ):
+                    tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
+
+
 def install_all_hooks(tracer: VizTracer) -> None:
+    uninstall_all_hooks()
 
     args = tracer.get_args()
 
@@ -268,46 +317,12 @@ def install_all_hooks(tracer: VizTracer) -> None:
         patch_multiprocessing(tracer, args)
         patch_subprocess(args)
 
-    # If we want to hook fork correctly with file waiter, we need to
-    # use os.register_at_fork to write the file, and make sure
-    # os.exec won't clear viztracer so that the file lives forever.
-    if hasattr(os, "register_at_fork") and not tracer.ignore_multiprocess:
-        tracer_ref = weakref.ref(tracer)
-
-        def audit_hook(event, _):  # pragma: no cover
-            if event == "os.exec":
-                if tracer := tracer_ref():
-                    tracer.exit_routine()
-        sys.addaudithook(audit_hook)  # type: ignore
-
-        def callback():
-            if tracer := tracer_ref():
-                if tracer.report_server is not None:
-                    # Discard the report server in the forked child process
-                    # to avoid deleting the temporary report directory or conflicting socket
-                    tracer.report_server.discard()
-                    tracer.report_server = None
-                if tracer.report_socket is not None:
-                    # Reconnect to report server in the forked child process
-                    # otherwise it conflicts with the parent's connection
-                    tracer.connect_report_server()
-                tracer.register_exit()
-                tracer.start()
-
-        os.register_at_fork(after_in_child=callback)  # type: ignore
-
-    if tracer.log_audit is not None:
-        tracer_ref = weakref.ref(tracer)
-        audit_regex_list = [re.compile(regex) for regex in tracer.log_audit]
-
-        def audit_hook(event, _):  # pragma: no cover
-            if tracer := tracer_ref():
-                if len(audit_regex_list) == 0 or any((regex.fullmatch(event) for regex in audit_regex_list)):
-                    tracer.log_instant(event, args={"args": [str(arg) for arg in args]})
-        sys.addaudithook(audit_hook)  # type: ignore
+    HookManager().set_tracer(tracer)
 
 
 def uninstall_all_hooks() -> None:
+    HookManager().set_tracer(None)
+
     if hasattr(subprocess.Popen, "__originit__"):
         setattr(subprocess.Popen, "__init__", subprocess.Popen.__originit__)  # type: ignore
         delattr(subprocess.Popen, "__originit__")
