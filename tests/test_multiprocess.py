@@ -737,8 +737,11 @@ class TestInlineSupport(CmdlineTmpl):
                 install_all_hooks(tracer)
                 prog = multiprocessing.spawn.get_command_line()[2]
                 assert "viztracer.patch" in prog
+                get_command_line = multiprocessing.spawn.get_command_line
                 del tracer
                 prog = multiprocessing.spawn.get_command_line()[2]
+                assert "viztracer.patch" not in prog
+                prog = get_command_line()[2]
                 assert "viztracer.patch" not in prog
         """)
 
