@@ -320,8 +320,10 @@ class TestSubprocess(CmdlineTmpl):
     def test_python_entries(self):
         script = textwrap.dedent("""
             import subprocess
+            import sys
             subprocess.check_output(["vizviewer", "-h"])
-            subprocess.check_output(["ls", "./"])
+            if sys.platform != "win32":
+                subprocess.check_output(["ls", "./"])
             try:
                 subprocess.check_output(["nonexist"])
             except Exception:

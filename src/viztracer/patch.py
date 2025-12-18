@@ -127,6 +127,8 @@ def patch_subprocess(viz_args: list[str]) -> None:
 
 def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
 
+    tracer_ref = weakref.ref(tracer)
+
     # For fork process
     def func_after_fork(tracer: VizTracer):
         # This is the callback specifically for multiprocessing
@@ -156,12 +158,15 @@ def patch_multiprocessing(tracer: VizTracer, viz_args: list[str]) -> None:
                 return ([sys.executable, '--multiprocessing-fork']
                         + ['%s=%r' % item for item in kwds.items()])
             else:
-                prog = textwrap.dedent(f"""
+                if (tracer := tracer_ref()) is None:
+                    prog = 'from multiprocessing.spawn import spawn_main; spawn_main(%s)'
+                else:
+                    prog = textwrap.dedent(f"""
                         from multiprocessing.spawn import spawn_main;
                         from viztracer.patch import patch_spawned_process;
                         patch_spawned_process({tracer.init_kwargs}, {viz_args});
                         spawn_main(%s)
-                        """)
+                    """)
                 prog %= ', '.join('%s=%r' % item for item in kwds.items())
                 opts = multiprocessing.util._args_from_interpreter_flags()  # type: ignore
                 return [multiprocessing.spawn._python_exe] + opts + ['-c', prog, '--multiprocessing-fork']  # type: ignore
