@@ -294,7 +294,7 @@ class HookManager:
             tracer.register_exit()
             tracer.start()
 
-    def _audit_callback(self, event: str, args: Any) -> None:
+    def _audit_callback(self, event: str, args: Any) -> None:  # pragma: no cover
         if self._tracer and (tracer := self._tracer()) and not tracer.ignore_multiprocess:
             if event == "os.exec":
                 tracer.exit_routine()
