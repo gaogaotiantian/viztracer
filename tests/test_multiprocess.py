@@ -723,6 +723,7 @@ class TestInlineSupport(CmdlineTmpl):
                       script=script,
                       expected_output_file=None)
 
+    @unittest.skipIf(sys.platform != "win32", "Only test on Windows")
     def test_inline_hook_uninstall_windows(self):
         script = textwrap.dedent("""
             import multiprocessing
