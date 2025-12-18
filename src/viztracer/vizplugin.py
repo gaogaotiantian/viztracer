@@ -141,7 +141,6 @@ class VizPluginManager:
         if not ret or "action" not in ret:
             return
         tracer = self._tracer_ref()
-        if tracer is None:
-            return
-        if ret["action"] == "handle_data":
-            ret["handler"](tracer.data)
+        if tracer is not None:
+            if ret["action"] == "handle_data":
+                ret["handler"](tracer.data)
