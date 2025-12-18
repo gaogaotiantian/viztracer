@@ -1079,7 +1079,17 @@ tracer_start(TracerObject* self, PyObject* Py_UNUSED(unused))
         return NULL;
     };
 #else
-    PyEval_SetProfile(tracer_tracefunc, (PyObject*) self);
+    // Python: threading.setprofile(tracefunc)
+    {
+        static PyMethodDef ml = {"threadtracefunc", (PyCFunction)tracer_threadtracefunc, METH_VARARGS, "trace function"};
+        PyObject* handler = PyCFunction_New(&ml, (PyObject*)self);
+
+        if (PyObject_CallMethod(threading_module, "setprofile", "N", handler) == NULL) {
+            perror("Failed to call threading.setprofile() properly");
+            exit(-1);
+        }
+    }
+    PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
 #endif
 
     Py_RETURN_NONE;
@@ -1115,6 +1125,11 @@ tracer_stop(TracerObject* self, PyObject* stop_option)
     }
 #else
     PyEval_SetProfile(NULL, NULL);
+    // threading.setprofile(None)
+    PyObject* result = PyObject_CallMethod(threading_module, "setprofile", "O", Py_None);
+    if (result != NULL) {
+        Py_DECREF(result);
+    }
 #endif
 
     Py_RETURN_NONE;
@@ -2065,24 +2080,6 @@ Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
     }
 #endif
 
-#if PY_VERSION_HEX >= 0x030C0000
-#else
-    // Python: threading.setprofile(tracefunc)
-    {
-        PyObject* handler = PyCFunction_New(&Tracer_methods[0], (PyObject*)self);
-
-        if (PyObject_CallMethod(threading_module, "setprofile", "N", handler) == NULL) {
-            perror("Failed to call threading.setprofile() properly");
-            exit(-1);
-        }
-    }
-#endif
-
-#if PY_VERSION_HEX >= 0x030C0000
-#else
-    PyEval_SetProfile(tracer_tracefunc, (PyObject*)self);
-#endif
-
     return 0;
 }
 
@@ -2105,17 +2102,6 @@ Tracer_dealloc(TracerObject* self)
         node = node->next;
         PyMem_FREE(prev);
     }
-
-#if PY_VERSION_HEX >= 0x030C0000
-#else
-    // threading.setprofile(None)
-    // It's possible that during deallocation phase threading module has released setprofile
-    // and we should be okay with that.
-    PyObject* result = PyObject_CallMethod(threading_module, "setprofile", "O", Py_None);
-    if (result != NULL) {
-        Py_DECREF(result);
-    }
-#endif
 
     Py_TYPE(self)->tp_free((PyObject*) self);
 }
