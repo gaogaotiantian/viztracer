@@ -232,6 +232,7 @@ class VizTracer(Tracer):
 
     @property
     def report_directory(self) -> str | None:
+        assert self.report_endpoint is not None
         return self.report_endpoint.split(":", 2)[2]
 
     def connect_report_server(self) -> None:
