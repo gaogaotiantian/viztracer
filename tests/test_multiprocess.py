@@ -700,6 +700,27 @@ class TestInlineSupport(CmdlineTmpl):
                       script=script,
                       check_func=check_func)
 
+    def test_inline_hook_uninstall(self):
+        script = textwrap.dedent("""
+            import subprocess
+
+            from viztracer import VizTracer
+            from viztracer.patch import install_all_hooks
+
+            if __name__ == "__main__":
+                original_init = subprocess.Popen.__init__
+                tracer = VizTracer(ignore_multiprocess=False, register_global=False)
+                # mimic tracer.start() because tracing will overwrite coverage
+                install_all_hooks(tracer)
+                assert subprocess.Popen.__init__ != original_init
+                del tracer
+                assert subprocess.Popen.__init__ == original_init
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      script=script,
+                      expected_output_file=None)
+
     def test_multiple_instances(self):
         script = textwrap.dedent("""
             import multiprocessing

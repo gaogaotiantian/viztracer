@@ -95,7 +95,6 @@ class VizTracer(Tracer):
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
-        self.report_endpoint = report_endpoint
         self.system_print = builtins.print
 
         if self.pid_suffix:
@@ -133,7 +132,7 @@ class VizTracer(Tracer):
 
         self.report_socket: socket.socket | None = None
         self.report_server: ReportServer | None
-        if self.report_endpoint is None:
+        if report_endpoint is None:
             self.report_server = ReportServer(
                 output_file=self.output_file,
                 minimize_memory=self.minimize_memory,
@@ -142,6 +141,7 @@ class VizTracer(Tracer):
             self.report_endpoint = self.report_server.endpoint
         else:
             self.report_server = None
+            self.report_endpoint = report_endpoint
 
         # load in plugins
         self.plugins = plugins
@@ -419,14 +419,11 @@ class VizTracer(Tracer):
         if output_file is None:
             output_file = self.output_file
 
-        if self.report_endpoint is not None:
-            assert self.report_directory is not None
-            if not os.path.exists(self.report_directory):
-                # Report server report directory is gone, skip saving
-                return
-            tmp_output_file = unique_path(self.report_directory)
-        else:
-            tmp_output_file = output_file
+        assert self.report_directory is not None
+        if not os.path.exists(self.report_directory):
+            # Report server report directory is gone, skip saving
+            return
+        tmp_output_file = unique_path(self.report_directory)
 
         self.save_report(
             output_file=tmp_output_file,

@@ -211,7 +211,7 @@ class TestLogSparse(CmdlineTmpl):
     def test_with_disabled_tracer(self):
         script = textwrap.dedent("""
             from viztracer import VizTracer, log_sparse
-            tracer = VizTracer()
+            tracer = VizTracer(dynamic_tracer_check=True)
             @log_sparse
             def f():
                 return 1

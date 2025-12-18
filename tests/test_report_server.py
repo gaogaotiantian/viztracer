@@ -3,14 +3,16 @@
 
 
 import os
+import sys
 import tempfile
+import textwrap
 
 from viztracer.report_server import ReportServer
 
-from .base_tmpl import BaseTmpl
+from .cmdline_tmpl import CmdlineTmpl
 
 
-class TestReportServer(BaseTmpl):
+class TestReportServer(CmdlineTmpl):
     def test_before_start(self):
         with tempfile.NamedTemporaryFile() as tmpfile:
             rs = ReportServer(output_file=tmpfile.name)
@@ -34,3 +36,31 @@ class TestReportServer(BaseTmpl):
 
             with self.assertRaises(RuntimeError):
                 rs.start()
+
+    def test_enter_skip(self):
+        script = textwrap.dedent("""
+            import socket
+            import sys
+            import os
+            from viztracer.report_server import ReportServer
+
+            rs = ReportServer("result.json")
+            rs.start()
+            host, port, _ = rs.endpoint.split(":")
+
+            with socket.socket() as s1, socket.socket() as s2:
+                s1.connect((host, int(port)))
+                s2.connect((host, int(port)))
+
+            r_fd, w_fd = os.pipe()
+            sys.stdin = os.fdopen(r_fd, "r")
+            os.write(w_fd, b"\\n")
+
+            rs.collect()
+        """)
+
+        self.template(
+            cmd_list=[sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_stdout="Skipped remaining child processes"
+        )

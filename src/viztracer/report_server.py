@@ -96,7 +96,7 @@ class ReportServer:
                         conns.remove(key.fileobj)
         except KeyboardInterrupt:
             if self.verbose > 0:
-                same_line_print("Skipping remaining child processes")
+                same_line_print("Skipped remaining child processes\n")
         finally:
             try:
                 sel.unregister(sys.stdin)
