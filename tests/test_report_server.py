@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import textwrap
+import unittest
 
 from viztracer.report_server import ReportServer
 
@@ -37,6 +38,7 @@ class TestReportServer(CmdlineTmpl):
             with self.assertRaises(RuntimeError):
                 rs.start()
 
+    @unittest.skipIf(sys.platform == "win32", "Windows does not support stdin multiplexing")
     def test_enter_skip(self):
         script = textwrap.dedent("""
             import socket
@@ -62,5 +64,6 @@ class TestReportServer(CmdlineTmpl):
         self.template(
             cmd_list=[sys.executable, "cmdline_test.py"],
             script=script,
+            expected_output_file=None,
             expected_stdout="Skipped remaining child processes"
         )
