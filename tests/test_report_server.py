@@ -5,6 +5,7 @@
 import os
 import tempfile
 
+from viztracer import VizTracer
 from viztracer.report_server import ReportServer
 
 from .base_tmpl import BaseTmpl
@@ -31,3 +32,6 @@ class TestReportServer(BaseTmpl):
             self.assertFalse(os.path.exists(report_dir))
             # Make sure double clear() is safe
             rs.clear()
+
+            with self.assertRaises(RuntimeError):
+                rs.start()

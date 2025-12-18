@@ -232,16 +232,14 @@ class VizTracer(Tracer):
 
     @property
     def report_directory(self) -> str | None:
-        if self.report_endpoint is not None:
-            return self.report_endpoint.split(":", 2)[2]
-        return None
+        return self.report_endpoint.split(":", 2)[2]
 
     def connect_report_server(self) -> None:
         assert self.report_endpoint is not None
         if self.report_socket is not None:
             try:
                 self.report_socket.close()
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass
         self.report_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         addr, port = self.report_endpoint.split(":")[:2]
@@ -429,11 +427,6 @@ class VizTracer(Tracer):
         else:
             tmp_output_file = output_file
 
-        if isinstance(output_file, str):
-            output_file = os.path.abspath(output_file)
-            if not os.path.isdir(os.path.dirname(output_file)):
-                os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
         self.save_report(
             output_file=tmp_output_file,
             file_info=file_info,
@@ -449,7 +442,7 @@ class VizTracer(Tracer):
             self.report_socket.sendall(f"{tmp_output_file}\n".encode("utf-8"))
             self.report_socket.close()
             self.report_socket = None
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
 
         if self.report_server is not None:
