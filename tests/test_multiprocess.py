@@ -10,6 +10,8 @@ import textwrap
 import unittest
 import json
 
+from viztracer.report_server import ReportServer
+
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -283,10 +285,11 @@ class TestSubprocess(CmdlineTmpl):
 
     def test_child_process(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "child.py"],
-                          expected_output_file=None)
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+            output_path = os.path.join(tmpdir, "result.json")
+            with ReportServer(output_path) as server:
+                self.template(["viztracer", "-o", output_path, "--report_endpoint", server.endpoint, "child.py"],
+                              expected_output_file=None)
+            with open(output_path) as f:
                 self.assertSubprocessName("child.py", json.load(f))
 
     def test_module(self):
@@ -306,18 +309,21 @@ class TestSubprocess(CmdlineTmpl):
                           script=file_subprocess_code_string,
                           check_func=lambda data: self.assertSubprocessName("python -c", data))
 
-            # this is for coverage
-            self.template(['viztracer', '-o', os.path.join(tmpdir, "result.json"), '--subprocess_child',
-                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
-            with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
+            with ReportServer(output_path) as server:
+                # this is for coverage
+                self.template(['viztracer', '-o', output_path, '--report_endpoint', server.endpoint,
+                               '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+
+            with open(output_path) as f:
                 self.assertSubprocessName("python -c", json.load(f))
 
     def test_python_entries(self):
         script = textwrap.dedent("""
             import subprocess
+            import sys
             subprocess.check_output(["vizviewer", "-h"])
-            subprocess.check_output(["ls", "./"])
+            if sys.platform != "win32":
+                subprocess.check_output(["ls", "./"])
             try:
                 subprocess.check_output(["nonexist"])
             except Exception:
@@ -379,13 +385,6 @@ class TestSubprocess(CmdlineTmpl):
         self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                       expected_output_file="result.json", script=file_grandparent, check_func=check_func)
         os.remove("parent.py")
-
-    @unittest.skipIf(sys.platform == "win32", "Can't get anything on Windows with SIGTERM")
-    def test_term(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "cmdline_test.py"],
-                          script=file_subprocess_term, expected_output_file=None, send_sig=(signal.SIGTERM, "ready"))
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
 
 
 class TestMultiprocessing(CmdlineTmpl):
@@ -666,6 +665,130 @@ class TestMultiprocessing(CmdlineTmpl):
                       script=script,
                       check_func=check_func,
                       concurrency="multiprocessing")
+
+
+class TestInlineSupport(CmdlineTmpl):
+    def test_inline_basic(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            from viztracer import VizTracer
+
+            def target():
+                return 1
+
+            if __name__ == "__main__":
+                with VizTracer(ignore_multiprocess=False):
+                    p = multiprocessing.Process(target=target)
+                    p.start()
+                    p.join()
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script,
+                      check_func=check_func)
+
+    def test_inline_hook_uninstall(self):
+        script = textwrap.dedent("""
+            import subprocess
+
+            from viztracer import VizTracer
+            from viztracer.patch import install_all_hooks
+
+            if __name__ == "__main__":
+                original_init = subprocess.Popen.__init__
+                tracer = VizTracer(ignore_multiprocess=False, register_global=False)
+                # mimic tracer.start() because tracing will overwrite coverage
+                install_all_hooks(tracer)
+                assert subprocess.Popen.__init__ != original_init
+                del tracer
+                assert subprocess.Popen.__init__ == original_init
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      script=script,
+                      expected_output_file=None)
+
+    @unittest.skipIf(sys.platform != "win32", "Only test on Windows")
+    def test_inline_hook_uninstall_windows(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            from viztracer import VizTracer
+            from viztracer.patch import install_all_hooks
+
+            if __name__ == "__main__":
+                tracer = VizTracer(ignore_multiprocess=False, register_global=False)
+                # mimic tracer.start() because tracing will overwrite coverage
+                install_all_hooks(tracer)
+                prog = multiprocessing.spawn.get_command_line()[2]
+                assert "viztracer.patch" in prog
+                get_command_line = multiprocessing.spawn.get_command_line
+                del tracer
+                prog = multiprocessing.spawn.get_command_line()[2]
+                assert "viztracer.patch" not in prog
+                prog = get_command_line()[2]
+                assert "viztracer.patch" not in prog
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      script=script,
+                      expected_output_file=None)
+
+    def test_multiple_instances(self):
+        script = textwrap.dedent("""
+            import multiprocessing
+
+            from viztracer import VizTracer
+
+            def foo():
+                return 1
+
+            if __name__ == "__main__":
+                with VizTracer(output_file="result1.json", ignore_multiprocess=False):
+                    ctx = multiprocessing.get_context("spawn")
+                    p = ctx.Process(target=foo)
+                    p.start()
+                    p.join()
+
+                with VizTracer(output_file="result2.json", ignore_multiprocess=False):
+                    ctx = multiprocessing.get_context("spawn")
+                    p = ctx.Process(target=foo)
+                    p.start()
+                    p.join()
+        """)
+
+        def check_func(data):
+            pids = set()
+            for entry in data["traceEvents"]:
+                pids.add(entry["pid"])
+            self.assertEqual(len(pids), 2)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file=["result1.json", "result2.json"],
+                      script=script,
+                      check_func=check_func)
+
+    def test_uninstall(self):
+        script = textwrap.dedent("""
+            import subprocess
+            from viztracer import VizTracer
+            original_init = subprocess.Popen.__init__
+            with VizTracer(ignore_multiprocess=False) as tracer:
+                assert subprocess.Popen.__init__ != original_init
+            assert subprocess.Popen.__init__ == original_init
+        """)
+
+        self.template([sys.executable, "cmdline_test.py"],
+                      expected_output_file="result.json",
+                      script=script)
 
 
 @unittest.skipIf("free-threading" in sys.version, "loky does not support free-threading now")

@@ -7,6 +7,7 @@ import errno
 import os
 import re
 import sys
+import tempfile
 
 # Windows macros
 STILL_ACTIVE = 0x103
@@ -76,6 +77,12 @@ def unique_file_name(exec_name: str) -> str:
         f"{d.hour:02d}{d.minute:02d}{d.second:02d}",
         f"{os.getpid()}.json"
     ])
+
+
+def unique_path(directory: str, suffix=".json") -> str:
+    """Generate a unique file path in the specified directory."""
+    with tempfile.NamedTemporaryFile(dir=directory, suffix=suffix) as f:
+        return f.name
 
 
 def compare_version(ver1: str, ver2: str) -> int:

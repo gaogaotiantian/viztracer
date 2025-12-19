@@ -5,6 +5,7 @@ import builtins
 import json
 import multiprocessing
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -138,6 +139,21 @@ class TestVizTracerBasic(BaseTmpl):
                 tracer.stop()
                 tracer.save(path)
                 self.assertFileExists(path)
+
+    def test_save_report(self):
+        tracer = VizTracer(tracer_entries=10)
+        tracer.start()
+        fib(5)
+        tracer.stop()
+        tracer.parse()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pass
+        try:
+            path = os.path.join(tmpdir, "result.json")
+            tracer.save_report(path)
+            self.assertFileExists(path)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_save_while_enabled(self):
         tracer = VizTracer(tracer_entries=10)

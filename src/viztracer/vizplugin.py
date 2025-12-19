@@ -3,6 +3,7 @@
 
 
 import sys
+import weakref
 from typing import TYPE_CHECKING, Sequence
 
 from . import __version__
@@ -52,7 +53,7 @@ class VizPluginBase:
 
 class VizPluginManager:
     def __init__(self, tracer: "VizTracer", plugins: Sequence[VizPluginBase | str] | None):
-        self._tracer = tracer
+        self._tracer_ref = weakref.ref(tracer)
         self._plugins = []
         if plugins:
             for plugin in plugins:
@@ -139,5 +140,7 @@ class VizPluginManager:
     def resolve(self, version: str, ret: dict) -> None:
         if not ret or "action" not in ret:
             return
-        if ret["action"] == "handle_data":
-            ret["handler"](self._tracer.data)
+        tracer = self._tracer_ref()
+        if tracer is not None:
+            if ret["action"] == "handle_data":
+                ret["handler"](tracer.data)

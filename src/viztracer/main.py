@@ -10,20 +10,17 @@ import json
 import multiprocessing.util  # type: ignore
 import os
 import platform
-import shutil
 import signal
 import sys
 import tempfile
 import threading
 import time
 import types
-import re
 from types import CodeType
 from typing import Any
 
 from . import __version__
 from .code_monkey import CodeMonkey
-from .patch import install_all_hooks
 from .report_builder import ReportBuilder
 from .util import color_print, frame_stack_has_func, pid_exists, same_line_print, time_str_to_us, unique_file_name
 from .viztracer import VizTracer
@@ -117,7 +114,7 @@ class VizUI:
                             help="log all exception when it's raised")
         parser.add_argument("--log_subprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
-        parser.add_argument("--subprocess_child", action="store_true", default=False,
+        parser.add_argument("--report_endpoint", default=None,
                             help=argparse.SUPPRESS)
         parser.add_argument("--dump_raw", action="store_true", default=False,
                             help=argparse.SUPPRESS)
@@ -239,15 +236,6 @@ class VizUI:
                 os.mkdir(options.output_dir)
             self.ofile = os.path.join(options.output_dir, self.ofile)
 
-        if options.subprocess_child:
-            # If it's a subprocess, we need to store the FEE data to the
-            # directory from the parent process.
-            # It's not practical to cover this line as it requires coverage
-            # instrumentation on subprocess.
-            output_file = self.ofile  # pragma: no cover
-        else:
-            output_file = os.path.join(self.multiprocess_output_dir, "result.json")
-
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
                 "WARNING",
@@ -267,13 +255,14 @@ class VizUI:
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
-            "verbose": 0,
-            "output_file": output_file,
+            "verbose": self.verbose,
+            "output_file": self.ofile,
             "max_stack_depth": options.max_stack_depth,
             "exclude_files": options.exclude_files,
             "include_files": options.include_files,
             "ignore_c_function": options.ignore_c_function,
             "ignore_frozen": options.ignore_frozen,
+            "ignore_multiprocess": options.ignore_multiprocess,
             "log_func_retval": options.log_func_retval,
             "log_func_args": options.log_func_args,
             "log_func_with_objprint": options.log_func_with_objprint,
@@ -283,9 +272,10 @@ class VizUI:
             "log_async": options.log_async,
             "log_audit": options.log_audit,
             "log_torch": options.log_torch,
-            "pid_suffix": True,
+            "pid_suffix": options.pid_suffix,
             "file_info": False,
             "register_global": True,
+            "report_endpoint": options.report_endpoint,
             "plugins": options.plugins,
             "trace_self": options.trace_self,
             "min_duration": min_duration,
@@ -346,7 +336,7 @@ class VizUI:
         options = self.options
         self.parent_pid = os.getpid()
 
-        if options.subprocess_child:
+        if options.report_endpoint is not None:
             if options.cmd_string is not None:
                 self.init_kwargs["process_name"] = "python -c"
             else:
@@ -355,11 +345,9 @@ class VizUI:
         tracer = VizTracer(**self.init_kwargs)
         self.tracer = tracer
 
-        install_all_hooks(tracer,
-                          self.args,
-                          patch_multiprocess=not options.ignore_multiprocess)
-
         if options.patch_only:
+            from .patch import install_all_hooks
+            install_all_hooks(tracer)
             exec(code, global_dict)
             return True, None
 
@@ -372,14 +360,9 @@ class VizUI:
 
         signal.signal(signal.SIGTERM, term_handler)
 
-        if options.subprocess_child:
-            tracer.label_file_to_write()
-            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
-        else:
-            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+        multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
-        if not options.log_sparse:
-            tracer.start()
+        tracer.start()
 
         exec(code, global_dict)
 
@@ -627,46 +610,6 @@ class VizUI:
         except KeyboardInterrupt:
             pass
 
-    def save(self) -> None:
-        # This function will only be called from main process
-        options = self.options
-        ofile = self.ofile
-        if options.pid_suffix:
-            prefix, suffix = os.path.splitext(self.ofile)
-            prefix_pid = f"{prefix}_{os.getpid()}"
-            ofile = prefix_pid + suffix
-        else:
-            ofile = self.ofile
-
-        self.wait_children_finish()
-        builder = ReportBuilder(
-            [os.path.join(self.multiprocess_output_dir, f)
-                for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".json")],
-            minimize_memory=options.minimize_memory,
-            verbose=self.verbose)
-        builder.save(output_file=ofile)
-        shutil.rmtree(self.multiprocess_output_dir)
-
-    def wait_children_finish(self) -> None:
-        try:
-            if any((f.endswith(".viztmp") for f in os.listdir(self.multiprocess_output_dir))):
-                same_line_print("Wait for child processes to finish, Ctrl+C to skip")
-                while True:
-                    remain_viztmp = [f for f in os.listdir(self.multiprocess_output_dir) if f.endswith(".viztmp")]
-                    for viztmp_file in remain_viztmp:
-                        match = re.search(r'result_(\d+).json.viztmp', viztmp_file)
-                        if match:
-                            pid = int(match.group(1))
-                            if pid_exists(pid):
-                                break
-                        else:   # pragma: no cover
-                            color_print("WARNING", f"Unknown viztmp file {viztmp_file}")
-                    else:
-                        break
-                    time.sleep(0.5)
-        except KeyboardInterrupt:
-            pass
-
     def exit_routine(self) -> None:
         if self.tracer is not None:
             if not self._exiting:
@@ -674,7 +617,6 @@ class VizUI:
                 if self.verbose > 0:
                     same_line_print("Saving trace data, this could take a while")
                 self.tracer.exit_routine()
-                self.save()
                 if self.options.open:  # pragma: no cover
                     import subprocess
                     subprocess.run([sys.executable, "-m", "viztracer.viewer", "--once", os.path.abspath(self.ofile)])

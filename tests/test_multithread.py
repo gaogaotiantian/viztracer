@@ -84,9 +84,9 @@ class TestMultithread(BaseTmpl):
     @unittest.skipIf(sys.version_info >= (3, 12), "We always enable threading trace in Python 3.12+")
     def test_manual_tracefunc(self):
         tracer = VizTracer(max_stack_depth=4, verbose=0)
+        tracer.start()
         # Force disable threading trace
         threading.setprofile(None)
-        tracer.start()
 
         threads = [MyThread() for _ in range(4)]
 

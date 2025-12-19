@@ -149,10 +149,16 @@ class CmdlineTmpl(BaseTmpl):
                 self.assertRegex(result.stderr.decode("utf-8"), expected_stderr)
 
             if check_func:
-                assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
-                with open(expected_output_file) as f:
-                    data = json.load(f)
-                    check_func(data)
+                if isinstance(expected_output_file, str):
+                    files = [expected_output_file]
+                elif isinstance(expected_output_file, list):
+                    files = expected_output_file
+                elif expected_output_file is not None:
+                    assert False, "Unexpected type for expected_output_file"
+                for file in files:
+                    with open(file) as f:
+                        data = json.load(f)
+                        check_func(data)
 
         if cleanup:
             self.cleanup(output_file=expected_output_file, script_name=script_name)
