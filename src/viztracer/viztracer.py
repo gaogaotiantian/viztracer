@@ -97,11 +97,6 @@ class VizTracer(Tracer):
         self.minimize_memory = minimize_memory
         self.system_print = builtins.print
 
-        if self.pid_suffix:
-            output_file_parts = output_file.split(".")
-            output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
-            output_file = ".".join(output_file_parts)
-
         self.output_file = output_file
 
         # Members for the collected data
@@ -418,6 +413,11 @@ class VizTracer(Tracer):
 
         if output_file is None:
             output_file = self.output_file
+
+            if self.pid_suffix:
+                output_file_parts = output_file.split(".")
+                output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
+                output_file = ".".join(output_file_parts)
 
         assert self.report_directory is not None
         if not os.path.exists(self.report_directory):

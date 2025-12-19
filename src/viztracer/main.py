@@ -114,8 +114,6 @@ class VizUI:
                             help="log all exception when it's raised")
         parser.add_argument("--log_subprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
-        parser.add_argument("--subprocess_child", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
         parser.add_argument("--report_endpoint", default=None,
                             help=argparse.SUPPRESS)
         parser.add_argument("--dump_raw", action="store_true", default=False,
@@ -364,10 +362,7 @@ class VizUI:
 
         signal.signal(signal.SIGTERM, term_handler)
 
-        if options.subprocess_child:
-            multiprocessing.util.Finalize(tracer, tracer.exit_routine, exitpriority=-1)
-        else:
-            multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
+        multiprocessing.util.Finalize(self, self.exit_routine, exitpriority=-1)
 
         tracer.start()
 

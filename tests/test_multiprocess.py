@@ -386,13 +386,6 @@ class TestSubprocess(CmdlineTmpl):
                       expected_output_file="result.json", script=file_grandparent, check_func=check_func)
         os.remove("parent.py")
 
-    @unittest.skipIf(sys.platform == "win32", "Can't get anything on Windows with SIGTERM")
-    def test_term(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "-o", os.path.join(tmpdir, "result.json"), "--subprocess_child", "cmdline_test.py"],
-                          script=file_subprocess_term, expected_output_file=None, send_sig=(signal.SIGTERM, "ready"))
-            self.assertEqual(len(os.listdir(tmpdir)), 1)
-
 
 class TestMultiprocessing(CmdlineTmpl):
     def test_os_fork(self):
