@@ -388,17 +388,24 @@ class TestTimestampSkew(CmdlineTmpl):
     increments.
     """
     def test_timestamp_skew(self):
-        script = textwrap.dedent("""
+        script = textwrap.dedent(r"""
             import time
+            from viztracer import get_tracer
             for _ in range(1000000):
                 len([])
+            start = time.perf_counter_ns()
             time.sleep(0.002)
+            end = time.perf_counter_ns()
+            get_tracer().log_instant("duration", args={"duration": (end - start) / 1000})
         """)
 
         def check_func(data):
             for event in reversed(data["traceEvents"]):
-                if event["ph"] == "X" and "time.sleep" in event["name"]:
-                    self.assertGreater(event["dur"], 1500)
+                if event["ph"] == "i":
+                    duration = event["args"]["duration"]
+                elif event["ph"] == "X" and "time.sleep" in event["name"]:
+                    error = abs(event["dur"] - duration) / duration
+                    self.assertLess(error, 0.1)
 
         self.template(["viztracer", "--tracer_entries", "100", "cmdline_test.py"],
                       script=script, check_func=check_func)
