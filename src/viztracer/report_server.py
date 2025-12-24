@@ -26,7 +26,7 @@ class ReportServer:
         self.minimize_memory = minimize_memory
         self.verbose = verbose
         self.report_directory: str | None = tempfile.mkdtemp(prefix="viztracer_report_")
-        self._conns = set()
+        self._conns: set[socket.socket] = set()
         self._socket: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.bind(("127.0.0.1", 0))
         self._thread: threading.Thread | None = None
