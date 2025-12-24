@@ -218,6 +218,21 @@ snaptrace_createthreadinfo(TracerObject* self) {
 
     Py_DECREF(current_thread);
 
+    if (PyUnicode_Check(thread_name)) {
+        // If it's a viztracer internal thread, ignore it
+        PyObject* prefix = PyUnicode_FromString("_VizTracer_");
+        int namelen = PyUnicode_GetLength(prefix);
+        int result = PyUnicode_Tailmatch(thread_name, prefix, 0, namelen, -1);
+        Py_DECREF(prefix);
+        if (result == -1) {
+            PyErr_Clear();
+        } else if (result == 1) {
+            info->metadata_node = NULL;
+            Py_DECREF(thread_name);
+            goto cleanup;
+        }
+    }
+
     // Check for existing node for the same tid first
     struct MetadataNode* node = self->metadata_head;
     int found_node = 0;
@@ -301,7 +316,9 @@ snaptrace_threaddestructor(void* key) {
         info->stack_top = NULL;
         Py_CLEAR(info->curr_task);
         Py_CLEAR(info->curr_task_frame);
-        info->metadata_node->thread_info = NULL;
+        if (info->metadata_node) {
+            info->metadata_node->thread_info = NULL;
+        }
         PyMem_FREE(info);
         PyGILState_Release(state);
     }
@@ -339,6 +356,12 @@ prepare_before_trace(TracerObject* self, int is_call, struct ThreadInfo** info_o
     }
 
     if (info->ignore_stack_depth > 0) {
+        return 0;
+    }
+
+    if (info->metadata_node == NULL) {
+        // No metadata node means we should not trace this thread
+        // This happens for internal viztracer threads
         return 0;
     }
 
