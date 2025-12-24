@@ -55,7 +55,7 @@ jobs:
         sudo apt-get install gdb
         echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
     - name: Setup lldb
-      if: matrix.os == 'macos-latest' || matrix.os == 'macos-15-intel'
+      if: contains(matrix.os, 'macos')
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: latest-stable
@@ -64,13 +64,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
     - name: Build dist and test with unittest
-      if: matrix.os != 'windows-latest'
+      if: !contains(matrix.os, 'windows')
       run: |
         python -m build
         pip install dist/*.whl
         python -m unittest
     - name: Build dist and test with unittest on Windows
-      if: matrix.os == 'windows-latest'
+      if: contains(matrix.os, 'windows')
       run: |
         python -m build
         pip install (Get-ChildItem dist/*.whl)
