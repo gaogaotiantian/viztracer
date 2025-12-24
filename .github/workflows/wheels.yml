@@ -103,7 +103,7 @@ jobs:
           CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Build wheels
-        if: !contains(matrix.os, 'macos') && matrix.os != 'windows-11-arm'
+        if: "!contains(matrix.os, 'macos') && matrix.os != 'windows-11-arm'"
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
