@@ -71,7 +71,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, macos-15-intel, windows-latest]
+        os: [macos-latest, macos-15-intel, windows-latest, windows-11-arm]
 
     steps:
       - uses: actions/checkout@v4
@@ -88,19 +88,25 @@ jobs:
         run: python -m pip install cibuildwheel -U
 
       - name: Build wheels
-        if: matrix.os == 'macos-latest'
+        if: contains(matrix.os, 'macos')
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14
           CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Build wheels
-        if: matrix.os != 'macos-latest'
+        if: matrix.os == 'windows-11-arm'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD: cp312-* cp313-* cp313t-* cp314-* cp314t-*
+          CIBW_ENABLE: 'cpython-freethreading'
+
+      - name: Build wheels
+        if: "!contains(matrix.os, 'macos') && matrix.os != 'windows-11-arm'"
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
           CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Upload wheels
