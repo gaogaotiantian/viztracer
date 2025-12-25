@@ -290,7 +290,7 @@ class TestSubprocess(CmdlineTmpl):
                 output_file=output_path,
             )
             self.template(["viztracer", "-o", output_path, "--report_endpoint", endpoint, "child.py"],
-                            expected_output_file=None)
+                          expected_output_file=None)
             server_proc.__exit__(None, None, None)
             with open(output_path) as f:
                 self.assertSubprocessName("child.py", json.load(f))

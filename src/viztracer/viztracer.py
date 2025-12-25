@@ -240,8 +240,10 @@ class VizTracer(Tracer):
             return
         self.report_server_process.terminate()
         self.report_server_process.wait()
-        self.report_server_process.stdout.close()
-        self.report_server_process.stderr.close()
+        if self.report_server_process.stdout is not None:
+            self.report_server_process.stdout.close()
+        if self.report_server_process.stderr is not None:
+            self.report_server_process.stderr.close()
         self.report_server_process = None
         self.report_endpoint = None
 
@@ -422,6 +424,7 @@ class VizTracer(Tracer):
         if self.report_socket_file is None:
             self.connect_report_server()
 
+        assert self.report_directory is not None
         tmp_output_file = unique_path(self.report_directory)
 
         self.save_report(
@@ -453,11 +456,17 @@ class VizTracer(Tracer):
 
         if self.report_server_process is not None:
             try:
-                while line := self.report_server_process.stdout.readline():
-                    print(line.decode(), end="")
+                if self.report_server_process.stdout is not None:
+                    while line := self.report_server_process.stdout.readline():
+                        print(line.decode(), end="")
+                self.report_server_process.wait()
             except KeyboardInterrupt:
                 self.report_server_process.send_signal(signal.SIGINT)
-            self.report_server_process.wait()
+                try:
+                    self.report_server_process.wait()
+                except KeyboardInterrupt:
+                    self.report_server_process.kill()
+                    self.report_server_process.wait()
             self.clean_report_server_process()
 
         if enabled:

@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import io
 import json
 import os
 import selectors
@@ -54,6 +53,7 @@ class ReportServer:
         if verbose == 0:
             args.append("--quiet")
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert proc.stdout is not None
         line = proc.stdout.readline()
         endpoint = line.decode().split()[-1]
         return proc, endpoint
@@ -62,6 +62,8 @@ class ReportServer:
         self.clear()
 
     def run(self) -> None:
+        if self._socket is None:
+            raise RuntimeError("ReportServer has been cleared")
         self._socket.bind((self._host, self._port))
         self._host, self._port = self._socket.getsockname()
         print(f"Report server started at {self.endpoint}", flush=True)
@@ -132,7 +134,7 @@ class ReportServer:
         finally:
             sel.close()
 
-    def _recv_info(self, conn: socket.socket) -> bool:
+    def _recv_info(self, conn: socket.socket) -> None:
         buffer = b""
         while d := conn.recv(1024):
             buffer += d
