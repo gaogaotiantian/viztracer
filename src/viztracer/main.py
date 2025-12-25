@@ -150,6 +150,8 @@ class VizUI:
                                   "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
+        parser.add_argument("--report_server", action="store_true", default=False,
+                            help="start a report server to collect reports from multiple processes")
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
                             help="pid of Python process to trace")
         parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
@@ -314,6 +316,8 @@ class VizUI:
             return self.attach_installed()
         elif self.options.uninstall > 0:
             return self.uninstall()
+        elif self.options.report_server:
+            return self.run_report_server()
         elif self.options.cmd_string is not None:
             return self.run_string()
         elif self.options.module is not None:
@@ -331,6 +335,17 @@ class VizUI:
         else:
             self.parser.print_help()
             return True, None
+
+    def run_report_server(self) -> VizProcedureResult:
+        from .report_server import ReportServer
+
+        server = ReportServer(
+            output_file=self.ofile,
+            minimize_memory=self.options.minimize_memory,
+            verbose=self.verbose,
+        )
+        server.run()
+        return True, None
 
     def run_code(self, code: CodeType | str, global_dict: dict[str, Any]) -> VizProcedureResult:
         options = self.options

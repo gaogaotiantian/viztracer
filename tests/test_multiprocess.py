@@ -286,9 +286,12 @@ class TestSubprocess(CmdlineTmpl):
     def test_child_process(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "result.json")
-            with ReportServer(output_path) as server:
-                self.template(["viztracer", "-o", output_path, "--report_endpoint", server.endpoint, "child.py"],
-                              expected_output_file=None)
+            server_proc, endpoint = ReportServer.start_process(
+                output_file=output_path,
+            )
+            self.template(["viztracer", "-o", output_path, "--report_endpoint", endpoint, "child.py"],
+                            expected_output_file=None)
+            server_proc.__exit__(None, None, None)
             with open(output_path) as f:
                 self.assertSubprocessName("child.py", json.load(f))
 
@@ -309,10 +312,13 @@ class TestSubprocess(CmdlineTmpl):
                           script=file_subprocess_code_string,
                           check_func=lambda data: self.assertSubprocessName("python -c", data))
 
-            with ReportServer(output_path) as server:
-                # this is for coverage
-                self.template(['viztracer', '-o', output_path, '--report_endpoint', server.endpoint,
-                               '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+            server_proc, endpoint = ReportServer.start_process(
+                output_file=output_path,
+            )
+            # this is for coverage
+            self.template(['viztracer', '-o', output_path, '--report_endpoint', endpoint,
+                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
+            server_proc.__exit__(None, None, None)
 
             with open(output_path) as f:
                 self.assertSubprocessName("python -c", json.load(f))
@@ -412,7 +418,7 @@ class TestMultiprocessing(CmdlineTmpl):
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                expected_output_file="result.json", script=file_fork_wait,
                                check_func=check_func_wrapper(2))
-        self.assertIn("Wait for child process", result.stdout.decode())
+        self.assertIn("Waiting for", result.stdout.decode())
 
         result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
                                send_sig=(signal.SIGINT, 3.5), expected_output_file="result.json", script=file_fork_wait,
