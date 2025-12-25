@@ -66,7 +66,6 @@ class ReportServer:
             raise RuntimeError("ReportServer has been cleared")
         self._socket.bind((self._host, self._port))
         self._host, self._port = self._socket.getsockname()
-        print(f"Report server started at {self.endpoint}", flush=True)
         self.collect()
         self.save()
 
@@ -90,6 +89,7 @@ class ReportServer:
 
     def collect(self):
         self._socket.listen()
+        print(f"Report server started at {self.endpoint}", flush=True)
         sel = selectors.DefaultSelector()
         sel.register(self._socket, selectors.EVENT_READ)
         if sys.platform != "win32":
