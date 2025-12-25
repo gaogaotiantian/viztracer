@@ -66,8 +66,11 @@ class CmdlineTmpl(BaseTmpl):
             p.stderr.close()
             p.stdout, p.stderr = stdout, stderr
         except subprocess.TimeoutExpired:
-            # Trigger fault handler
-            p.send_signal(signal.SIGILL)
+            if sys.platform == "win32":
+                p.terminate()
+            else:
+                # Trigger fault handler
+                p.send_signal(signal.SIGILL)
             try:
                 stdout, stderr = p.communicate(timeout=10)
                 logging.error("Timeout!")
