@@ -52,9 +52,9 @@ class ReportServer:
             args.extend(["--report_endpoint", report_endpoint])
         if verbose == 0:
             args.append("--quiet")
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         assert proc.stdout is not None
-        line = proc.stdout.readline()
+        line = proc.stdout.readline().strip()
         endpoint = line.decode().split()[-1]
         return proc, endpoint
 
@@ -136,6 +136,7 @@ class ReportServer:
 
     def _recv_info(self, conn: socket.socket) -> None:
         buffer = b""
+        conn.settimeout(10)
         while d := conn.recv(1024):
             buffer += d
             if b"\n" in buffer:
