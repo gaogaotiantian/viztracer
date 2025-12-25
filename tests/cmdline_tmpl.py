@@ -61,8 +61,7 @@ class CmdlineTmpl(BaseTmpl):
             p.send_signal(send_signal)
 
         try:
-            p.wait(timeout=timeout)
-            stdout, stderr = p.stdout.read(), p.stderr.read()
+            stdout, stderr = p.communicate(timeout=timeout)
             p.stdout.close()
             p.stderr.close()
             p.stdout, p.stderr = stdout, stderr
@@ -70,14 +69,14 @@ class CmdlineTmpl(BaseTmpl):
             # Trigger fault handler
             p.send_signal(signal.SIGILL)
             try:
-                p.wait(10)
+                stdout, stderr = p.communicate(timeout=10)
+                logging.error("Timeout!")
+                logging.error(f"stdout: {stdout.decode('utf-8')}")
+                logging.error(f"stderr: {stderr.decode('utf-8')}")
             except subprocess.TimeoutExpired:
                 p.kill()
                 p.wait()
             finally:
-                logging.error("Timeout!")
-                logging.error(f"stdout: {p.stdout.read()}")
-                logging.error(f"stderr: {p.stderr.read()}")
                 p.stdout.close()
                 p.stderr.close()
                 raise
