@@ -11,6 +11,10 @@ coverage
 # Test
 coredumpy
 
+# Devtools
+pystack; sys_platform == 'linux'
+psutil
+
 # 3rd party packages for test
 ipywidgets>8.0.5
 loky>3.5.0
