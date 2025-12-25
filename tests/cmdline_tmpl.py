@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import textwrap
@@ -43,6 +44,45 @@ class CmdlineTmpl(BaseTmpl):
                         os.remove(output_file)
             else:
                 raise Exception("Unexpected output file argument")
+
+    def run_cmd(self, cmd_list, timeout=60, wait=None, send_signal=None):
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             env={"PYTHONFAULTHANDLER": "1", **os.environ})
+        if isinstance(wait, str):
+            while True:
+                line = p.stdout.readline().decode("utf-8")
+                if wait in line:
+                    time.sleep(0.5)
+                    break
+        elif isinstance(wait, (int, float)):
+            time.sleep(wait)
+
+        if send_signal is not None:
+            p.send_signal(send_signal)
+
+        try:
+            p.wait(timeout=timeout)
+            stdout, stderr = p.stdout.read(), p.stderr.read()
+            p.stdout.close()
+            p.stderr.close()
+            p.stdout, p.stderr = stdout, stderr
+        except subprocess.TimeoutExpired:
+            # Trigger fault handler
+            p.send_signal(signal.SIGILL)
+            try:
+                p.wait(10)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.wait()
+            finally:
+                logging.error("Timeout!")
+                logging.error(f"stdout: {p.stdout.read()}")
+                logging.error(f"stderr: {p.stderr.read()}")
+                p.stdout.close()
+                p.stderr.close()
+                raise
+
+        return p
 
     def template(self,
                  cmd_list,
@@ -90,22 +130,7 @@ class CmdlineTmpl(BaseTmpl):
                     wait = 5
                 else:
                     wait = 2
-            p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if isinstance(wait, str):
-                while True:
-                    line = p.stdout.readline().decode("utf-8")
-                    if wait in line:
-                        time.sleep(0.5)
-                        break
-            elif isinstance(wait, (int, float)):
-                time.sleep(wait)
-            p.send_signal(sig)
-            p.wait(timeout=60)
-            stdout, stderr = p.stdout.read(), p.stderr.read()
-            p.stdout.close()
-            p.stderr.close()
-            p.stdout, p.stderr = stdout, stderr
-            result = p
+            result = self.run_cmd(cmd_list, wait=wait, send_signal=sig)
             if sys.platform == "win32":
                 # If we are on win32, we can't get anything useful from
                 # terminating the process
@@ -115,13 +140,7 @@ class CmdlineTmpl(BaseTmpl):
                 timeout = 90
             else:
                 timeout = 60
-            try:
-                result = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
-            except subprocess.TimeoutExpired as e:
-                logging.error("Timeout!")
-                logging.error(f"stdout: {e.stdout}")
-                logging.error(f"stderr: {e.stderr}")
-                raise e
+            result = self.run_cmd(cmd_list, timeout=timeout)
         expected = (success ^ (result.returncode != 0))
         if not expected:
             logging.error(f"return code: {result.returncode}")
