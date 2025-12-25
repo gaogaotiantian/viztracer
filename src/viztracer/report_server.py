@@ -44,7 +44,7 @@ class ReportServer:
         verbose: int = 1,
         report_endpoint: str | None = None,
     ) -> tuple["subprocess.Popen", str]:
-        args = [sys.executable, "-m", "viztracer",
+        args = [sys.executable, "-u", "-m", "viztracer",
                 "--report_server", "-o", output_file]
         if minimize_memory:
             args.append("--minimize_memory")
