@@ -97,6 +97,7 @@ class ReportServer:
         const_count = len(sel.get_map())
 
         started = False
+        unfinished_children = 0
 
         try:
             while True:
@@ -105,7 +106,9 @@ class ReportServer:
                         # No active connections
                         break
                     else:
-                        same_line_print(f"Waiting for {len(sel.get_map()) - const_count} connections to send reports. "
+                        if len(sel.get_map()) - const_count != unfinished_children:
+                            unfinished_children = len(sel.get_map()) - const_count
+                        same_line_print(f"Waiting for {unfinished_children} connections to send reports. "
                                         "Ctrl+C to ignore and dump now.")
                 events = sel.select()
                 for key, _ in events:
