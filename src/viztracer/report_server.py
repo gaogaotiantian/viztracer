@@ -108,8 +108,8 @@ class ReportServer:
                     else:
                         if len(sel.get_map()) - const_count != unfinished_children:
                             unfinished_children = len(sel.get_map()) - const_count
-                        # same_line_print(f"Waiting for {unfinished_children} connections to send reports. "
-                        #                 "Ctrl+C to ignore and dump now.")
+                            same_line_print(f"Waiting for {unfinished_children} connections to send reports. "
+                                            "Ctrl+C to ignore and dump now.")
                 events = sel.select()
                 for key, _ in events:
                     if key.fileobj is self._socket:
