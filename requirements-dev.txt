@@ -12,7 +12,7 @@ coverage
 coredumpy
 
 # Devtools
-pystack; sys_platform == 'linux'
+pystack; sys_platform == 'linux' and python_version < '3.13'
 psutil
 
 # 3rd party packages for test
