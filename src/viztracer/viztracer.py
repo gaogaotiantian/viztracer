@@ -310,13 +310,9 @@ class VizTracer(Tracer):
                     minimize_memory=self.minimize_memory,
                     verbose=self.verbose,
                 )
-                assert self.report_server_process.poll() is None
 
             if self.report_socket_file is None:
                 self.connect_report_server()
-
-            if self.report_server_process is not None:
-                assert self.report_server_process.poll() is None
 
             if not self.ignore_multiprocess:
                 install_all_hooks(self)
@@ -428,9 +424,6 @@ class VizTracer(Tracer):
         if self.report_socket_file is None:
             self.connect_report_server()
 
-        if self.report_server_process is not None:
-            assert self.report_server_process.poll() is None
-
         assert self.report_directory is not None
         tmp_output_file = unique_path(self.report_directory)
 
@@ -449,9 +442,6 @@ class VizTracer(Tracer):
                 output_file_parts = output_file.split(".")
                 output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
                 output_file = ".".join(output_file_parts)
-
-        if self.report_server_process is not None:
-            assert self.report_server_process.poll() is None
 
         try:
             data = {"path": tmp_output_file}
