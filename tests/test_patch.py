@@ -11,8 +11,6 @@ import tempfile
 import unittest
 from string import Template
 
-from viztracer.report_server import ReportServer
-
 from .cmdline_tmpl import CmdlineTmpl
 
 
@@ -171,7 +169,7 @@ class TestPatchOnly(CmdlineTmpl):
             pid = os.fork()
             if pid > 0:
                 tracer = viztracer.get_tracer()
-                tracer.connect_report_server()
+                tracer.report_server.start()
                 output_dir = tracer.report_directory
                 for _ in range(5):
                     if any(f.endswith(".json") for f in os.listdir(output_dir)):
@@ -180,18 +178,9 @@ class TestPatchOnly(CmdlineTmpl):
                 else:
                     sys.exit(1)
         """
-        server_proc, endpoint = ReportServer.start_process(
-            output_file="result.json",
-        )
-
-        self.template(["viztracer", "--patch_only", "--report_endpoint", endpoint, "cmdline_test.py"],
+        self.template(["viztracer", "--patch_only", "cmdline_test.py"],
                       expected_output_file=None,
                       script=script)
-
-        server_proc.stdout.close()
-        server_proc.stderr.close()
-        server_proc.terminate()
-        server_proc.wait(timeout=5)
 
 
 class TestPatchSideEffect(CmdlineTmpl):
