@@ -185,7 +185,6 @@ class TestPatchOnly(CmdlineTmpl):
                       expected_output_file=None,
                       script=script)
         server_proc.stdout.close()
-        server_proc.stderr.close()
         server_proc.terminate()
         server_proc.wait(timeout=5)
 
