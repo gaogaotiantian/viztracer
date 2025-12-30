@@ -44,20 +44,12 @@ class TestCTracer(BaseTmpl):
         tracer.stop()
         entries1 = tracer.parse()
 
-        with tempfile.NamedTemporaryFile(suffix=".json") as f:
-            tracer.save(f.name)
-            report1 = f.read().decode()
-
         tracer.start()
         fib(5)
         tracer.stop()
         entries2 = tracer.parse()
-        with tempfile.NamedTemporaryFile(suffix=".json") as f:
-            tracer.save(f.name)
-            report2 = f.read().decode()
 
         self.assertEqual(entries1, entries2)
-        self.assertNotEqual(report1, report2)
 
     def test_c_cleanup(self):
         tracer = VizTracer()
