@@ -472,6 +472,8 @@ class VizTracer(Tracer):
                     while line := self.report_server_process.stdout.readline():
                         print(line.decode(), end="")
                 self.report_server_process.wait()
+                if self.report_server_process.returncode != 0:
+                    raise RuntimeError("Report server process exited with non-zero exit code")
             except KeyboardInterrupt:
                 self.report_server_process.send_signal(signal.SIGINT)
                 try:

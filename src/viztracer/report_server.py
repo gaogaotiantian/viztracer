@@ -106,7 +106,7 @@ class ReportServer:
                         # No active connections
                         break
                     else:
-                        if len(sel.get_map()) - const_count != unfinished_children:
+                        if len(sel.get_map()) - const_count != unfinished_children and self.verbose > 0:
                             unfinished_children = len(sel.get_map()) - const_count
                             same_line_print(f"Waiting for {unfinished_children} connections to send reports. "
                                             "Ctrl+C to ignore and dump now.")
@@ -135,7 +135,8 @@ class ReportServer:
         except KeyboardInterrupt:
             pass
         finally:
-            same_line_print("")
+            if self.verbose > 0:
+                same_line_print("")
             sel.close()
 
     def _recv_info(self, conn: socket.socket) -> None:
@@ -154,7 +155,8 @@ class ReportServer:
 
     def save(self) -> None:
         if not self.paths:
-            print("No reports collected, nothing to save.")
+            if self.verbose > 0:
+                print("No reports collected, nothing to save.")
             return
         builder = ReportBuilder(
             self.paths,
