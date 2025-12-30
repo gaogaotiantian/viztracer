@@ -113,6 +113,7 @@ class TestRemote(CmdlineTmpl):
                 self.assertFileNotExist(output_file)
 
             p_attach = subprocess.Popen(attach_cmd, stdout=subprocess.PIPE, bufsize=0)
+            time.sleep(wait_time)
             # Read the attach success line
             out = p_attach.stdout.readline()
             self.assertIn("success", out.decode("utf-8"))
