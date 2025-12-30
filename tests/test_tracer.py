@@ -3,6 +3,7 @@
 
 import io
 import os
+import tempfile
 import time
 
 from viztracer import VizTracer
@@ -23,10 +24,10 @@ class TestTracer(BaseTmpl):
         fib(10)
         tracer.stop()
         tracer.parse()
-        result1 = tracer.save()
+        tracer.save()
         tracer.parse()
-        result2 = tracer.save()
-        self.assertEqual(result1, result2)
+        with self.assertWarns(RuntimeWarning):
+            tracer.save()
 
 
 class TestCTracer(BaseTmpl):
@@ -43,16 +44,19 @@ class TestCTracer(BaseTmpl):
         fib(5)
         tracer.stop()
         entries1 = tracer.parse()
-        with io.StringIO() as s:
-            tracer.save(s)
-            report1 = s.getvalue()
+
+        with tempfile.NamedTemporaryFile(suffix=".json") as f:
+            tracer.save(f.name)
+            report1 = f.read().decode()
+
         tracer.start()
         fib(5)
         tracer.stop()
         entries2 = tracer.parse()
-        with io.StringIO() as s:
-            tracer.save(s)
-            report2 = s.getvalue()
+        with tempfile.NamedTemporaryFile(suffix=".json") as f:
+            tracer.save(f.name)
+            report2 = f.read().decode()
+
         self.assertEqual(entries1, entries2)
         self.assertNotEqual(report1, report2)
 

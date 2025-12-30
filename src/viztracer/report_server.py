@@ -52,7 +52,7 @@ class ReportServer:
             args.extend(["--report_endpoint", report_endpoint])
         if verbose == 0:
             args.append("--quiet")
-        proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         assert proc.stdout is not None
         line = proc.stdout.readline().strip()
         endpoint = line.decode().split()[-1]
@@ -135,6 +135,7 @@ class ReportServer:
         except KeyboardInterrupt:
             pass
         finally:
+            same_line_print("")
             sel.close()
 
     def _recv_info(self, conn: socket.socket) -> None:

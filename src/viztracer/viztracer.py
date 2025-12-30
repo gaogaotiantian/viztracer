@@ -13,6 +13,7 @@ import socket
 import signal
 import subprocess
 import sys
+import warnings
 from typing import Any, Callable, Literal, Sequence
 from viztracer.snaptrace import Tracer
 
@@ -242,8 +243,6 @@ class VizTracer(Tracer):
         self.report_server_process.wait()
         if self.report_server_process.stdout is not None:
             self.report_server_process.stdout.close()
-        if self.report_server_process.stderr is not None:
-            self.report_server_process.stderr.close()
         self.report_server_process = None
         self.report_endpoint = None
 
@@ -415,6 +414,18 @@ class VizTracer(Tracer):
             output_file: str | None = None,
             file_info: bool | None = None,
             verbose: int | None = None) -> None:
+
+        if output_file is not None and not isinstance(output_file, str):
+            raise ValueError("output_file should be a string or None")
+
+        if self.report_endpoint is None:
+            warnings.warn(
+                "Tried to save report without starting VizTracer. No data will be saved.",
+                RuntimeWarning,
+                2
+            )
+            return
+
         enabled = False
 
         if self.enable:
@@ -449,10 +460,11 @@ class VizTracer(Tracer):
                 data["output_file"] = output_file
             self.report_socket_file.write(f"{json.dumps(data)}\n")
             self.report_socket_file.flush()
-            self.report_socket_file.close()
-            self.report_socket_file = None
         except Exception:  # pragma: no cover
             pass
+        finally:
+            self.report_socket_file.close()
+            self.report_socket_file = None
 
         if self.report_server_process is not None:
             try:
