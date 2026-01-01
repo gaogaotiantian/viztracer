@@ -1,5 +1,6 @@
 [run]
 cover_pylib = True
 source = viztracer
+patch = subprocess
 omit =
     */viztracer/attach_process/*
