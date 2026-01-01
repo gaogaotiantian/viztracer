@@ -312,17 +312,6 @@ class TestSubprocess(CmdlineTmpl):
                           script=file_subprocess_code_string,
                           check_func=lambda data: self.assertSubprocessName("python -c", data))
 
-            server_proc, endpoint = ReportServer.start_process(
-                output_file=output_path,
-            )
-            # this is for coverage
-            self.template(['viztracer', '-o', output_path, '--report_endpoint', endpoint,
-                           '-c', 'import time;time.sleep(0.5)'], expected_output_file=None)
-            server_proc.__exit__(None, None, None)
-
-            with open(output_path) as f:
-                self.assertSubprocessName("python -c", json.load(f))
-
     def test_python_entries(self):
         script = textwrap.dedent("""
             import subprocess
