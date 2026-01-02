@@ -20,8 +20,7 @@ class ReportServer:
                  output_file: str,
                  minimize_memory: bool = False,
                  verbose: int = 1,
-                 endpoint: str | None = None,
-                 append_newline: bool = False) -> None:
+                 endpoint: str | None = None) -> None:
         self._host = None
         self._port = None
         self.paths: list[str] = []
@@ -31,12 +30,20 @@ class ReportServer:
         self.report_directory: str | None = tempfile.mkdtemp(prefix="viztracer_report_")
         self._socket: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._finish = False
+        configs = []
         if endpoint is not None:
+            if "|" in endpoint:
+                endpoint, config_str = endpoint.split("|")
+                if config_str:
+                    configs = config_str.split(",")
+
+        if endpoint:
             self._host, port_str = endpoint.split(":")[:2]
             self._port = int(port_str)
         else:
             self._host, self._port = "127.0.0.1", 0
-        if append_newline:
+
+        if "append_newline" in configs:
             # If ReportServer is started in a subprocess, make sure the parent process
             # can read each same_line_print in real time.
             from .util import set_same_line_print_end
@@ -49,17 +56,11 @@ class ReportServer:
         minimize_memory: bool = False,
         verbose: int = 1,
         report_endpoint: str | None = None,
-        append_newline: bool = False,
     ) -> tuple["subprocess.Popen", str]:
         args = [sys.executable, "-u", "-m", "viztracer", "-o", output_file]
 
-        # For now append_newline is only used for VizTracer save() function
-        assert not (report_endpoint is not None and append_newline is True)
-
         if report_endpoint is not None:
             args.extend(["--report_server", report_endpoint])
-        elif append_newline:
-            args.extend(["--report_server", "append_newline"])
         else:
             args.append("--report_server")
 

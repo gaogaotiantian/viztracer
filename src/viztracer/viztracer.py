@@ -308,7 +308,7 @@ class VizTracer(Tracer):
                     output_file=self.output_file,
                     minimize_memory=self.minimize_memory,
                     verbose=self.verbose,
-                    append_newline=True
+                    report_endpoint="|append_newline"
                 )
 
             if self.report_socket_file is None:
