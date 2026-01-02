@@ -231,8 +231,7 @@ class SpawnProcess:
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
         tracer.register_exit()
-        if not self._viztracer_kwargs.get("log_sparse"):
-            tracer.start()
+        tracer.start()
         self._run()
 
 
