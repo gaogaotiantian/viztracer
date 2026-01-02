@@ -75,6 +75,7 @@ class TestReportServer(CmdlineTmpl):
         out, _ = p.communicate("\n")
         self.assertIn("No reports collected, nothing to save.", out)
 
+    @unittest.skipIf(sys.platform == "win32", "Windows terminate will kill the process without cleanup")
     def test_server_shutdown_before_save(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             server_proc, endpoint = ReportServer.start_process(
@@ -83,10 +84,7 @@ class TestReportServer(CmdlineTmpl):
 
             tracer = VizTracer(report_endpoint=endpoint, verbose=0)
             tracer.start()
-            if sys.platform == "win32":
-                server_proc.terminate()
-            else:
-                server_proc.send_signal(signal.SIGINT)
+            server_proc.send_signal(signal.SIGINT)
             server_proc.__exit__(None, None, None)
             with self.assertWarns(RuntimeWarning):
                 tracer.save()
