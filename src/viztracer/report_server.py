@@ -20,7 +20,8 @@ class ReportServer:
                  output_file: str,
                  minimize_memory: bool = False,
                  verbose: int = 1,
-                 endpoint: str | None = None) -> None:
+                 endpoint: str | None = None,
+                 stdout_newline: bool = False) -> None:
         self._host = None
         self._port = None
         self.paths: list[str] = []
@@ -35,6 +36,11 @@ class ReportServer:
             self._port = int(port_str)
         else:
             self._host, self._port = "127.0.0.1", 0
+        if stdout_newline:
+            # If ReportServer is started in a subprocess, make sure the parent process
+            # can read each same_line_print in real time.
+            from .util import set_same_line_print_end
+            set_same_line_print_end("\n")
 
     @classmethod
     def start_process(
@@ -43,6 +49,7 @@ class ReportServer:
         minimize_memory: bool = False,
         verbose: int = 1,
         report_endpoint: str | None = None,
+        stdout_newline: bool = False,
     ) -> tuple["subprocess.Popen", str]:
         args = [sys.executable, "-u", "-m", "viztracer",
                 "--report_server", "-o", output_file]
@@ -52,6 +59,8 @@ class ReportServer:
             args.extend(["--report_endpoint", report_endpoint])
         if verbose == 0:
             args.append("--quiet")
+        if stdout_newline:
+            args.append("--report_server_stdout_newline")
         proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         assert proc.stdout is not None
         line = proc.stdout.readline().strip()
@@ -83,8 +92,6 @@ class ReportServer:
 
     @property
     def endpoint(self) -> str:
-        if self._host is None or self._port is None:
-            raise RuntimeError("ReportServer has been cleared")
         return f"{self._host}:{self._port}"
 
     def collect(self):

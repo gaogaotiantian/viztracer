@@ -4,6 +4,7 @@
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 
@@ -54,3 +55,9 @@ def cmd_with_coverage(cmd):
         else:
             raise ValueError(f"can't get cmd with coverage for {cmd}")
     return cmd
+
+
+def get_free_port(host="127.0.0.1") -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, 0))          # 0 => let OS pick
+        return s.getsockname()[1]  # chosen port

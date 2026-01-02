@@ -152,6 +152,8 @@ class VizUI:
                             help="open the report in browser after saving")
         parser.add_argument("--report_server", action="store_true", default=False,
                             help="start a report server to collect reports from multiple processes")
+        parser.add_argument("--report_server_stdout_newline", action="store_true", default=False,
+                            help=argparse.SUPPRESS)
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
                             help="pid of Python process to trace")
         parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
@@ -343,6 +345,7 @@ class VizUI:
             output_file=self.ofile,
             minimize_memory=self.options.minimize_memory,
             verbose=self.verbose,
+            stdout_newline=self.options.report_server_stdout_newline,
         )
         server.run()
         return True, None

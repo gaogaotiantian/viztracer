@@ -308,6 +308,7 @@ class VizTracer(Tracer):
                     output_file=self.output_file,
                     minimize_memory=self.minimize_memory,
                     verbose=self.verbose,
+                    stdout_newline=True
                 )
 
             if self.report_socket_file is None:
@@ -438,6 +439,14 @@ class VizTracer(Tracer):
         assert self.report_directory is not None
         tmp_output_file = unique_path(self.report_directory)
 
+        if tmp_output_file is None:
+            warnings.warn(
+                "Report server has ended before saving report. No data will be saved.",
+                RuntimeWarning,
+                2
+            )
+            return
+
         self.save_report(
             output_file=tmp_output_file,
             file_info=file_info,
@@ -470,6 +479,8 @@ class VizTracer(Tracer):
             try:
                 if self.report_server_process.stdout is not None:
                     while line := self.report_server_process.stdout.readline():
+                        if line.startswith(b"\r"):
+                            line = line.strip(b"\n")
                         print(line.decode(), end="")
                 self.report_server_process.wait()
                 if self.report_server_process.returncode != 0:
@@ -478,7 +489,7 @@ class VizTracer(Tracer):
                 self.report_server_process.send_signal(signal.SIGINT)
                 try:
                     self.report_server_process.wait()
-                except KeyboardInterrupt:
+                except KeyboardInterrupt:  # pragma: no cover
                     self.report_server_process.kill()
                     self.report_server_process.wait()
             self.clean_report_server_process()

@@ -58,9 +58,17 @@ def color_print(color, s: str, **kwargs) -> None:
         print(s)
 
 
+_same_line_print_end = ""
+
+
+def set_same_line_print_end(end: str) -> None:
+    global _same_line_print_end
+    _same_line_print_end = end
+
+
 def same_line_print(s: str, width: int = 80, **kwargs) -> None:
     print(f"\r{'':<{width}}", end="")  # clear the line
-    print(f"\r{s}", end="", **kwargs)
+    print(f"\r{s}", end=_same_line_print_end, flush=True, **kwargs)
 
 
 def unique_file_name(exec_name: str) -> str:
@@ -79,10 +87,13 @@ def unique_file_name(exec_name: str) -> str:
     ])
 
 
-def unique_path(directory: str, suffix=".json") -> str:
+def unique_path(directory: str, suffix=".json") -> str | None:
     """Generate a unique file path in the specified directory."""
-    with tempfile.NamedTemporaryFile(dir=directory, suffix=suffix) as f:
-        return f.name
+    try:
+        with tempfile.NamedTemporaryFile(dir=directory, suffix=suffix) as f:
+            return f.name
+    except FileNotFoundError:
+        return None
 
 
 def compare_version(ver1: str, ver2: str) -> int:

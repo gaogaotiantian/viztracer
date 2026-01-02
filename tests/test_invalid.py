@@ -1,6 +1,8 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import io
+
 from viztracer import VizTracer
 from viztracer.event_base import _EventBase
 
@@ -56,6 +58,14 @@ class TestInvalidOperation(BaseTmpl):
             tracer.add_variable("a", 1, event="invalid")
         with self.assertRaises(Exception):
             tracer.add_variable("a", "str", event="counter")
+
+    def test_invalid_save_file(self):
+        tracer = VizTracer(verbose=0)
+        tracer.start()
+        _ = len([1, 2])
+        tracer.stop()
+        with self.assertRaises(ValueError):
+            tracer.save(io.StringIO())
 
 
 class TestUseEventBase(BaseTmpl):
