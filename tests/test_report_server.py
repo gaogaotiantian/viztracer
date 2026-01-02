@@ -83,7 +83,10 @@ class TestReportServer(CmdlineTmpl):
 
             tracer = VizTracer(report_endpoint=endpoint, verbose=0)
             tracer.start()
-            server_proc.send_signal(signal.SIGINT)
+            if sys.platform == "win32":
+                server_proc.terminate()
+            else:
+                server_proc.send_signal(signal.SIGINT)
             server_proc.__exit__(None, None, None)
             with self.assertWarns(RuntimeWarning):
                 tracer.save()
