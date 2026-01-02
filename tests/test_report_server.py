@@ -29,8 +29,8 @@ class TestReportServer(CmdlineTmpl):
             )
             self.template(
                 ["viztracer", "--report_endpoint", endpoint, "cmdline_test.py"],
-                script = script,
-                expected_output_file = f"{tmpdir}/result.json",
+                script=script,
+                expected_output_file=f"{tmpdir}/result.json",
             )
             server_proc.__exit__(None, None, None)
 
