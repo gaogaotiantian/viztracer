@@ -2,10 +2,13 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import json
 import signal
 import subprocess
+import sys
 import tempfile
 import textwrap
+import unittest
 
 from viztracer import VizTracer
 from viztracer.report_server import ReportServer
@@ -23,16 +26,25 @@ class TestReportServer(CmdlineTmpl):
         """)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            server_proc, endpoint = ReportServer.start_process(
+            endpoint = f"127.0.0.1:{get_free_port()}"
+            server_proc, actual_endpoint = ReportServer.start_process(
                 output_file=f"{tmpdir}/result.json",
-                report_endpoint=f"127.0.0.1:{get_free_port()}",
+                report_endpoint=endpoint,
             )
+            self.assertEqual(endpoint, actual_endpoint)
+
             self.template(
                 ["viztracer", "--report_endpoint", endpoint, "cmdline_test.py"],
                 script=script,
-                expected_output_file=f"{tmpdir}/result.json",
+                expected_output_file=None
             )
             server_proc.__exit__(None, None, None)
+
+            with open(f"{tmpdir}/result.json") as f:
+                data = json.load(f)
+                self.assertTrue(
+                    any("foo" in event["name"] for event in data["traceEvents"])
+                )
 
     def test_cleared(self):
         server = ReportServer(
@@ -44,6 +56,7 @@ class TestReportServer(CmdlineTmpl):
         with self.assertRaises(RuntimeError):
             server.run()
 
+    @unittest.skipIf(sys.platform == "win32", "Skip Windows due to subprocess signal handling differences")
     def test_no_data(self):
         cmd = cmd_with_coverage([
             "viztracer",

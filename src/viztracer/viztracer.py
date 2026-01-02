@@ -419,7 +419,7 @@ class VizTracer(Tracer):
         if output_file is not None and not isinstance(output_file, str):
             raise ValueError("output_file should be a string or None")
 
-        if self.report_endpoint is None:
+        if self.report_endpoint is None or self.report_socket_file is None:
             warnings.warn(
                 "Tried to save report without starting VizTracer. No data will be saved.",
                 RuntimeWarning,
@@ -432,9 +432,6 @@ class VizTracer(Tracer):
         if self.enable:
             enabled = True
             self.stop()
-
-        if self.report_socket_file is None:
-            self.connect_report_server()
 
         assert self.report_directory is not None
         tmp_output_file = unique_path(self.report_directory)
@@ -452,8 +449,6 @@ class VizTracer(Tracer):
             file_info=file_info,
             verbose=verbose
         )
-
-        assert self.report_socket_file is not None
 
         if output_file is None:
             output_file = self.output_file

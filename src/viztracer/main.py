@@ -115,7 +115,7 @@ class VizUI:
         parser.add_argument("--log_subprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--report_endpoint", default=None,
-                            help=argparse.SUPPRESS)
+                            help="The endpoint to report the trace data to, in the format of host:port")
         parser.add_argument("--dump_raw", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--sanitize_function_name", action="store_true", default=False,
@@ -345,6 +345,7 @@ class VizUI:
             output_file=self.ofile,
             minimize_memory=self.options.minimize_memory,
             verbose=self.verbose,
+            endpoint=self.options.report_endpoint,
             stdout_newline=self.options.report_server_stdout_newline,
         )
         server.run()
