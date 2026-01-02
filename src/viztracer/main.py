@@ -343,15 +343,11 @@ class VizUI:
     def run_report_server(self) -> VizProcedureResult:
         from .report_server import ReportServer
 
-        endpoint = None if ":" not in self.options.report_server else self.options.report_server
-        append_newline = self.options.report_server == ""
-
         server = ReportServer(
             output_file=self.ofile,
             minimize_memory=self.options.minimize_memory,
             verbose=self.verbose,
-            endpoint=endpoint,
-            append_newline=append_newline,
+            endpoint=self.options.report_server,
         )
         server.run()
         return True, None
