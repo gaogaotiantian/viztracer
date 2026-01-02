@@ -88,3 +88,22 @@ class TestReportServer(CmdlineTmpl):
             server_proc.__exit__(None, None, None)
             with self.assertWarns(RuntimeWarning):
                 tracer.save()
+
+    def test_invalid_report_server_argument(self):
+        cmd = cmd_with_coverage([
+            "viztracer",
+            "--report_server",
+            "invalid_endpoint_without_colon",
+            "-o",
+            "result.json",
+        ])
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        out, _ = p.communicate("\n")
+        self.assertIn("Invalid report server endpoint", out)

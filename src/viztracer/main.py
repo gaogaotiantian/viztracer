@@ -150,10 +150,8 @@ class VizUI:
                                   "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
-        parser.add_argument("--report_server", action="store_true", default=False,
-                            help="start a report server to collect reports from multiple processes")
-        parser.add_argument("--report_server_stdout_newline", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
+        parser.add_argument("--report_server", nargs="?", default=None, const="",
+                            help="start a report server to collect reports from multiple VizTracer instances")
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
                             help="pid of Python process to trace")
         parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
@@ -256,6 +254,10 @@ class VizUI:
             except ImportError:
                 return False, "torch is not installed"
 
+        if options.report_server is not None:
+            if options.report_server != "" and options.report_server != "append_newline" and ":" not in options.report_server:
+                return False, f"Invalid report server endpoint: {options.report_server}"
+
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
@@ -318,7 +320,7 @@ class VizUI:
             return self.attach_installed()
         elif self.options.uninstall > 0:
             return self.uninstall()
-        elif self.options.report_server:
+        elif self.options.report_server is not None:
             return self.run_report_server()
         elif self.options.cmd_string is not None:
             return self.run_string()
@@ -341,12 +343,15 @@ class VizUI:
     def run_report_server(self) -> VizProcedureResult:
         from .report_server import ReportServer
 
+        endpoint = None if ":" not in self.options.report_server else self.options.report_server
+        append_newline = self.options.report_server == ""
+
         server = ReportServer(
             output_file=self.ofile,
             minimize_memory=self.options.minimize_memory,
             verbose=self.verbose,
-            endpoint=self.options.report_endpoint,
-            stdout_newline=self.options.report_server_stdout_newline,
+            endpoint=endpoint,
+            append_newline=append_newline,
         )
         server.run()
         return True, None

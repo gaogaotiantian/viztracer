@@ -21,7 +21,7 @@ class ReportServer:
                  minimize_memory: bool = False,
                  verbose: int = 1,
                  endpoint: str | None = None,
-                 stdout_newline: bool = False) -> None:
+                 append_newline: bool = False) -> None:
         self._host = None
         self._port = None
         self.paths: list[str] = []
@@ -36,7 +36,7 @@ class ReportServer:
             self._port = int(port_str)
         else:
             self._host, self._port = "127.0.0.1", 0
-        if stdout_newline:
+        if append_newline:
             # If ReportServer is started in a subprocess, make sure the parent process
             # can read each same_line_print in real time.
             from .util import set_same_line_print_end
@@ -49,18 +49,25 @@ class ReportServer:
         minimize_memory: bool = False,
         verbose: int = 1,
         report_endpoint: str | None = None,
-        stdout_newline: bool = False,
+        append_newline: bool = False,
     ) -> tuple["subprocess.Popen", str]:
-        args = [sys.executable, "-u", "-m", "viztracer",
-                "--report_server", "-o", output_file]
+        args = [sys.executable, "-u", "-m", "viztracer", "-o", output_file]
+
+        # For now append_newline is only used for VizTracer save() function
+        assert not (report_endpoint is not None and append_newline is True)
+
+        if report_endpoint is not None:
+            args.extend(["--report_server", report_endpoint])
+        elif append_newline:
+            args.extend(["--report_server", "append_newline"])
+        else:
+            args.append("--report_server")
+
         if minimize_memory:
             args.append("--minimize_memory")
-        if report_endpoint is not None:
-            args.extend(["--report_endpoint", report_endpoint])
         if verbose == 0:
             args.append("--quiet")
-        if stdout_newline:
-            args.append("--report_server_stdout_newline")
+
         proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         assert proc.stdout is not None
         line = proc.stdout.readline().strip()
@@ -132,7 +139,7 @@ class ReportServer:
                     else:
                         try:
                             self._recv_info(key.fileobj)
-                        except KeyboardInterrupt:
+                        except KeyboardInterrupt:  # pragma: no cover
                             raise
                         except Exception:
                             pass
