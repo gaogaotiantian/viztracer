@@ -168,10 +168,10 @@ class TestPatchOnly(CmdlineTmpl):
             import sys
             import time
             import viztracer
+            tracer = viztracer.get_tracer()
+            tracer.connect_report_server()
             pid = os.fork()
             if pid > 0:
-                tracer = viztracer.get_tracer()
-                tracer.connect_report_server()
                 output_dir = tracer.report_directory
                 for _ in range(5):
                     if any(f.endswith(".json") for f in os.listdir(output_dir)):
