@@ -90,20 +90,21 @@ class TestReportServer(CmdlineTmpl):
                 tracer.save()
 
     def test_invalid_report_server_argument(self):
-        cmd = cmd_with_coverage([
-            "viztracer",
-            "--report_server",
-            "invalid_endpoint_without_colon",
-            "-o",
-            "result.json",
-        ])
-        p = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:
+            cmd = cmd_with_coverage([
+                "viztracer",
+                "--report_server",
+                arg,
+                "-o",
+                "result.json",
+            ])
+            p = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
 
-        out, _ = p.communicate("\n")
-        self.assertIn("Invalid report server endpoint", out)
+            p.communicate("\n")
+            self.assertNotEqual(0, p.returncode)

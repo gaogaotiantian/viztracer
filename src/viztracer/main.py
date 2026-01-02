@@ -255,8 +255,20 @@ class VizUI:
                 return False, "torch is not installed"
 
         if options.report_server is not None:
-            if options.report_server != "" and options.report_server != "append_newline" and ":" not in options.report_server:
-                return False, f"Invalid report server endpoint: {options.report_server}"
+            configs = []
+            if "|" in options.report_server:
+                endpoint, config_str = options.report_server.split("|")
+                if config_str:
+                    configs = config_str.split(",")
+            else:
+                endpoint = options.report_server
+
+            if endpoint and ":" not in endpoint:
+                return False, "report_server endpoint should be in host:port format"
+
+            for config in configs:
+                if config not in ["append_newline"]:
+                    return False, f"Unknown report_server config: {config}"
 
         self.options, self.command = options, command
         self.init_kwargs = {
