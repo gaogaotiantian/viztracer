@@ -2,68 +2,109 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import os
+import json
+import signal
+import subprocess
 import sys
 import tempfile
 import textwrap
 import unittest
 
+from viztracer import VizTracer
 from viztracer.report_server import ReportServer
 
 from .cmdline_tmpl import CmdlineTmpl
+from .util import cmd_with_coverage, get_free_port
 
 
 class TestReportServer(CmdlineTmpl):
-    def test_before_start(self):
-        with tempfile.NamedTemporaryFile() as tmpfile:
-            rs = ReportServer(output_file=tmpfile.name)
-            rs.clear()
-            with self.assertRaises(RuntimeError):
-                _ = rs.endpoint
-
-            with self.assertRaises(RuntimeError):
-                rs.collect()
-
-    def test_remove_output_dir(self):
-        with tempfile.NamedTemporaryFile() as tmpfile:
-            rs = ReportServer(output_file=tmpfile.name)
-            rs.start()
-            report_dir = rs.report_directory
-            self.assertTrue(os.path.exists(report_dir))
-            rs.clear()
-            self.assertFalse(os.path.exists(report_dir))
-            # Make sure double clear() is safe
-            rs.clear()
-
-            with self.assertRaises(RuntimeError):
-                rs.start()
-
-    @unittest.skipIf(sys.platform == "win32", "Windows does not support stdin multiplexing")
-    def test_enter_skip(self):
+    def test_report_server_with_endpoint(self):
         script = textwrap.dedent("""
-            import socket
-            import sys
-            import os
-            from viztracer.report_server import ReportServer
-
-            rs = ReportServer("result.json")
-            rs.start()
-            host, port, _ = rs.endpoint.split(":")
-
-            with socket.socket() as s1, socket.socket() as s2:
-                s1.connect((host, int(port)))
-                s2.connect((host, int(port)))
-
-            r_fd, w_fd = os.pipe()
-            sys.stdin = os.fdopen(r_fd, "r")
-            os.write(w_fd, b"\\n")
-
-            rs.collect()
+            def foo():
+                pass
+            foo()
         """)
 
-        self.template(
-            cmd_list=[sys.executable, "cmdline_test.py"],
-            script=script,
-            expected_output_file=None,
-            expected_stdout="Skipped remaining child processes"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            endpoint = f"127.0.0.1:{get_free_port()}"
+            server_proc, actual_endpoint = ReportServer.start_process(
+                output_file=f"{tmpdir}/result.json",
+                report_endpoint=endpoint,
+            )
+            self.assertEqual(endpoint, actual_endpoint)
+
+            self.template(
+                ["viztracer", "--report_endpoint", endpoint, "cmdline_test.py"],
+                script=script,
+                expected_output_file=None
+            )
+            server_proc.__exit__(None, None, None)
+
+            with open(f"{tmpdir}/result.json") as f:
+                data = json.load(f)
+                self.assertTrue(
+                    any("foo" in event["name"] for event in data["traceEvents"])
+                )
+
+    def test_cleared(self):
+        server = ReportServer(
+            output_file="result.json",
         )
+
+        server.clear()
+
+        with self.assertRaises(RuntimeError):
+            server.run()
+
+    @unittest.skipIf(sys.platform == "win32", "Skip Windows due to subprocess signal handling differences")
+    def test_no_data(self):
+        cmd = cmd_with_coverage([
+            "viztracer",
+            "--report_server",
+            "-o",
+            "result.json",
+        ])
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        out, _ = p.communicate("\n")
+        self.assertIn("No reports collected, nothing to save.", out)
+
+    @unittest.skipIf(sys.platform == "win32", "Windows terminate will kill the process without cleanup")
+    def test_server_shutdown_before_save(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            server_proc, endpoint = ReportServer.start_process(
+                output_file=f"{tmpdir}/result.json",
+            )
+
+            tracer = VizTracer(report_endpoint=endpoint, verbose=0)
+            tracer.start()
+            server_proc.send_signal(signal.SIGINT)
+            server_proc.__exit__(None, None, None)
+            with self.assertWarns(RuntimeWarning):
+                tracer.save()
+
+    def test_invalid_report_server_argument(self):
+        for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:
+            cmd = cmd_with_coverage([
+                "viztracer",
+                "--report_server",
+                arg,
+                "-o",
+                "result.json",
+            ])
+            p = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            p.communicate("\n")
+            self.assertNotEqual(0, p.returncode)

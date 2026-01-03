@@ -5,12 +5,15 @@ import builtins
 import gc
 import inspect
 import io
+import json
 import multiprocessing
 import os
 import platform
 import socket
 import signal
+import subprocess
 import sys
+import warnings
 from typing import Any, Callable, Literal, Sequence
 from viztracer.snaptrace import Tracer
 
@@ -107,6 +110,11 @@ class VizTracer(Tracer):
         self.total_entries = 0
         self.gc_start_args: dict[str, int] = {}
 
+        self.report_socket_file: io.TextIOWrapper | None = None
+        self.report_server_process: subprocess.Popen | None = None
+        self.report_endpoint = report_endpoint
+        self.report_directory: str | None = None
+
         self._exiting = False
         if register_global:
             self.register_global()
@@ -125,19 +133,6 @@ class VizTracer(Tracer):
         self._afterfork_args: tuple = tuple()
         self._afterfork_kwargs: dict = {}
 
-        self.report_socket: socket.socket | None = None
-        self.report_server: ReportServer | None
-        if report_endpoint is None:
-            self.report_server = ReportServer(
-                output_file=self.output_file,
-                minimize_memory=self.minimize_memory,
-                verbose=self.verbose
-            )
-            self.report_endpoint = self.report_server.endpoint
-        else:
-            self.report_server = None
-            self.report_endpoint = report_endpoint
-
         # load in plugins
         self.plugins = plugins
         self._plugin_manager = VizPluginManager(self, plugins)
@@ -147,8 +142,10 @@ class VizTracer(Tracer):
             import torch  # type: ignore  # noqa: F401
 
     def __del__(self):
-        if (report_socket := getattr(self, "report_socket", None)) is not None:
-            report_socket.close()
+        if (report_socket_file := getattr(self, "report_socket_file", None)) is not None:
+            report_socket_file.close()
+
+        self.clean_report_server_process()
 
         if not self.ignore_multiprocess:
             uninstall_all_hooks()
@@ -225,21 +222,29 @@ class VizTracer(Tracer):
         self.terminate()
         builtins.__dict__.pop("__viz_tracer__", None)
 
-    @property
-    def report_directory(self) -> str | None:
-        assert self.report_endpoint is not None
-        return self.report_endpoint.split(":", 2)[2]
-
     def connect_report_server(self) -> None:
         assert self.report_endpoint is not None
-        if self.report_socket is not None:
+        if self.report_socket_file is not None:
             try:
-                self.report_socket.close()
+                self.report_socket_file.close()
             except Exception:  # pragma: no cover
                 pass
-        self.report_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        addr, port = self.report_endpoint.split(":")[:2]
-        self.report_socket.connect((addr, int(port)))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        addr, port = self.report_endpoint.split(":")
+        sock.connect((addr, int(port)))
+        self.report_socket_file = sock.makefile("rw")
+        sock.close()
+        self.report_directory = self.report_socket_file.readline().strip()
+
+    def clean_report_server_process(self) -> None:
+        if self.report_server_process is None:
+            return
+        self.report_server_process.terminate()
+        self.report_server_process.wait()
+        if self.report_server_process.stdout is not None:
+            self.report_server_process.stdout.close()
+        self.report_server_process = None
+        self.report_endpoint = None
 
     def register_global(self) -> None:
         builtins.__dict__["__viz_tracer__"] = self
@@ -298,10 +303,15 @@ class VizTracer(Tracer):
             if self.include_files is not None and self.exclude_files is not None:
                 raise Exception("include_files and exclude_files can't be both specified!")
 
-            if self.report_server is not None:
-                self.report_server.start()
+            if self.report_endpoint is None:
+                self.report_server_process, self.report_endpoint = ReportServer.start_process(
+                    output_file=self.output_file,
+                    minimize_memory=self.minimize_memory,
+                    verbose=self.verbose,
+                    report_endpoint="|append_newline"
+                )
 
-            if self.report_socket is None:
+            if self.report_socket_file is None:
                 self.connect_report_server()
 
             if not self.ignore_multiprocess:
@@ -405,11 +415,40 @@ class VizTracer(Tracer):
             output_file: str | None = None,
             file_info: bool | None = None,
             verbose: int | None = None) -> None:
+
+        if output_file is not None and not isinstance(output_file, str):
+            raise ValueError("output_file should be a string or None")
+
+        if self.report_endpoint is None or self.report_socket_file is None:
+            warnings.warn(
+                "Tried to save report without starting VizTracer. No data will be saved.",
+                RuntimeWarning,
+                2
+            )
+            return
+
         enabled = False
 
         if self.enable:
             enabled = True
             self.stop()
+
+        assert self.report_directory is not None
+        tmp_output_file = unique_path(self.report_directory)
+
+        if tmp_output_file is None:
+            warnings.warn(
+                "Report server has ended before saving report. No data will be saved.",
+                RuntimeWarning,
+                2
+            )
+            return
+
+        self.save_report(
+            output_file=tmp_output_file,
+            file_info=file_info,
+            verbose=verbose
+        )
 
         if output_file is None:
             output_file = self.output_file
@@ -419,33 +458,36 @@ class VizTracer(Tracer):
                 output_file_parts[-2] = output_file_parts[-2] + "_" + str(os.getpid())
                 output_file = ".".join(output_file_parts)
 
-        assert self.report_directory is not None
-        if not os.path.exists(self.report_directory):
-            # Report server report directory is gone, skip saving
-            return
-        tmp_output_file = unique_path(self.report_directory)
-
-        self.save_report(
-            output_file=tmp_output_file,
-            file_info=file_info,
-            verbose=verbose
-        )
-
-        if self.report_socket is None:
-            self.connect_report_server()
-
-        assert self.report_socket is not None
-
         try:
-            self.report_socket.sendall(f"{tmp_output_file}\n".encode("utf-8"))
-            self.report_socket.close()
-            self.report_socket = None
+            data = {"path": tmp_output_file}
+            if self.report_server_process is not None:
+                data["output_file"] = output_file
+            self.report_socket_file.write(f"{json.dumps(data)}\n")
+            self.report_socket_file.flush()
         except Exception:  # pragma: no cover
             pass
+        finally:
+            self.report_socket_file.close()
+            self.report_socket_file = None
 
-        if self.report_server is not None:
-            self.report_server.collect()
-            self.report_server.save(output_file)
+        if self.report_server_process is not None:
+            try:
+                if self.report_server_process.stdout is not None:
+                    while line := self.report_server_process.stdout.readline():
+                        if line.startswith(b"\r"):
+                            line = line.strip(b"\n")
+                        print(line.decode(), end="")
+                self.report_server_process.wait()
+                if self.report_server_process.returncode != 0:
+                    raise RuntimeError("Report server process exited with non-zero exit code")
+            except KeyboardInterrupt:
+                self.report_server_process.send_signal(signal.SIGINT)
+                try:
+                    self.report_server_process.wait()
+                except KeyboardInterrupt:  # pragma: no cover
+                    self.report_server_process.kill()
+                    self.report_server_process.wait()
+            self.clean_report_server_process()
 
         if enabled:
             self.start()

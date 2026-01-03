@@ -115,7 +115,7 @@ class VizUI:
         parser.add_argument("--log_subprocess", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--report_endpoint", default=None,
-                            help=argparse.SUPPRESS)
+                            help="The endpoint to report the trace data to, in the format of host:port")
         parser.add_argument("--dump_raw", action="store_true", default=False,
                             help=argparse.SUPPRESS)
         parser.add_argument("--sanitize_function_name", action="store_true", default=False,
@@ -150,6 +150,8 @@ class VizUI:
                                   "Specify all the json reports you want to combine"))
         parser.add_argument("--open", action="store_true", default=False,
                             help="open the report in browser after saving")
+        parser.add_argument("--report_server", nargs="?", default=None, const="",
+                            help="start a report server to collect reports from multiple VizTracer instances")
         parser.add_argument("--attach", type=int, nargs="?", default=-1,
                             help="pid of Python process to trace")
         parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
@@ -252,6 +254,22 @@ class VizUI:
             except ImportError:
                 return False, "torch is not installed"
 
+        if options.report_server is not None:
+            configs = []
+            if "|" in options.report_server:
+                endpoint, config_str = options.report_server.split("|")
+                if config_str:
+                    configs = config_str.split(",")
+            else:
+                endpoint = options.report_server
+
+            if endpoint and ":" not in endpoint:
+                return False, "report_server endpoint should be in host:port format"
+
+            for config in configs:
+                if config not in ["append_newline"]:
+                    return False, f"Unknown report_server config: {config}"
+
         self.options, self.command = options, command
         self.init_kwargs = {
             "tracer_entries": options.tracer_entries,
@@ -314,6 +332,8 @@ class VizUI:
             return self.attach_installed()
         elif self.options.uninstall > 0:
             return self.uninstall()
+        elif self.options.report_server is not None:
+            return self.run_report_server()
         elif self.options.cmd_string is not None:
             return self.run_string()
         elif self.options.module is not None:
@@ -331,6 +351,18 @@ class VizUI:
         else:
             self.parser.print_help()
             return True, None
+
+    def run_report_server(self) -> VizProcedureResult:
+        from .report_server import ReportServer
+
+        server = ReportServer(
+            output_file=self.ofile,
+            minimize_memory=self.options.minimize_memory,
+            verbose=self.verbose,
+            endpoint=self.options.report_server,
+        )
+        server.run()
+        return True, None
 
     def run_code(self, code: CodeType | str, global_dict: dict[str, Any]) -> VizProcedureResult:
         options = self.options

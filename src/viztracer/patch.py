@@ -231,8 +231,7 @@ class SpawnProcess:
 
         tracer = viztracer.VizTracer(**self._viztracer_kwargs)
         tracer.register_exit()
-        if not self._viztracer_kwargs.get("log_sparse"):
-            tracer.start()
+        tracer.start()
         self._run()
 
 
@@ -282,12 +281,9 @@ class HookManager:
 
     def _after_fork(self):
         if self._tracer and (tracer := self._tracer()) and not tracer.ignore_multiprocess:
-            if tracer.report_server is not None:
-                # Discard the report server in the forked child process
-                # to avoid deleting the temporary report directory or conflicting socket
-                tracer.report_server.discard()
-                tracer.report_server = None
-            if tracer.report_socket is not None:
+            if tracer.report_server_process is not None:
+                tracer.report_server_process = None
+            if tracer.report_socket_file is not None:
                 # Reconnect to report server in the forked child process
                 # otherwise it conflicts with the parent's connection
                 tracer.connect_report_server()

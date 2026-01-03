@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+import psutil
 import shutil
 import signal
 import subprocess
@@ -66,6 +67,11 @@ class CmdlineTmpl(BaseTmpl):
             p.stderr.close()
             p.stdout, p.stderr = stdout, stderr
         except subprocess.TimeoutExpired:
+            if os.getenv("GITHUB_ACTIONS") and sys.version_info < (3, 13):
+                for proc in [p] + psutil.Process(p.pid).children(recursive=True):
+                    logging.error(f"Child process {proc.pid} info:")
+                    proc_info = subprocess.check_output(["pystack", "remote", str(proc.pid)]).decode("utf-8")
+                    logging.error(proc_info)
             if sys.platform == "win32":
                 p.terminate()
             else:

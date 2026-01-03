@@ -1,7 +1,6 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
-import io
 import os
 import time
 
@@ -23,10 +22,10 @@ class TestTracer(BaseTmpl):
         fib(10)
         tracer.stop()
         tracer.parse()
-        result1 = tracer.save()
+        tracer.save()
         tracer.parse()
-        result2 = tracer.save()
-        self.assertEqual(result1, result2)
+        with self.assertWarns(RuntimeWarning):
+            tracer.save()
 
 
 class TestCTracer(BaseTmpl):
@@ -43,18 +42,13 @@ class TestCTracer(BaseTmpl):
         fib(5)
         tracer.stop()
         entries1 = tracer.parse()
-        with io.StringIO() as s:
-            tracer.save(s)
-            report1 = s.getvalue()
+
         tracer.start()
         fib(5)
         tracer.stop()
         entries2 = tracer.parse()
-        with io.StringIO() as s:
-            tracer.save(s)
-            report2 = s.getvalue()
+
         self.assertEqual(entries1, entries2)
-        self.assertNotEqual(report1, report2)
 
     def test_c_cleanup(self):
         tracer = VizTracer()
