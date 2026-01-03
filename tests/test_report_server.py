@@ -151,6 +151,10 @@ class TestReportServer(CmdlineTmpl):
                     any("print" in event["name"] for event in data["traceEvents"])
                 )
 
+    @unittest.skipIf(
+        sys.platform == "win32",
+        "Skip Windows because we can't send SIGINT to subprocess properly",
+    )
     def test_report_server_devnull_stdin(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cmd = cmd_with_coverage(
