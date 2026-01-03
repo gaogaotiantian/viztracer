@@ -334,9 +334,7 @@ class ReportBuilder:
                     )
                     color_print(
                         "WARNING",
-                        (
-                            '    If you need more buffer, use "viztracer --tracer_entries <entry_number>"'
-                        ),
+                        '    If you need more buffer, use "viztracer --tracer_entries <entry_number>"',
                     )
                     color_print(
                         "WARNING",

@@ -7,9 +7,9 @@ def load_ipython_extension(ipython) -> None:
     Use `%load_ext viztracer`
     Lazy execute the following code because importing IPython is slow
     """
-    from IPython.core.magic import (
+    from IPython.core.magic import (  # type: ignore
         Magics,
-        cell_magic,  # type: ignore
+        cell_magic,
         magics_class,
         needs_local_scope,
     )
