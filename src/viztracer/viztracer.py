@@ -120,6 +120,9 @@ class VizTracer(Tracer):
         self.report_socket_file: io.TextIOWrapper | None = None
         self.report_server_process: subprocess.Popen | None = None
         self.report_endpoint = report_endpoint
+        if self.report_endpoint is None:
+            if (endpoint := os.getenv("VIZTRACER_REPORT_SERVER_ENDPOINT")) is not None:
+                self.report_endpoint = endpoint
         self.report_directory: str | None = None
 
         self._exiting = False

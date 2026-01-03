@@ -41,7 +41,9 @@ class ReportServer:
                 if config_str:
                     configs = config_str.split(",")
 
-        if endpoint:
+        if endpoint or (
+            (endpoint := os.getenv("VIZTRACER_REPORT_SERVER_ENDPOINT")) is not None
+        ):
             self._host, port_str = endpoint.split(":")[:2]
             self._port = int(port_str)
         else:

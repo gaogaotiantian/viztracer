@@ -3,6 +3,7 @@
 
 
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -96,6 +97,59 @@ class TestReportServer(CmdlineTmpl):
             server_proc.__exit__(None, None, None)
             with self.assertWarns(RuntimeWarning):
                 tracer.save()
+
+    def test_report_server_env_variable(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report_server_cmd = cmd_with_coverage(
+                [
+                    "viztracer",
+                    "--report_server",
+                    "-o",
+                    f"{tmpdir}/result.json",
+                ]
+            )
+
+            port = get_free_port()
+
+            report_server_proc = subprocess.Popen(
+                report_server_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env={
+                    "VIZTRACER_REPORT_SERVER_ENDPOINT": f"127.0.0.1:{port}",
+                    **os.environ,
+                },
+                text=True,
+            )
+
+            script_cmd = cmd_with_coverage(["viztracer", "-c", "print('hello')"])
+
+            line = report_server_proc.stdout.readline()
+            self.assertIn(f"127.0.0.1:{port}", line)
+
+            script_proc = subprocess.Popen(
+                script_cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env={
+                    "VIZTRACER_REPORT_SERVER_ENDPOINT": f"127.0.0.1:{port}",
+                    **os.environ,
+                },
+                text=True,
+            )
+
+            script_proc.wait()
+
+            report_server_proc.wait()
+            report_server_proc.stdout.close()
+
+            self.assertFileExists(f"{tmpdir}/result.json")
+
+            with open(f"{tmpdir}/result.json") as f:
+                data = json.load(f)
+                self.assertTrue(
+                    any("print" in event["name"] for event in data["traceEvents"])
+                )
 
     def test_invalid_report_server_argument(self):
         for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:
