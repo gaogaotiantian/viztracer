@@ -72,14 +72,15 @@ python setup.py build install
 
 ### Lint
 
-Check lint with flake8 and mypy
+Check lint with ruff and mypy
 
 ```
 # On Unix
 make lint
 
 # explicit or windows
-flake8 src/ tests/ example/ --exclude "src/viztracer/attach_process/*" --count --ignore=W503 --max-line-length=127 --statistics
+ruff check --fix
+ruff format
 mypy src/ --exclude src/viztracer/attach_process/
 ```
 

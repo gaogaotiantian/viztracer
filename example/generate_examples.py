@@ -9,8 +9,12 @@ def generate_by_script(script):
 
 def generate_by_vt(script, options):
     file_path = os.path.join(os.path.dirname(__file__), "src", script)
-    output_file = os.path.join(os.path.dirname(__file__), "json", script.replace("py", "json"))
-    subprocess.run(["viztracer"] + options + ["-o", output_file, "--file_info", file_path])
+    output_file = os.path.join(
+        os.path.dirname(__file__), "json", script.replace("py", "json")
+    )
+    subprocess.run(
+        ["viztracer"] + options + ["-o", output_file, "--file_info", file_path]
+    )
 
 
 if __name__ == "__main__":

@@ -29,25 +29,25 @@ def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
             json_str = f.read()
     elif isinstance(data, tuple):
         path, args = data
-        if args['type'] == 'torch':
+        if args["type"] == "torch":
             with open(path, encoding="utf-8") as f:
                 json_str = f.read()
             ret = json.loads(json_str)
-            base_offset = args['base_offset']
+            base_offset = args["base_offset"]
             # torch 2.4.0+ uses baseTimeNanoseconds to store the offset
             # before that they simply use the absolute timestamp which is
             # equivalent to baseTimeNanoseconds = 0
-            torch_offset = ret.get('baseTimeNanoseconds', 0)
+            torch_offset = ret.get("baseTimeNanoseconds", 0)
             # convert to us
             offset_diff = (torch_offset - base_offset) / 1000
 
-            for event in ret['traceEvents']:
-                if 'ts' in event:
-                    event['ts'] += offset_diff
-                if event['ph'] == 'M':
+            for event in ret["traceEvents"]:
+                if "ts" in event:
+                    event["ts"] += offset_diff
+                if event["ph"] == "M":
                     # Pop metadata timestamp so it won't overwrite
                     # process and thread names
-                    event.pop('ts', None)
+                    event.pop("ts", None)
 
             ret.pop("baseTimeNanoseconds", None)
             ret.pop("displayTimeUnit", None)
@@ -55,7 +55,7 @@ def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
             ret.pop("deviceProperties")
             ret.pop("schemaVersion")
 
-            ret['viztracer_metadata'] = {}
+            ret["viztracer_metadata"] = {}
 
             return ret
 
@@ -64,12 +64,13 @@ def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
 
 class ReportBuilder:
     def __init__(
-            self,
-            data: Sequence[str | dict | tuple[str, dict]] | dict[str, Any],
-            verbose: int = 1,
-            align: bool = False,
-            minimize_memory: bool = False,
-            base_time: int | None = None) -> None:
+        self,
+        data: Sequence[str | dict | tuple[str, dict]] | dict[str, Any],
+        verbose: int = 1,
+        align: bool = False,
+        minimize_memory: bool = False,
+        base_time: int | None = None,
+    ) -> None:
         self.data = data
         self.verbose = verbose
         self.combined_json: dict = {}
@@ -106,14 +107,18 @@ class ReportBuilder:
                 self.invalid_json_paths = []
                 for idx, j in enumerate(self.data):
                     if self.verbose > 0:
-                        same_line_print(f"Loading trace data from processes {idx}/{len(self.data)}")
+                        same_line_print(
+                            f"Loading trace data from processes {idx}/{len(self.data)}"
+                        )
                     try:
                         self.jsons.append(get_json(j))
                     except json.JSONDecodeError:
                         assert isinstance(j, str)
                         self.invalid_json_paths.append(j)
                 if len(self.invalid_json_paths) > 0:
-                    self.final_messages.append(("invalid_json", {"paths": self.invalid_json_paths}))
+                    self.final_messages.append(
+                        ("invalid_json", {"paths": self.invalid_json_paths})
+                    )
 
     def combine_json(self) -> None:
         if self.verbose > 0:
@@ -127,7 +132,10 @@ class ReportBuilder:
                 raise ValueError("Can't get report of nothing")
         if self.align:
             for one in self.jsons:
-                self.align_events(one["traceEvents"], one['viztracer_metadata'].get('sync_marker', None))
+                self.align_events(
+                    one["traceEvents"],
+                    one["viztracer_metadata"].get("sync_marker", None),
+                )
         self.combined_json = self.jsons[0]
         if "viztracer_metadata" not in self.combined_json:
             self.combined_json["viztracer_metadata"] = {}
@@ -137,15 +145,22 @@ class ReportBuilder:
             if one.get("viztracer_metadata", {}).get("overflow", False):
                 self.combined_json["viztracer_metadata"]["overflow"] = True
             if one.get("viztracer_metadata", {}).get("baseTimeNanoseconds") is not None:
-                self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = \
-                    one["viztracer_metadata"]["baseTimeNanoseconds"]
+                self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = one[
+                    "viztracer_metadata"
+                ]["baseTimeNanoseconds"]
             if "file_info" in one:
                 if "file_info" not in self.combined_json:
                     self.combined_json["file_info"] = {"files": {}, "functions": {}}
-                self.combined_json["file_info"]["files"].update(one["file_info"]["files"])
-                self.combined_json["file_info"]["functions"].update(one["file_info"]["functions"])
+                self.combined_json["file_info"]["files"].update(
+                    one["file_info"]["files"]
+                )
+                self.combined_json["file_info"]["functions"].update(
+                    one["file_info"]["functions"]
+                )
 
-    def align_events(self, original_events: list[dict[str, Any]], sync_marker: float | None = None) -> list[dict[str, Any]]:
+    def align_events(
+        self, original_events: list[dict[str, Any]], sync_marker: float | None = None
+    ) -> list[dict[str, Any]]:
         """
         Apply an offset to all the trace events, making the start timestamp 0
         This is useful when comparing multiple runs of the same script
@@ -164,7 +179,9 @@ class ReportBuilder:
                 event["ts"] -= offset_ts
         return original_events
 
-    def prepare_json(self, file_info: bool = True, display_time_unit: str | None = None) -> None:
+    def prepare_json(
+        self, file_info: bool = True, display_time_unit: str | None = None
+    ) -> None:
         # This will prepare self.combined_json to be ready to output
         self.load_jsons()
         self.combine_json()
@@ -181,7 +198,9 @@ class ReportBuilder:
         self.combined_json["viztracer_metadata"]["version"] = __version__
 
         if self.base_time is not None:
-            self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = self.base_time
+            self.combined_json["viztracer_metadata"]["baseTimeNanoseconds"] = (
+                self.base_time
+            )
 
         if file_info:
             if "file_info" not in self.combined_json:
@@ -190,7 +209,7 @@ class ReportBuilder:
             file_dict = self.combined_json["file_info"]["files"]
             func_dict = self.combined_json["file_info"]["functions"]
             for event in self.combined_json["traceEvents"]:
-                if event["ph"] == 'X':
+                if event["ph"] == "X":
                     if event["name"] not in func_dict:
                         func_dict[event["name"]] = None
                         m = pattern.match(event["name"])
@@ -203,7 +222,9 @@ class ReportBuilder:
                                     continue
                                 file_dict[file_name] = [content, content.count("\n")]
                             func_dict[event["name"]] = [file_name, lineno]
-            unknown_func_dict = set(func for func in func_dict if func_dict[func] is None)
+            unknown_func_dict = set(
+                func for func in func_dict if func_dict[func] is None
+            )
             for func in unknown_func_dict:
                 del func_dict[func]
 
@@ -229,24 +250,33 @@ class ReportBuilder:
             return None
 
     def generate_report(
-            self,
-            output_file: TextIO,
-            output_format: str,
-            file_info: bool = True) -> None:
+        self, output_file: TextIO, output_format: str, file_info: bool = True
+    ) -> None:
         sub = {}
         if output_format == "html":
             self.prepare_json(file_info=file_info, display_time_unit="ns")
-            with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_embedder.html"), encoding="utf-8") as f:
+            with open(
+                os.path.join(
+                    os.path.dirname(__file__), "html/trace_viewer_embedder.html"
+                ),
+                encoding="utf-8",
+            ) as f:
                 tmpl = f.read()
-            with open(os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"), encoding="utf-8") as f:
+            with open(
+                os.path.join(os.path.dirname(__file__), "html/trace_viewer_full.html"),
+                encoding="utf-8",
+            ) as f:
                 sub["trace_viewer_full"] = f.read()
             if json.__name__ == "orjson":
-                sub["json_data"] = json.dumps(self.combined_json) \
-                                       .decode("utf-8") \
-                                       .replace("</script>", "<\\/script>")
+                sub["json_data"] = (
+                    json.dumps(self.combined_json)
+                    .decode("utf-8")
+                    .replace("</script>", "<\\/script>")
+                )
             else:
-                sub["json_data"] = json.dumps(self.combined_json) \
-                                       .replace("</script>", "<\\/script>")  # type: ignore
+                sub["json_data"] = json.dumps(self.combined_json).replace(
+                    "</script>", "<\\/script>"
+                )  # type: ignore
             output_file.write(Template(tmpl).substitute(sub))
         elif output_format == "json":
             self.prepare_json(file_info=file_info)
@@ -258,7 +288,9 @@ class ReportBuilder:
                 else:
                     output_file.write(json.dumps(self.combined_json))  # type: ignore
 
-    def save(self, output_file: str | TextIO = "result.html", file_info: bool = True) -> None:
+    def save(
+        self, output_file: str | TextIO = "result.html", file_info: bool = True
+    ) -> None:
         if isinstance(output_file, str):
             output_file = os.path.abspath(output_file)
             if not os.path.isdir(os.path.dirname(output_file)):
@@ -281,7 +313,9 @@ class ReportBuilder:
             self.generate_report(output_file, output_format="json", file_info=file_info)
 
         if isinstance(output_file, str):
-            self.final_messages.append(("view_command", {"output_file": os.path.abspath(output_file)}))
+            self.final_messages.append(
+                ("view_command", {"output_file": os.path.abspath(output_file)})
+            )
 
         self.print_messages()
 
@@ -291,10 +325,23 @@ class ReportBuilder:
             for msg_type, msg_args in self.final_messages:
                 if msg_type == "overflow":
                     print("")
-                    color_print("WARNING", ("Circular buffer is full, you lost some early data, "
-                                            "but you still have the most recent data."))
-                    color_print("WARNING", ("    If you need more buffer, use \"viztracer --tracer_entries <entry_number>\""))
-                    color_print("WARNING", "    Or, you can try the filter options to filter out some data you don't need")
+                    color_print(
+                        "WARNING",
+                        (
+                            "Circular buffer is full, you lost some early data, "
+                            "but you still have the most recent data."
+                        ),
+                    )
+                    color_print(
+                        "WARNING",
+                        (
+                            '    If you need more buffer, use "viztracer --tracer_entries <entry_number>"'
+                        ),
+                    )
+                    color_print(
+                        "WARNING",
+                        "    Or, you can try the filter options to filter out some data you don't need",
+                    )
                     color_print("WARNING", "    use --quiet to shut me up")
                     print("")
                 elif msg_type == "total_entries":
@@ -303,12 +350,15 @@ class ReportBuilder:
                     report_abspath = os.path.abspath(msg_args["output_file"])
                     print("Use the following command to open the report:")
                     if " " in report_abspath:
-                        color_print("OKGREEN", f"vizviewer \"{report_abspath}\"")
+                        color_print("OKGREEN", f'vizviewer "{report_abspath}"')
                     else:
                         color_print("OKGREEN", f"vizviewer {report_abspath}")
                 elif msg_type == "invalid_json":
                     print("")
-                    color_print("WARNING", "Found and ignored invalid json file, you may lost some process data.")
+                    color_print(
+                        "WARNING",
+                        "Found and ignored invalid json file, you may lost some process data.",
+                    )
                     color_print("WARNING", "Invalid json file:")
                     for msg in msg_args["paths"]:
                         color_print("WARNING", f"    {msg}")

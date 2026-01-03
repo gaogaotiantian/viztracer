@@ -35,11 +35,15 @@ class AstTransformer(ast.NodeTransformer):
         elif self.inst_type == "log_func_entry":
             for funcname in self.inst_args["funcnames"]:
                 if re.fullmatch(funcname, node.name):
-                    node.body.insert(0, self.get_instrument_node("Function Entry", node.name))
+                    node.body.insert(
+                        0, self.get_instrument_node("Function Entry", node.name)
+                    )
         elif self.inst_type in ("log_var", "log_number"):
             instrumented_nodes: list[ast.stmt] = []
             args = node.args
-            func_args_name = [a.arg for a in args.posonlyargs + args.args + args.kwonlyargs]
+            func_args_name = [
+                a.arg for a in args.posonlyargs + args.args + args.kwonlyargs
+            ]
             if "vararg" in args._fields and args.vararg:
                 func_args_name.append(args.vararg.arg)
             if "kwarg" in args._fields and args.kwarg:
@@ -47,7 +51,9 @@ class AstTransformer(ast.NodeTransformer):
             for name in func_args_name:
                 for pattern in self.inst_args["varnames"]:
                     if re.fullmatch(pattern, name):
-                        instrumented_nodes.append(self.get_instrument_node("Variable Assign", name))
+                        instrumented_nodes.append(
+                            self.get_instrument_node("Variable Assign", name)
+                        )
                         break
 
         self.generic_visit(node)
@@ -75,7 +81,9 @@ class AstTransformer(ast.NodeTransformer):
             return [instrument_node, node]
         return node
 
-    def _visit_generic_assign(self, node: ast.Assign | ast.AugAssign | ast.AnnAssign) -> list[ast.stmt]:
+    def _visit_generic_assign(
+        self, node: ast.Assign | ast.AugAssign | ast.AnnAssign
+    ) -> list[ast.stmt]:
         self.generic_visit(node)
         ret: list[ast.stmt] = [node]
         self.curr_lineno = node.lineno
@@ -100,9 +108,16 @@ class AstTransformer(ast.NodeTransformer):
         elif isinstance(node, (ast.Attribute, ast.Subscript, ast.Starred)):
             return self.get_assign_targets(node.value)
         elif isinstance(node, ast.Tuple) or isinstance(node, ast.List):
-            return reduce(lambda a, b: a + b, [self.get_assign_targets(elt) for elt in node.elts])
-        color_print("WARNING", "Unexpected node type {} for ast.Assign. \
-            Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
+            return reduce(
+                lambda a, b: a + b, [self.get_assign_targets(elt) for elt in node.elts]
+            )
+        color_print(
+            "WARNING",
+            "Unexpected node type {} for ast.Assign. \
+            Please report to the author github.com/gaogaotiantian/viztracer".format(
+                type(node)
+            ),
+        )
         return []
 
     def get_assign_targets_with_attr(self, node: ast.AST) -> list[ast.Attribute]:
@@ -114,9 +129,17 @@ class AstTransformer(ast.NodeTransformer):
         elif isinstance(node, (ast.Name, ast.Subscript, ast.Starred)):
             return []
         elif isinstance(node, (ast.Tuple, ast.List)):
-            return reduce(lambda a, b: a + b, [self.get_assign_targets_with_attr(elt) for elt in node.elts])
-        color_print("WARNING", "Unexpected node type {} for ast.Assign. \
-            Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
+            return reduce(
+                lambda a, b: a + b,
+                [self.get_assign_targets_with_attr(elt) for elt in node.elts],
+            )
+        color_print(
+            "WARNING",
+            "Unexpected node type {} for ast.Assign. \
+            Please report to the author github.com/gaogaotiantian/viztracer".format(
+                type(node)
+            ),
+        )
         return []
 
     def get_assign_log_nodes(self, target: ast.expr) -> list[ast.stmt]:
@@ -131,14 +154,20 @@ class AstTransformer(ast.NodeTransformer):
             for target_id in target_ids:
                 for varname in self.inst_args["varnames"]:
                     if re.fullmatch(varname, target_id):
-                        ret.append(self.get_instrument_node("Variable Assign", target_id))
+                        ret.append(
+                            self.get_instrument_node("Variable Assign", target_id)
+                        )
                         break
         elif self.inst_type == "log_attr":
             target_nodes = self.get_assign_targets_with_attr(target)
             for target_node in target_nodes:
                 for varname in self.inst_args["varnames"]:
                     if re.fullmatch(varname, target_node.attr):
-                        ret.append(self.get_instrument_node_by_node("Attribute Assign", target_node))
+                        ret.append(
+                            self.get_instrument_node_by_node(
+                                "Attribute Assign", target_node
+                            )
+                        )
                         break
         elif self.inst_type == "log_func_exec":
             if self.log_func_exec_enable:
@@ -174,7 +203,9 @@ class AstTransformer(ast.NodeTransformer):
         else:
             raise ValueError(f"{name} is not supported")
 
-    def get_instrument_node_by_node(self, trigger: str, node: ast.expr | None) -> ast.Expr:
+    def get_instrument_node_by_node(
+        self, trigger: str, node: ast.expr | None
+    ) -> ast.Expr:
         var_node: ast.expr
         if node is None:
             name = f"{trigger}"
@@ -188,7 +219,9 @@ class AstTransformer(ast.NodeTransformer):
             event="instant",
         )
 
-    def get_add_variable_node(self, name: str, var_node: ast.expr, event: str) -> ast.Expr:
+    def get_add_variable_node(
+        self, name: str, var_node: ast.expr, event: str
+    ) -> ast.Expr:
         node_instrument = ast.Expr(
             value=ast.Call(
                 func=ast.Attribute(
@@ -256,17 +289,34 @@ class AstTransformer(ast.NodeTransformer):
         elif isinstance(node, ast.List):
             return f"[{','.join([self.get_string_of_expr(elt) for elt in node.elts])}]"
         elif isinstance(node, ast.Slice):
-            lower = self.get_string_of_expr(node.lower) if "lower" in node._fields and node.lower else ""
-            upper = self.get_string_of_expr(node.upper) if "upper" in node._fields and node.upper else ""
-            step = self.get_string_of_expr(node.step) if "step" in node._fields and node.step else ""
+            lower = (
+                self.get_string_of_expr(node.lower)
+                if "lower" in node._fields and node.lower
+                else ""
+            )
+            upper = (
+                self.get_string_of_expr(node.upper)
+                if "upper" in node._fields and node.upper
+                else ""
+            )
+            step = (
+                self.get_string_of_expr(node.step)
+                if "step" in node._fields and node.step
+                else ""
+            )
             if step:
                 return f"{lower}:{upper}:{step}"
             elif upper:
                 return f"{lower}:{upper}"
             else:
                 return f"{lower}:"
-        color_print("WARNING", "Unexpected node type {} for ast.Assign. \
-            Please report to the author github.com/gaogaotiantian/viztracer".format(type(node)))
+        color_print(
+            "WARNING",
+            "Unexpected node type {} for ast.Assign. \
+            Please report to the author github.com/gaogaotiantian/viztracer".format(
+                type(node)
+            ),
+        )
         return ""
 
 
@@ -303,14 +353,14 @@ class SourceProcessor:
     def inline_transform(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
-            val_assigned = stmt[:stmt.index("=")].strip()
+            val_assigned = stmt[: stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}))"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}')"
 
     def inline_transform_condition(self, re_match: re.Match) -> str:
         stmt = re_match.group(1)
         if "=" in stmt:
-            val_assigned = stmt[:stmt.index("=")].strip()
+            val_assigned = stmt[: stmt.index("=")].strip()
             return f"{stmt}; __viz_tracer__.log_var('{val_assigned}', ({val_assigned}), cond={re_match.group(2)})"
         return f"{stmt}; __viz_tracer__.log_instant('{stmt.strip()}', cond={re_match.group(2)});"
 
@@ -320,9 +370,15 @@ class SourceProcessor:
         # a = 3  # !viztracer: log
         (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*$"), inline_transform),
         # !viztracer: log_var("var", var) if var > 3
-        (re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"), line_transform_condition),
+        (
+            re.compile(r"(\s*)#\s*!viztracer:\s*(log_.*?\(.*\))\s*if\s+(.*?)\s*$"),
+            line_transform_condition,
+        ),
         # a = 3  # !viztracer: log if a != 3
-        (re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"), inline_transform_condition),
+        (
+            re.compile(r"(.*\S.*)#\s*!viztracer:\s*log\s*if\s+(.*?)\s*$"),
+            inline_transform_condition,
+        ),
     ]
 
 
@@ -339,15 +395,48 @@ class CodeMonkey:
     def add_source_processor(self) -> None:
         self.source_processor = SourceProcessor()
 
-    def compile(self, source, filename, mode, flags=0, dont_inherit=False, optimize=-1, *, _feature_version=-1):
+    def compile(
+        self,
+        source,
+        filename,
+        mode,
+        flags=0,
+        dont_inherit=False,
+        optimize=-1,
+        *,
+        _feature_version=-1,
+    ):
         if self.source_processor is not None:
             source = self.source_processor.process(source)
         if self.ast_transformers:
-            tree = self._compile(source, filename, mode, flags | ast.PyCF_ONLY_AST,
-                                 dont_inherit, optimize, _feature_version=_feature_version)
+            tree = self._compile(
+                source,
+                filename,
+                mode,
+                flags | ast.PyCF_ONLY_AST,
+                dont_inherit,
+                optimize,
+                _feature_version=_feature_version,
+            )
             for trans in self.ast_transformers:
                 trans.visit(tree)
                 ast.fix_missing_locations(tree)
-            return self._compile(tree, filename, mode, flags, dont_inherit, optimize, _feature_version=_feature_version)
+            return self._compile(
+                tree,
+                filename,
+                mode,
+                flags,
+                dont_inherit,
+                optimize,
+                _feature_version=_feature_version,
+            )
 
-        return self._compile(source, filename, mode, flags, dont_inherit, optimize, _feature_version=_feature_version)
+        return self._compile(
+            source,
+            filename,
+            mode,
+            flags,
+            dont_inherit,
+            optimize,
+            _feature_version=_feature_version,
+        )

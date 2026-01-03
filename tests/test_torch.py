@@ -50,25 +50,36 @@ class TestTorch(CmdlineTmpl):
                     if "linux" in sys.platform:
                         # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                        self.assertGreater(
+                            py["ts"] + py["dur"], aten["ts"] + aten["dur"]
+                        )
                     elif sys.platform == "win32":
                         # Windows is at least sane, give it 50us diff
                         self.assertLess(py["ts"], aten["ts"] + 50)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50)
+                        self.assertGreater(
+                            py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50
+                        )
                     else:
                         # Mac is pure crazy and we don't care about it
                         pass
 
-            self.template([sys.executable, "cmdline_test.py"], script=script,
-                          check_func=check_func)
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                script=script,
+                check_func=check_func,
+            )
         else:
             script = """
                 from viztracer import VizTracer
                 _ = VizTracer(log_torch=True, verbose=0)
             """
-            self.template([sys.executable, "cmdline_test.py"], script=script,
-                          expected_output_file=None, success=False,
-                          expected_stderr=".*ModuleNotFoundError.*")
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                script=script,
+                expected_output_file=None,
+                success=False,
+                expected_stderr=".*ModuleNotFoundError.*",
+            )
 
     def case_cmdline(self):
         assert self.pkg_config is not None
@@ -90,17 +101,30 @@ class TestTorch(CmdlineTmpl):
                     if "linux" in sys.platform:
                         # We care about Linux
                         self.assertLess(py["ts"], aten["ts"])
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"])
+                        self.assertGreater(
+                            py["ts"] + py["dur"], aten["ts"] + aten["dur"]
+                        )
                     elif sys.platform == "win32":
                         # Windows is at least sane, give it 100us diff
                         acceptable_margin = 100
                         self.assertLess(py["ts"], aten["ts"] + acceptable_margin)
-                        self.assertGreater(py["ts"] + py["dur"], aten["ts"] + aten["dur"] - acceptable_margin)
+                        self.assertGreater(
+                            py["ts"] + py["dur"],
+                            aten["ts"] + aten["dur"] - acceptable_margin,
+                        )
                     else:
                         # Mac is pure crazy and we don't care about it
                         pass
 
-            self.template(["viztracer", "--log_torch", "cmdline_test.py"], script=script, check_func=check_func)
+            self.template(
+                ["viztracer", "--log_torch", "cmdline_test.py"],
+                script=script,
+                check_func=check_func,
+            )
 
         else:
-            self.template(["viztracer", "--log_torch", "cmdline_test.py"], script="pass", success=False)
+            self.template(
+                ["viztracer", "--log_torch", "cmdline_test.py"],
+                script="pass",
+                success=False,
+            )

@@ -1,4 +1,3 @@
-
 from __future__ import division
 
 import operator
@@ -8,7 +7,7 @@ from functools import reduce
 from mcts import mcts
 
 
-class NaughtsAndCrossesState():
+class NaughtsAndCrossesState:
     def __init__(self):
         self.board = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
         self.currentPlayer = 1
@@ -37,8 +36,10 @@ class NaughtsAndCrossesState():
         for column in list(map(list, zip(*self.board))):
             if abs(sum(column)) == 3:
                 return True
-        for diagonal in [[self.board[i][i] for i in range(len(self.board))],
-                         [self.board[i][len(self.board) - i - 1] for i in range(len(self.board))]]:
+        for diagonal in [
+            [self.board[i][i] for i in range(len(self.board))],
+            [self.board[i][len(self.board) - i - 1] for i in range(len(self.board))],
+        ]:
             if abs(sum(diagonal)) == 3:
                 return True
         return reduce(operator.mul, sum(self.board, []), 1)
@@ -50,14 +51,16 @@ class NaughtsAndCrossesState():
         for column in list(map(list, zip(*self.board))):
             if abs(sum(column)) == 3:
                 return sum(column) / 3
-        for diagonal in [[self.board[i][i] for i in range(len(self.board))],
-                         [self.board[i][len(self.board) - i - 1] for i in range(len(self.board))]]:
+        for diagonal in [
+            [self.board[i][i] for i in range(len(self.board))],
+            [self.board[i][len(self.board) - i - 1] for i in range(len(self.board))],
+        ]:
             if abs(sum(diagonal)) == 3:
                 return sum(diagonal) / 3
         return False
 
 
-class Action():
+class Action:
     def __init__(self, player, x, y):
         self.player = player
         self.x = x
@@ -70,7 +73,12 @@ class Action():
         return str(self)
 
     def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.x == other.x and self.y == other.y and self.player == other.player
+        return (
+            self.__class__ == other.__class__
+            and self.x == other.x
+            and self.y == other.y
+            and self.player == other.player
+        )
 
     def __hash__(self):
         return hash((self.x, self.y, self.player))

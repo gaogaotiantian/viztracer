@@ -15,8 +15,8 @@ ERROR_ACCESS_DENIED = 0x5
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
-def size_fmt(num: int | float, suffix: str = 'B') -> str:
-    for unit in ['', 'Ki', 'Mi', 'Gi']:
+def size_fmt(num: int | float, suffix: str = "B") -> str:
+    for unit in ["", "Ki", "Mi", "Gi"]:
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
@@ -24,14 +24,14 @@ def size_fmt(num: int | float, suffix: str = 'B') -> str:
 
 
 class _bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 bcolors = _bcolors()
@@ -45,6 +45,7 @@ if sys.platform == "win32":
         # https://stackoverflow.com/questions/36760127/...
         # how-to-use-the-new-support-for-ansi-escape-sequences-in-the-windows-10-console
         from ctypes import windll
+
         kernel32 = windll.kernel32
         kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
     except Exception:  # pragma: no cover
@@ -79,12 +80,14 @@ def unique_file_name(exec_name: str) -> str:
     filename = filename.split(".")[0]
 
     d = datetime.datetime.now()
-    return "_".join([
-        f"{filename}",
-        f"{d.year}{d.month:02d}{d.day:02d}",
-        f"{d.hour:02d}{d.minute:02d}{d.second:02d}",
-        f"{os.getpid()}.json"
-    ])
+    return "_".join(
+        [
+            f"{filename}",
+            f"{d.year}{d.month:02d}{d.day:02d}",
+            f"{d.hour:02d}{d.minute:02d}{d.second:02d}",
+            f"{os.getpid()}.json",
+        ]
+    )
 
 
 def unique_path(directory: str, suffix=".json") -> str | None:
@@ -139,8 +142,7 @@ def time_str_to_us(t_s: str) -> float:
 
 # https://github.com/giampaolo/psutil
 def pid_exists(pid):
-    """Check whether pid exists in the current process table.
-    """
+    """Check whether pid exists in the current process table."""
     if pid < 0:
         return False
     if pid == 0:
@@ -150,10 +152,11 @@ def pid_exists(pid):
         # to know that in a portable fashion.
         # On Windows, 0 is an idle process buw we don't need to
         # check it here
-        raise ValueError('invalid PID 0')
+        raise ValueError("invalid PID 0")
     if sys.platform == "win32":
         # Windows
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
 
         process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
@@ -161,7 +164,7 @@ def pid_exists(pid):
             if kernel32.GetLastError() == ERROR_ACCESS_DENIED:
                 # Access is denied, which means there's a process.
                 # Usually it's impossible to run here in viztracer.
-                return True     # pragma: no cover
+                return True  # pragma: no cover
             else:
                 return False
 
@@ -181,12 +184,12 @@ def pid_exists(pid):
                 return True
             else:
                 return False
-        else:   # pragma: no cover
+        else:  # pragma: no cover
             if kernel32.GetLastError() == ERROR_ACCESS_DENIED:
                 # Access is denied, which means there's a process.
                 # Usually it's impossible to run here in viztracer.
                 return True
-        return False    # pragma: no cover
+        return False  # pragma: no cover
     else:
         # UNIX
         try:

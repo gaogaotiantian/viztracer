@@ -4,7 +4,6 @@
 import json
 import logging
 import os
-import psutil
 import shutil
 import signal
 import subprocess
@@ -13,8 +12,9 @@ import textwrap
 import time
 from typing import Optional
 
-from .base_tmpl import BaseTmpl
+import psutil
 
+from .base_tmpl import BaseTmpl
 
 file_fib = """
 def fib(n):
@@ -47,8 +47,12 @@ class CmdlineTmpl(BaseTmpl):
                 raise Exception("Unexpected output file argument")
 
     def run_cmd(self, cmd_list, timeout=60, wait=None, send_signal=None):
-        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             env={"PYTHONFAULTHANDLER": "1", **os.environ})
+        p = subprocess.Popen(
+            cmd_list,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"PYTHONFAULTHANDLER": "1", **os.environ},
+        )
         if isinstance(wait, str):
             while True:
                 line = p.stdout.readline().decode("utf-8")
@@ -70,7 +74,9 @@ class CmdlineTmpl(BaseTmpl):
             if os.getenv("GITHUB_ACTIONS") and sys.version_info < (3, 13):
                 for proc in [p] + psutil.Process(p.pid).children(recursive=True):
                     logging.error(f"Child process {proc.pid} info:")
-                    proc_info = subprocess.check_output(["pystack", "remote", str(proc.pid)]).decode("utf-8")
+                    proc_info = subprocess.check_output(
+                        ["pystack", "remote", str(proc.pid)]
+                    ).decode("utf-8")
                     logging.error(proc_info)
             if sys.platform == "win32":
                 p.terminate()
@@ -92,39 +98,67 @@ class CmdlineTmpl(BaseTmpl):
 
         return p
 
-    def template(self,
-                 cmd_list,
-                 expected_output_file: Optional[str] = "result.json",
-                 success=True,
-                 script=file_fib,
-                 script_name="cmdline_test.py",
-                 expected_entries=None,
-                 expected_stdout=None,
-                 expected_stderr=None,
-                 cleanup=True,
-                 check_func=None,
-                 concurrency=None,
-                 send_sig=None):
-        assert "python" not in cmd_list, \
+    def template(
+        self,
+        cmd_list,
+        expected_output_file: Optional[str] = "result.json",
+        success=True,
+        script=file_fib,
+        script_name="cmdline_test.py",
+        expected_entries=None,
+        expected_stdout=None,
+        expected_stderr=None,
+        cleanup=True,
+        check_func=None,
+        concurrency=None,
+        send_sig=None,
+    ):
+        assert "python" not in cmd_list, (
             "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
+        )
         if os.getenv("COVERAGE_RUN"):
             if "viztracer" in cmd_list:
                 idx = cmd_list.index("viztracer")
                 if not concurrency:
-                    cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] \
-                        + cmd_list[idx:]
+                    cmd_list = [
+                        "coverage",
+                        "run",
+                        "--source",
+                        "viztracer",
+                        "--parallel-mode",
+                        "-m",
+                    ] + cmd_list[idx:]
                 elif concurrency == "multiprocessing":
                     # Specification needs to be in config file
-                    cmd_list = ["coverage", "run", "--concurrency=multiprocessing", "-m"] \
-                        + cmd_list[idx:]
+                    cmd_list = [
+                        "coverage",
+                        "run",
+                        "--concurrency=multiprocessing",
+                        "-m",
+                    ] + cmd_list[idx:]
             elif "vizviewer" in cmd_list:
                 idx = cmd_list.index("vizviewer")
-                cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode", "-m"] + ["viztracer.viewer"] \
-                    + cmd_list[idx + 1:]
+                cmd_list = (
+                    [
+                        "coverage",
+                        "run",
+                        "--source",
+                        "viztracer",
+                        "--parallel-mode",
+                        "-m",
+                    ]
+                    + ["viztracer.viewer"]
+                    + cmd_list[idx + 1 :]
+                )
             elif sys.executable in cmd_list:
                 idx = cmd_list.index(sys.executable)
-                cmd_list = ["coverage", "run", "--source", "viztracer", "--parallel-mode"] \
-                    + cmd_list[idx + 1:]
+                cmd_list = [
+                    "coverage",
+                    "run",
+                    "--source",
+                    "viztracer",
+                    "--parallel-mode",
+                ] + cmd_list[idx + 1 :]
 
         if script:
             self.build_script(script, script_name)
@@ -149,7 +183,7 @@ class CmdlineTmpl(BaseTmpl):
             else:
                 timeout = 60
             result = self.run_cmd(cmd_list, timeout=timeout)
-        expected = (success ^ (result.returncode != 0))
+        expected = success ^ (result.returncode != 0)
         if not expected:
             logging.error(f"return code: {result.returncode}")
             logging.error(f"stdout:\n{result.stdout.decode('utf-8')}")
@@ -164,7 +198,10 @@ class CmdlineTmpl(BaseTmpl):
                     self.assertFileExists(expected_output_file)
 
             if success and expected_entries:
-                assert (type(expected_output_file) is str and expected_output_file.split(".")[-1] == "json")
+                assert (
+                    type(expected_output_file) is str
+                    and expected_output_file.split(".")[-1] == "json"
+                )
                 with open(expected_output_file) as f:
                     data = json.load(f)
                     self.assertEventNumber(data, expected_entries)

@@ -42,3 +42,14 @@ vizviewer = "viztracer.viewer:viewer_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "viztracer.__version__"}
+
+[tool.ruff]
+exclude = [
+    "src/viztracer/attach_process"
+]
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -9,12 +9,13 @@ import json
 import multiprocessing
 import os
 import platform
-import socket
 import signal
+import socket
 import subprocess
 import sys
 import warnings
 from typing import Any, Callable, Literal, Sequence
+
 from viztracer.snaptrace import Tracer
 
 from . import __version__
@@ -29,37 +30,39 @@ from .vizplugin import VizPluginBase, VizPluginManager
 # This is the interface of the package. Almost all user should use this
 # class for the functions
 class VizTracer(Tracer):
-    def __init__(self,
-                 tracer_entries: int = 1000000,
-                 verbose: int = 1,
-                 max_stack_depth: int = -1,
-                 include_files: list[str] | None = None,
-                 exclude_files: list[str] | None = None,
-                 ignore_c_function: bool = False,
-                 ignore_frozen: bool = False,
-                 log_func_retval: bool = False,
-                 log_func_args: bool = False,
-                 log_func_repr: Callable[..., str] | None = None,
-                 log_func_with_objprint: bool = False,
-                 log_print: bool = False,
-                 log_gc: bool = False,
-                 log_sparse: bool = False,
-                 log_async: bool = False,
-                 log_torch: bool = False,
-                 log_audit: Sequence[str] | None = None,
-                 ignore_multiprocess: bool = True,
-                 pid_suffix: bool = False,
-                 file_info: bool = True,
-                 register_global: bool = True,
-                 report_endpoint: str | None = None,
-                 trace_self: bool = False,
-                 min_duration: float = 0,
-                 minimize_memory: bool = False,
-                 dump_raw: bool = False,
-                 sanitize_function_name: bool = False,
-                 process_name: str | None = None,
-                 output_file: str = "result.json",
-                 plugins: Sequence[VizPluginBase | str] | None = None) -> None:
+    def __init__(
+        self,
+        tracer_entries: int = 1000000,
+        verbose: int = 1,
+        max_stack_depth: int = -1,
+        include_files: list[str] | None = None,
+        exclude_files: list[str] | None = None,
+        ignore_c_function: bool = False,
+        ignore_frozen: bool = False,
+        log_func_retval: bool = False,
+        log_func_args: bool = False,
+        log_func_repr: Callable[..., str] | None = None,
+        log_func_with_objprint: bool = False,
+        log_print: bool = False,
+        log_gc: bool = False,
+        log_sparse: bool = False,
+        log_async: bool = False,
+        log_torch: bool = False,
+        log_audit: Sequence[str] | None = None,
+        ignore_multiprocess: bool = True,
+        pid_suffix: bool = False,
+        file_info: bool = True,
+        register_global: bool = True,
+        report_endpoint: str | None = None,
+        trace_self: bool = False,
+        min_duration: float = 0,
+        minimize_memory: bool = False,
+        dump_raw: bool = False,
+        sanitize_function_name: bool = False,
+        process_name: str | None = None,
+        output_file: str = "result.json",
+        plugins: Sequence[VizPluginBase | str] | None = None,
+    ) -> None:
         super().__init__(tracer_entries)
 
         # Members of C Tracer object
@@ -80,12 +83,16 @@ class VizTracer(Tracer):
         if include_files is None:
             self.include_files = include_files
         else:
-            self.include_files = include_files[:] + [os.path.abspath(f) for f in include_files if not f.startswith("/")]
+            self.include_files = include_files[:] + [
+                os.path.abspath(f) for f in include_files if not f.startswith("/")
+            ]
 
         if exclude_files is None:
             self.exclude_files = exclude_files
         else:
-            self.exclude_files = exclude_files[:] + [os.path.abspath(f) for f in exclude_files if not f.startswith("/")]
+            self.exclude_files = exclude_files[:] + [
+                os.path.abspath(f) for f in exclude_files if not f.startswith("/")
+            ]
 
         # Members of VizTracer object
         self.pid_suffix = pid_suffix
@@ -124,8 +131,11 @@ class VizTracer(Tracer):
         self.log_func_with_objprint = log_func_with_objprint
         if log_func_with_objprint:
             import objprint  # type: ignore
+
             if log_func_repr:
-                raise ValueError("log_func_repr and log_func_with_objprint can't be both set")
+                raise ValueError(
+                    "log_func_repr and log_func_with_objprint can't be both set"
+                )
             log_func_repr = objprint.objstr
         self.log_func_repr = log_func_repr
 
@@ -142,7 +152,9 @@ class VizTracer(Tracer):
             import torch  # type: ignore  # noqa: F401
 
     def __del__(self):
-        if (report_socket_file := getattr(self, "report_socket_file", None)) is not None:
+        if (
+            report_socket_file := getattr(self, "report_socket_file", None)
+        ) is not None:
             report_socket_file.close()
 
         self.clean_report_server_process()
@@ -168,7 +180,11 @@ class VizTracer(Tracer):
                 elif isinstance(attr, (int, str)):
                     args.append(f"--{name}")
                     args.append(str(attr))
-                elif isinstance(attr, list) and attr and all(isinstance(i, (int, str)) for i in attr):
+                elif (
+                    isinstance(attr, list)
+                    and attr
+                    and all(isinstance(i, (int, str)) for i in attr)
+                ):
                     args.append(f"--{name}")
                     for item in attr:
                         args.append(str(item))
@@ -250,8 +266,9 @@ class VizTracer(Tracer):
         builtins.__dict__["__viz_tracer__"] = self
 
     def install(self) -> None:
-        if (sys.platform == "win32"
-                or (sys.platform == "darwin" and "arm" in platform.processor())):
+        if sys.platform == "win32" or (
+            sys.platform == "darwin" and "arm" in platform.processor()
+        ):
             print("remote install is not supported on this platform!")
             sys.exit(1)
 
@@ -265,7 +282,13 @@ class VizTracer(Tracer):
         signal.signal(signal.SIGUSR1, signal_start)
         signal.signal(signal.SIGUSR2, signal_stop)
 
-    def log_instant(self, name: str, args: Any = None, scope: Literal["g", "p", "t"] = "t", cond: bool = True) -> None:
+    def log_instant(
+        self,
+        name: str,
+        args: Any = None,
+        scope: Literal["g", "p", "t"] = "t",
+        cond: bool = True,
+    ) -> None:
         if cond:
             self.add_instant(name, args=args, scope=scope)
 
@@ -275,11 +298,16 @@ class VizTracer(Tracer):
                 self.add_counter(name, {"value": var})
             else:
                 import objprint  # type: ignore
-                self.add_instant(name, args={"object": objprint.objstr(var, color=False)}, scope="t")
+
+                self.add_instant(
+                    name, args={"object": objprint.objstr(var, color=False)}, scope="t"
+                )
 
     def log_event(self, event_name: str) -> VizEvent:
         call_frame = sys._getframe(1)
-        return VizEvent(self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno)
+        return VizEvent(
+            self, event_name, call_frame.f_code.co_filename, call_frame.f_lineno
+        )
 
     def shield_ignore(self, func: Callable, *args, **kwargs):
         prev_ignore_stack = self.setignorestackcounter(0)
@@ -297,18 +325,25 @@ class VizTracer(Tracer):
             self.parsed = False
             if self.log_torch:
                 from torch.profiler import profile, supported_activities  # type: ignore
-                self.torch_profile = profile(activities=supported_activities()).__enter__()
+
+                self.torch_profile = profile(
+                    activities=supported_activities()
+                ).__enter__()
             if self.log_print:
                 self.overload_print()
             if self.include_files is not None and self.exclude_files is not None:
-                raise Exception("include_files and exclude_files can't be both specified!")
+                raise Exception(
+                    "include_files and exclude_files can't be both specified!"
+                )
 
             if self.report_endpoint is None:
-                self.report_server_process, self.report_endpoint = ReportServer.start_process(
-                    output_file=self.output_file,
-                    minimize_memory=self.minimize_memory,
-                    verbose=self.verbose,
-                    report_endpoint="|append_newline"
+                self.report_server_process, self.report_endpoint = (
+                    ReportServer.start_process(
+                        output_file=self.output_file,
+                        minimize_memory=self.minimize_memory,
+                        verbose=self.verbose,
+                        report_endpoint="|append_newline",
+                    )
                 )
 
             if self.report_socket_file is None:
@@ -350,7 +385,7 @@ class VizTracer(Tracer):
             }
             sync_marker = self.get_sync_marker()
             if sync_marker is not None:
-                self.data['viztracer_metadata']['sync_marker'] = sync_marker
+                self.data["viztracer_metadata"]["sync_marker"] = sync_marker
 
             metadata_count = 0
             for d in self.data["traceEvents"]:
@@ -375,7 +410,7 @@ class VizTracer(Tracer):
         self,
         output_file: str,
         file_info: bool | None = None,
-        verbose: int | None = None
+        verbose: int | None = None,
     ) -> None:
         if file_info is None:
             file_info = self.file_info
@@ -401,21 +436,37 @@ class VizTracer(Tracer):
 
             if self.log_torch and self.torch_profile is not None:
                 import tempfile
+
                 with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
                     self.torch_profile.export_chrome_trace(tmpfile.name)
-                    rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'base_offset': self.get_base_time()}), self.data],
-                                       0, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
+                    rb = ReportBuilder(
+                        [
+                            (
+                                tmpfile.name,
+                                {"type": "torch", "base_offset": self.get_base_time()},
+                            ),
+                            self.data,
+                        ],
+                        0,
+                        minimize_memory=self.minimize_memory,
+                        base_time=self.get_base_time(),
+                    )
                     rb.save(output_file=output_file, file_info=file_info)
             else:
-                rb = ReportBuilder(self.data, 0, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
+                rb = ReportBuilder(
+                    self.data,
+                    0,
+                    minimize_memory=self.minimize_memory,
+                    base_time=self.get_base_time(),
+                )
                 rb.save(output_file=output_file, file_info=file_info)
 
     def save(
-            self,
-            output_file: str | None = None,
-            file_info: bool | None = None,
-            verbose: int | None = None) -> None:
-
+        self,
+        output_file: str | None = None,
+        file_info: bool | None = None,
+        verbose: int | None = None,
+    ) -> None:
         if output_file is not None and not isinstance(output_file, str):
             raise ValueError("output_file should be a string or None")
 
@@ -423,7 +474,7 @@ class VizTracer(Tracer):
             warnings.warn(
                 "Tried to save report without starting VizTracer. No data will be saved.",
                 RuntimeWarning,
-                2
+                2,
             )
             return
 
@@ -440,14 +491,12 @@ class VizTracer(Tracer):
             warnings.warn(
                 "Report server has ended before saving report. No data will be saved.",
                 RuntimeWarning,
-                2
+                2,
             )
             return
 
         self.save_report(
-            output_file=tmp_output_file,
-            file_info=file_info,
-            verbose=verbose
+            output_file=tmp_output_file, file_info=file_info, verbose=verbose
         )
 
         if output_file is None:
@@ -479,7 +528,9 @@ class VizTracer(Tracer):
                         print(line.decode(), end="")
                 self.report_server_process.wait()
                 if self.report_server_process.returncode != 0:
-                    raise RuntimeError("Report server process exited with non-zero exit code")
+                    raise RuntimeError(
+                        "Report server process exited with non-zero exit code"
+                    )
             except KeyboardInterrupt:
                 self.report_server_process.send_signal(signal.SIGINT)
                 try:
@@ -499,8 +550,9 @@ class VizTracer(Tracer):
         # Fix the current pid so it won't give new pid when parsing
         self.setpid()
 
-        p = multiprocessing.Process(target=self.save_report, daemon=False,
-                                    kwargs={"output_file": output_file})
+        p = multiprocessing.Process(
+            target=self.save_report, daemon=False, kwargs={"output_file": output_file}
+        )
         p.start()
 
         # Revert to the normal pid mode
@@ -518,13 +570,15 @@ class VizTracer(Tracer):
             # For multiprocessing.pool, it's possible we receive SIGTERM
             # in util._exit_function(), but before tracer.exit_routine()
             # executes. In this case, we can just let the exit finish
-            if not frame_stack_has_func(frame, (self.exit_routine,
-                                                multiprocessing.util._exit_function)):
+            if not frame_stack_has_func(
+                frame, (self.exit_routine, multiprocessing.util._exit_function)
+            ):
                 sys.exit(0)
 
         signal.signal(signal.SIGTERM, term_handler)
 
         from multiprocessing.util import Finalize  # type: ignore
+
         Finalize(self, self.exit_routine, exitpriority=-1)
 
     def exit_routine(self) -> None:
@@ -561,6 +615,7 @@ class VizTracer(Tracer):
             self.system_print(*args, **kwargs)
             self.add_instant(f"print - {file.getvalue()}")
             self.resume()
+
         builtins.print = new_print
 
     def restore_print(self) -> None:
@@ -606,11 +661,14 @@ class VizTracer(Tracer):
                 self.gc_start_args["collected"] = info["collected"]
                 self.gc_start_args["uncollectable"] = info["uncollectable"]
                 self.gc_start_args = {}
-                self.add_counter("garbage collection", {
-                    "collecting": 0,
-                    "collected": 0,
-                    "uncollectable": 0,
-                })
+                self.add_counter(
+                    "garbage collection",
+                    {
+                        "collecting": 0,
+                        "collected": 0,
+                        "uncollectable": 0,
+                    },
+                )
 
 
 def get_tracer() -> VizTracer | None:

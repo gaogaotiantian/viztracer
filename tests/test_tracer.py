@@ -163,6 +163,7 @@ class TestTracerFilter(BaseTmpl):
         tracer = VizTracer(ignore_frozen=True)
         tracer.start()
         import random  # noqa: F401
+
         lst = []
         lst.append(1)
         tracer.stop()
@@ -186,8 +187,7 @@ class TestTracerFeature(BaseTmpl):
         tracer.stop()
         tracer.parse()
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
-        self.assertTrue("args" in events[0]
-                        and "return_value" in events[0]["args"])
+        self.assertTrue("args" in events[0] and "return_value" in events[0]["args"])
 
     def test_log_func_args(self):
         tracer = VizTracer(log_func_args=True)
@@ -201,17 +201,22 @@ class TestTracerFeature(BaseTmpl):
     def test_log_func_repr(self):
         def myrepr(obj):
             return "deadbeef"
+
         tracer = VizTracer(log_func_args=True, log_func_repr=myrepr)
         tracer.start()
         fib(5)
         tracer.stop()
         tracer.parse()
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
-        self.assertTrue("args" in events[0] and "func_args" in events[0]["args"]
-                        and events[0]["args"]["func_args"]["n"] == "deadbeef")
+        self.assertTrue(
+            "args" in events[0]
+            and "func_args" in events[0]["args"]
+            and events[0]["args"]["func_args"]["n"] == "deadbeef"
+        )
 
     def test_log_gc(self):
         import gc
+
         tracer = VizTracer(log_gc=True)
         # do collect first to get rid of the garbage tracer
         gc.collect()

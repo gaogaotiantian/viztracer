@@ -23,7 +23,9 @@ attach_status = AttachStatus(created_tracer=False, save_path="", attached=False)
 
 
 def start_attach(init_kwargs_b64: str) -> None:
-    init_kwargs = json.loads(base64.urlsafe_b64decode(init_kwargs_b64.encode("ascii")).decode("ascii"))
+    init_kwargs = json.loads(
+        base64.urlsafe_b64decode(init_kwargs_b64.encode("ascii")).decode("ascii")
+    )
     tracer = get_tracer()
     if tracer is None:
         attach_status.created_tracer = True

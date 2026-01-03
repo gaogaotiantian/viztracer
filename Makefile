@@ -21,7 +21,8 @@ release:
 	python -m twine upload dist/*
 
 lint:
-	flake8 src/ tests/ example/ --exclude "src/viztracer/attach_process/*" --count --ignore=W503 --max-line-length=127 --statistics
+	ruff check --fix
+	ruff format
 	mypy src/ --exclude 'src/viztracer/attach_process/.*'
 
 test:

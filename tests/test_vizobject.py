@@ -105,9 +105,11 @@ class TestVizObject(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 10)
         with self.assertRaises(ValueError):
+
             @VizObject.triggerlog(when="invalid")
             def change_invalid():
                 pass
+
             change_invalid()
 
     def test_buffer_wrap(self):

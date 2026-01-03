@@ -18,8 +18,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependency
-        run: pip install flake8 mypy
-      - name: Run flake8
-        run: flake8 . --exclude "src/viztracer/attach_process/*" --count --ignore=W503 --max-line-length=127 --statistics
+        run: pip install ruff mypy
+      - name: Run ruff check
+        run: ruff check
+      - name: Run ruff format check
+        run: ruff format --check
       - name: Run mypy 
         run: mypy src/ --exclude src/viztracer/attach_process/

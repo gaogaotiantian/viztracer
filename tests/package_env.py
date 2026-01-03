@@ -24,8 +24,9 @@ class PackageConfig:
 
 
 def get_curr_packages():
-    freeze_process = subprocess.run([sys.executable, "-m", "pip", "freeze"],
-                                    check=True, stdout=subprocess.PIPE)
+    freeze_process = subprocess.run(
+        [sys.executable, "-m", "pip", "freeze"], check=True, stdout=subprocess.PIPE
+    )
     packages = freeze_process.stdout.decode("utf-8").strip().splitlines()
     return [pkg for pkg in packages if "viztracer" not in pkg]
 
@@ -39,8 +40,14 @@ def package_keeper():
         curr_packages = get_curr_packages()
         for pkg in curr_packages:
             if pkg not in orig_packages:
-                subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg], stdout=subprocess.DEVNULL)
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *orig_packages], stdout=subprocess.DEVNULL)
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "uninstall", "-y", pkg],
+                    stdout=subprocess.DEVNULL,
+                )
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", *orig_packages],
+            stdout=subprocess.DEVNULL,
+        )
 
 
 def setup_env(pkg_matrix, orig_packages):
@@ -62,18 +69,22 @@ def setup_env(pkg_matrix, orig_packages):
         try:
             for pkg in pkg_config:
                 if pkg.startswith("~"):
-                    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]], stdout=subprocess.DEVNULL)
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "uninstall", "-y", pkg[1:]],
+                        stdout=subprocess.DEVNULL,
+                    )
                 else:
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", pkg], stdout=subprocess.DEVNULL)
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", pkg],
+                        stdout=subprocess.DEVNULL,
+                    )
         except subprocess.CalledProcessError:
             continue
         yield PackageConfig(pkg_config)
 
 
 def package_matrix(pkg_matrix):
-
     def inner_func(func):
-
         def wrapper(*args, **kwargs):
             if os.getenv("GITHUB_ACTIONS"):
                 with package_keeper() as orig_packages:
@@ -84,11 +95,12 @@ def package_matrix(pkg_matrix):
                             pass
             else:
                 func(*args, **kwargs)
+
         return wrapper
 
     def inner_cls(cls):
-
         if os.getenv("GITHUB_ACTIONS"):
+
             def new_run(self, result=None):
                 with package_keeper() as orig_packages:
                     for pkg_config in setup_env(pkg_matrix, orig_packages):

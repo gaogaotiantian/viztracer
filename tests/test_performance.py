@@ -59,8 +59,16 @@ class BenchmarkTimer:
     def print_result(self):
         def time_str(baseline, experiment):
             return f"{experiment['dur']:.9f}({experiment['dur'] / baseline['dur']:.2f})[{experiment['section']}]"
+
         for experiments in self.timer_experiments.values():
-            logging.info(" ".join([time_str(self.timer_baseline, experiment) for experiment in experiments]))
+            logging.info(
+                " ".join(
+                    [
+                        time_str(self.timer_baseline, experiment)
+                        for experiment in experiments
+                    ]
+                )
+            )
 
     def add_set_up_func(self, func, *args, **kwargs):
         self._set_up_funcs.append((func, args, kwargs))
@@ -114,7 +122,9 @@ class TestPerformance(BaseTmpl):
                 if n <= 1:
                     return 1
                 return _fib(n - 1) + _fib(n - 2)
+
             return _fib(23)
+
         self.do_one_function(fib)
 
     def test_slow_fib(self):
@@ -124,7 +134,9 @@ class TestPerformance(BaseTmpl):
                     return 1
                 time.sleep(0.00001)
                 return _fib(n - 1) + _fib(n - 2)
+
             return _fib(15)
+
         self.do_one_function(slow_fib)
 
     def test_qsort(self):
@@ -146,8 +158,10 @@ class TestPerformance(BaseTmpl):
                         high.append(item)
 
                 return quicksort(low) + same + quicksort(high)
+
             arr = [random.randrange(100000) for _ in range(5000)]
             quicksort(arr)
+
         self.do_one_function(qsort)
 
     def test_hanoi(self):
@@ -157,7 +171,9 @@ class TestPerformance(BaseTmpl):
                     return
                 TowerOfHanoi(n - 1, source, auxiliary, destination)
                 TowerOfHanoi(n - 1, auxiliary, destination, source)
+
             TowerOfHanoi(16, "A", "B", "C")
+
         self.do_one_function(hanoi)
 
     def test_list(self):
@@ -170,14 +186,16 @@ class TestPerformance(BaseTmpl):
                 for i in range(n):
                     ret.append(i)
                 return ret
+
             ListOperation(205)
+
         self.do_one_function(list_operation)
 
     def test_float(self):
         from math import cos, sin, sqrt
 
-        class Point():
-            __slots__ = ('x', 'y', 'z')
+        class Point:
+            __slots__ = ("x", "y", "z")
 
             def __init__(self, i):
                 self.x = x = sin(i)
@@ -249,8 +267,12 @@ class TestFilterPerformance(BaseTmpl):
 
         logging.info("Filter performance:")
         logging.info(f"Baseline:        {baseline:.9f}(1)")
-        logging.info(f"Include:         {include_files:.9f}({include_files / baseline:.2f})")
-        logging.info(f"Max stack depth: {max_stack_depth:.9f}({max_stack_depth / baseline:.2f})")
+        logging.info(
+            f"Include:         {include_files:.9f}({include_files / baseline:.2f})"
+        )
+        logging.info(
+            f"Max stack depth: {max_stack_depth:.9f}({max_stack_depth / baseline:.2f})"
+        )
 
     def test_hanoi(self):
         def hanoi():
@@ -259,5 +281,7 @@ class TestFilterPerformance(BaseTmpl):
                     return
                 TowerOfHanoi(n - 1, source, auxiliary, destination)
                 TowerOfHanoi(n - 1, auxiliary, destination, source)
+
             TowerOfHanoi(12, "A", "B", "C")
+
         self.do_one_function(hanoi)

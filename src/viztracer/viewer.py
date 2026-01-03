@@ -5,9 +5,9 @@ import argparse
 import atexit
 import contextlib
 import functools
+import gzip
 import html
 import http.server
-import gzip
 import io
 import json
 import os
@@ -15,13 +15,12 @@ import socket
 import socketserver
 import subprocess
 import sys
-import traceback
 import threading
 import time
+import traceback
 import urllib.parse
 from http import HTTPStatus
 from typing import Any, Callable
-
 
 dir_lock = threading.Lock()
 
@@ -39,8 +38,8 @@ def chdir_temp(d: str):
 
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Cache-Control', 'no-store')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
         return super().end_headers()
 
     def log_message(self, format, *args):
@@ -49,10 +48,7 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class ExternalProcessorHandler(HttpHandler):
-    def __init__(
-            self,
-            server_thread: "ServerThread",
-            *args, **kwargs) -> None:
+    def __init__(self, server_thread: "ServerThread", *args, **kwargs) -> None:
         self.server_thread = server_thread
         super().__init__(*args, **kwargs)
 
@@ -65,10 +61,7 @@ class ExternalProcessorHandler(HttpHandler):
 
 
 class PerfettoHandler(HttpHandler):
-    def __init__(
-            self,
-            server_thread: "ServerThread",
-            *args, **kwargs) -> None:
+    def __init__(self, server_thread: "ServerThread", *args, **kwargs) -> None:
         self.server_thread = server_thread
         super().__init__(*args, **kwargs)
 
@@ -141,11 +134,10 @@ class DirectoryHandler(HttpHandler):
         path = self.translate_path(self.path)
         if os.path.isdir(path):
             parts = urllib.parse.urlsplit(self.path)
-            if not parts.path.endswith('/'):
+            if not parts.path.endswith("/"):
                 # redirect browser - doing basically what apache does
                 self.send_response(HTTPStatus.MOVED_PERMANENTLY)
-                new_parts = (parts[0], parts[1], parts[2] + '/',
-                             parts[3], parts[4])
+                new_parts = (parts[0], parts[1], parts[2] + "/", parts[3], parts[4])
                 new_url = urllib.parse.urlunsplit(new_parts)
                 self.send_header("Location", new_url)
                 self.send_header("Content-Length", "0")
@@ -164,28 +156,28 @@ class DirectoryHandler(HttpHandler):
         try:
             list = os.listdir(path)
         except OSError:
-            self.send_error(
-                HTTPStatus.NOT_FOUND,
-                "No permission to list directory")
+            self.send_error(HTTPStatus.NOT_FOUND, "No permission to list directory")
             return None
         list.sort(key=lambda a: a.lower())
         r = []
         try:
-            displaypath = urllib.parse.unquote(self.path,
-                                               errors='surrogatepass')
+            displaypath = urllib.parse.unquote(self.path, errors="surrogatepass")
         except UnicodeDecodeError:
             displaypath = urllib.parse.unquote(path)
         displaypath = html.escape(displaypath, quote=False)
         enc = sys.getfilesystemencoding()
-        title = f'Directory listing for {displaypath}'
-        r.append('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
-                 '"http://www.w3.org/TR/html4/strict.dtd">')
-        r.append('<html>\n<head>')
-        r.append('<meta http-equiv="Content-Type" '
-                 'content="text/html; charset=%s">' % enc)
-        r.append(f'<title>{title}</title>\n</head>')
-        r.append(f'<body>\n<h1>{title}</h1>')
-        r.append('<hr>\n<ul>')
+        title = f"Directory listing for {displaypath}"
+        r.append(
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+            '"http://www.w3.org/TR/html4/strict.dtd">'
+        )
+        r.append("<html>\n<head>")
+        r.append(
+            '<meta http-equiv="Content-Type" content="text/html; charset=%s">' % enc
+        )
+        r.append(f"<title>{title}</title>\n</head>")
+        r.append(f"<body>\n<h1>{title}</h1>")
+        r.append("<hr>\n<ul>")
         for name in list:
             fullname = os.path.join(path, name)
             displayname = linkname = name
@@ -200,18 +192,24 @@ class DirectoryHandler(HttpHandler):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
             if os.path.isdir(fullname):
-                r.append('<li><a href="%s">%s</a></li>'
-                         % (urllib.parse.quote(linkname,
-                                               errors='surrogatepass'),
-                            html.escape(displayname, quote=False)))
+                r.append(
+                    '<li><a href="%s">%s</a></li>'
+                    % (
+                        urllib.parse.quote(linkname, errors="surrogatepass"),
+                        html.escape(displayname, quote=False),
+                    )
+                )
             else:
                 # Open a new tab
-                r.append('<li><a href="%s" target="_blank">%s</a></li>'
-                         % (urllib.parse.quote(linkname,
-                                               errors='surrogatepass'),
-                            html.escape(displayname, quote=False)))
-        r.append('</ul>\n<hr>\n</body>\n</html>\n')
-        encoded = '\n'.join(r).encode(enc, 'surrogateescape')
+                r.append(
+                    '<li><a href="%s" target="_blank">%s</a></li>'
+                    % (
+                        urllib.parse.quote(linkname, errors="surrogatepass"),
+                        html.escape(displayname, quote=False),
+                    )
+                )
+        r.append("</ul>\n<hr>\n</body>\n</html>\n")
+        encoded = "\n".join(r).encode(enc, "surrogateescape")
         f = io.BytesIO()
         f.write(encoded)
         f.seek(0)
@@ -223,7 +221,9 @@ class DirectoryHandler(HttpHandler):
 
 
 class ExternalProcessorProcess:
-    trace_processor_path = os.path.join(os.path.dirname(__file__), "web_dist", "trace_processor")
+    trace_processor_path = os.path.join(
+        os.path.dirname(__file__), "web_dist", "trace_processor"
+    )
 
     def __init__(self, path: str) -> None:
         self.path = path
@@ -264,13 +264,14 @@ class VizViewerTCPServer(socketserver.TCPServer):
 
 class ServerThread(threading.Thread):
     def __init__(
-            self,
-            path: str,
-            port: int = 9001,
-            once: bool = False,
-            use_external_processor: bool = False,
-            timeout: float = 10,
-            quiet: bool = False) -> None:
+        self,
+        path: str,
+        port: int = 9001,
+        once: bool = False,
+        use_external_processor: bool = False,
+        timeout: float = 10,
+        quiet: bool = False,
+    ) -> None:
         self.path = path
         self.port = port
         self.once = once
@@ -310,7 +311,9 @@ class ServerThread(threading.Thread):
                 self.externel_processor_process = ExternalProcessorProcess(self.path)
             else:
                 if filename.endswith("gz"):
-                    with gzip.open(self.path, "rt", encoding="utf-8", errors="ignore") as f:
+                    with gzip.open(
+                        self.path, "rt", encoding="utf-8", errors="ignore"
+                    ) as f:
                         trace_data = json.load(f)
                 else:
                     with open(self.path, encoding="utf-8", errors="ignore") as f:
@@ -324,11 +327,13 @@ class ServerThread(threading.Thread):
             return 1
 
         if self.is_port_in_use():
-            print(f'Error! Port {self.port} is already in use, try another port with "--port"')
+            print(
+                f'Error! Port {self.port} is already in use, try another port with "--port"'
+            )
             return 1
 
         socketserver.TCPServer.allow_reuse_address = True
-        with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as self.httpd:
+        with VizViewerTCPServer(("0.0.0.0", self.port), Handler) as self.httpd:
             if not self.once and not self.quiet:
                 print("Running vizviewer")
                 print(f"You can also view your trace on http://localhost:{self.port}")
@@ -351,19 +356,20 @@ class ServerThread(threading.Thread):
 
     def is_port_in_use(self) -> bool:
         with contextlib.closing(
-                socket.socket(socket.AF_INET,
-                              socket.SOCK_STREAM)) as sock:
-            return sock.connect_ex(('127.0.0.1', self.port)) == 0
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ) as sock:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
 
 
 class DirectoryViewer:
     def __init__(
-            self,
-            path: str,
-            port: int,
-            server_only: bool,
-            timeout: int,
-            use_external_processor: bool) -> None:
+        self,
+        path: str,
+        port: int,
+        server_only: bool,
+        timeout: int,
+        use_external_processor: bool,
+    ) -> None:
         self.base_path = os.path.abspath(path)
         self.port = port
         self.server_only = server_only
@@ -394,7 +400,8 @@ class DirectoryViewer:
                     path,
                     port=port,
                     use_external_processor=self.use_external_processor,
-                    quiet=True)
+                    quiet=True,
+                )
                 t.start()
                 t.ready.wait()
                 return t
@@ -424,14 +431,15 @@ class DirectoryViewer:
     def run(self) -> int:
         Handler = functools.partial(DirectoryHandler, self)
         socketserver.TCPServer.allow_reuse_address = True
-        with VizViewerTCPServer(('0.0.0.0', self.port), Handler) as httpd:
+        with VizViewerTCPServer(("0.0.0.0", self.port), Handler) as httpd:
             print("Running vizviewer")
             print(f"You can also view your trace on http://localhost:{self.port}")
             print("Press Ctrl+C to quit", flush=True)
             if not self.server_only:
                 # import webbrowser only if necessary
                 import webbrowser
-                webbrowser.open_new_tab(f'http://127.0.0.1:{self.port}')
+
+                webbrowser.open_new_tab(f"http://127.0.0.1:{self.port}")
             try:
                 httpd.serve_forever()
             except KeyboardInterrupt:
@@ -446,24 +454,51 @@ class DirectoryViewer:
 def viewer_main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("file", nargs=1, help="html/json/gz file to open")
-    parser.add_argument("--server_only", "-s", default=False, action="store_true",
-                        help="Only start the server, do not open webpage")
-    parser.add_argument("--port", "-p", nargs="?", type=int, default=9001,
-                        help="Specify the port vizviewer will use")
-    parser.add_argument("--once", default=False, action="store_true",
-                        help="Only serve trace data once, then exit.")
-    parser.add_argument("--timeout", nargs="?", type=int, default=10,
-                        help="Timeout in seconds to stop the server without trace data requests")
-    parser.add_argument("--flamegraph", default=False, action="store_true",
-                        help=argparse.SUPPRESS)
-    parser.add_argument("--use_external_processor", default=False, action="store_true",
-                        help="Use the more powerful external trace processor instead of WASM")
+    parser.add_argument(
+        "--server_only",
+        "-s",
+        default=False,
+        action="store_true",
+        help="Only start the server, do not open webpage",
+    )
+    parser.add_argument(
+        "--port",
+        "-p",
+        nargs="?",
+        type=int,
+        default=9001,
+        help="Specify the port vizviewer will use",
+    )
+    parser.add_argument(
+        "--once",
+        default=False,
+        action="store_true",
+        help="Only serve trace data once, then exit.",
+    )
+    parser.add_argument(
+        "--timeout",
+        nargs="?",
+        type=int,
+        default=10,
+        help="Timeout in seconds to stop the server without trace data requests",
+    )
+    parser.add_argument(
+        "--flamegraph", default=False, action="store_true", help=argparse.SUPPRESS
+    )
+    parser.add_argument(
+        "--use_external_processor",
+        default=False,
+        action="store_true",
+        help="Use the more powerful external trace processor instead of WASM",
+    )
 
     options = parser.parse_args(sys.argv[1:])
     f = options.file[0]
 
     if options.flamegraph:
-        print("--flamegraph is removed because the front-end supports native flamegraph now.")
+        print(
+            "--flamegraph is removed because the front-end supports native flamegraph now."
+        )
         print("You can select slices in the UI and do 'Slice Flamegraph'.")
         return 1
 
@@ -509,7 +544,8 @@ def viewer_main() -> int:
             if not options.server_only:
                 # import webbrowser only if necessary
                 import webbrowser
-                webbrowser.open_new_tab(f'http://127.0.0.1:{options.port}')
+
+                webbrowser.open_new_tab(f"http://127.0.0.1:{options.port}")
             while server.is_alive():
                 server.join(timeout=1)
         except KeyboardInterrupt:

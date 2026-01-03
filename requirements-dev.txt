@@ -4,7 +4,7 @@ setuptools
 wheel
 
 # Lint & Coverage
-flake8
+ruff
 mypy
 coverage
 

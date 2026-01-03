@@ -29,6 +29,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
+
         t = VizTracer()
         t.verbose = 0
         t.start()
@@ -43,6 +44,7 @@ class TestTracerBasic(BaseTmpl):
         def fun(n):
             for _ in range(n):
                 random.randrange(n)
+
         t = VizTracer(ignore_c_function=True)
         t.verbose = 0
         t.start()
@@ -56,6 +58,7 @@ class TestTracerBasic(BaseTmpl):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
+
         t = VizTracer()
         t.verbose = 0
         t.start()
@@ -100,11 +103,14 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.stop()
         tracer.parse()
         if sys.version_info >= (3, 11):
-            self.assertIn("TestVizTracerBasic.test_name_with_class.<locals>.A.f",
-                          [e["name"].split()[0] for e in tracer.data["traceEvents"]])
+            self.assertIn(
+                "TestVizTracerBasic.test_name_with_class.<locals>.A.f",
+                [e["name"].split()[0] for e in tracer.data["traceEvents"]],
+            )
         else:
-            self.assertIn("f",
-                          [e["name"].split()[0] for e in tracer.data["traceEvents"]])
+            self.assertIn(
+                "f", [e["name"].split()[0] for e in tracer.data["traceEvents"]]
+            )
 
     def test_tracer_entries(self):
         tracer = VizTracer(tracer_entries=10)
@@ -132,7 +138,12 @@ class TestVizTracerBasic(BaseTmpl):
         tracer.stop()
         tracer.parse()
         with tempfile.TemporaryDirectory() as tmpdir:
-            for file_path in [["result.html"], ["result2.json"], ["new_dir", "result2.json"], ["result3.gz"]]:
+            for file_path in [
+                ["result.html"],
+                ["result2.json"],
+                ["new_dir", "result2.json"],
+                ["result3.gz"],
+            ]:
                 path = os.path.join(tmpdir, *file_path)
                 tracer.start()
                 fib(5)
@@ -177,7 +188,9 @@ class TestVizTracerBasic(BaseTmpl):
         end_real = time.perf_counter_ns() / 1000
         tracer.stop()
         tracer.parse()
-        time_events = [e for e in tracer.data["traceEvents"] if e["name"] == "time.sleep"]
+        time_events = [
+            e for e in tracer.data["traceEvents"] if e["name"] == "time.sleep"
+        ]
         self.assertEqual(len(time_events), 1)
         self.assertAlmostEqual(time_events[0]["dur"], end - start, delta=0.003e6)
         self.assertAlmostEqual(end - start, end_real - start_real, delta=0.003e6)
@@ -197,7 +210,7 @@ class TestInstant(BaseTmpl):
         tracer = VizTracer(verbose=0)
         tracer.start()
         tracer.add_instant('instant - "karma": True')
-        tracer.add_instant('instant', args={"karma": True})
+        tracer.add_instant("instant", args={"karma": True})
         tracer.stop()
         tracer.parse()
         self.assertEventNumber(tracer.data, 2)
@@ -215,14 +228,14 @@ class TestFunctionArg(BaseTmpl):
     def test_addfunctionarg(self):
         def f(tracer):
             tracer.add_func_args("hello", "world")
+
         tracer = VizTracer(verbose=0)
         tracer.start()
         f(tracer)
         tracer.stop()
         tracer.parse()
         events = [e for e in tracer.data["traceEvents"] if e["ph"] != "M"]
-        self.assertTrue("args" in events[0]
-                        and "hello" in events[0]["args"])
+        self.assertTrue("args" in events[0] and "hello" in events[0]["args"])
 
 
 class TestDecorator(BaseTmpl):
@@ -237,6 +250,7 @@ class TestDecorator(BaseTmpl):
             if n == 0:
                 return 1
             return ignore(n - 1) + 1
+
         tracer.start()
         ignore(10)
         f()
@@ -245,7 +259,6 @@ class TestDecorator(BaseTmpl):
         self.assertEventNumber(tracer.data, 1)
 
     def test_ignore_function_without_global_tracer(self):
-
         @ignore_function
         def f():
             return
@@ -275,9 +288,13 @@ class TestDecorator(BaseTmpl):
                 my_function(10)
 
             def t():
-                self.assertEqual(len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3)
+                self.assertEqual(
+                    len([f for f in os.listdir(tmp_dir) if f.endswith(".json")]), 3
+                )
 
-            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
+            self.assertTrueTimeout(
+                lambda: self.assertFalse(multiprocessing.active_children()), timeout
+            )
             self.assertTrueTimeout(t, timeout)
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -291,7 +308,9 @@ class TestDecorator(BaseTmpl):
             def t():
                 self.assertEqual(len(os.listdir(os.path.join(tmp_dir, "new_dir"))), 1)
 
-            self.assertTrueTimeout(lambda: self.assertFalse(multiprocessing.active_children()), timeout)
+            self.assertTrueTimeout(
+                lambda: self.assertFalse(multiprocessing.active_children()), timeout
+            )
             self.assertTrueTimeout(t, timeout)
 
         if sys.platform in ["linux", "linux2", "darwin"]:
@@ -299,22 +318,29 @@ class TestDecorator(BaseTmpl):
             @trace_and_save
             def my_function2(n):
                 fib(n)
+
             my_function2(10)
 
             def t1():
-                a = subprocess.run(["ls result_my_function2*.json"],
-                                   shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+                a = subprocess.run(
+                    ["ls result_my_function2*.json"],
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 self.assertEqual(a.returncode, 0)
+
             self.assertTrueTimeout(t1, timeout)
 
             def t2():
-                a = subprocess.run(["rm result_my_function2*.json"],
-                                   shell=True,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+                a = subprocess.run(
+                    ["rm result_my_function2*.json"],
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 self.assertEqual(a.returncode, 0)
+
             self.assertTrueTimeout(t2, timeout)
 
 
@@ -332,12 +358,15 @@ class TestLogPrint(BaseTmpl):
 
 
 class TestForkSave(BaseTmpl):
-    @unittest.skipUnless(multiprocessing.get_start_method() == "fork", "Fork save only works with fork")
+    @unittest.skipUnless(
+        multiprocessing.get_start_method() == "fork", "Fork save only works with fork"
+    )
     def test_basic(self):
         def fib(n):
             if n == 1 or n == 0:
                 return 1
             return fib(n - 1) + fib(n - 2)
+
         t = VizTracer(verbose=0)
         processes = {}
         for i in range(5, 10):
@@ -368,7 +397,9 @@ class TestForkSave(BaseTmpl):
             else:
                 self.assertEqual(data["traceEvents"][0]["pid"], pid)
 
-    @unittest.skipUnless(multiprocessing.get_start_method() != "fork", "Fork save only works with fork")
+    @unittest.skipUnless(
+        multiprocessing.get_start_method() != "fork", "Fork save only works with fork"
+    )
     def test_non_fork_platform(self):
         tracer = VizTracer(verbose=0)
         with self.assertRaises(RuntimeError):

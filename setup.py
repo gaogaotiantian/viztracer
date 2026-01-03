@@ -19,27 +19,35 @@ package_data = {
 }
 
 if sys.platform == "win32":
-    package_data["viztracer"].extend([
-        "attach_process/attach_x86.dll",
-        "attach_process/attach_x86_64.dll",
-        "attach_process/inject_dll.exe",
-        "attach_process/inject_dll_amd64.exe",
-        "attach_process/run_code_on_dllmain_amd64.dll",
-        "attach_process/run_code_on_dllmain_x86.dll",
-    ])
+    package_data["viztracer"].extend(
+        [
+            "attach_process/attach_x86.dll",
+            "attach_process/attach_x86_64.dll",
+            "attach_process/inject_dll.exe",
+            "attach_process/inject_dll_amd64.exe",
+            "attach_process/run_code_on_dllmain_amd64.dll",
+            "attach_process/run_code_on_dllmain_x86.dll",
+        ]
+    )
 if sys.platform == "darwin":
-    package_data["viztracer"].extend([
-        "attach_process/attach_x86_64.dylib",
-    ])
+    package_data["viztracer"].extend(
+        [
+            "attach_process/attach_x86_64.dylib",
+        ]
+    )
 elif sys.platform in ("linux", "linux2"):
     if platform.machine() == "i686":
-        package_data["viztracer"].extend([
-            "attach_process/attach_linux_x86.so",
-        ])
+        package_data["viztracer"].extend(
+            [
+                "attach_process/attach_linux_x86.so",
+            ]
+        )
     elif platform.machine() == "x86_64":
-        package_data["viztracer"].extend([
-            "attach_process/attach_linux_amd64.so",
-        ])
+        package_data["viztracer"].extend(
+            [
+                "attach_process/attach_linux_amd64.so",
+            ]
+        )
 
 setuptools.setup(
     packages=setuptools.find_namespace_packages("src"),
@@ -64,7 +72,9 @@ setuptools.setup(
                 "src/viztracer/modules/vcompressor/vcompressor.c",
                 "src/viztracer/modules/vcompressor/vc_dump.c",
             ],
-            extra_compile_args={"win32": []}.get(sys.platform, ["-Wno-unused-result", "-Werror", "-std=c99"]),
+            extra_compile_args={"win32": []}.get(
+                sys.platform, ["-Wno-unused-result", "-Werror", "-std=c99"]
+            ),
         ),
     ],
 )

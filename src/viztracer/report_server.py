@@ -16,11 +16,13 @@ from .util import same_line_print
 
 
 class ReportServer:
-    def __init__(self,
-                 output_file: str,
-                 minimize_memory: bool = False,
-                 verbose: int = 1,
-                 endpoint: str | None = None) -> None:
+    def __init__(
+        self,
+        output_file: str,
+        minimize_memory: bool = False,
+        verbose: int = 1,
+        endpoint: str | None = None,
+    ) -> None:
         self._host = None
         self._port = None
         self.paths: list[str] = []
@@ -28,7 +30,9 @@ class ReportServer:
         self.minimize_memory = minimize_memory
         self.verbose = verbose
         self.report_directory: str | None = tempfile.mkdtemp(prefix="viztracer_report_")
-        self._socket: socket.socket | None = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket: socket.socket | None = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM
+        )
         self._finish = False
         configs = []
         if endpoint is not None:
@@ -47,6 +51,7 @@ class ReportServer:
             # If ReportServer is started in a subprocess, make sure the parent process
             # can read each same_line_print in real time.
             from .util import set_same_line_print_end
+
             set_same_line_print_end("\n")
 
     @classmethod
@@ -69,7 +74,9 @@ class ReportServer:
         if verbose == 0:
             args.append("--quiet")
 
-        proc = subprocess.Popen(args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(
+            args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         assert proc.stdout is not None
         line = proc.stdout.readline().strip()
         endpoint = line.decode().split()[-1]
@@ -121,10 +128,15 @@ class ReportServer:
                         # No active connections
                         break
                     else:
-                        if len(sel.get_map()) - const_count != unfinished_children and self.verbose > 0:
+                        if (
+                            len(sel.get_map()) - const_count != unfinished_children
+                            and self.verbose > 0
+                        ):
                             unfinished_children = len(sel.get_map()) - const_count
-                            same_line_print(f"Waiting for {unfinished_children} connections to send reports. "
-                                            "Ctrl+C to ignore and dump now.")
+                            same_line_print(
+                                f"Waiting for {unfinished_children} connections to send reports. "
+                                "Ctrl+C to ignore and dump now."
+                            )
                 events = sel.select()
                 for key, _ in events:
                     if key.fileobj is self._socket:
@@ -174,9 +186,8 @@ class ReportServer:
                 print("No reports collected, nothing to save.")
             return
         builder = ReportBuilder(
-            self.paths,
-            minimize_memory=self.minimize_memory,
-            verbose=self.verbose)
+            self.paths, minimize_memory=self.minimize_memory, verbose=self.verbose
+        )
 
         builder.save(output_file=self.output_file)
         self.paths = []

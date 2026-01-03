@@ -122,7 +122,12 @@ arr2 = [random.randrange(100000) for _ in range(500)]
 arr3 = [random.randrange(100000) for _ in range(500)]
 
 
-with VizTracer(output_file=os.path.join(os.path.dirname(__file__), "../", "json/different_sorts.json"), file_info=True) as _:
+with VizTracer(
+    output_file=os.path.join(
+        os.path.dirname(__file__), "../", "json/different_sorts.json"
+    ),
+    file_info=True,
+) as _:
     merge_sort(arr1)
     quick_sort(arr2)
     heap_sort(arr3)

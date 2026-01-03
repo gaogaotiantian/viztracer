@@ -24,7 +24,8 @@ class TestCodeMonkey(BaseTmpl):
                 a = 3 / 0
             except Exception as e:
                 raise
-            """)
+            """
+        )
         monkey = CodeMonkey("test.py")
         monkey.add_instrument("log_exception", {})
         _compile = monkey.compile
@@ -40,15 +41,18 @@ class TestCodeMonkey(BaseTmpl):
 
         # some unittest
         self.assertIs(monkey.source_processor.process(tree), tree)
-        self.assertEqual(monkey.source_processor.process(
-            "# !viztracer: log_instant('test')"),
-            "__viz_tracer__.log_instant('test')")
-        self.assertEqual(monkey.source_processor.process(
-            "a = 3  # !viztracer: log"),
-            "a = 3  ; __viz_tracer__.log_var('a', (a))")
-        self.assertEqual(monkey.source_processor.process(
-            "f()  # !viztracer: log"),
-            "f()  ; __viz_tracer__.log_instant('f()')")
+        self.assertEqual(
+            monkey.source_processor.process("# !viztracer: log_instant('test')"),
+            "__viz_tracer__.log_instant('test')",
+        )
+        self.assertEqual(
+            monkey.source_processor.process("a = 3  # !viztracer: log"),
+            "a = 3  ; __viz_tracer__.log_var('a', (a))",
+        )
+        self.assertEqual(
+            monkey.source_processor.process("f()  # !viztracer: log"),
+            "f()  ; __viz_tracer__.log_instant('f()')",
+        )
 
 
 class TestAstTransformer(BaseTmpl):
@@ -61,7 +65,18 @@ class TestAstTransformer(BaseTmpl):
         self.assertEqual(tf.get_assign_targets_with_attr("invalid"), [])
 
     def test_get_string_of_expr(self):
-        test_cases = ["a", "a[0]", "a[1:]", "a[0:3]", "a[0:3:1]", "d['a']", "d['a'][0].b", "[a,b]", "(a,b)", "*a"]
+        test_cases = [
+            "a",
+            "a[0]",
+            "a[1:]",
+            "a[0:3]",
+            "a[0:3:1]",
+            "d['a']",
+            "d['a'][0].b",
+            "[a,b]",
+            "(a,b)",
+            "*a",
+        ]
         # just for coverage
         invalid_test_cases = ["a[1,2:3]", "a>b"]
         tf = AstTransformer("", "")
@@ -77,7 +92,9 @@ class TestAstTransformer(BaseTmpl):
         test_cases = [("fib = 1", 0)]
         for test_case, node_number in test_cases:
             tree = compile(test_case, "test.py", "exec", ast.PyCF_ONLY_AST)
-            self.assertEqual(len(tf.get_assign_log_nodes(tree.body[0].targets[0])), node_number)
+            self.assertEqual(
+                len(tf.get_assign_log_nodes(tree.body[0].targets[0])), node_number
+            )
 
 
 file_magic_comment = """
@@ -110,4 +127,8 @@ class TestMagicComment(CmdlineTmpl):
             self.assertEqual(instant_count, 2)
             self.assertEqual(var_count, 4)
 
-        self.template(["viztracer", "--magic_comment", "cmdline_test.py"], script=file_magic_comment, check_func=check_func)
+        self.template(
+            ["viztracer", "--magic_comment", "cmdline_test.py"],
+            script=file_magic_comment,
+            check_func=check_func,
+        )
