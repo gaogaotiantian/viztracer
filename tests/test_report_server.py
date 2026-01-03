@@ -151,6 +151,33 @@ class TestReportServer(CmdlineTmpl):
                     any("print" in event["name"] for event in data["traceEvents"])
                 )
 
+    def test_report_server_devnull_stdin(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cmd = cmd_with_coverage(
+                [
+                    "viztracer",
+                    "--report_server",
+                    "-o",
+                    f"{tmpdir}/result.json",
+                ]
+            )
+
+            report_server_proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            report_server_proc.stdout.readline()  # Read the starting line
+            report_server_proc.send_signal(signal.SIGINT)
+
+            report_server_proc.wait()
+            report_server_proc.stdout.close()
+
+            self.assertEqual(0, report_server_proc.returncode)
+
     def test_invalid_report_server_argument(self):
         for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:
             cmd = cmd_with_coverage(

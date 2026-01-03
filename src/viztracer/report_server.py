@@ -116,7 +116,7 @@ class ReportServer:
         print(f"Report server started at {self.endpoint}", flush=True)
         sel = selectors.DefaultSelector()
         sel.register(self._socket, selectors.EVENT_READ)
-        if sys.platform != "win32":
+        if sys.platform != "win32" and sys.stdin.isatty():
             sel.register(sys.stdin, selectors.EVENT_READ)
         const_count = len(sel.get_map())
 
