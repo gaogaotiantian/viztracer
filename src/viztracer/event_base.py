@@ -41,8 +41,12 @@ class _EventBase:
         if self._viztracer_config["include_attributes"]:
             return self._viztracer_config["include_attributes"]
         else:
-            return [attr for attr in self.__dir__()
-                    if not attr.startswith("_") and attr not in self._viztracer_config["exclude_attributes"]]
+            return [
+                attr
+                for attr in self.__dir__()
+                if not attr.startswith("_")
+                and attr not in self._viztracer_config["exclude_attributes"]
+            ]
 
     def _viztracer_set_config(self, key: str, value: Any) -> None:
         if key not in self._viztracer_config:
@@ -59,13 +63,16 @@ class _EventBase:
         self._viztracer_log()
 
     @staticmethod
-    def triggerlog(method: Callable | None = None,
-                   when: Literal["after", "before", "both"] = "after") -> Callable:
+    def triggerlog(
+        method: Callable | None = None,
+        when: Literal["after", "before", "both"] = "after",
+    ) -> Callable:
         if when not in ["after", "before", "both"]:
-            raise ValueError(f"when has to be one of 'after', 'before' or 'both', not {when}")
+            raise ValueError(
+                f"when has to be one of 'after', 'before' or 'both', not {when}"
+            )
 
         def inner(func: Callable) -> Callable:
-
             @functools.wraps(func)
             def wrapper(self, *args, **kwargs) -> Any:
                 if when in ("before", "both"):
@@ -74,6 +81,7 @@ class _EventBase:
                 if when in ("after", "both"):
                     self._viztracer_log()
                 return ret
+
             return wrapper
 
         if method:

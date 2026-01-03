@@ -1,6 +1,7 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import json
 import multiprocessing
 import os
 import signal
@@ -8,12 +9,10 @@ import sys
 import tempfile
 import textwrap
 import unittest
-import json
 
 from viztracer.report_server import ReportServer
 
 from .cmdline_tmpl import CmdlineTmpl
-
 
 file_grandparent = """
 import subprocess
@@ -280,8 +279,13 @@ class TestSubprocess(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 4)
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", script=file_parent, check_func=check_func)
+
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_parent,
+            check_func=check_func,
+        )
 
     def test_child_process(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -289,8 +293,17 @@ class TestSubprocess(CmdlineTmpl):
             server_proc, endpoint = ReportServer.start_process(
                 output_file=output_path,
             )
-            self.template(["viztracer", "-o", output_path, "--report_endpoint", endpoint, "child.py"],
-                          expected_output_file=None)
+            self.template(
+                [
+                    "viztracer",
+                    "-o",
+                    output_path,
+                    "--report_endpoint",
+                    endpoint,
+                    "child.py",
+                ],
+                expected_output_file=None,
+            )
             server_proc.__exit__(None, None, None)
             with open(output_path) as f:
                 self.assertSubprocessName("child.py", json.load(f))
@@ -298,19 +311,23 @@ class TestSubprocess(CmdlineTmpl):
     def test_module(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_file = os.path.join(tmpdir, "result.json")
-            self.template(["viztracer", "-o", output_file, "cmdline_test.py"],
-                          expected_output_file=output_file,
-                          expected_stdout=".*100 loops.*",
-                          script=file_subprocess_module,
-                          check_func=lambda data: self.assertSubprocessName("timeit", data))
+            self.template(
+                ["viztracer", "-o", output_file, "cmdline_test.py"],
+                expected_output_file=output_file,
+                expected_stdout=".*100 loops.*",
+                script=file_subprocess_module,
+                check_func=lambda data: self.assertSubprocessName("timeit", data),
+            )
 
     def test_code_string(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "result.json")
-            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
-                          expected_output_file=output_path,
-                          script=file_subprocess_code_string,
-                          check_func=lambda data: self.assertSubprocessName("python -c", data))
+            self.template(
+                ["viztracer", "-o", output_path, "cmdline_test.py"],
+                expected_output_file=output_path,
+                script=file_subprocess_code_string,
+                check_func=lambda data: self.assertSubprocessName("python -c", data),
+            )
 
     def test_python_entries(self):
         script = textwrap.dedent("""
@@ -337,10 +354,12 @@ class TestSubprocess(CmdlineTmpl):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "result.json")
-            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
-                          expected_output_file=output_path,
-                          script=script,
-                          check_func=check_func)
+            self.template(
+                ["viztracer", "-o", output_path, "cmdline_test.py"],
+                expected_output_file=output_path,
+                script=script,
+                check_func=check_func,
+            )
 
     def test_subprocess_shell_true(self):
         def check_func(data):
@@ -351,11 +370,13 @@ class TestSubprocess(CmdlineTmpl):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "result.json")
-            self.template(["viztracer", "-o", output_path, "cmdline_test.py"],
-                          expected_output_file=output_path,
-                          script=file_subprocess_shell,
-                          expected_stdout=".*hello.*",
-                          check_func=check_func)
+            self.template(
+                ["viztracer", "-o", output_path, "cmdline_test.py"],
+                expected_output_file=output_path,
+                script=file_subprocess_shell,
+                expected_stdout=".*hello.*",
+                check_func=check_func,
+            )
 
     def test_nested(self):
         def check_func(data):
@@ -363,10 +384,15 @@ class TestSubprocess(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 5)
+
         with open("parent.py", "w") as f:
             f.write(file_parent)
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", script=file_grandparent, check_func=check_func)
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_grandparent,
+            check_func=check_func,
+        )
         os.remove("parent.py")
 
     def test_nested_multiprocessing(self):
@@ -375,10 +401,15 @@ class TestSubprocess(CmdlineTmpl):
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 3)
+
         with open("parent.py", "w") as f:
             f.write(file_multiprocessing)
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", script=file_grandparent, check_func=check_func)
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_grandparent,
+            check_func=check_func,
+        )
         os.remove("parent.py")
 
 
@@ -391,8 +422,12 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
 
         if sys.platform in ["linux", "linux2"]:
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json", script=file_fork, check_func=check_func)
+            self.template(
+                ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                expected_output_file="result.json",
+                script=file_fork,
+                check_func=check_func,
+            )
 
     @unittest.skipIf(sys.platform not in ["linux", "linux2"], "Only works on Linux")
     def test_os_fork_term(self):
@@ -402,16 +437,24 @@ class TestMultiprocessing(CmdlineTmpl):
                 for entry in data["traceEvents"]:
                     pids.add(entry["pid"])
                 self.assertEqual(len(pids), process_num)
+
             return check_func
 
-        result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                               expected_output_file="result.json", script=file_fork_wait,
-                               check_func=check_func_wrapper(2))
+        result = self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_fork_wait,
+            check_func=check_func_wrapper(2),
+        )
         self.assertIn("Waiting for", result.stdout.decode())
 
-        result = self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                               send_sig=(signal.SIGINT, 3.5), expected_output_file="result.json", script=file_fork_wait,
-                               check_func=check_func_wrapper(1))
+        result = self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            send_sig=(signal.SIGINT, 3.5),
+            expected_output_file="result.json",
+            script=file_fork_wait,
+            check_func=check_func_wrapper(1),
+        )
 
     @unittest.skipIf(sys.platform not in ["linux", "linux2"], "Only works on Linux")
     def test_os_fork_exit(self):
@@ -432,9 +475,12 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 2)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", script=script,
-                      check_func=check_func)
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            check_func=check_func,
+        )
 
     def test_multiprosessing(self):
         def check_func(data):
@@ -443,13 +489,18 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_multiprocessing,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_multiprocessing,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
-    @unittest.skipIf("forkserver" not in multiprocessing.get_all_start_methods(), "Only works on supported platform")
+    @unittest.skipIf(
+        "forkserver" not in multiprocessing.get_all_start_methods(),
+        "Only works on supported platform",
+    )
     def test_multiprocessing_forkserver(self):
         script = """
             import multiprocessing
@@ -501,11 +552,13 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 3)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_nested_multiprocessing,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_nested_multiprocessing,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
     def test_multiprocessing_unique_name(self):
         def check_func(data):
@@ -515,21 +568,38 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertEqual(len(pids), 2)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "--output_dir", tmpdir, "--unique_output_file", "cmdline_test.py"],
-                          expected_output_file=None,
-                          script=file_multiprocessing,
-                          concurrency="multiprocessing")
+            self.template(
+                [
+                    "viztracer",
+                    "--output_dir",
+                    tmpdir,
+                    "--unique_output_file",
+                    "cmdline_test.py",
+                ],
+                expected_output_file=None,
+                script=file_multiprocessing,
+                concurrency="multiprocessing",
+            )
             self.assertEqual(len(os.listdir(tmpdir)), 1)
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
                 data = json.load(f)
                 check_func(data)
 
     def test_multiprocessing_entry_limit(self):
-        result = self.template(["viztracer", "-o", "result.json", "--tracer_entries", "10", "cmdline_test.py"],
-                               expected_output_file="result.json",
-                               script=file_multiprocessing,
-                               expected_entries=20,
-                               concurrency="multiprocessing")
+        result = self.template(
+            [
+                "viztracer",
+                "-o",
+                "result.json",
+                "--tracer_entries",
+                "10",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            script=file_multiprocessing,
+            expected_entries=20,
+            concurrency="multiprocessing",
+        )
         self.assertIn("buffer is full", result.stdout.decode())
 
     def test_ignore_multiprocessing(self):
@@ -539,11 +609,19 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 1)
 
-        self.template(["viztracer", "-o", "result.json", "--ignore_multiprocess", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_multiprocessing,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            [
+                "viztracer",
+                "-o",
+                "result.json",
+                "--ignore_multiprocess",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            script=file_multiprocessing,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
     def test_multiprocessing_overload(self):
         def check_func(data):
@@ -555,11 +633,13 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
             self.assertEqual(fib_count, 15)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_multiprocessing_overload_run,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_multiprocessing_overload_run,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
     @unittest.skipIf("win32" in sys.platform, "Does not support Windows")
     def test_multiprocessing_pool(self):
@@ -572,11 +652,13 @@ class TestMultiprocessing(CmdlineTmpl):
             self.assertGreater(len(pids), 1)
 
         try:
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=file_pool,
-                          check_func=check_func,
-                          concurrency="multiprocessing")
+            self.template(
+                ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                expected_output_file="result.json",
+                script=file_pool,
+                check_func=check_func,
+                concurrency="multiprocessing",
+            )
         except Exception as e:
             # coveragepy has some issue with multiprocess pool
             if not os.getenv("COVERAGE_RUN"):
@@ -590,24 +672,31 @@ class TestMultiprocessing(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertGreater(len(pids), 1)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_pool_with_pickle,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_pool_with_pickle,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
     def test_multiprosessing_stack_depth(self):
         def check_func(data):
             for entry in data["traceEvents"]:
                 self.assertNotIn("fib", entry["name"].split())
-        if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=file_multiprocessing_stack_limit,
-                          check_func=check_func,
-                          concurrency="multiprocessing")
 
-    @unittest.skipIf(multiprocessing.get_start_method() != "fork", "Only need to test fork")
+        if multiprocessing.get_start_method() == "fork":
+            self.template(
+                ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                expected_output_file="result.json",
+                script=file_multiprocessing_stack_limit,
+                check_func=check_func,
+                concurrency="multiprocessing",
+            )
+
+    @unittest.skipIf(
+        multiprocessing.get_start_method() != "fork", "Only need to test fork"
+    )
     def test_multiprocessing_daemon(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             script = f"""
@@ -621,10 +710,12 @@ class TestMultiprocessing(CmdlineTmpl):
                 p.join()
             """
 
-            self.template([sys.executable, "cmdline_test.py"],
-                          expected_output_file=None,
-                          script=script,
-                          concurrency="multiprocessing")
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                expected_output_file=None,
+                script=script,
+                concurrency="multiprocessing",
+            )
 
             self.assertEqual(len(os.listdir(tmpdir)), 1)
             with open(os.path.join(tmpdir, os.listdir(tmpdir)[0])) as f:
@@ -633,7 +724,9 @@ class TestMultiprocessing(CmdlineTmpl):
                 self.assertEqual(len(events), 1)
                 self.assertIn("foo", events[0]["name"])
 
-    @unittest.skipIf("fork" not in multiprocessing.get_all_start_methods(), "Only need to test fork")
+    @unittest.skipIf(
+        "fork" not in multiprocessing.get_all_start_methods(), "Only need to test fork"
+    )
     def test_multiprocessing_stack_depth(self):
         script = """
             import multiprocessing
@@ -655,11 +748,13 @@ class TestMultiprocessing(CmdlineTmpl):
                     count += 1
             self.assertEqual(count, 9)
 
-        self.template(["viztracer", "--max_stack_depth", "10", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=script,
-                      check_func=check_func,
-                      concurrency="multiprocessing")
+        self.template(
+            ["viztracer", "--max_stack_depth", "10", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )
 
 
 class TestInlineSupport(CmdlineTmpl):
@@ -685,10 +780,12 @@ class TestInlineSupport(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 2)
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=script,
-                      check_func=check_func)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            check_func=check_func,
+        )
 
     def test_inline_hook_uninstall(self):
         script = textwrap.dedent("""
@@ -707,9 +804,11 @@ class TestInlineSupport(CmdlineTmpl):
                 assert subprocess.Popen.__init__ == original_init
         """)
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      script=script,
-                      expected_output_file=None)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file=None,
+        )
 
     @unittest.skipIf(sys.platform != "win32", "Only test on Windows")
     def test_inline_hook_uninstall_windows(self):
@@ -733,9 +832,11 @@ class TestInlineSupport(CmdlineTmpl):
                 assert "viztracer.patch" not in prog
         """)
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      script=script,
-                      expected_output_file=None)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file=None,
+        )
 
     def test_multiple_instances(self):
         script = textwrap.dedent("""
@@ -766,10 +867,12 @@ class TestInlineSupport(CmdlineTmpl):
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 2)
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file=["result1.json", "result2.json"],
-                      script=script,
-                      check_func=check_func)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file=["result1.json", "result2.json"],
+            script=script,
+            check_func=check_func,
+        )
 
     def test_uninstall(self):
         script = textwrap.dedent("""
@@ -781,12 +884,16 @@ class TestInlineSupport(CmdlineTmpl):
             assert subprocess.Popen.__init__ == original_init
         """)
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=script)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+        )
 
 
-@unittest.skipIf("free-threading" in sys.version, "loky does not support free-threading now")
+@unittest.skipIf(
+    "free-threading" in sys.version, "loky does not support free-threading now"
+)
 class TestLoky(CmdlineTmpl):
     def test_loky_basic(self):
         def check_func(data):
@@ -795,5 +902,10 @@ class TestLoky(CmdlineTmpl):
                 pids.add(event["pid"])
             # main, 4 workers, and a forked main on Linux
             self.assertGreaterEqual(len(pids), 5)
-        self.template(["viztracer", "cmdline_test.py"], script=file_loky,
-                      check_func=check_func, concurrency="multiprocessing")
+
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=file_loky,
+            check_func=check_func,
+            concurrency="multiprocessing",
+        )

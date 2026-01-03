@@ -35,8 +35,17 @@ class Viewer(unittest.TestCase):
         port=None,
     ):
         if os.getenv("COVERAGE_RUN"):
-            self.cmd = ["coverage", "run", "--source", "viztracer", "--parallel-mode",
-                        "-m", "viztracer.viewer", "-s", file_path]
+            self.cmd = [
+                "coverage",
+                "run",
+                "--source",
+                "viztracer",
+                "--parallel-mode",
+                "-m",
+                "viztracer.viewer",
+                "-s",
+                file_path,
+            ]
         else:
             self.cmd = ["vizviewer", "-s", file_path]
 
@@ -75,7 +84,9 @@ class Viewer(unittest.TestCase):
 
     def run(self):
         self.stopped = False
-        self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+        self.process = subprocess.Popen(
+            self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+        )
         if self.expect_success and not self.once:
             self._wait_until_stdout_ready()
         self._wait_until_socket_on()
@@ -89,7 +100,11 @@ class Viewer(unittest.TestCase):
                     self.process.wait(timeout=20)
                 out, err = self.process.communicate()
                 if self.expect_success:
-                    self.assertEqual(self.process.returncode, 0, msg=f"stdout:\n{out}\nstderr\n{err}\n")
+                    self.assertEqual(
+                        self.process.returncode,
+                        0,
+                        msg=f"stdout:\n{out}\nstderr\n{err}\n",
+                    )
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=5)
@@ -115,7 +130,7 @@ class Viewer(unittest.TestCase):
         for _ in range(10):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
-            result = sock.connect_ex(('127.0.0.1', port))
+            result = sock.connect_ex(("127.0.0.1", port))
             sock.close()
             if result == 0:
                 return
@@ -123,7 +138,7 @@ class Viewer(unittest.TestCase):
         self.fail(f"Can't connect to 127.0.0.1:{port}")
 
     def url(self, offset: int = 0) -> str:
-        return f'http://127.0.0.1:{self.port + offset}'
+        return f"http://127.0.0.1:{self.port + offset}"
 
 
 class MockOpen(unittest.TestCase):
@@ -140,7 +155,9 @@ class MockOpen(unittest.TestCase):
                 resp = urllib.request.urlopen(url, timeout=2)
             except Exception:
                 continue
-            self.assertRegex(resp.read().decode("utf-8"), re.compile(expected, re.DOTALL))
+            self.assertRegex(
+                resp.read().decode("utf-8"), re.compile(expected, re.DOTALL)
+            )
         if self.int_pid is not None:
             os.kill(self.int_pid, signal.SIGINT)
 
@@ -154,7 +171,7 @@ class MockOpen(unittest.TestCase):
 class TestViewer(CmdlineTmpl):
     def _find_a_free_port(self) -> int:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('', 0))
+        sock.bind(("", 0))
         port = sock.getsockname()[1]
         sock.close()
 
@@ -164,7 +181,9 @@ class TestViewer(CmdlineTmpl):
     def test_custom_port(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
             with Viewer(f.name, port=self._find_a_free_port()) as v:
                 time.sleep(0.5)
@@ -173,7 +192,9 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(
+                    json.loads(resp.read().decode("utf-8")), json.loads(json_script)
+                )
         finally:
             os.remove(f.name)
 
@@ -181,7 +202,9 @@ class TestViewer(CmdlineTmpl):
     def test_json(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
             with Viewer(f.name) as v:
                 time.sleep(0.5)
@@ -190,7 +213,9 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(
+                    json.loads(resp.read().decode("utf-8")), json.loads(json_script)
+                )
         finally:
             os.remove(f.name)
 
@@ -208,14 +233,18 @@ class TestViewer(CmdlineTmpl):
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(gzip.decompress(resp.read()).decode("utf-8")),
-                                 json.loads(json_script))
+                self.assertEqual(
+                    json.loads(gzip.decompress(resp.read()).decode("utf-8")),
+                    json.loads(json_script),
+                )
 
     @unittest.skipIf(sys.platform == "win32", "Can't send Ctrl+C reliably on Windows")
     def test_html(self):
-        html = '<html></html>'
+        html = "<html></html>"
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False
+            ) as f:
                 f.write(html)
             with Viewer(f.name) as v:
                 time.sleep(0.5)
@@ -228,7 +257,9 @@ class TestViewer(CmdlineTmpl):
     def test_use_external_processor(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
             with Viewer(f.name, use_external_processor=True) as v:
                 time.sleep(0.5)
@@ -259,7 +290,9 @@ class TestViewer(CmdlineTmpl):
     def test_port_in_use_error(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
             with Viewer(f.name) as v:
                 time.sleep(0.5)
@@ -273,9 +306,11 @@ class TestViewer(CmdlineTmpl):
             os.remove(f.name)
 
     def test_once(self):
-        html = '<html></html>'
+        html = "<html></html>"
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False
+            ) as f:
                 f.write(html)
             with Viewer(f.name, once=True) as v:
                 time.sleep(0.5)
@@ -288,14 +323,18 @@ class TestViewer(CmdlineTmpl):
 
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
             with Viewer(f.name, once=True) as v:
                 time.sleep(0.5)
                 resp = urllib.request.urlopen(v.url())
                 self.assertTrue(resp.code == 200)
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(
+                    json.loads(resp.read().decode("utf-8")), json.loads(json_script)
+                )
                 resp = urllib.request.urlopen(f"{v.url()}/file_info")
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 v.wait()
@@ -305,12 +344,17 @@ class TestViewer(CmdlineTmpl):
     def test_once_timeout(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
 
             # --once won't work with --use_external_processor
-            self.template(["vizviewer", "--once", "--use_external_processor", f.name],
-                          success=False, expected_output_file=None)
+            self.template(
+                ["vizviewer", "--once", "--use_external_processor", f.name],
+                success=False,
+                expected_output_file=None,
+            )
 
             with Viewer(f.name, once=True, timeout=3) as v:
                 try:
@@ -320,14 +364,22 @@ class TestViewer(CmdlineTmpl):
         finally:
             os.remove(f.name)
 
-    @unittest.skipIf(sys.platform == "darwin", "MacOS has a high security check for multiprocessing")
+    @unittest.skipIf(
+        sys.platform == "darwin", "MacOS has a high security check for multiprocessing"
+    )
     def test_browser(self):
-        html = '<html></html>'
+        html = "<html></html>"
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False
+            ) as f:
                 f.write(html)
-            with unittest.mock.patch.object(sys, "argv", ["vizviewer", "--once", f.name]):
-                with unittest.mock.patch.object(webbrowser, "open_new_tab", MockOpen(html)) as mock_obj:
+            with unittest.mock.patch.object(
+                sys, "argv", ["vizviewer", "--once", f.name]
+            ):
+                with unittest.mock.patch.object(
+                    webbrowser, "open_new_tab", MockOpen(html)
+                ) as mock_obj:
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
@@ -337,7 +389,9 @@ class TestViewer(CmdlineTmpl):
     def test_vizviewer_info(self):
         json_script = '{"file_info": {}, "traceEvents": []}'
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 f.write(json_script)
 
             with Viewer(f.name, once=True) as v:
@@ -346,7 +400,9 @@ class TestViewer(CmdlineTmpl):
                 self.assertTrue(resp.code == 200)
                 self.assertEqual(json.loads(resp.read().decode("utf-8")), {})
                 resp = urllib.request.urlopen(f"{v.url()}/localtrace")
-                self.assertEqual(json.loads(resp.read().decode("utf-8")), json.loads(json_script))
+                self.assertEqual(
+                    json.loads(resp.read().decode("utf-8")), json.loads(json_script)
+                )
                 v.wait()
         finally:
             os.remove(f.name)
@@ -355,7 +411,11 @@ class TestViewer(CmdlineTmpl):
     def test_directory(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
         # --use_external_processor won't work with directory
-        self.template(["vizviewer", "--use_external_processor", test_data_dir], success=False, expected_output_file=None)
+        self.template(
+            ["vizviewer", "--use_external_processor", test_data_dir],
+            success=False,
+            expected_output_file=None,
+        )
 
         with Viewer(test_data_dir) as v:
             time.sleep(0.5)
@@ -367,18 +427,26 @@ class TestViewer(CmdlineTmpl):
             resp = urllib.request.urlopen(f"{v.url()}/old.json")
             self.assertEqual(resp.url, f"{v.url(2)}/")
 
-    @unittest.skipIf(sys.platform in ("darwin", "win32"),
-                     "MacOS has a high security check for multiprocessing, Windows can't handle SIGINT")
+    @unittest.skipIf(
+        sys.platform in ("darwin", "win32"),
+        "MacOS has a high security check for multiprocessing, Windows can't handle SIGINT",
+    )
     def test_directory_browser(self):
-        html = '<html></html>'
+        html = "<html></html>"
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False
+            ) as f:
                 f.write(html)
             tmp_dir = os.path.dirname(f.name)
             with unittest.mock.patch.object(sys, "argv", ["vizviewer", tmp_dir]):
                 with unittest.mock.patch.object(
-                        webbrowser, "open_new_tab",
-                        MockOpen(r".*" + os.path.basename(f.name) + r".*", int_pid=os.getpid())) as mock_obj:
+                    webbrowser,
+                    "open_new_tab",
+                    MockOpen(
+                        r".*" + os.path.basename(f.name) + r".*", int_pid=os.getpid()
+                    ),
+                ) as mock_obj:
                     viewer_main()
                     mock_obj.p.join()
                     self.assertEqual(mock_obj.p.exitcode, 0)
@@ -421,12 +489,28 @@ class TestViewer(CmdlineTmpl):
 
     def test_exception(self):
         test_data_dir = os.path.join(os.path.dirname(__file__), "data")
-        self.template(["vizviewer", "--port", "-3", os.path.join(test_data_dir, "fib.json")],
-                      success=False, expected_output_file=None, expected_stderr=".*Traceback.*")
+        self.template(
+            ["vizviewer", "--port", "-3", os.path.join(test_data_dir, "fib.json")],
+            success=False,
+            expected_output_file=None,
+            expected_stderr=".*Traceback.*",
+        )
 
     def test_invalid(self):
-        self.template(["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None)
-        self.template(["vizviewer", "README.md"], success=False, expected_output_file=None)
-        self.template(["vizviewer", "--flamegraph", "README.md"], success=False, expected_output_file=None)
-        self.template(["vizviewer", "--flamegraph", "example/json/multithread.md"],
-                      success=False, expected_output_file=None, expected_stdout="--flamegraph is removed.*")
+        self.template(
+            ["vizviewer", "do_not_exist.json"], success=False, expected_output_file=None
+        )
+        self.template(
+            ["vizviewer", "README.md"], success=False, expected_output_file=None
+        )
+        self.template(
+            ["vizviewer", "--flamegraph", "README.md"],
+            success=False,
+            expected_output_file=None,
+        )
+        self.template(
+            ["vizviewer", "--flamegraph", "example/json/multithread.md"],
+            success=False,
+            expected_output_file=None,
+            expected_stdout="--flamegraph is removed.*",
+        )

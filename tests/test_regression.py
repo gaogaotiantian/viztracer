@@ -22,6 +22,7 @@ class TestIssue1(BaseTmpl):
         tracer = viztracer.VizTracer(verbose=0)
         tracer.start()
         from datetime import timedelta
+
         timedelta(hours=5)
         tracer.stop()
         tracer.parse()
@@ -30,6 +31,7 @@ class TestIssue1(BaseTmpl):
         tracer = viztracer.VizTracer(verbose=0)
         tracer.start()
         from datetime import timedelta
+
         timedelta(hours=5)
         tracer.stop()
         tracer.parse()
@@ -47,6 +49,7 @@ class TestStackOptimization(BaseTmpl):
     def test_instant(self):
         def s():
             return 0
+
         tracer = VizTracer(verbose=0)
         tracer.start()
         # This is a library function which will be ignored, but
@@ -83,6 +86,7 @@ class TestFunctionArg(BaseTmpl):
             if n < 2:
                 return 1
             return f(n - 1) + f(n - 2)
+
         tracer = VizTracer(verbose=0)
         tracer.start()
         f(5)
@@ -112,13 +116,39 @@ class TestIssue21(CmdlineTmpl):
     # is not parsed correctly because the program gets confused
     # about --script_option
     def test_issue21(self):
-        self.template(["viztracer", "--include_files", "/", "--run", "cmdline_test.py", "--script_option"],
-                      script=issue21_code)
-        self.template(["viztracer", "--include_files", "/", "--", "cmdline_test.py", "--script_option"],
-                      script=issue21_code)
-        self.template(["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code)
-        self.template(["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
-        self.template(["viztracer", "--", "cmdline_test.py", "-o", "--script_option"], script=issue21_code)
+        self.template(
+            [
+                "viztracer",
+                "--include_files",
+                "/",
+                "--run",
+                "cmdline_test.py",
+                "--script_option",
+            ],
+            script=issue21_code,
+        )
+        self.template(
+            [
+                "viztracer",
+                "--include_files",
+                "/",
+                "--",
+                "cmdline_test.py",
+                "--script_option",
+            ],
+            script=issue21_code,
+        )
+        self.template(
+            ["viztracer", "cmdline_test.py", "--script_option"], script=issue21_code
+        )
+        self.template(
+            ["viztracer", "--run", "cmdline_test.py", "-o", "--script_option"],
+            script=issue21_code,
+        )
+        self.template(
+            ["viztracer", "--", "cmdline_test.py", "-o", "--script_option"],
+            script=issue21_code,
+        )
 
 
 term_code = """
@@ -134,13 +164,16 @@ for i in range(10):
 class TestTermCaught(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "windows does not have graceful term")
     def test_term(self):
-        self.template(["viztracer", "-o", "term.json", "cmdline_test.py"],
-                      expected_output_file="term.json", script=term_code, send_sig=(signal.SIGTERM, "ready"))
+        self.template(
+            ["viztracer", "-o", "term.json", "cmdline_test.py"],
+            expected_output_file="term.json",
+            script=term_code,
+            send_sig=(signal.SIGTERM, "ready"),
+        )
 
 
 class TestIssue42(BaseTmpl):
     def test_issue42(self):
-
         @ignore_function
         def f():
             lst = []
@@ -173,23 +206,29 @@ c.change()
 
 class TestIssue47(CmdlineTmpl):
     def test_issue47(self):
-        self.template(["viztracer", "cmdline_test.py", "-o", "result.json"],
-                      script=issue47_code,
-                      expected_output_file="result.json",
-                      expected_entries=7)
+        self.template(
+            ["viztracer", "cmdline_test.py", "-o", "result.json"],
+            script=issue47_code,
+            expected_output_file="result.json",
+            expected_entries=7,
+        )
 
 
 class TestIssue58(CmdlineTmpl):
     def test_issue58(self):
         if multiprocessing.get_start_method() == "fork":
-            self.template(["viztracer", "-m", "tests.modules.issue58"],
-                          expected_output_file="result.json")
+            self.template(
+                ["viztracer", "-m", "tests.modules.issue58"],
+                expected_output_file="result.json",
+            )
 
 
 class TestIssue83(CmdlineTmpl):
     def test_issue83(self):
-        self.template(["viztracer", "--quiet", "-m", "tests.modules.issue83"],
-                      expected_stdout="__main__")
+        self.template(
+            ["viztracer", "--quiet", "-m", "tests.modules.issue83"],
+            expected_stdout="__main__",
+        )
 
 
 issue119_code = """
@@ -209,9 +248,16 @@ class TestIssue119(CmdlineTmpl):
             with tempfile.TemporaryDirectory() as script_dir:
                 try:
                     self.template(
-                        ["viztracer", "-o", "result.json", "cmdline_test.py", script_dir],
+                        [
+                            "viztracer",
+                            "-o",
+                            "result.json",
+                            "cmdline_test.py",
+                            script_dir,
+                        ],
                         script=issue119_code,
-                        expected_output_file=filepath)
+                        expected_output_file=filepath,
+                    )
                 finally:
                     os.chdir(cwd)
 
@@ -230,14 +276,15 @@ atexit.register(fib, 6)
 
 class TestIssue121(CmdlineTmpl):
     def test_issue121(self):
-
         def check_func(data):
             fib_count = sum(["fib" in event["name"] for event in data["traceEvents"]])
             self.assertEqual(fib_count, 15)
 
-        self.template(["viztracer", "cmdline_test.py", "--log_exit"],
-                      script=issue121_code,
-                      check_func=check_func)
+        self.template(
+            ["viztracer", "cmdline_test.py", "--log_exit"],
+            script=issue121_code,
+            check_func=check_func,
+        )
 
 
 issue141_code = """
@@ -266,15 +313,17 @@ class TestIssue141(CmdlineTmpl):
 
 class TestIssue160(CmdlineTmpl):
     def test_issue160(self):
-
         def check_func(data):
             pids = set()
             for entry in data["traceEvents"]:
                 pids.add(entry["pid"])
             self.assertEqual(len(pids), 2)
 
-        self.template(["viztracer", "-m", "tests.modules.issue160"],
-                      expected_output_file="result.json", check_func=check_func)
+        self.template(
+            ["viztracer", "-m", "tests.modules.issue160"],
+            expected_output_file="result.json",
+            check_func=check_func,
+        )
 
 
 issue162_code = """
@@ -300,13 +349,21 @@ print(os.popen("echo test_issue162").read())
 
 class TestIssue162(CmdlineTmpl):
     def test_issue162(self):
-        self.template(["viztracer", "cmdline_test.py"], expected_output_file="result.json",
-                      script=issue162_code, expected_stdout=r"90\s*Saving.*")
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=issue162_code,
+            expected_stdout=r"90\s*Saving.*",
+        )
 
     @unittest.skipIf(sys.platform == "win32", "Windows does not have echo")
     def test_issue162_os_popen(self):
-        self.template(["viztracer", "cmdline_test.py"], expected_output_file="result.json",
-                      script=issue162_code_os_popen, expected_stdout=r".*test_issue162.*")
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=issue162_code_os_popen,
+            expected_stdout=r".*test_issue162.*",
+        )
 
 
 class TestIssue508(CmdlineTmpl):
@@ -328,9 +385,12 @@ class TestIssue508(CmdlineTmpl):
                 call_self(10)
         """
 
-        self.template([sys.executable, "cmdline_test.py"], script=script,
-                      expected_output_file="result.json",
-                      expected_entries=6)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file="result.json",
+            expected_entries=6,
+        )
 
 
 @unittest.skipIf(sys.version_info < (3, 12), "We only care about monitoring backend")
@@ -344,9 +404,12 @@ class TestIssue552(CmdlineTmpl):
                 A().f()
         """)
 
-        self.template([sys.executable, "cmdline_test.py"], script=script,
-                      expected_output_file="result.json",
-                      expected_entries=1)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file="result.json",
+            expected_entries=1,
+        )
 
 
 file_timestamp_disorder = """
@@ -378,8 +441,13 @@ class TestTimestampDisorder(CmdlineTmpl):
                     self.assertGreaterEqual(event["ts"], curr_time)
                     self.assertGreaterEqual(event["dur"], 0)
                     curr_time = event["ts"] + event["dur"]
-        self.template(["viztracer", "cmdline_test.py"], script=file_timestamp_disorder,
-                      expected_output_file="result.json", check_func=check_func)
+
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            script=file_timestamp_disorder,
+            expected_output_file="result.json",
+            check_func=check_func,
+        )
 
 
 class TestTimestampSkew(CmdlineTmpl):
@@ -387,6 +455,7 @@ class TestTimestampSkew(CmdlineTmpl):
     Ensure that we are not accumulating timestamp too much with artificial
     increments.
     """
+
     def test_timestamp_skew(self):
         script = textwrap.dedent(r"""
             import time
@@ -407,8 +476,11 @@ class TestTimestampSkew(CmdlineTmpl):
                     error = abs(event["dur"] - duration) / duration
                     self.assertLess(error, 0.1)
 
-        self.template(["viztracer", "--tracer_entries", "100", "cmdline_test.py"],
-                      script=script, check_func=check_func)
+        self.template(
+            ["viztracer", "--tracer_entries", "100", "cmdline_test.py"],
+            script=script,
+            check_func=check_func,
+        )
 
 
 issue285_code = """
@@ -453,10 +525,12 @@ test_thread.join()
 
 class TestEscapeString(CmdlineTmpl):
     def test_escape_string(self):
-        self.template(["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=issue285_code,
-                      expected_stdout=".*Total Entries:.*")
+        self.template(
+            ["viztracer", "-o", "result.json", "--dump_raw", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=issue285_code,
+            expected_stdout=".*Total Entries:.*",
+        )
 
 
 wait_for_child = """
@@ -524,23 +598,29 @@ class TestWaitForChild(CmdlineTmpl):
         self.assertEqual(len(pids), 2)
 
     def test_child_process_exits_normally(self):
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=wait_for_child,
-                      check_func=self.checkfunc)
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=wait_for_child,
+            check_func=self.checkfunc,
+        )
 
     def test_child_process_exits_abnormally(self):
         if sys.platform == "win32":
             # For windows, we just want to make sure it doesn't hang
             # and generates the output file correctly
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=wait_for_terminated_child)
+            self.template(
+                ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                expected_output_file="result.json",
+                script=wait_for_terminated_child,
+            )
         else:
-            self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=wait_for_terminated_child,
-                          check_func=self.checkfunc)
+            self.template(
+                ["viztracer", "-o", "result.json", "cmdline_test.py"],
+                expected_output_file="result.json",
+                script=wait_for_terminated_child,
+                check_func=self.checkfunc,
+            )
 
 
 class TestFinalizerReference(CmdlineTmpl):
@@ -557,10 +637,12 @@ class TestFinalizerReference(CmdlineTmpl):
                 atexit.register(task)
         """)
 
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=script,
-                      expected_stdout="success")
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            expected_stdout="success",
+        )
 
 
 class TestThreadingExitOrder(CmdlineTmpl):
@@ -575,5 +657,5 @@ class TestThreadingExitOrder(CmdlineTmpl):
         self.template(
             ["viztracer", "cmdline_test.py"],
             script=threading_exit_order,
-            expected_stdout="hello world"
+            expected_stdout="hello world",
         )

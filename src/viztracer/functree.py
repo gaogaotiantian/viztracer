@@ -17,8 +17,8 @@ class FuncTreeNode:
         self.funcname: str | None = None
         self.parent: FuncTreeNode | None = None
         self.children: list[FuncTreeNode] = []
-        self.start: float = - (2 ** 64)
-        self.end: float = 2 ** 64
+        self.start: float = -(2**64)
+        self.end: float = 2**64
         self.event: dict[str, Any] = {}
         if event is None:
             self.event = {"name": "__ROOT__"}
@@ -39,9 +39,11 @@ class FuncTreeNode:
         return self.start < other.start and self.end > other.end
 
     def is_same(self, other: "FuncTreeNode") -> bool:
-        return (self.fullname == other.fullname
-                and len(self.children) == len(other.children)
-                and all(t[0].is_same(t[1]) for t in zip(self.children, other.children)))
+        return (
+            self.fullname == other.fullname
+            and len(self.children) == len(other.children)
+            and all(t[0].is_same(t[1]) for t in zip(self.children, other.children))
+        )
 
     def adopt(self, other: "FuncTreeNode") -> None:
         new_children = []
@@ -69,20 +71,24 @@ class FuncTreeNode:
                 else:
                     end_array = [n.end for n in self.children]
                     end_idx = bisect.bisect(end_array, other.end)
-            if (start_idx == end_idx + 1):
+            if start_idx == end_idx + 1:
                 self.children[end_idx].adopt(other)
-            elif (start_idx == end_idx):
+            elif start_idx == end_idx:
                 other.parent = self
                 self.children.insert(start_idx, other)
-            elif (start_idx < end_idx):
+            elif start_idx < end_idx:
+
                 def change_parent(node):
                     node.parent = other
+
                 new_children = self.children[start_idx:end_idx]
                 # force map to run
                 list(map(change_parent, new_children))
                 other.children = new_children
                 other.parent = self
-                self.children = self.children[:start_idx] + [other] + self.children[end_idx:]
+                self.children = (
+                    self.children[:start_idx] + [other] + self.children[end_idx:]
+                )
             else:  # pragma: no cover
                 raise Exception("This should not be possible")
         elif self.parent is not None:

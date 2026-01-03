@@ -22,7 +22,14 @@ from typing import Any
 from . import __version__
 from .code_monkey import CodeMonkey
 from .report_builder import ReportBuilder
-from .util import color_print, frame_stack_has_func, pid_exists, same_line_print, time_str_to_us, unique_file_name
+from .util import (
+    color_print,
+    frame_stack_has_func,
+    pid_exists,
+    same_line_print,
+    time_str_to_us,
+    unique_file_name,
+)
 from .viztracer import VizTracer
 
 # For all the procedures in VizUI, return a tuple as the result
@@ -45,127 +52,342 @@ class VizUI:
 
     def create_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog="python -m viztracer")
-        parser.add_argument("--version", action="version", version=__version__,
-                            help="show version of viztracer")
-        parser.add_argument("-c", "--cmd_string", nargs="?", default=None,
-                            help="program passed in as string")
-        parser.add_argument("--rcfile", nargs="?", default=None,
-                            help="specify rcfile for viztracer")
-        parser.add_argument("--tracer_entries", nargs="?", type=int, default=1000000,
-                            help="size of circular buffer. How many entries can it store")
+        parser.add_argument(
+            "--version",
+            action="version",
+            version=__version__,
+            help="show version of viztracer",
+        )
+        parser.add_argument(
+            "-c",
+            "--cmd_string",
+            nargs="?",
+            default=None,
+            help="program passed in as string",
+        )
+        parser.add_argument(
+            "--rcfile", nargs="?", default=None, help="specify rcfile for viztracer"
+        )
+        parser.add_argument(
+            "--tracer_entries",
+            nargs="?",
+            type=int,
+            default=1000000,
+            help="size of circular buffer. How many entries can it store",
+        )
         filename_group = parser.add_mutually_exclusive_group()
-        filename_group.add_argument("--output_file", "-o", nargs="?", default=None,
-                                    help="output file path. End with .json or .html or .gz")
-        filename_group.add_argument("--unique_output_file", "-u", action="store_true", default=False,
-                                    help="Use a unique file name for each run")
-        parser.add_argument("--output_dir", nargs="?", default=None,
-                            help="output directory. Should only be used when --pid_suffix is used")
-        parser.add_argument("--file_info", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--quiet", action="store_true", default=False,
-                            help="stop VizTracer from printing anything")
-        parser.add_argument("--trace_self", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--plugins", nargs="*", default=[],
-                            help="specify plugins for VizTracer")
-        parser.add_argument("--max_stack_depth", nargs="?", type=int, default=-1,
-                            help="maximum stack depth you want to trace.")
-        parser.add_argument("--min_duration", nargs="?", default="0",
-                            help="minimum duration of function to log")
-        parser.add_argument("--exclude_files", nargs="*", default=None,
-                            help=("specify the files(directories) you want to exclude from tracing. "
-                                  "Can't be used with --include_files"))
-        parser.add_argument("--include_files", nargs="*", default=None,
-                            help=("specify the only files(directories) you want to include from tracing. "
-                                  "Can't be used with --exclude_files"))
-        parser.add_argument("--ignore_c_function", action="store_true", default=False,
-                            help="ignore all c functions including most builtin functions and libraries")
-        parser.add_argument("--ignore_frozen", action="store_true", default=False,
-                            help="ignore all functions that are frozen(like import)")
-        parser.add_argument("--log_exit", action="store_true", default=False,
-                            help="log functions in exit functions like atexit")
-        parser.add_argument("--log_func_retval", action="store_true", default=False,
-                            help="log return value of the function in the report")
-        parser.add_argument("--log_func_with_objprint", action="store_true", default=False,
-                            help="use objprint for function argument and return value")
-        parser.add_argument("--log_print", action="store_true", default=False,
-                            help="replace all print() function to adding an event to the result")
-        parser.add_argument("--log_sparse", action="store_true", default=False,
-                            help="log only selected functions with @log_sparse")
-        parser.add_argument("--log_func_args", action="store_true", default=False,
-                            help="log all function arguments, this will introduce large overhead")
-        parser.add_argument("--log_gc", action="store_true", default=False,
-                            help="log ref cycle garbage collection operations")
-        parser.add_argument("--log_torch", action="store_true", default=False,
-                            help="log all the supported torch events together with the trace")
-        parser.add_argument("--log_var", nargs="*", default=None,
-                            help="log variable with specified names")
-        parser.add_argument("--log_number", nargs="*", default=None,
-                            help="log variable with specified names as a number(using VizCounter)")
-        parser.add_argument("--log_attr", nargs="*", default=None,
-                            help="log attribute with specified names")
-        parser.add_argument("--log_audit", nargs="*", default=None,
-                            help="log audit when audit event is raised, takes regex")
-        parser.add_argument("--log_func_exec", nargs="*", default=None,
-                            help="log execution of function with specified names")
-        parser.add_argument("--log_func_entry", nargs="*", default=None,
-                            help="log entry of the function with specified names")
-        parser.add_argument("--log_exception", action="store_true", default=False,
-                            help="log all exception when it's raised")
-        parser.add_argument("--log_subprocess", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--report_endpoint", default=None,
-                            help="The endpoint to report the trace data to, in the format of host:port")
-        parser.add_argument("--dump_raw", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--sanitize_function_name", action="store_true", default=False,
-                            help="Sanitize logged function names to enforce utf-8 encoding")
-        parser.add_argument("--log_multiprocess", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--log_async", action="store_true", default=False,
-                            help="log as async format")
-        parser.add_argument("--ignore_multiprocess", action="store_true", default=False,
-                            help="Do not log any process other than the main process")
-        parser.add_argument("--magic_comment", action="store_true", default=False,
-                            help="Process VizTracer specific comments")
-        parser.add_argument("--minimize_memory", action="store_true", default=False,
-                            help="Use json.dump to dump chunks to file to save memory")
-        parser.add_argument("--pid_suffix", action="store_true", default=False,
-                            help=("append pid to file name. "
-                                  "This should be used when you try to trace multi process programs. "
-                                  "Will by default generate json files"))
-        parser.add_argument("--module", "-m", nargs="?", default=None,
-                            help="run module with VizTracer")
-        parser.add_argument("--patch_only", action="store_true", default=False,
-                            help=argparse.SUPPRESS)
-        parser.add_argument("--compress", nargs="?", default=None,
-                            help="Compress a json report to a compact cvf format")
-        parser.add_argument("--decompress", nargs="?", default=None,
-                            help="Decompress a compressed cvf file to a json format")
-        parser.add_argument("--combine", nargs="*", default=[],
-                            help=("combine all json reports to a single report. "
-                                  "Specify all the json reports you want to combine"))
-        parser.add_argument("--align_combine", nargs="*", default=[],
-                            help=("combine all json reports to a single report and align them from the start "
-                                  "Specify all the json reports you want to combine"))
-        parser.add_argument("--open", action="store_true", default=False,
-                            help="open the report in browser after saving")
-        parser.add_argument("--report_server", nargs="?", default=None, const="",
-                            help="start a report server to collect reports from multiple VizTracer instances")
-        parser.add_argument("--attach", type=int, nargs="?", default=-1,
-                            help="pid of Python process to trace")
-        parser.add_argument("--attach_installed", type=int, nargs="?", default=-1,
-                            help="pid of Python process with VizTracer installed")
-        parser.add_argument("--uninstall", type=int, nargs="?", default=-1,
-                            help="pid of Python process with VizTracer to be uninstalled")
-        parser.add_argument("-t", type=float, nargs="?", default=-1,
-                            help="time you want to trace the process")
+        filename_group.add_argument(
+            "--output_file",
+            "-o",
+            nargs="?",
+            default=None,
+            help="output file path. End with .json or .html or .gz",
+        )
+        filename_group.add_argument(
+            "--unique_output_file",
+            "-u",
+            action="store_true",
+            default=False,
+            help="Use a unique file name for each run",
+        )
+        parser.add_argument(
+            "--output_dir",
+            nargs="?",
+            default=None,
+            help="output directory. Should only be used when --pid_suffix is used",
+        )
+        parser.add_argument(
+            "--file_info", action="store_true", default=False, help=argparse.SUPPRESS
+        )
+        parser.add_argument(
+            "--quiet",
+            action="store_true",
+            default=False,
+            help="stop VizTracer from printing anything",
+        )
+        parser.add_argument(
+            "--trace_self", action="store_true", default=False, help=argparse.SUPPRESS
+        )
+        parser.add_argument(
+            "--plugins", nargs="*", default=[], help="specify plugins for VizTracer"
+        )
+        parser.add_argument(
+            "--max_stack_depth",
+            nargs="?",
+            type=int,
+            default=-1,
+            help="maximum stack depth you want to trace.",
+        )
+        parser.add_argument(
+            "--min_duration",
+            nargs="?",
+            default="0",
+            help="minimum duration of function to log",
+        )
+        parser.add_argument(
+            "--exclude_files",
+            nargs="*",
+            default=None,
+            help=(
+                "specify the files(directories) you want to exclude from tracing. "
+                "Can't be used with --include_files"
+            ),
+        )
+        parser.add_argument(
+            "--include_files",
+            nargs="*",
+            default=None,
+            help=(
+                "specify the only files(directories) you want to include from tracing. "
+                "Can't be used with --exclude_files"
+            ),
+        )
+        parser.add_argument(
+            "--ignore_c_function",
+            action="store_true",
+            default=False,
+            help="ignore all c functions including most builtin functions and libraries",
+        )
+        parser.add_argument(
+            "--ignore_frozen",
+            action="store_true",
+            default=False,
+            help="ignore all functions that are frozen(like import)",
+        )
+        parser.add_argument(
+            "--log_exit",
+            action="store_true",
+            default=False,
+            help="log functions in exit functions like atexit",
+        )
+        parser.add_argument(
+            "--log_func_retval",
+            action="store_true",
+            default=False,
+            help="log return value of the function in the report",
+        )
+        parser.add_argument(
+            "--log_func_with_objprint",
+            action="store_true",
+            default=False,
+            help="use objprint for function argument and return value",
+        )
+        parser.add_argument(
+            "--log_print",
+            action="store_true",
+            default=False,
+            help="replace all print() function to adding an event to the result",
+        )
+        parser.add_argument(
+            "--log_sparse",
+            action="store_true",
+            default=False,
+            help="log only selected functions with @log_sparse",
+        )
+        parser.add_argument(
+            "--log_func_args",
+            action="store_true",
+            default=False,
+            help="log all function arguments, this will introduce large overhead",
+        )
+        parser.add_argument(
+            "--log_gc",
+            action="store_true",
+            default=False,
+            help="log ref cycle garbage collection operations",
+        )
+        parser.add_argument(
+            "--log_torch",
+            action="store_true",
+            default=False,
+            help="log all the supported torch events together with the trace",
+        )
+        parser.add_argument(
+            "--log_var",
+            nargs="*",
+            default=None,
+            help="log variable with specified names",
+        )
+        parser.add_argument(
+            "--log_number",
+            nargs="*",
+            default=None,
+            help="log variable with specified names as a number(using VizCounter)",
+        )
+        parser.add_argument(
+            "--log_attr",
+            nargs="*",
+            default=None,
+            help="log attribute with specified names",
+        )
+        parser.add_argument(
+            "--log_audit",
+            nargs="*",
+            default=None,
+            help="log audit when audit event is raised, takes regex",
+        )
+        parser.add_argument(
+            "--log_func_exec",
+            nargs="*",
+            default=None,
+            help="log execution of function with specified names",
+        )
+        parser.add_argument(
+            "--log_func_entry",
+            nargs="*",
+            default=None,
+            help="log entry of the function with specified names",
+        )
+        parser.add_argument(
+            "--log_exception",
+            action="store_true",
+            default=False,
+            help="log all exception when it's raised",
+        )
+        parser.add_argument(
+            "--log_subprocess",
+            action="store_true",
+            default=False,
+            help=argparse.SUPPRESS,
+        )
+        parser.add_argument(
+            "--report_endpoint",
+            default=None,
+            help="The endpoint to report the trace data to, in the format of host:port",
+        )
+        parser.add_argument(
+            "--dump_raw", action="store_true", default=False, help=argparse.SUPPRESS
+        )
+        parser.add_argument(
+            "--sanitize_function_name",
+            action="store_true",
+            default=False,
+            help="Sanitize logged function names to enforce utf-8 encoding",
+        )
+        parser.add_argument(
+            "--log_multiprocess",
+            action="store_true",
+            default=False,
+            help=argparse.SUPPRESS,
+        )
+        parser.add_argument(
+            "--log_async",
+            action="store_true",
+            default=False,
+            help="log as async format",
+        )
+        parser.add_argument(
+            "--ignore_multiprocess",
+            action="store_true",
+            default=False,
+            help="Do not log any process other than the main process",
+        )
+        parser.add_argument(
+            "--magic_comment",
+            action="store_true",
+            default=False,
+            help="Process VizTracer specific comments",
+        )
+        parser.add_argument(
+            "--minimize_memory",
+            action="store_true",
+            default=False,
+            help="Use json.dump to dump chunks to file to save memory",
+        )
+        parser.add_argument(
+            "--pid_suffix",
+            action="store_true",
+            default=False,
+            help=(
+                "append pid to file name. "
+                "This should be used when you try to trace multi process programs. "
+                "Will by default generate json files"
+            ),
+        )
+        parser.add_argument(
+            "--module", "-m", nargs="?", default=None, help="run module with VizTracer"
+        )
+        parser.add_argument(
+            "--patch_only", action="store_true", default=False, help=argparse.SUPPRESS
+        )
+        parser.add_argument(
+            "--compress",
+            nargs="?",
+            default=None,
+            help="Compress a json report to a compact cvf format",
+        )
+        parser.add_argument(
+            "--decompress",
+            nargs="?",
+            default=None,
+            help="Decompress a compressed cvf file to a json format",
+        )
+        parser.add_argument(
+            "--combine",
+            nargs="*",
+            default=[],
+            help=(
+                "combine all json reports to a single report. "
+                "Specify all the json reports you want to combine"
+            ),
+        )
+        parser.add_argument(
+            "--align_combine",
+            nargs="*",
+            default=[],
+            help=(
+                "combine all json reports to a single report and align them from the start "
+                "Specify all the json reports you want to combine"
+            ),
+        )
+        parser.add_argument(
+            "--open",
+            action="store_true",
+            default=False,
+            help="open the report in browser after saving",
+        )
+        parser.add_argument(
+            "--report_server",
+            nargs="?",
+            default=None,
+            const="",
+            help="start a report server to collect reports from multiple VizTracer instances",
+        )
+        parser.add_argument(
+            "--attach",
+            type=int,
+            nargs="?",
+            default=-1,
+            help="pid of Python process to trace",
+        )
+        parser.add_argument(
+            "--attach_installed",
+            type=int,
+            nargs="?",
+            default=-1,
+            help="pid of Python process with VizTracer installed",
+        )
+        parser.add_argument(
+            "--uninstall",
+            type=int,
+            nargs="?",
+            default=-1,
+            help="pid of Python process with VizTracer to be uninstalled",
+        )
+        parser.add_argument(
+            "-t",
+            type=float,
+            nargs="?",
+            default=-1,
+            help="time you want to trace the process",
+        )
         return parser
 
     def load_config_file(self, filename: str = ".viztracerrc") -> argparse.Namespace:
         ret = argparse.Namespace()
         if os.path.exists(filename):
             import configparser
+
             cfg_parser = configparser.ConfigParser()
             cfg_parser.read(filename)
             if "default" not in cfg_parser:
@@ -176,19 +398,38 @@ class VizUI:
                     if not callable(convert):
                         # This only happens when action.type is not None but not a callable
                         # This should not happen in normal case
-                        raise ValueError(f"Invalid action type {action.type}")  # pragma: no cover
+                        raise ValueError(
+                            f"Invalid action type {action.type}"
+                        )  # pragma: no cover
                     if action.nargs == 0:
                         setattr(ret, action.dest, action.const)
                     elif action.nargs is None or action.nargs == "?":
-                        if action.type == bool:  # pragma: no cover
+                        if action.type is bool:  # pragma: no cover
                             # VizTracer does not have any option that belongs to this case
                             # store_true/store_false has nargs == 0, this only happens
                             # when it's a store, but with type == bool
-                            setattr(ret, action.dest, cfg_parser["default"].getboolean(action.dest))
+                            setattr(
+                                ret,
+                                action.dest,
+                                cfg_parser["default"].getboolean(action.dest),
+                            )
                         else:
-                            setattr(ret, action.dest, convert(cfg_parser["default"][action.dest]))
+                            setattr(
+                                ret,
+                                action.dest,
+                                convert(cfg_parser["default"][action.dest]),
+                            )
                     else:
-                        setattr(ret, action.dest, [convert(val) for val in cfg_parser["default"][action.dest].strip().split()])
+                        setattr(
+                            ret,
+                            action.dest,
+                            [
+                                convert(val)
+                                for val in cfg_parser["default"][action.dest]
+                                .strip()
+                                .split()
+                            ],
+                        )
         else:
             if filename != ".viztracerrc":
                 # User specified name, raise error
@@ -210,10 +451,15 @@ class VizUI:
         default_namespace = self.load_config_file(rc_options.rcfile)
 
         if idx is not None:
-            options, command = self.parser.parse_args(argv[1:idx], namespace=default_namespace), argv[idx + 1:]
+            options, command = (
+                self.parser.parse_args(argv[1:idx], namespace=default_namespace),
+                argv[idx + 1 :],
+            )
             self.args = argv[1:idx]
         else:
-            options, command = self.parser.parse_known_args(argv[1:], namespace=default_namespace)
+            options, command = self.parser.parse_known_args(
+                argv[1:], namespace=default_namespace
+            )
             self.args = [elem for elem in argv[1:] if elem not in command]
 
         if options.quiet:
@@ -227,7 +473,9 @@ class VizUI:
                 exec_name = command[0]
             self.ofile = unique_file_name(exec_name)
         if options.output_file:
-            if not options.compress and not options.output_file.endswith((".json", ".html", ".gz")):
+            if not options.compress and not options.output_file.endswith(
+                (".json", ".html", ".gz")
+            ):
                 return False, "Only html, json and gz are supported"
             self.ofile = options.output_file
         elif options.pid_suffix:
@@ -241,12 +489,16 @@ class VizUI:
         if options.log_multiprocess or options.log_subprocess:  # pragma: no cover
             color_print(
                 "WARNING",
-                "--log_multiprocess and --log_subprocess are no longer needed to trace multi-process program")
+                "--log_multiprocess and --log_subprocess are no longer needed to trace multi-process program",
+            )
 
         try:
             min_duration = time_str_to_us(options.min_duration)
         except ValueError:
-            return False, f"Can't convert {options.min_duration} to time. Format should be 0.3ms or 13us"
+            return (
+                False,
+                f"Can't convert {options.min_duration} to time. Format should be 0.3ms or 13us",
+            )
 
         if options.log_torch:
             try:
@@ -364,7 +616,9 @@ class VizUI:
         server.run()
         return True, None
 
-    def run_code(self, code: CodeType | str, global_dict: dict[str, Any]) -> VizProcedureResult:
+    def run_code(
+        self, code: CodeType | str, global_dict: dict[str, Any]
+    ) -> VizProcedureResult:
         options = self.options
         self.parent_pid = os.getpid()
 
@@ -379,15 +633,21 @@ class VizUI:
 
         if options.patch_only:
             from .patch import install_all_hooks
+
             install_all_hooks(tracer)
             exec(code, global_dict)
             return True, None
 
         def term_handler(signalnum, frame):
             # Exit if we are not already doing exit routine
-            if not frame_stack_has_func(frame, (self.exit_routine,
-                                                tracer.exit_routine,
-                                                multiprocessing.util._exit_function)):
+            if not frame_stack_has_func(
+                frame,
+                (
+                    self.exit_routine,
+                    tracer.exit_routine,
+                    multiprocessing.util._exit_function,
+                ),
+            ):
                 sys.exit(0)
 
         signal.signal(signal.SIGTERM, term_handler)
@@ -414,6 +674,7 @@ class VizUI:
 
     def run_module(self) -> VizProcedureResult:
         import runpy
+
         code = "run_module(modname, run_name='__main__', alter_sys=True)"
         global_dict = {
             "run_module": runpy.run_module,
@@ -443,13 +704,23 @@ class VizUI:
         if not search_result:
             return False, f"No such file as {file_name}"
         if file_name.endswith(".json"):
-            return False, f"viztracer can't run json file, did you mean \"vizviewer {file_name}\"?"
+            return (
+                False,
+                f'viztracer can\'t run json file, did you mean "vizviewer {file_name}"?',
+            )
         file_name = search_result
 
         with io.open_code(file_name) as f:
             code_string = f.read()
-        if options.magic_comment or options.log_var or options.log_number or options.log_attr or \
-                options.log_func_exec or options.log_exception or options.log_func_entry:
+        if (
+            options.magic_comment
+            or options.log_var
+            or options.log_number
+            or options.log_attr
+            or options.log_func_exec
+            or options.log_exception
+            or options.log_func_entry
+        ):
             monkey = CodeMonkey(file_name)
             if options.magic_comment:
                 monkey.add_source_processor()
@@ -460,9 +731,13 @@ class VizUI:
             if options.log_attr:
                 monkey.add_instrument("log_attr", {"varnames": options.log_attr})
             if options.log_func_exec:
-                monkey.add_instrument("log_func_exec", {"funcnames": options.log_func_exec})
+                monkey.add_instrument(
+                    "log_func_exec", {"funcnames": options.log_func_exec}
+                )
             if options.log_func_entry:
-                monkey.add_instrument("log_func_entry", {"funcnames": options.log_func_entry})
+                monkey.add_instrument(
+                    "log_func_entry", {"funcnames": options.log_func_entry}
+                )
             if options.log_exception:
                 monkey.add_instrument("log_exception", {})
             builtins.compile = monkey.compile  # type: ignore
@@ -524,7 +799,9 @@ class VizUI:
 
     def run_combine(self, files: list[str], align: bool = False) -> VizProcedureResult:
         options = self.options
-        builder = ReportBuilder(files, align=align, minimize_memory=options.minimize_memory)
+        builder = ReportBuilder(
+            files, align=align, minimize_memory=options.minimize_memory
+        )
         if options.output_file:
             ofile = options.output_file
         else:
@@ -541,12 +818,17 @@ class VizUI:
             return False, "VizTracer does not support this feature on Apple Silicon"
 
         if sys.platform == "darwin" and sys.version_info >= (3, 11):
-            color_print("WARNING", "Warning: attach may not work on 3.11+ on Mac due to hardened runtime")
+            color_print(
+                "WARNING",
+                "Warning: attach may not work on 3.11+ on Mac due to hardened runtime",
+            )
 
         return True, None
 
     def attach(self) -> VizProcedureResult:
-        from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
+        from .attach_process.add_code_to_python_process import (  # type: ignore
+            run_python_code,
+        )
 
         pid = self.options.attach
         interval = self.options.t
@@ -560,18 +842,28 @@ class VizUI:
             return False, f"pid {pid} does not exist!"
 
         # If we are doing attach, we need to clean init_kwargs first
-        self.init_kwargs.update({
-            "output_file": os.path.abspath(self.ofile),
-            "pid_suffix": False,
-            "file_info": True,
-            "register_global": True,
-            "dump_raw": False,
-            "verbose": 1 if self.verbose != 0 else 0,
-        })
-        b64s = base64.urlsafe_b64encode(json.dumps(self.init_kwargs).encode("ascii")).decode("ascii")
-        start_code = f"import viztracer.attach; viztracer.attach.start_attach(\\\"{b64s}\\\")"
+        self.init_kwargs.update(
+            {
+                "output_file": os.path.abspath(self.ofile),
+                "pid_suffix": False,
+                "file_info": True,
+                "register_global": True,
+                "dump_raw": False,
+                "verbose": 1 if self.verbose != 0 else 0,
+            }
+        )
+        b64s = base64.urlsafe_b64encode(
+            json.dumps(self.init_kwargs).encode("ascii")
+        ).decode("ascii")
+        start_code = (
+            f'import viztracer.attach; viztracer.attach.start_attach(\\"{b64s}\\")'
+        )
         stop_code = "viztracer.attach.stop_attach()"
-        retcode, _, _, = run_python_code(pid, start_code)
+        (
+            retcode,
+            _,
+            _,
+        ) = run_python_code(pid, start_code)
         if retcode != 0:  # pragma: no cover
             return False, f"Failed to inject code [err {retcode}]"
 
@@ -587,7 +879,9 @@ class VizUI:
         return True, None
 
     def uninstall(self) -> VizProcedureResult:
-        from .attach_process.add_code_to_python_process import run_python_code  # type: ignore
+        from .attach_process.add_code_to_python_process import (  # type: ignore
+            run_python_code,
+        )
 
         pid = self.options.uninstall
 
@@ -636,7 +930,9 @@ class VizUI:
                 print(f"Attach success, collect trace after {interval}s", flush=True)
                 time.sleep(interval)
             else:
-                print("Attach success, press CTRL+C to stop and save report", flush=True)
+                print(
+                    "Attach success, press CTRL+C to stop and save report", flush=True
+                )
                 while True:
                     time.sleep(0.1)
         except KeyboardInterrupt:
@@ -651,7 +947,16 @@ class VizUI:
                 self.tracer.exit_routine()
                 if self.options.open:  # pragma: no cover
                     import subprocess
-                    subprocess.run([sys.executable, "-m", "viztracer.viewer", "--once", os.path.abspath(self.ofile)])
+
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "viztracer.viewer",
+                            "--once",
+                            os.path.abspath(self.ofile),
+                        ]
+                    )
 
 
 def main():

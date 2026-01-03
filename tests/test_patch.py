@@ -15,7 +15,6 @@ from viztracer.report_server import ReportServer
 
 from .cmdline_tmpl import CmdlineTmpl
 
-
 file_spawn_tmpl = Template("""
 import multiprocessing
 import io
@@ -116,9 +115,11 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
         tmpdir = tempfile.mkdtemp()
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file=None,
-                      script=file_spawn_tmpl.substitute(foo=foo_normal, tmpdir=tmpdir))
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file=None,
+            script=file_spawn_tmpl.substitute(foo=foo_normal, tmpdir=tmpdir),
+        )
 
         files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)
@@ -128,10 +129,12 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
         tmpdir = tempfile.mkdtemp()
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file=None,
-                      script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
-                      send_sig=(signal.SIGTERM, "ready"))
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file=None,
+            script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
+            send_sig=(signal.SIGTERM, "ready"),
+        )
 
         files = os.listdir(tmpdir)
         self.assertEqual(len(files), 1)
@@ -139,22 +142,22 @@ class TestPatchSpawn(CmdlineTmpl):
         shutil.rmtree(tmpdir)
 
     def test_patch_args(self):
-        a = self.template([sys.executable, "cmdline_test.py"],
-                          expected_output_file=None,
-                          script=check_output)
-        b = self.template(["viztracer", "--quiet", "cmdline_test.py"],
-                          expected_output_file="result.json",
-                          script=check_output)
+        a = self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file=None,
+            script=check_output,
+        )
+        b = self.template(
+            ["viztracer", "--quiet", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=check_output,
+        )
         a_content = re.search(
-            r"PATCH TEST START(.*)PATCH TEST END",
-            a.stdout.decode("utf-8"),
-            re.DOTALL
+            r"PATCH TEST START(.*)PATCH TEST END", a.stdout.decode("utf-8"), re.DOTALL
         ).group(1)
 
         b_content = re.search(
-            r"PATCH TEST START(.*)PATCH TEST END",
-            b.stdout.decode("utf-8"),
-            re.DOTALL
+            r"PATCH TEST START(.*)PATCH TEST END", b.stdout.decode("utf-8"), re.DOTALL
         ).group(1)
 
         self.assertEqual(a_content, b_content)
@@ -181,9 +184,17 @@ class TestPatchOnly(CmdlineTmpl):
                     sys.exit(1)
         """
         server_proc, endpoint = ReportServer.start_process("result.json")
-        self.template(["viztracer", "--patch_only", "--report_endpoint", endpoint, "cmdline_test.py"],
-                      expected_output_file=None,
-                      script=script)
+        self.template(
+            [
+                "viztracer",
+                "--patch_only",
+                "--report_endpoint",
+                endpoint,
+                "cmdline_test.py",
+            ],
+            expected_output_file=None,
+            script=script,
+        )
         server_proc.stdout.close()
         server_proc.terminate()
         server_proc.wait(timeout=5)
@@ -191,6 +202,8 @@ class TestPatchOnly(CmdlineTmpl):
 
 class TestPatchSideEffect(CmdlineTmpl):
     def test_func_names(self):
-        self.template(["viztracer", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_after_patch_check)
+        self.template(
+            ["viztracer", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_after_patch_check,
+        )

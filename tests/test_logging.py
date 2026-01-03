@@ -20,7 +20,9 @@ class TestLogging(BaseTmpl):
         tracer.stop()
         entries = tracer.parse()
         self.assertGreater(entries, 10)
-        self.assertTrue(any([entry["ph"] == "i" for entry in tracer.data["traceEvents"]]))
+        self.assertTrue(
+            any([entry["ph"] == "i" for entry in tracer.data["traceEvents"]])
+        )
         logging.getLogger().removeHandler(handler)
 
     def test_notracer(self):

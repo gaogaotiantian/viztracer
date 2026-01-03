@@ -10,11 +10,15 @@ class VizObject(_EventBase):
         super().__init__(tracer, name, **kwargs)
         self._viztracer_id = str(id(self))
         if self._viztracer_tracer:
-            self._viztracer_tracer.add_object("N", self._viztracer_id, self._viztracer_name)
+            self._viztracer_tracer.add_object(
+                "N", self._viztracer_id, self._viztracer_name
+            )
 
     def __del__(self) -> None:
         if self._viztracer_tracer:
-            self._viztracer_tracer.add_object("D", self._viztracer_id, self._viztracer_name)
+            self._viztracer_tracer.add_object(
+                "D", self._viztracer_id, self._viztracer_name
+            )
 
     def _viztracer_log(self, ph: str = "O") -> None:
         if not self._viztracer_tracer:
@@ -23,6 +27,14 @@ class VizObject(_EventBase):
         for attr in self._viztracer_get_attr_list():
             if hasattr(self, attr):
                 val = self.__getattribute__(attr)
-                if type(val) is list or type(val) is dict or type(val) is int or type(val) is float or type(val) is str:
+                if (
+                    type(val) is list
+                    or type(val) is dict
+                    or type(val) is int
+                    or type(val) is float
+                    or type(val) is str
+                ):
                     d[attr] = val
-        self._viztracer_tracer.add_object(ph, self._viztracer_id, self._viztracer_name, {"snapshot": d})
+        self._viztracer_tracer.add_object(
+            ph, self._viztracer_id, self._viztracer_name, {"snapshot": d}
+        )

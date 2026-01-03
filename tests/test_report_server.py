@@ -36,7 +36,7 @@ class TestReportServer(CmdlineTmpl):
             self.template(
                 ["viztracer", "--report_endpoint", endpoint, "cmdline_test.py"],
                 script=script,
-                expected_output_file=None
+                expected_output_file=None,
             )
             server_proc.__exit__(None, None, None)
 
@@ -56,14 +56,19 @@ class TestReportServer(CmdlineTmpl):
         with self.assertRaises(RuntimeError):
             server.run()
 
-    @unittest.skipIf(sys.platform == "win32", "Skip Windows due to subprocess signal handling differences")
+    @unittest.skipIf(
+        sys.platform == "win32",
+        "Skip Windows due to subprocess signal handling differences",
+    )
     def test_no_data(self):
-        cmd = cmd_with_coverage([
-            "viztracer",
-            "--report_server",
-            "-o",
-            "result.json",
-        ])
+        cmd = cmd_with_coverage(
+            [
+                "viztracer",
+                "--report_server",
+                "-o",
+                "result.json",
+            ]
+        )
         p = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
@@ -75,7 +80,10 @@ class TestReportServer(CmdlineTmpl):
         out, _ = p.communicate("\n")
         self.assertIn("No reports collected, nothing to save.", out)
 
-    @unittest.skipIf(sys.platform == "win32", "Windows terminate will kill the process without cleanup")
+    @unittest.skipIf(
+        sys.platform == "win32",
+        "Windows terminate will kill the process without cleanup",
+    )
     def test_server_shutdown_before_save(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             server_proc, endpoint = ReportServer.start_process(
@@ -91,13 +99,15 @@ class TestReportServer(CmdlineTmpl):
 
     def test_invalid_report_server_argument(self):
         for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:
-            cmd = cmd_with_coverage([
-                "viztracer",
-                "--report_server",
-                arg,
-                "-o",
-                "result.json",
-            ])
+            cmd = cmd_with_coverage(
+                [
+                    "viztracer",
+                    "--report_server",
+                    arg,
+                    "-o",
+                    "result.json",
+                ]
+            )
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,

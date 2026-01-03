@@ -21,7 +21,6 @@ class MyPlugin(VizPluginBase):
         return "0.10.5"
 
     def message(self, m_type, payload):
-
         def f(data):
             self.handler_triggered = True
 
@@ -84,7 +83,29 @@ class TestVizPlugin(CmdlineTmpl):
         self.assertEqual(output.count("support version is higher"), 1)
 
     def test_cmdline(self):
-        self.template(["viztracer", "--plugin", "tests.modules.dummy_vizplugin", "--", "cmdline_test.py"])
-        self.template(["viztracer", "--plugin", "tests.modules.dummy_vizplugin_wrong", "--", "cmdline_test.py"], success=False)
-        self.template(["viztracer", "--plugin", "tests.modules", "--", "cmdline_test.py"], success=False)
-        self.template(["viztracer", "--plugin", "invalid", "--", "cmdline_test.py"], success=False)
+        self.template(
+            [
+                "viztracer",
+                "--plugin",
+                "tests.modules.dummy_vizplugin",
+                "--",
+                "cmdline_test.py",
+            ]
+        )
+        self.template(
+            [
+                "viztracer",
+                "--plugin",
+                "tests.modules.dummy_vizplugin_wrong",
+                "--",
+                "cmdline_test.py",
+            ],
+            success=False,
+        )
+        self.template(
+            ["viztracer", "--plugin", "tests.modules", "--", "cmdline_test.py"],
+            success=False,
+        )
+        self.template(
+            ["viztracer", "--plugin", "invalid", "--", "cmdline_test.py"], success=False
+        )

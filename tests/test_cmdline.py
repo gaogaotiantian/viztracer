@@ -7,14 +7,13 @@ import os
 import re
 import signal
 import sys
-import textwrap
 import tempfile
+import textwrap
 from contextlib import contextmanager
 from unittest.case import skipIf
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
-
 
 file_c_function = """
 lst = []
@@ -215,7 +214,9 @@ print(os.getpid())
 
 class TestCommandLineBasic(CmdlineTmpl):
     def test_no_file(self):
-        result = self.template([sys.executable, "-m", "viztracer"], expected_output_file=None)
+        result = self.template(
+            [sys.executable, "-m", "viztracer"], expected_output_file=None
+        )
         result_stdout = result.stdout.decode("utf8")
         self.assertIn("help", result_stdout)
         #  Check for a few more arguments to ensure we hit the intended argumentParser
@@ -227,11 +228,19 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_help(self):
         """Test that all three options print the same help page"""
-        result = self.template([sys.executable, "-m", "viztracer"], expected_output_file=None)
-        result_h = self.template([sys.executable, "-m", "viztracer", "-h"], expected_output_file=None)
-        result_help = self.template([sys.executable, "-m", "viztracer", "--help"], expected_output_file=None)
+        result = self.template(
+            [sys.executable, "-m", "viztracer"], expected_output_file=None
+        )
+        result_h = self.template(
+            [sys.executable, "-m", "viztracer", "-h"], expected_output_file=None
+        )
+        result_help = self.template(
+            [sys.executable, "-m", "viztracer", "--help"], expected_output_file=None
+        )
 
-        self.assertEqual(result_h.stdout.decode("utf-8"), result_help.stdout.decode("utf-8"))
+        self.assertEqual(
+            result_h.stdout.decode("utf-8"), result_help.stdout.decode("utf-8")
+        )
         self.assertEqual(result.stdout.decode("utf-8"), result_h.stdout.decode("utf-8"))
 
     def test_run(self):
@@ -241,125 +250,357 @@ class TestCommandLineBasic(CmdlineTmpl):
     def test_cmd_string(self):
         self.template(["viztracer", "-c", "lst=[]; lst.append(1)"], expected_entries=3)
 
-    @package_matrix(["~orjson", "orjson"] if "free-threading" not in sys.version else None)
+    @package_matrix(
+        ["~orjson", "orjson"] if "free-threading" not in sys.version else None
+    )
     def test_outputfile(self):
-        self.template([sys.executable, "-m", "viztracer", "-o", "result.html", "cmdline_test.py"],
-                      expected_output_file="result.html")
-        self.template([sys.executable, "-m", "viztracer", "-o", "result.json", "cmdline_test.py"])
-        self.template([sys.executable, "-m", "viztracer", "-o", "result.json.gz", "cmdline_test.py"],
-                      expected_output_file="result.json.gz")
-        self.template([sys.executable, "-m", "viztracer", "--output_file", "result.html", "cmdline_test.py"],
-                      expected_output_file="result.html")
-        self.template([sys.executable, "-m", "viztracer", "--output_file", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json")
-        self.template([sys.executable, "-m", "viztracer", "--output_file", "result with space.json", "cmdline_test.py"],
-                      expected_output_file="result with space.json")
-        self.template([sys.executable, "-m", "viztracer", "--output_file", "result.json.gz", "cmdline_test.py"],
-                      expected_output_file="result.json.gz")
-        self.template(["viztracer", "-o", "result.html", "cmdline_test.py"], expected_output_file="result.html")
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"], expected_output_file="result.json")
-        self.template(["viztracer", "-o", "result.json.gz", "cmdline_test.py"], expected_output_file="result.json.gz")
+        self.template(
+            [sys.executable, "-m", "viztracer", "-o", "result.html", "cmdline_test.py"],
+            expected_output_file="result.html",
+        )
+        self.template(
+            [sys.executable, "-m", "viztracer", "-o", "result.json", "cmdline_test.py"]
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "-o",
+                "result.json.gz",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json.gz",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--output_file",
+                "result.html",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.html",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--output_file",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--output_file",
+                "result with space.json",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result with space.json",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--output_file",
+                "result.json.gz",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json.gz",
+        )
+        self.template(
+            ["viztracer", "-o", "result.html", "cmdline_test.py"],
+            expected_output_file="result.html",
+        )
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+        )
+        self.template(
+            ["viztracer", "-o", "result.json.gz", "cmdline_test.py"],
+            expected_output_file="result.json.gz",
+        )
 
-        self.template(["viztracer", "cmdline_test.py", "-o", "result.txt"],
-                      success=False,
-                      expected_output_file=None,
-                      expected_stdout='Only html, json and gz are supported')
+        self.template(
+            ["viztracer", "cmdline_test.py", "-o", "result.txt"],
+            success=False,
+            expected_output_file=None,
+            expected_stdout="Only html, json and gz are supported",
+        )
 
     def test_unique_outputfile(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "--output_dir", tmpdir, "-u", "cmdline_test.py"],
-                          expected_output_file=None)
+            self.template(
+                ["viztracer", "--output_dir", tmpdir, "-u", "cmdline_test.py"],
+                expected_output_file=None,
+            )
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            self.assertRegex(os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json")
+            self.assertRegex(
+                os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json"
+            )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             abspath = os.path.abspath("cmdline_test.py")
-            self.template(["viztracer", "--output_dir", tmpdir, "-u", abspath],
-                          expected_output_file=None)
+            self.template(
+                ["viztracer", "--output_dir", tmpdir, "-u", abspath],
+                expected_output_file=None,
+            )
             self.assertEqual(len(os.listdir(tmpdir)), 1)
-            self.assertRegex(os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json")
+            self.assertRegex(
+                os.listdir(tmpdir)[0], r"cmdline_test_\d{8}_\d{6}_\d+\.json"
+            )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.template(["viztracer", "--output_dir", tmpdir, "-u", "-m", "numbers"],
-                          expected_output_file=None)
+            self.template(
+                ["viztracer", "--output_dir", tmpdir, "-u", "-m", "numbers"],
+                expected_output_file=None,
+            )
             self.assertEqual(len(os.listdir(tmpdir)), 1)
             self.assertRegex(os.listdir(tmpdir)[0], r"numbers_\d{8}_\d{6}_\d+\.json")
 
     def test_verbose(self):
         result = self.template([sys.executable, "-m", "viztracer", "cmdline_test.py"])
         self.assertTrue("Use the following command" in result.stdout.decode("utf8"))
-        result = self.template([sys.executable, "-m", "viztracer", "--quiet", "cmdline_test.py"])
+        result = self.template(
+            [sys.executable, "-m", "viztracer", "--quiet", "cmdline_test.py"]
+        )
         self.assertFalse("Use the following command" in result.stdout.decode("utf8"))
 
     def test_max_stack_depth(self):
-        self.template([sys.executable, "-m", "viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--max_stack_depth",
+                "5",
+                "cmdline_test.py",
+            ]
+        )
         self.template(["viztracer", "--max_stack_depth", "5", "cmdline_test.py"])
 
     def test_include_files(self):
-        result = self.template([sys.executable, "-m", "viztracer", "--include_files", "./abcd", "cmdline_test.py"],
-                               expected_output_file=None)
+        result = self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--include_files",
+                "./abcd",
+                "cmdline_test.py",
+            ],
+            expected_output_file=None,
+        )
         self.assertIn("help", result.stdout.decode("utf8"))
         self.template(
-            [sys.executable, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--run", "cmdline_test.py"],
-            expected_output_file="result.json", expected_entries=17
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "-o",
+                "result.json",
+                "--include_files",
+                "./",
+                "--run",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            expected_entries=17,
         )
         self.template(
-            [sys.executable, "-m", "viztracer", "-o", "result.json", "--include_files", "./", "--", "cmdline_test.py"],
-            expected_output_file="result.json", expected_entries=17
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "-o",
+                "result.json",
+                "--include_files",
+                "./",
+                "--",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            expected_entries=17,
         )
         self.template(
-            [sys.executable, "-m", "viztracer", "--include_files", "./", "--max_stack_depth", "5", "cmdline_test.py"]
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--include_files",
+                "./",
+                "--max_stack_depth",
+                "5",
+                "cmdline_test.py",
+            ]
         )
-        self.template([sys.executable, "-m", "viztracer", "--include_files", "./abcd", "--run", "cmdline_test.py"])
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--include_files",
+                "./abcd",
+                "--run",
+                "cmdline_test.py",
+            ]
+        )
 
     def test_exclude_files(self):
-        result = self.template([sys.executable, "-m", "viztracer", "--exclude_files", "./abcd", "cmdline_test.py"],
-                               expected_output_file=None)
+        result = self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--exclude_files",
+                "./abcd",
+                "cmdline_test.py",
+            ],
+            expected_output_file=None,
+        )
         self.assertIn("help", result.stdout.decode("utf8"))
-        self.template([sys.executable, "-m", "viztracer", "--exclude_files", "./", "-o", "result.json", "cmdline_test.py"],
-                      expected_output_file="result.json", expected_entries=1)
-        self.template([sys.executable, "-m", "viztracer", "--exclude_files", "./abcd", "--run", "cmdline_test.py"])
-        self.template([sys.executable, "-m", "viztracer", "--exclude_files", "./abcd", "--", "cmdline_test.py"])
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--exclude_files",
+                "./",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            expected_entries=1,
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--exclude_files",
+                "./abcd",
+                "--run",
+                "cmdline_test.py",
+            ]
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--exclude_files",
+                "./abcd",
+                "--",
+                "cmdline_test.py",
+            ]
+        )
 
     def test_ignore_c_function(self):
-        self.template([sys.executable, "-m", "viztracer", "--ignore_c_function", "cmdline_test.py"], script=file_c_function)
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--ignore_c_function",
+                "cmdline_test.py",
+            ],
+            script=file_c_function,
+        )
 
     def test_log_func_retval(self):
-        self.template([sys.executable, "-m", "viztracer", "--log_func_retval", "cmdline_test.py"], script=file_c_function)
+        self.template(
+            [sys.executable, "-m", "viztracer", "--log_func_retval", "cmdline_test.py"],
+            script=file_c_function,
+        )
 
     def test_log_func_args(self):
-        self.template([sys.executable, "-m", "viztracer", "--log_func_args", "cmdline_test.py"])
+        self.template(
+            [sys.executable, "-m", "viztracer", "--log_func_args", "cmdline_test.py"]
+        )
 
     def test_log_func_with_objprint(self):
-        self.template([sys.executable, "-m", "viztracer", "--log_func_args", "--log_func_with_objprint", "cmdline_test.py"])
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--log_func_args",
+                "--log_func_with_objprint",
+                "cmdline_test.py",
+            ]
+        )
 
     def test_minimize_memory(self):
-        self.template([sys.executable, "-m", "viztracer", "--minimize_memory", "cmdline_test.py"])
+        self.template(
+            [sys.executable, "-m", "viztracer", "--minimize_memory", "cmdline_test.py"]
+        )
 
     def test_frozen_source(self):
         script = "import calendar"
 
         def check_func(data):
             self.assertIn("<frozen importlib._bootstrap>", data["file_info"]["files"])
-            self.assertGreater(len(data["file_info"]["files"]["<frozen importlib._bootstrap>"]), 0)
+            self.assertGreater(
+                len(data["file_info"]["files"]["<frozen importlib._bootstrap>"]), 0
+            )
 
-        self.template([sys.executable, "-m", "viztracer", "cmdline_test.py"], script=script, check_func=check_func)
+        self.template(
+            [sys.executable, "-m", "viztracer", "cmdline_test.py"],
+            script=script,
+            check_func=check_func,
+        )
 
-    @package_matrix(["~orjson", "orjson"] if "free-threading" not in sys.version else None)
+    @package_matrix(
+        ["~orjson", "orjson"] if "free-threading" not in sys.version else None
+    )
     def test_combine(self):
-        example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
-        self.template([sys.executable, "-m", "viztracer", "--combine",
-                       os.path.join(example_json_dir, "multithread.json"),
-                       os.path.join(example_json_dir, "different_sorts.json")],
-                      expected_output_file="result.json")
-        self.template([sys.executable, "-m", "viztracer", "-o", "my_result.html", "--combine",
-                       os.path.join(example_json_dir, "multithread.json"),
-                       os.path.join(example_json_dir, "different_sorts.json")],
-                      expected_output_file="my_result.html")
-        self.template([sys.executable, "-m", "viztracer", "--align_combine",
-                       os.path.join(example_json_dir, "multithread.json"),
-                       os.path.join(example_json_dir, "different_sorts.json")],
-                      expected_output_file="result.json")
+        example_json_dir = os.path.join(
+            os.path.dirname(__file__), "../", "example/json"
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--combine",
+                os.path.join(example_json_dir, "multithread.json"),
+                os.path.join(example_json_dir, "different_sorts.json"),
+            ],
+            expected_output_file="result.json",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "-o",
+                "my_result.html",
+                "--combine",
+                os.path.join(example_json_dir, "multithread.json"),
+                os.path.join(example_json_dir, "different_sorts.json"),
+            ],
+            expected_output_file="my_result.html",
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--align_combine",
+                os.path.join(example_json_dir, "multithread.json"),
+                os.path.join(example_json_dir, "different_sorts.json"),
+            ],
+            expected_output_file="result.json",
+        )
 
     def test_set_sync_marker(self):
         test_script = textwrap.dedent("""
@@ -371,10 +612,18 @@ class TestCommandLineBasic(CmdlineTmpl):
         """)
 
         def expect_sync_marker(data):
-            self.assertGreater(data['viztracer_metadata'].get('sync_marker'), 0)
+            self.assertGreater(data["viztracer_metadata"].get("sync_marker"), 0)
 
         self.template(
-            [sys.executable, "-m", "viztracer", "--ignore_frozen", "-o", "result.json", "cmdline_test.py"],
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--ignore_frozen",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
             expected_output_file="result.json",
             expected_stderr="Synchronization marker already set",
             script=test_script,
@@ -398,20 +647,28 @@ class TestCommandLineBasic(CmdlineTmpl):
         """)
 
         def expect_aligned_to_sync_marker(data):
-
-            funcs = [event for event in data['traceEvents'] if 'ts' in event and event['name'].startswith('test_func')]
+            funcs = [
+                event
+                for event in data["traceEvents"]
+                if "ts" in event and event["name"].startswith("test_func")
+            ]
             self.assertEqual(len(funcs), 2)
 
             # we expect that aligned events shifted not more than 1ms
-            aligned_diff = abs(funcs[1]['ts'] - funcs[0]['ts'])
+            aligned_diff = abs(funcs[1]["ts"] - funcs[0]["ts"])
             self.assertLessEqual(aligned_diff, 1000.0, str(data))
 
         for extra_args in [[], ["--dump_raw"]]:
             with tempfile.TemporaryDirectory() as tmpdir:
-                res1_filename = os.path.join(tmpdir, 'res1.json')
-                res2_filename = os.path.join(tmpdir, 'res2.json')
+                res1_filename = os.path.join(tmpdir, "res1.json")
+                res2_filename = os.path.join(tmpdir, "res2.json")
 
-                common_cmd_line = [sys.executable, "-m", "viztracer", "--ignore_frozen"] + extra_args
+                common_cmd_line = [
+                    sys.executable,
+                    "-m",
+                    "viztracer",
+                    "--ignore_frozen",
+                ] + extra_args
                 self.template(
                     common_cmd_line + ["-o", res1_filename, "cmdline_test.py"],
                     expected_output_file=res1_filename,
@@ -426,36 +683,110 @@ class TestCommandLineBasic(CmdlineTmpl):
                 )
 
                 self.template(
-                    [sys.executable, "-m", "viztracer", "--align_combine", res1_filename, res2_filename],
+                    [
+                        sys.executable,
+                        "-m",
+                        "viztracer",
+                        "--align_combine",
+                        res1_filename,
+                        res2_filename,
+                    ],
                     expected_output_file="result.json",
                     check_func=expect_aligned_to_sync_marker,
                 )
 
     def test_tracer_entries(self):
-        self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "1000", "cmdline_test.py"])
-        self.template([sys.executable, "-m", "viztracer", "--tracer_entries", "50", "cmdline_test.py"])
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--tracer_entries",
+                "1000",
+                "cmdline_test.py",
+            ]
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--tracer_entries",
+                "50",
+                "cmdline_test.py",
+            ]
+        )
 
     def test_trace_self(self):
         def check_func(data):
             self.assertGreater(len(data["traceEvents"]), 1000)
 
-        example_json_dir = os.path.join(os.path.dirname(__file__), "../", "example/json")
+        example_json_dir = os.path.join(
+            os.path.dirname(__file__), "../", "example/json"
+        )
         if sys.platform == "win32":
-            self.template(["viztracer", "--trace_self", "vizviewer", "--server_only",
-                           os.path.join(example_json_dir, "multithread.json")], success=False)
+            self.template(
+                [
+                    "viztracer",
+                    "--trace_self",
+                    "vizviewer",
+                    "--server_only",
+                    os.path.join(example_json_dir, "multithread.json"),
+                ],
+                success=False,
+            )
         else:
-            self.template(["viztracer", "--trace_self", "vizviewer", "--server_only",
-                           os.path.join(example_json_dir, "multithread.json")],
-                          send_sig=(signal.SIGTERM, "Ctrl+C"), expected_output_file="result.json", check_func=check_func)
+            self.template(
+                [
+                    "viztracer",
+                    "--trace_self",
+                    "vizviewer",
+                    "--server_only",
+                    os.path.join(example_json_dir, "multithread.json"),
+                ],
+                send_sig=(signal.SIGTERM, "Ctrl+C"),
+                expected_output_file="result.json",
+                check_func=check_func,
+            )
 
     def test_min_duration(self):
-        self.template([sys.executable, "-m", "viztracer", "--min_duration", "1s", "cmdline_test.py"], expected_entries=0)
-        self.template([sys.executable, "-m", "viztracer", "--min_duration", "0.0.3s", "cmdline_test.py"], success=False)
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--min_duration",
+                "1s",
+                "cmdline_test.py",
+            ],
+            expected_entries=0,
+        )
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--min_duration",
+                "0.0.3s",
+                "cmdline_test.py",
+            ],
+            success=False,
+        )
 
     def test_pid_suffix(self):
         result = self.template(
-            [sys.executable, "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "cmdline_test.py"],
-            expected_output_file="./suffix_tmp", script=file_pid_suffix, cleanup=False
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--pid_suffix",
+                "--output_dir",
+                "./suffix_tmp",
+                "cmdline_test.py",
+            ],
+            expected_output_file="./suffix_tmp",
+            script=file_pid_suffix,
+            cleanup=False,
         )
         pid = result.stdout.decode("utf-8").split()[0]
         self.assertFileExists(os.path.join("./suffix_tmp", f"result_{pid}.json"))
@@ -463,8 +794,20 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_pid_suffix_and_output(self):
         result = self.template(
-            [sys.executable, "-m", "viztracer", "--pid_suffix", "--output_dir", "./suffix_tmp", "-o", "test.json",
-             "cmdline_test.py"], expected_output_file="./suffix_tmp", script=file_pid_suffix, cleanup=False
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "--pid_suffix",
+                "--output_dir",
+                "./suffix_tmp",
+                "-o",
+                "test.json",
+                "cmdline_test.py",
+            ],
+            expected_output_file="./suffix_tmp",
+            script=file_pid_suffix,
+            cleanup=False,
         )
         pid = result.stdout.decode("utf-8").split()[0]
         self.assertFileExists(os.path.join("./suffix_tmp", f"test_{pid}.json"))
@@ -475,38 +818,59 @@ class TestCommandLineBasic(CmdlineTmpl):
 
     def test_import_star(self):
         script = "from viztracer import *"
-        self.template([sys.executable, "cmdline_test.py"], script=script, expected_output_file=None)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file=None,
+        )
 
     def test_log_gc(self):
         self.template(["viztracer", "--log_gc", "cmdline_test.py"], script=file_gc)
 
     def test_log_var(self):
-        self.template(["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"],
-                      script=file_c_function,
-                      expected_output_file="result.json",
-                      expected_entries=4)
-        self.template(["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_var,
-                      expected_output_file="result.json",
-                      expected_entries=26)
-        self.template(["viztracer", "--log_number", "ab[cd]", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_var,
-                      expected_output_file="result.json",
-                      expected_entries=12)
+        self.template(
+            ["viztracer", "--log_var", "lst", "-o", "result.json", "cmdline_test.py"],
+            script=file_c_function,
+            expected_output_file="result.json",
+            expected_entries=4,
+        )
+        self.template(
+            ["viztracer", "--log_var", "a.*", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_var,
+            expected_output_file="result.json",
+            expected_entries=26,
+        )
+        self.template(
+            [
+                "viztracer",
+                "--log_number",
+                "ab[cd]",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            script=file_log_var,
+            expected_output_file="result.json",
+            expected_entries=12,
+        )
 
         code_ast = textwrap.dedent("""
             import ast
             tree = ast.parse("a = 1")
         """)
-        self.template(["viztracer", "--log_var", "tree", "-o", "result.json", "cmdline_test.py"],
-                      script=code_ast,
-                      expected_output_file="result.json")
+        self.template(
+            ["viztracer", "--log_var", "tree", "-o", "result.json", "cmdline_test.py"],
+            script=code_ast,
+            expected_output_file="result.json",
+        )
 
     def test_log_attr(self):
-        self.template(["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_attr,
-                      expected_output_file="result.json",
-                      expected_entries=9)
+        self.template(
+            ["viztracer", "--log_attr", "a.*", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_attr,
+            expected_output_file="result.json",
+            expected_entries=9,
+        )
 
     def test_log_func_exec(self):
         def check_func(data):
@@ -514,16 +878,35 @@ class TestCommandLineBasic(CmdlineTmpl):
                 if entry["name"].startswith("a"):
                     self.assertIn("exec_steps", entry["args"])
                     self.assertEqual(len(entry["args"]["exec_steps"]), 2)
-        self.template(["viztracer", "--log_func_exec", "a.*", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_func_exec,
-                      expected_output_file="result.json",
-                      check_func=check_func)
+
+        self.template(
+            [
+                "viztracer",
+                "--log_func_exec",
+                "a.*",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            script=file_log_func_exec,
+            expected_output_file="result.json",
+            check_func=check_func,
+        )
 
     def test_log_func_entry(self):
-        self.template(["viztracer", "--log_func_entry", "a.*", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_func_exec,
-                      expected_output_file="result.json",
-                      expected_entries=7)
+        self.template(
+            [
+                "viztracer",
+                "--log_func_entry",
+                "a.*",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            script=file_log_func_exec,
+            expected_output_file="result.json",
+            expected_entries=7,
+        )
 
     def test_log_audit(self):
         def check_func(include_names, exclude_names=[]):
@@ -535,35 +918,56 @@ class TestCommandLineBasic(CmdlineTmpl):
                 self.assertGreaterEqual(name_set, set(include_names))
                 for name in exclude_names:
                     self.assertNotIn(name, name_set)
+
             return inner
 
-        self.template(["viztracer", "--log_audit", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_audit,
-                      expected_output_file="result.json",
-                      check_func=check_func(["builtins.id", "import"]))
+        self.template(
+            ["viztracer", "--log_audit", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_audit,
+            expected_output_file="result.json",
+            check_func=check_func(["builtins.id", "import"]),
+        )
 
-        self.template(["viztracer", "--log_audit", "i.*", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_audit,
-                      expected_output_file="result.json",
-                      check_func=check_func(["import"], ["buildins.id"]))
+        self.template(
+            ["viztracer", "--log_audit", "i.*", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_audit,
+            expected_output_file="result.json",
+            check_func=check_func(["import"], ["buildins.id"]),
+        )
 
-        self.template(["viztracer", "--log_audit", "builtins.id", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_audit,
-                      expected_output_file="result.json",
-                      check_func=check_func(["builtins.id"], ["import"]))
+        self.template(
+            [
+                "viztracer",
+                "--log_audit",
+                "builtins.id",
+                "-o",
+                "result.json",
+                "cmdline_test.py",
+            ],
+            script=file_log_audit,
+            expected_output_file="result.json",
+            check_func=check_func(["builtins.id"], ["import"]),
+        )
 
     def test_log_exception(self):
-        self.template(["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_exception,
-                      expected_output_file="result.json",
-                      expected_entries=3)
+        self.template(
+            ["viztracer", "--log_exception", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_exception,
+            expected_output_file="result.json",
+            expected_entries=3,
+        )
         # Coverage for visit_Raise without change
-        self.template(["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_exception,
-                      expected_output_file="result.json",
-                      expected_entries=2)
+        self.template(
+            ["viztracer", "--log_var", "a", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_exception,
+            expected_output_file="result.json",
+            expected_entries=2,
+        )
 
-    @skipIf(hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(), "trio does not support free-threaded Python")
+    @skipIf(
+        hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(),
+        "trio does not support free-threaded Python",
+    )
     @package_matrix(["~trio", "trio"])
     def test_log_async(self):
         def check_func(data):
@@ -572,12 +976,17 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_async,
-                      expected_output_file="result.json",
-                      check_func=check_func)
+        self.template(
+            ["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_async,
+            expected_output_file="result.json",
+            check_func=check_func,
+        )
 
-    @skipIf(hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(), "trio does not support free-threaded Python")
+    @skipIf(
+        hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled(),
+        "trio does not support free-threaded Python",
+    )
     @package_matrix(["~trio", "trio"])
     @skipIf(importlib.util.find_spec("trio") is None, reason="Trio-specific test")
     def test_log_trio(self):
@@ -587,40 +996,60 @@ class TestCommandLineBasic(CmdlineTmpl):
                 tids.add(entry["tid"])
             self.assertGreaterEqual(len(tids), 4)
 
-        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_trio,
-                      check_func=check_func)
-        self.template(["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
-                      script=file_log_async_with_trio,
-                      check_func=check_func)
+        self.template(
+            ["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_trio,
+            check_func=check_func,
+        )
+        self.template(
+            ["viztracer", "--log_async", "-o", "result.json", "cmdline_test.py"],
+            script=file_log_async_with_trio,
+            check_func=check_func,
+        )
 
-    @skipIf(sys.platform == "win32" or sys.version_info >= (3, 11), "jaxlib does not support Windows")
+    @skipIf(
+        sys.platform == "win32" or sys.version_info >= (3, 11),
+        "jaxlib does not support Windows",
+    )
     def test_sanitize_function_name(self):
-        self.template(["viztracer", "--sanitize_function_name", "cmdline_test.py"],
-                      script=file_sanitize_function_name,
-                      expected_stdout=".*vizviewer.*")
+        self.template(
+            ["viztracer", "--sanitize_function_name", "cmdline_test.py"],
+            script=file_sanitize_function_name,
+            expected_stdout=".*vizviewer.*",
+        )
 
     def test_ignore_function(self):
         def check_func(data):
             for entry in data["traceEvents"]:
                 self.assertNotEqual(entry["name"], "f")
-        self.template(["viztracer", "-o", "result.json", "cmdline_test.py"],
-                      script=file_ignore_function,
-                      expected_output_file="result.json",
-                      check_func=check_func)
+
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            script=file_ignore_function,
+            expected_output_file="result.json",
+            check_func=check_func,
+        )
 
     def test_show_version(self):
-        result = self.template(["viztracer", "--version"], script=None, expected_output_file=None)
+        result = self.template(
+            ["viztracer", "--version"], script=None, expected_output_file=None
+        )
         m = re.match(r".*\..*\..*", result.stdout.decode("utf-8").strip())
         self.assertNotEqual(m, None)
 
     def test_invalid_file(self):
-        self.template(["viztracer", "no_such_file.py"], success=False, expected_output_file=[])
-        self.template(["viztracer", "result_wrong.json"], script_name="result_wrong.json",
-                      success=False, expected_output_file=[], expected_stdout="vizviewer result_wrong.json")
+        self.template(
+            ["viztracer", "no_such_file.py"], success=False, expected_output_file=[]
+        )
+        self.template(
+            ["viztracer", "result_wrong.json"],
+            script_name="result_wrong.json",
+            success=False,
+            expected_output_file=[],
+            expected_stdout="vizviewer result_wrong.json",
+        )
 
     def test_rcfile(self):
-
         @contextmanager
         def option_to_file(options, filename=".viztracerrc", section="default"):
             parser = configparser.ConfigParser()
@@ -638,10 +1067,15 @@ class TestCommandLineBasic(CmdlineTmpl):
             self.template(["viztracer", "cmdline_test.py"], expected_entries=0)
 
         with option_to_file({"max_stack_depth": "0"}):
-            self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], success=False)
+            self.template(
+                ["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], success=False
+            )
 
         with option_to_file({"max_stack_depth": "0"}, filename="anotherrc"):
-            self.template(["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"], expected_entries=0)
+            self.template(
+                ["viztracer", "--rcfile", "anotherrc", "cmdline_test.py"],
+                expected_entries=0,
+            )
 
         with option_to_file({"max_stack_depth": "0"}, section="invalid"):
             self.template(["viztracer", "cmdline_test.py"], success=False)
@@ -651,21 +1085,29 @@ class TestCommandLineBasic(CmdlineTmpl):
             self.assertEqual(result.stdout.decode(), "")
 
         with option_to_file({"log_var": "a.* d"}):
-            self.template(["viztracer", "cmdline_test.py"],
-                          script=file_log_var,
-                          expected_output_file="result.json",
-                          expected_entries=27)
+            self.template(
+                ["viztracer", "cmdline_test.py"],
+                script=file_log_var,
+                expected_output_file="result.json",
+                expected_entries=27,
+            )
 
 
 class TestPossibleFailures(CmdlineTmpl):
     def test_main(self):
-        self.template([sys.executable, "-m", "viztracer", "-o", "main.json", "cmdline_test.py"],
-                      expected_output_file="main.json",
-                      script=file_main,
-                      expected_entries=3)
+        self.template(
+            [sys.executable, "-m", "viztracer", "-o", "main.json", "cmdline_test.py"],
+            expected_output_file="main.json",
+            script=file_main,
+            expected_entries=3,
+        )
 
     def test_argv(self):
-        self.template([sys.executable, "-m", "viztracer", "cmdline_test.py"], script=file_argv)
+        self.template(
+            [sys.executable, "-m", "viztracer", "cmdline_test.py"], script=file_argv
+        )
 
     def test_exit(self):
-        self.template([sys.executable, "-m", "viztracer", "cmdline_test.py"], script=file_exit)
+        self.template(
+            [sys.executable, "-m", "viztracer", "cmdline_test.py"], script=file_exit
+        )

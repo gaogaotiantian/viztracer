@@ -28,8 +28,9 @@ def _error(example_no, data_set="train"):
     :param example_no: example number whose error has to be checked
     :return: error in example pointed by example number.
     """
-    return calculate_hypothesis_value(example_no, data_set) - \
-        output(example_no, data_set)
+    return calculate_hypothesis_value(example_no, data_set) - output(
+        example_no, data_set
+    )
 
 
 def _hypothesis_value(data_input_tuple):
@@ -137,9 +138,13 @@ def test_gradient_descent():
 
 
 if __name__ == "__main__":
-    with VizTracer(log_print=True,
-                   output_file=os.path.join(os.path.dirname(__file__), "../", "json/gradient_descent.json"),
-                   file_info=True) as tracer:
+    with VizTracer(
+        log_print=True,
+        output_file=os.path.join(
+            os.path.dirname(__file__), "../", "json/gradient_descent.json"
+        ),
+        file_info=True,
+    ) as tracer:
         counter = VizCounter(tracer, "log(1 + cost)")
         run_gradient_descent()
         test_gradient_descent()

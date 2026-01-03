@@ -47,9 +47,13 @@ class TestReportBuilder(BaseTmpl):
         self.assertEqual(result1, result2)
 
     def test_get_source_from_filename(self):
-        self.assertIsNotNone(ReportBuilder.get_source_from_filename("<frozen importlib._bootstrap>"))
+        self.assertIsNotNone(
+            ReportBuilder.get_source_from_filename("<frozen importlib._bootstrap>")
+        )
         self.assertIsNotNone(ReportBuilder.get_source_from_filename(__file__))
-        self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen nonexistmodule>"))
+        self.assertIsNone(
+            ReportBuilder.get_source_from_filename("<frozen nonexistmodule>")
+        )
         self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen incomplete"))
 
     def test_invalid(self):
@@ -82,23 +86,35 @@ class TestReportBuilder(BaseTmpl):
         with self.assertRaises(Exception):
             ReportBuilder([invalid_json_path], verbose=1)
 
-    @patch('sys.stdout', new_callable=io.StringIO)
+    @patch("sys.stdout", new_callable=io.StringIO)
     def test_invalid_json_file(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
-            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
-            valid_json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
-            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
-            valid_json_file = shutil.copy(valid_json_path, os.path.join(tmpdir, "valid.json"))
+            invalid_json_path = os.path.join(
+                os.path.dirname(__file__), "data", "fib.py"
+            )
+            valid_json_path = os.path.join(
+                os.path.dirname(__file__), "data", "multithread.json"
+            )
+            invalid_json_file = shutil.copy(
+                invalid_json_path, os.path.join(tmpdir, "invalid.json")
+            )
+            valid_json_file = shutil.copy(
+                valid_json_path, os.path.join(tmpdir, "valid.json")
+            )
             rb = ReportBuilder([invalid_json_file, valid_json_file], verbose=1)
             with io.StringIO() as s:
                 rb.save(s)
             self.assertIn("Invalid json file", mock_stdout.getvalue())
 
-    @patch('sys.stdout', new_callable=io.StringIO)
+    @patch("sys.stdout", new_callable=io.StringIO)
     def test_all_invalid_json(self, mock_stdout):
         with tempfile.TemporaryDirectory() as tmpdir:
-            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
-            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
+            invalid_json_path = os.path.join(
+                os.path.dirname(__file__), "data", "fib.py"
+            )
+            invalid_json_file = shutil.copy(
+                invalid_json_path, os.path.join(tmpdir, "invalid.json")
+            )
             rb = ReportBuilder([invalid_json_file], verbose=1)
             with self.assertRaises(Exception) as context:
                 with io.StringIO() as s:
@@ -114,7 +130,9 @@ class TestReportBuilder(BaseTmpl):
                 for _ in range(10):
                     a.append(1)
 
-            with viztracer.VizTracer(tracer_entries=5, output_file=file_path2, verbose=0):
+            with viztracer.VizTracer(
+                tracer_entries=5, output_file=file_path2, verbose=0
+            ):
                 a = []
                 for _ in range(10):
                     a.append(1)
@@ -134,11 +152,16 @@ class TestReportBuilder(BaseTmpl):
             with io.StringIO() as s:
                 rb.save(output_file=s)
                 data = json.loads(s.getvalue())
-                self.assertEqual(len([e for e in data["traceEvents"] if e["name"] == "list.append"]), 10)
+                self.assertEqual(
+                    len([e for e in data["traceEvents"] if e["name"] == "list.append"]),
+                    10,
+                )
 
 
 class TestReportBuilderCmdline(CmdlineTmpl):
-    @package_matrix(["~orjson", "orjson"] if "free-threading" not in sys.version else None)
+    @package_matrix(
+        ["~orjson", "orjson"] if "free-threading" not in sys.version else None
+    )
     def test_package_matrix(self):
         """
         The module will be imported only once so flipping the package matrix will only
@@ -146,8 +169,12 @@ class TestReportBuilderCmdline(CmdlineTmpl):
         """
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
-            invalid_json_file = shutil.copy(invalid_json_path, os.path.join(tmpdir, "invalid.json"))
+            invalid_json_path = os.path.join(
+                os.path.dirname(__file__), "data", "fib.py"
+            )
+            invalid_json_file = shutil.copy(
+                invalid_json_path, os.path.join(tmpdir, "invalid.json")
+            )
 
             script = textwrap.dedent(f"""
                 import io
@@ -162,4 +189,8 @@ class TestReportBuilderCmdline(CmdlineTmpl):
                     assert False
             """)
 
-            self.template([sys.executable, "cmdline_test.py"], script=script, expected_output_file=None)
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                script=script,
+                expected_output_file=None,
+            )

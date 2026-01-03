@@ -81,7 +81,9 @@ class TestMultithread(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 300)
 
-    @unittest.skipIf(sys.version_info >= (3, 12), "We always enable threading trace in Python 3.12+")
+    @unittest.skipIf(
+        sys.version_info >= (3, 12), "We always enable threading trace in Python 3.12+"
+    )
     def test_manual_tracefunc(self):
         tracer = VizTracer(max_stack_depth=4, verbose=0)
         tracer.start()
@@ -152,10 +154,12 @@ for thread in threads:
 
 class TestMultithreadCmdline(CmdlineTmpl):
     def test_with_log_sparse(self):
-        self.template(["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=file_log_sparse,
-                      expected_entries=2)
+        self.template(
+            ["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_log_sparse,
+            expected_entries=2,
+        )
 
     def test_trace_after_thread_start(self):
         script = """
@@ -200,8 +204,17 @@ class TestMultithreadCmdline(CmdlineTmpl):
         def check_func(data):
             # Main thread on MacOS does not have the same id as pid
             self.assertGreaterEqual(len(set(e["tid"] for e in data["traceEvents"])), 3)
-            self.assertTrue(any(e["name"] for e in data["traceEvents"] if e["name"].startswith("fib")))
+            self.assertTrue(
+                any(
+                    e["name"]
+                    for e in data["traceEvents"]
+                    if e["name"].startswith("fib")
+                )
+            )
 
-        self.template([sys.executable, "cmdline_test.py"],
-                      expected_output_file="result.json",
-                      script=script, check_func=check_func)
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=script,
+            check_func=check_func,
+        )

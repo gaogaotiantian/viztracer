@@ -21,6 +21,7 @@ class VizPluginError(Exception):
 # Simply inherit VizPluginBase class and finish the methods. Then you can load it
 # by VizTracer(plugins=[YourVizPlugin()])
 
+
 class VizPluginBase:
     def __init__(self) -> None:
         pass
@@ -31,7 +32,9 @@ class VizPluginBase:
         # Simply return the version string
         # For example:
         #     return "0.10.5"
-        raise NotImplementedError("Plugin of viztracer has to implement support_version method")
+        raise NotImplementedError(
+            "Plugin of viztracer has to implement support_version method"
+        )
 
     def message(self, m_type: str, payload: dict) -> dict:
         """
@@ -52,7 +55,9 @@ class VizPluginBase:
 
 
 class VizPluginManager:
-    def __init__(self, tracer: "VizTracer", plugins: Sequence[VizPluginBase | str] | None):
+    def __init__(
+        self, tracer: "VizTracer", plugins: Sequence[VizPluginBase | str] | None
+    ):
         self._tracer_ref = weakref.ref(tracer)
         self._plugins = []
         if plugins:
@@ -67,8 +72,11 @@ class VizPluginManager:
 
                 support_version = plugin_instance.support_version()
                 if compare_version(support_version, __version__) > 0:
-                    color_print("WARNING", "The plugin support version is higher than "
-                                           "viztracer version. Consider update your viztracer")
+                    color_print(
+                        "WARNING",
+                        "The plugin support version is higher than "
+                        "viztracer version. Consider update your viztracer",
+                    )
                 self._send_message(plugin_instance, "event", {"when": "initialize"})
 
     def _get_plugin_from_string(self, plugin: str) -> VizPluginBase:
@@ -76,7 +84,7 @@ class VizPluginManager:
         module = args[0]
         try:
             package = __import__(module)
-        except (ImportError):
+        except ImportError:
             print(f"There's no module named {module}, maybe you need to install it")
             sys.exit(1)
 
@@ -100,7 +108,9 @@ class VizPluginManager:
         if callable(m):
             return m(plugin)
         else:
-            print(f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin.")
+            print(
+                f"Unable to find get_vizplugin as a callable in {module}. Incorrect plugin."
+            )
             sys.exit(1)
 
     def _send_message(self, plugin: VizPluginBase, m_type: str, payload: dict) -> None:
@@ -133,7 +143,9 @@ class VizPluginManager:
             del plugin
         self._plugins = []
 
-    def assert_success(self, plugin: VizPluginBase, cmd: dict, ret: dict | None) -> None:
+    def assert_success(
+        self, plugin: VizPluginBase, cmd: dict, ret: dict | None
+    ) -> None:
         if not ret or "success" not in ret or not ret["success"]:
             raise VizPluginError(f"{plugin} failed to process {cmd}")
 
