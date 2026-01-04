@@ -116,8 +116,12 @@ class ReportServer:
         print(f"Report server started at {self.endpoint}", flush=True)
         sel = selectors.DefaultSelector()
         sel.register(self._socket, selectors.EVENT_READ)
-        if sys.platform != "win32" and sys.stdin.isatty():
-            sel.register(sys.stdin, selectors.EVENT_READ)
+        if sys.platform != "win32":
+            try:
+                sel.register(sys.stdin, selectors.EVENT_READ)
+            except Exception:
+                # sys.stdin may be some piped fd that we don't have permission to read
+                pass
         const_count = len(sel.get_map())
 
         started = False
