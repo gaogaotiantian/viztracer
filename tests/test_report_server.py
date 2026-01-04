@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 import unittest
 
 from viztracer import VizTracer
@@ -150,6 +151,38 @@ class TestReportServer(CmdlineTmpl):
                 self.assertTrue(
                     any("print" in event["name"] for event in data["traceEvents"])
                 )
+
+    @unittest.skipIf(
+        sys.platform == "win32",
+        "Skip Windows because we can't send SIGINT to subprocess properly",
+    )
+    def test_report_server_devnull_stdin(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cmd = cmd_with_coverage(
+                [
+                    "viztracer",
+                    "--report_server",
+                    "-o",
+                    f"{tmpdir}/result.json",
+                ]
+            )
+
+            report_server_proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            report_server_proc.stdout.readline()  # Read the starting line
+            time.sleep(0.1)
+            report_server_proc.send_signal(signal.SIGINT)
+
+            report_server_proc.wait()
+            report_server_proc.stdout.close()
+
+            self.assertEqual(0, report_server_proc.returncode)
 
     def test_invalid_report_server_argument(self):
         for arg in ["invalid_endpoint", "|invalid_config", "127.0.0.1"]:

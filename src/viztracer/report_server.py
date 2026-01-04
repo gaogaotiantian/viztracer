@@ -117,7 +117,11 @@ class ReportServer:
         sel = selectors.DefaultSelector()
         sel.register(self._socket, selectors.EVENT_READ)
         if sys.platform != "win32":
-            sel.register(sys.stdin, selectors.EVENT_READ)
+            try:
+                sel.register(sys.stdin, selectors.EVENT_READ)
+            except Exception:
+                # sys.stdin may be some piped fd that we don't have permission to read
+                pass
         const_count = len(sel.get_map())
 
         started = False
