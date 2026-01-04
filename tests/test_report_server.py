@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 import tempfile
 import textwrap
 import unittest
@@ -175,6 +176,7 @@ class TestReportServer(CmdlineTmpl):
             )
 
             report_server_proc.stdout.readline()  # Read the starting line
+            time.sleep(0.1)
             report_server_proc.send_signal(signal.SIGINT)
 
             report_server_proc.wait()
