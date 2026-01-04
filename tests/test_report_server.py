@@ -7,9 +7,9 @@ import os
 import signal
 import subprocess
 import sys
-import time
 import tempfile
 import textwrap
+import time
 import unittest
 
 from viztracer import VizTracer
