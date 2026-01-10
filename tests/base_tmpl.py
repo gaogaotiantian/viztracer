@@ -65,6 +65,13 @@ class BaseTmpl(TestCase):
     def dbgPrint(self, *args, **kwargs):
         print(*args, file=self.stdout_orig, **kwargs)
 
+    def getProcessNumber(self, data):
+        pids = set()
+        for event in data["traceEvents"]:
+            if "pid" in event:
+                pids.add(event["pid"])
+        return len(pids)
+
     def assertEventNumber(self, data, expected_entries):
         entries = [entry for entry in data["traceEvents"] if entry["ph"] != "M"]
         entries_count = len(entries)
@@ -73,6 +80,20 @@ class BaseTmpl(TestCase):
             expected_entries,
             f"Event number incorrect, {entries_count}(expected {expected_entries}) - {entries}",
         )
+
+    def functionInEvents(self, data, func_name):
+        for event in data["traceEvents"]:
+            if event["ph"] == "X" and func_name in event["name"]:
+                return True
+        return False
+
+    def assertFunctionInEvents(self, data, func_name):
+        if not self.functionInEvents(data, func_name):
+            raise AssertionError(f"Function {func_name} not found in trace events")
+
+    def assertFunctionNotInEvents(self, data, func_name):
+        if self.functionInEvents(data, func_name):
+            raise AssertionError(f"Function {func_name} found in trace events")
 
     def assertFileExists(self, path, timeout=None, msg=None):
         err_msg = f"file {path} does not exist!"

@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
+import json
 import os
 import re
 import shutil
@@ -168,36 +169,38 @@ class TestPatchOnly(CmdlineTmpl):
     def test_patch_only(self):
         script = """
             import os
-            import sys
-            import time
-            import viztracer
-            tracer = viztracer.get_tracer()
-            tracer.connect_report_server()
             pid = os.fork()
+            def foo():
+                pass
+            def bar():
+                pass
             if pid > 0:
-                output_dir = tracer.report_directory
-                for _ in range(5):
-                    if any(f.endswith(".json") for f in os.listdir(output_dir)):
-                        break
-                    time.sleep(0.5)
-                else:
-                    sys.exit(1)
+                foo()
+            else:
+                bar()
         """
-        server_proc, endpoint = ReportServer.start_process("result.json")
-        self.template(
-            [
-                "viztracer",
-                "--patch_only",
-                "--report_endpoint",
-                endpoint,
-                "cmdline_test.py",
-            ],
-            expected_output_file=None,
-            script=script,
-        )
-        server_proc.stdout.close()
-        server_proc.terminate()
-        server_proc.wait(timeout=5)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            server_proc, endpoint = ReportServer.start_process(f"{tmpdir}/result.json")
+            self.template(
+                [
+                    "viztracer",
+                    "--patch_only",
+                    "--report_endpoint",
+                    endpoint,
+                    "cmdline_test.py",
+                ],
+                expected_output_file=None,
+                script=script,
+            )
+            server_proc.wait(timeout=5)
+            server_proc.stdout.close()
+
+            self.assertFileExists(f"{tmpdir}/result.json")
+            with open(f"{tmpdir}/result.json", "r") as f:
+                data = json.load(f)
+                self.assertEqual(self.getProcessNumber(data), 1)
+                self.assertFunctionNotInEvents(data, "foo")
+                self.assertFunctionInEvents(data, "bar")
 
 
 class TestPatchSideEffect(CmdlineTmpl):
