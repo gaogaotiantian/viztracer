@@ -25,7 +25,7 @@ class ReportServer:
     ) -> None:
         self._host = None
         self._port = None
-        self.paths: list[str] = []
+        self.payloads: list[dict] = []
         self.output_file = output_file
         self.minimize_memory = minimize_memory
         self.verbose = verbose
@@ -105,7 +105,6 @@ class ReportServer:
             except Exception:  # pragma: no cover
                 pass
         self.report_directory = None
-        self.paths = []
 
     @property
     def endpoint(self) -> str:
@@ -173,26 +172,24 @@ class ReportServer:
             sel.close()
 
     def _recv_info(self, conn: socket.socket) -> None:
-        buffer = b""
+        buffer = bytearray()
         conn.settimeout(10)
-        while d := conn.recv(1024):
+        while d := conn.recv(1 << 20):
             buffer += d
-            if b"\n" in buffer:
-                break
         if b"\n" in buffer:
             data = json.loads(buffer.decode().strip())
             if "output_file" in data:
                 self.output_file = data["output_file"]
-            if "path" in data:
-                self.paths.append(data["path"])
+            if "payload" in data:
+                self.payloads.append(json.loads(data["payload"]))
 
     def save(self) -> None:
-        if not self.paths:
+        if not self.payloads:
             if self.verbose > 0:
                 print("No reports collected, nothing to save.")
             return
         builder = ReportBuilder(
-            self.paths, minimize_memory=self.minimize_memory, verbose=self.verbose
+            self.payloads, minimize_memory=self.minimize_memory, verbose=self.verbose
         )
 
         builder.save(output_file=self.output_file)
