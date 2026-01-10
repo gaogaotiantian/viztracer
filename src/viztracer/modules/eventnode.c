@@ -72,20 +72,26 @@ get_name_from_fee_node(struct EventNode* node, PyObject* name_dict)
     // This way, for entries that has the same name, we won't create multiple
     // string instances
     if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_RETURN) {
-        name = PyUnicode_FromFormat("%s (%s:%d)",
+        name = PyUnicode_FromFormat(
+            "%s (%s:%d)",
 #if PY_VERSION_HEX >= 0x030B0000
-               PyUnicode_AsUTF8(node->data.fee.code->co_qualname),
+            PyUnicode_Check(node->data.fee.code->co_qualname) ?
+                PyUnicode_AsUTF8(node->data.fee.code->co_qualname): "<unknown>",
 #else
-               PyUnicode_AsUTF8(node->data.fee.code->co_name),
+            PyUnicode_Check(node->data.fee.code->co_name) ?
+                PyUnicode_AsUTF8(node->data.fee.code->co_name): "<unknown>",
 #endif
-               PyUnicode_AsUTF8(node->data.fee.code->co_filename),
-               node->data.fee.code->co_firstlineno);
+            PyUnicode_Check(node->data.fee.code->co_filename) ?
+                PyUnicode_AsUTF8(node->data.fee.code->co_filename): "<unknown>",
+            node->data.fee.code->co_firstlineno);
     } else {
         if (node->data.fee.m_module) {
             // The function belongs to a module
-            name = PyUnicode_FromFormat("%s.%s",
-                   PyUnicode_AsUTF8(node->data.fee.m_module),
-                   node->data.fee.ml_name);
+            name = PyUnicode_FromFormat(
+                "%s.%s",
+                PyUnicode_Check(node->data.fee.m_module) ?
+                    PyUnicode_AsUTF8(node->data.fee.m_module) : "<unknown>",
+                node->data.fee.ml_name);
         } else {
             // The function is a class method
             if (node->data.fee.tp_name) {
