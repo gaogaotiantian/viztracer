@@ -193,4 +193,3 @@ class ReportServer:
         )
 
         builder.save(output_file=self.output_file)
-        self.paths = []
