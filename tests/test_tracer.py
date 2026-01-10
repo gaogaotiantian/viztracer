@@ -17,7 +17,7 @@ def fib(n):
 
 class TestTracer(BaseTmpl):
     def test_double_parse(self):
-        tracer = VizTracer(verbose=0)
+        tracer = VizTracer(verbose=0, ignore_multiprocess=False)
         tracer.start()
         fib(10)
         tracer.stop()

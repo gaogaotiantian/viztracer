@@ -339,21 +339,23 @@ class VizTracer(Tracer):
                     "include_files and exclude_files can't be both specified!"
                 )
 
-            if self.report_endpoint is None:
-                self.report_server_process, self.report_endpoint = (
-                    ReportServer.start_process(
-                        output_file=self.output_file,
-                        minimize_memory=self.minimize_memory,
-                        verbose=self.verbose,
-                        report_endpoint="|append_newline",
+            if not self.ignore_multiprocess or self.report_endpoint is not None:
+                # Multiprocess mode, we need report endpoint and report server
+                if self.report_endpoint is None:
+                    self.report_server_process, self.report_endpoint = (
+                        ReportServer.start_process(
+                            output_file=self.output_file,
+                            minimize_memory=self.minimize_memory,
+                            verbose=self.verbose,
+                            report_endpoint="|append_newline",
+                        )
                     )
-                )
 
-            if self.report_socket_file is None:
-                self.connect_report_server()
+                if self.report_socket_file is None:
+                    self.connect_report_server()
 
-            if not self.ignore_multiprocess:
-                install_all_hooks(self)
+                if not self.ignore_multiprocess:
+                    install_all_hooks(self)
 
             self._plugin_manager.event("pre-start")
             if not self.log_sparse:
@@ -477,6 +479,15 @@ class VizTracer(Tracer):
     ) -> None:
         if output_file is not None and not isinstance(output_file, str):
             raise ValueError("output_file should be a string or None")
+
+        if self.ignore_multiprocess and self.report_endpoint is None:
+            # Single process mode, just save the report normally
+            self.save_report(
+                output_file=output_file or self.output_file,
+                file_info=file_info,
+                verbose=verbose,
+            )
+            return
 
         if self.report_endpoint is None or self.report_socket_file is None:
             warnings.warn(
