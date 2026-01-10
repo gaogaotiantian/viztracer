@@ -14,7 +14,7 @@ import socket
 import subprocess
 import sys
 import warnings
-from typing import Any, Callable, Literal, Sequence
+from typing import Any, Callable, Literal, Sequence, TextIO
 
 from viztracer.snaptrace import Tracer
 
@@ -411,7 +411,7 @@ class VizTracer(Tracer):
 
     def save_report(
         self,
-        output_file: str,
+        output_file: str | TextIO,
         file_info: bool | None = None,
         verbose: int | None = None,
     ) -> None:
@@ -429,7 +429,12 @@ class VizTracer(Tracer):
         # If there are plugins, we can't do dump raw because it will skip the data
         # manipulation phase
         # If we want to dump torch profile, we can't do dump raw either
-        if not self._plugin_manager.has_plugin and not self.log_torch and self.dump_raw:
+        if (
+            not self._plugin_manager.has_plugin
+            and not self.log_torch
+            and self.dump_raw
+            and isinstance(output_file, str)
+        ):
             self.dump(output_file, sanitize_function_name=self.sanitize_function_name)
         else:
             if not self.parsed:
@@ -498,9 +503,8 @@ class VizTracer(Tracer):
             )
             return
 
-        self.save_report(
-            output_file=tmp_output_file, file_info=file_info, verbose=verbose
-        )
+        payload = io.StringIO()
+        self.save_report(output_file=payload, file_info=file_info, verbose=verbose)
 
         if output_file is None:
             output_file = self.output_file
@@ -511,7 +515,7 @@ class VizTracer(Tracer):
                 output_file = ".".join(output_file_parts)
 
         try:
-            data = {"path": tmp_output_file}
+            data = {"path": tmp_output_file, "payload": payload.getvalue()}
             if self.report_server_process is not None:
                 data["output_file"] = output_file
             self.report_socket_file.write(f"{json.dumps(data)}\n")
