@@ -1,7 +1,9 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import json
 import os
+import tempfile
 import time
 
 from viztracer import VizTracer
@@ -17,7 +19,7 @@ def fib(n):
 
 class TestTracer(BaseTmpl):
     def test_double_parse(self):
-        tracer = VizTracer(verbose=0)
+        tracer = VizTracer(verbose=0, ignore_multiprocess=False)
         tracer.start()
         fib(10)
         tracer.stop()
@@ -26,6 +28,25 @@ class TestTracer(BaseTmpl):
         tracer.parse()
         with self.assertWarns(RuntimeWarning):
             tracer.save()
+
+    def test_dump_raw(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "result.json")
+
+            def foo():
+                pass
+
+            with VizTracer(
+                output_file=output_path,
+                verbose=0,
+                dump_raw=True,
+            ):
+                foo()
+
+            self.assertFileExists(output_path)
+            with open(output_path) as f:
+                data = json.load(f)
+                self.assertFunctionInEvents(data, "foo")
 
 
 class TestCTracer(BaseTmpl):

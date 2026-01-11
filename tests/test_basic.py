@@ -178,6 +178,17 @@ class TestVizTracerBasic(BaseTmpl):
             tracer.parse()
             self.assertEventNumber(tracer.data, 10)
 
+        tracer = VizTracer(tracer_entries=10, ignore_multiprocess=False)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tracer.start()
+            fib(5)
+            tracer.save(os.path.join(tmpdir, "result.json"))
+            tracer.clear()
+            fib(5)
+            tracer.stop()
+            tracer.parse()
+            self.assertEventNumber(tracer.data, 10)
+
     def test_time_sanity(self):
         tracer = VizTracer(tracer_entries=10)
         tracer.start()

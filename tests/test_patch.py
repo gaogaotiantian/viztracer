@@ -35,7 +35,7 @@ reduction.dump(process, fp)
 set_spawning_popen(None)
 child_r, parent_w = os.pipe()
 
-patch_spawned_process({'output_file': "$tmpdir/result.json", 'pid_suffix': True}, [])
+patch_spawned_process({'report_endpoint': "$report_endpoint", 'pid_suffix': True}, [])
 pid = os.getpid()
 
 assert multiprocessing.spawn._main.__qualname__ == "_main"
@@ -115,32 +115,44 @@ assert subprocess.Popen.__init__.__module__ == "subprocess"
 class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
-        tmpdir = tempfile.mkdtemp()
-        self.template(
-            [sys.executable, "cmdline_test.py"],
-            expected_output_file=None,
-            script=file_spawn_tmpl.substitute(foo=foo_normal, tmpdir=tmpdir),
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            server_proc, endpoint = ReportServer.start_process(f"{tmpdir}/result.json")
 
-        files = os.listdir(tmpdir)
-        self.assertEqual(len(files), 1)
-        self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
-        shutil.rmtree(tmpdir)
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                expected_output_file=None,
+                script=file_spawn_tmpl.substitute(
+                    foo=foo_normal, report_endpoint=endpoint
+                ),
+            )
+
+            server_proc.wait(timeout=5)
+            server_proc.stdout.close()
+
+            files = os.listdir(tmpdir)
+            self.assertEqual(len(files), 1)
+            self.assertFileExists(f"{tmpdir}/result.json")
 
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
-        tmpdir = tempfile.mkdtemp()
-        self.template(
-            [sys.executable, "cmdline_test.py"],
-            expected_output_file=None,
-            script=file_spawn_tmpl.substitute(foo=foo_infinite, tmpdir=tmpdir),
-            send_sig=(signal.SIGTERM, "ready"),
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            server_proc, endpoint = ReportServer.start_process(f"{tmpdir}/result.json")
 
-        files = os.listdir(tmpdir)
-        self.assertEqual(len(files), 1)
-        self.assertTrue(re.match(r"result_[0-9]*\.json", files[0]))
-        shutil.rmtree(tmpdir)
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                expected_output_file=None,
+                script=file_spawn_tmpl.substitute(
+                    foo=foo_infinite, report_endpoint=endpoint
+                ),
+                send_sig=(signal.SIGTERM, "ready"),
+            )
+
+            server_proc.wait(timeout=5)
+            server_proc.stdout.close()
+
+            files = os.listdir(tmpdir)
+            self.assertEqual(len(files), 1)
+            self.assertFileExists(f"{tmpdir}/result.json")
 
     def test_patch_args(self):
         a = self.template(
