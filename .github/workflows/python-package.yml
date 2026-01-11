@@ -87,7 +87,7 @@ jobs:
       with:
         report_type: 'test_results'
         files: test-results.xml
-        flags: unittests
+        flags: ${{ matrix.os }}-${{ matrix.python-version }}
         name: VizTracer Tests
         token: ${{ secrets.codecov_token }}
     - name: Generate coverage report
