@@ -532,8 +532,12 @@ class VizTracer(Tracer):
             self.report_socket_file.write(f"{json.dumps(data)}\n")
             self.report_socket_file.flush()
             self.report_socket_file.close()
-        except Exception:  # pragma: no cover
-            pass
+        except Exception as exc:
+            warnings.warn(
+                f"Failed to send report to report server: {exc}.",
+                RuntimeWarning,
+                2,
+            )
         finally:
             self.report_socket_file = None
 
