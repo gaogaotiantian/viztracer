@@ -26,7 +26,7 @@ lint:
 	mypy src/ --exclude 'src/viztracer/attach_process/.*'
 
 test:
-	python -m unittest
+	python -m pytest
 
 clean:
 	rm -rf __pycache__
