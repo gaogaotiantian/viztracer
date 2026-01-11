@@ -1205,6 +1205,19 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
     PyObject* ph_X = PyUnicode_FromString("X");
     PyObject* ph_C = PyUnicode_FromString("C");
     PyObject* ph_M = PyUnicode_FromString("M");
+
+    PyObject* key_ph = PyUnicode_FromString("ph");
+    PyObject* key_cat = PyUnicode_FromString("cat");
+    PyObject* key_pid = PyUnicode_FromString("pid");
+    PyObject* key_tid = PyUnicode_FromString("tid");
+    PyObject* key_ts = PyUnicode_FromString("ts");
+    PyObject* key_dur = PyUnicode_FromString("dur");
+    PyObject* key_name = PyUnicode_FromString("name");
+    PyObject* key_args = PyUnicode_FromString("args");
+    PyObject* key_s = PyUnicode_FromString("s");
+    PyObject* key_id = PyUnicode_FromString("id");
+    PyObject* key_return_value = PyUnicode_FromString("return_value");
+
     unsigned long counter = 0;
     unsigned long prev_counter = 0;
     struct MetadataNode* metadata_node = NULL;
@@ -1247,16 +1260,17 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             Py_DECREF(current_process);
         }
         
-        PyDict_SetItemString(dict, "ph", ph_M);
-        PyDict_SetItemString(dict, "pid", pid);
-        PyDict_SetItemString(dict, "tid", pid);
-        PyDict_SetItemString(dict, "name", process_name_string);
+        PyDict_SetItem(dict, key_ph, ph_M);
+        PyDict_SetItem(dict, key_pid, pid);
+        PyDict_SetItem(dict, key_tid, pid);
+        PyDict_SetItem(dict, key_name, process_name_string);
         Py_DECREF(process_name_string);
-        PyDict_SetItemString(args, "name", process_name);
-        PyDict_SetItemString(dict, "args", args);
+        PyDict_SetItem(args, key_name, process_name);
+        PyDict_SetItem(dict, key_args, args);
         Py_DECREF(args);
         Py_DECREF(process_name);
         PyList_Append(lst, dict);
+        Py_DECREF(dict);
     }
 
     
@@ -1268,17 +1282,18 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyObject* tid = PyLong_FromLong(metadata_node->tid);
         PyObject* thread_name_string = PyUnicode_FromString("thread_name");
 
-        PyDict_SetItemString(dict, "ph", ph_M);
-        PyDict_SetItemString(dict, "pid", pid);
-        PyDict_SetItemString(dict, "tid", tid);
+        PyDict_SetItem(dict, key_ph, ph_M);
+        PyDict_SetItem(dict, key_pid, pid);
+        PyDict_SetItem(dict, key_tid, tid);
         Py_DECREF(tid);
-        PyDict_SetItemString(dict, "name", thread_name_string);
+        PyDict_SetItem(dict, key_name, thread_name_string);
         Py_DECREF(thread_name_string);
-        PyDict_SetItemString(args, "name", metadata_node->name);
-        PyDict_SetItemString(dict, "args", args);
+        PyDict_SetItem(args, key_name, metadata_node->name);
+        PyDict_SetItem(dict, key_args, args);
         Py_DECREF(args);
         metadata_node = metadata_node->next;
         PyList_Append(lst, dict);
+        Py_DECREF(dict);
     }
 
     // Task Name if using LOG_ASYNC
@@ -1294,13 +1309,13 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyObject* tid = PyLong_FromLong(node->tid);
         PyObject* ts = PyFloat_FromDouble(system_ts_to_us(node->ts));
 
-        PyDict_SetItemString(dict, "pid", pid);
+        PyDict_SetItem(dict, key_pid, pid);
         if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
             if (curr->data.fee.asyncio_task == NULL) {
-                PyDict_SetItemString(dict, "tid", tid);
+                PyDict_SetItem(dict, key_tid, tid);
             } else {
                 PyObject* task_id = PyLong_FromUnsignedLongLong(((uintptr_t)curr->data.fee.asyncio_task) & 0xffffff);
-                PyDict_SetItemString(dict, "tid", task_id);
+                PyDict_SetItem(dict, key_tid, task_id);
                 if (!PyDict_Contains(task_dict, task_id)) {
                     PyObject* task_name = NULL;
                     if (PyObject_HasAttrString(curr->data.fee.asyncio_task, "get_name")) {
@@ -1318,10 +1333,10 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 Py_DECREF(task_id);
             }
         } else {
-            PyDict_SetItemString(dict, "tid", tid);
+            PyDict_SetItem(dict, key_tid, tid);
         }
         Py_DECREF(tid);
-        PyDict_SetItemString(dict, "ts", ts);
+        PyDict_SetItem(dict, key_ts, ts);
         Py_DECREF(ts);
 
         switch (node->ntype) {
@@ -1329,14 +1344,14 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             name = get_name_from_fee_node(node, func_name_dict);
 
             if (node->data.fee.type == PyTrace_CALL || node->data.fee.type == PyTrace_C_CALL) {
-                PyDict_SetItemString(dict, "ph", ph_B);
+                PyDict_SetItem(dict, key_ph, ph_B);
             } else {
-                PyDict_SetItemString(dict, "ph", ph_X);
+                PyDict_SetItem(dict, key_ph, ph_X);
                 PyObject* dur = PyFloat_FromDouble(dur_ts_to_us(node->data.fee.dur));
-                PyDict_SetItemString(dict, "dur", dur);
+                PyDict_SetItem(dict, key_dur, dur);
                 Py_DECREF(dur);
             }
-            PyDict_SetItemString(dict, "name", name);
+            PyDict_SetItem(dict, key_name, name);
             Py_DECREF(name);
 
             PyObject* arg_dict = Py_XNewRef(node->data.fee.args);
@@ -1344,33 +1359,33 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
                 if (!arg_dict) {
                     arg_dict = PyDict_New();
                 }
-                PyDict_SetItemString(arg_dict, "return_value", node->data.fee.retval);
+                PyDict_SetItem(arg_dict, key_return_value, node->data.fee.retval);
             }
             if (arg_dict) {
-                PyDict_SetItemString(dict, "args", arg_dict);
+                PyDict_SetItem(dict, key_args, arg_dict);
                 Py_DECREF(arg_dict);
             }
 
-            PyDict_SetItemString(dict, "cat", cat_fee);
+            PyDict_SetItem(dict, key_cat, cat_fee);
             break;
         case INSTANT_NODE:
-            PyDict_SetItemString(dict, "ph", ph_i);
-            PyDict_SetItemString(dict, "cat", cat_instant);
-            PyDict_SetItemString(dict, "name", node->data.instant.name);
-            PyDict_SetItemString(dict, "args", node->data.instant.args);
-            PyDict_SetItemString(dict, "s", node->data.instant.scope);
+            PyDict_SetItem(dict, key_ph, ph_i);
+            PyDict_SetItem(dict, key_cat, cat_instant);
+            PyDict_SetItem(dict, key_name, node->data.instant.name);
+            PyDict_SetItem(dict, key_args, node->data.instant.args);
+            PyDict_SetItem(dict, key_s, node->data.instant.scope);
             break;
         case COUNTER_NODE:
-            PyDict_SetItemString(dict, "ph", ph_C);
-            PyDict_SetItemString(dict, "name", node->data.counter.name);
-            PyDict_SetItemString(dict, "args", node->data.counter.args);
+            PyDict_SetItem(dict, key_ph, ph_C);
+            PyDict_SetItem(dict, key_name, node->data.counter.name);
+            PyDict_SetItem(dict, key_args, node->data.counter.args);
             break;
         case OBJECT_NODE:
-            PyDict_SetItemString(dict, "ph", node->data.object.ph);
-            PyDict_SetItemString(dict, "id", node->data.object.id);
-            PyDict_SetItemString(dict, "name", node->data.object.name);
+            PyDict_SetItem(dict, key_ph, node->data.object.ph);
+            PyDict_SetItem(dict, key_id, node->data.object.id);
+            PyDict_SetItem(dict, key_name, node->data.object.name);
             if (!(node->data.object.args == Py_None)) {
-                PyDict_SetItemString(dict, "args", node->data.object.args);
+                PyDict_SetItem(dict, key_args, node->data.object.args);
             }
             break;
         case RAW_NODE:
@@ -1380,8 +1395,8 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             Py_DECREF(dict);
             dict = node->data.raw;
 
-            PyDict_SetItemString(dict, "pid", pid);
-            PyDict_SetItemString(dict, "tid", tid);
+            PyDict_SetItem(dict, key_pid, pid);
+            PyDict_SetItem(dict, key_tid, tid);
             Py_DECREF(tid);
 
             Py_INCREF(dict);
@@ -1415,13 +1430,13 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             PyObject* tid = key;
             PyObject* thread_name_string = PyUnicode_FromString("thread_name");
 
-            PyDict_SetItemString(dict, "ph", ph_M);
-            PyDict_SetItemString(dict, "pid", pid);
-            PyDict_SetItemString(dict, "tid", tid);
-            PyDict_SetItemString(dict, "name", thread_name_string);
+            PyDict_SetItem(dict, key_ph, ph_M);
+            PyDict_SetItem(dict, key_pid, pid);
+            PyDict_SetItem(dict, key_tid, tid);
+            PyDict_SetItem(dict, key_name, thread_name_string);
             Py_DECREF(thread_name_string);
-            PyDict_SetItemString(args, "name", value);
-            PyDict_SetItemString(dict, "args", args);
+            PyDict_SetItem(args, key_name, value);
+            PyDict_SetItem(dict, key_args, args);
             Py_DECREF(args);
             PyList_Append(lst, dict);
         }
@@ -1437,6 +1452,19 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
     Py_DECREF(ph_C);
     Py_DECREF(ph_M);
     Py_DECREF(func_name_dict);
+
+    Py_DECREF(key_ph);
+    Py_DECREF(key_cat);
+    Py_DECREF(key_pid);
+    Py_DECREF(key_tid);
+    Py_DECREF(key_ts);
+    Py_DECREF(key_dur);
+    Py_DECREF(key_name);
+    Py_DECREF(key_args);
+    Py_DECREF(key_s);
+    Py_DECREF(key_id);
+    Py_DECREF(key_return_value);
+
     self->buffer_tail_idx = self->buffer_head_idx;
     SNAPTRACE_THREAD_PROTECT_END(self);
     return lst;
