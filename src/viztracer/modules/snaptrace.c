@@ -1273,6 +1273,23 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         Py_DECREF(dict);
     }
 
+    //    Process Sort Index
+    {
+        PyObject* dict = PyDict_New();
+        PyObject* args = PyDict_New();
+        PyObject* process_name_string = PyUnicode_FromString("process_sort_index");
+
+        PyDict_SetItem(dict, key_ph, ph_M);
+        PyDict_SetItem(dict, key_pid, pid);
+        PyDict_SetItem(dict, key_tid, pid);
+        PyDict_SetItem(dict, key_name, process_name_string);
+        PyDict_SetItemString(args, "sort_index", pid);
+        Py_DECREF(process_name_string);
+        PyDict_SetItem(dict, key_args, args);
+        Py_DECREF(args);
+        PyList_Append(lst, dict);
+        Py_DECREF(dict);
+    }
     
     //    Thread Name
     metadata_node = self->metadata_head;
