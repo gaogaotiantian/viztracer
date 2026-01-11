@@ -1190,37 +1190,12 @@ tracer_resume(TracerObject* self, PyObject* Py_UNUSED(unused))
     Py_RETURN_NONE;
 }
 
-static uint64_t
-get_event_count(TracerObject* self)
-{
-    // We need an event for process name
-    uint64_t count = 1;
-
-    // Count thread events
-    struct MetadataNode* metadata_node = self->metadata_head;
-    while (metadata_node) {
-        count += 1;
-        metadata_node = metadata_node->next;
-    }
-
-    // Calculate event node count
-    if (self->buffer_tail_idx >= self->buffer_head_idx) {
-        count += (self->buffer_tail_idx - self->buffer_head_idx);
-    } else {
-        count += (self->buffer_size - self->buffer_head_idx) + self->buffer_tail_idx;
-    }
-
-    return count;
-}
-
 static PyObject*
 tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
-    SNAPTRACE_THREAD_PROTECT_START(self);
-    uint64_t lst_size = get_event_count(self);
-    PyObject* lst = PyList_New(lst_size);
-    uint64_t lst_idx = 0;
+    PyObject* lst = PyList_New(0);
 
+    SNAPTRACE_THREAD_PROTECT_START(self);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
@@ -1281,7 +1256,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyDict_SetItemString(dict, "args", args);
         Py_DECREF(args);
         Py_DECREF(process_name);
-        PyList_SET_ITEM(lst, lst_idx++, dict);
+        PyList_Append(lst, dict);
     }
 
     
@@ -1303,7 +1278,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
         PyDict_SetItemString(dict, "args", args);
         Py_DECREF(args);
         metadata_node = metadata_node->next;
-        PyList_SET_ITEM(lst, lst_idx++, dict);
+        PyList_Append(lst, dict);
     }
 
     // Task Name if using LOG_ASYNC
@@ -1416,7 +1391,8 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             exit(1);
         }
         clear_node(node);
-        PyList_SET_ITEM(lst, lst_idx++, dict);
+        PyList_Append(lst, dict);
+        Py_DECREF(dict);
         curr = curr + 1;
         if (curr == self->buffer + self->buffer_size) {
             curr = self->buffer;
@@ -1427,13 +1403,6 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
             verbose_printf(self, 1, "Loading data, %lu / %lu\r", counter, self->total_entries);
             prev_counter = counter;
         }
-    }
-
-    if (lst_idx != lst_size) {
-        PyErr_Format(PyExc_RuntimeError, "VizTracer: Internal error when loading data. Expected list size %lu but got %lu", lst_size, lst_idx);
-        Py_DECREF(lst);
-        lst = NULL;
-        goto cleanup;
     }
 
     if (CHECK_FLAG(self->check_flags, SNAPTRACE_LOG_ASYNC)) {
@@ -1459,8 +1428,6 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
     }
 
     verbose_printf(self, 1, "Loading finish                                        \n");
-
-cleanup:
     Py_DECREF(pid);
     Py_DECREF(cat_fee);
     Py_DECREF(cat_instant);
