@@ -9,6 +9,7 @@ mypy
 coverage
 
 # Test
+pytest
 coredumpy
 
 # Devtools
