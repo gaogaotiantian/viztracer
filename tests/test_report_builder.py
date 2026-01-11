@@ -32,6 +32,14 @@ class TestReportBuilder(BaseTmpl):
             result2 = s.getvalue()
         self.assertEqual(result1, result2)
 
+    def test_nonexist_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nonexist_dir = os.path.join(tmpdir, "nonexist_dir")
+            data = {"traceEvents": []}
+            rb = ReportBuilder(data, verbose=0)
+            rb.save(os.path.join(nonexist_dir, "result.json"))
+            self.assertFileExists(os.path.join(nonexist_dir, "result.json"))
+
     def test_minimize_memory(self):
         json_path = os.path.join(os.path.dirname(__file__), "data", "multithread.json")
         with open(json_path) as f:
