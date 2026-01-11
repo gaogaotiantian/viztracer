@@ -53,3 +53,6 @@ select = ["I"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest]
+junit_suite_name = "viztracer"

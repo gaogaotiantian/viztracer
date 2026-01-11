@@ -68,13 +68,13 @@ jobs:
       run: |
         python -m build
         pip install dist/*.whl
-        python -m pytest --junit-xml=./test-results.xml
+        python -m pytest --junit-xml=./test-results.xml -o junit_family=legacy
     - name: Build dist and test with pytest on Windows
       if: contains(matrix.os, 'windows')
       run: |
         python -m build
         pip install (Get-ChildItem dist/*.whl)
-        python -m pytest --junit-xml=./test-results.xml
+        python -m pytest --junit-xml=./test-results.xml -o junit_family=legacy
     - name: Upload the test time artifacts
       uses: actions/upload-artifact@v4
       with:
