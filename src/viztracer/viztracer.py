@@ -531,10 +531,10 @@ class VizTracer(Tracer):
                 data["output_file"] = output_file
             self.report_socket_file.write(f"{json.dumps(data)}\n")
             self.report_socket_file.flush()
+            self.report_socket_file.close()
         except Exception:  # pragma: no cover
             pass
         finally:
-            self.report_socket_file.close()
             self.report_socket_file = None
 
         if self.report_server_process is not None:
