@@ -179,7 +179,7 @@ class TestLogSparse(CmdlineTmpl):
         function_names = [
             name.split(" ")[0]
             for name in names
-            if name not in ["process_name", "thread_name"]
+            if name not in ["process_name", "thread_name", "process_sort_index"]
         ]
 
         self.assertEqual(function_names, target)
