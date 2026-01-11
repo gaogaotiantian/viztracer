@@ -116,14 +116,14 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_cmdline(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            server_proc, endpoint = ReportServer.start_process(
-                f"{tmpdir}/result.json"
-            )
+            server_proc, endpoint = ReportServer.start_process(f"{tmpdir}/result.json")
 
             self.template(
                 [sys.executable, "cmdline_test.py"],
                 expected_output_file=None,
-                script=file_spawn_tmpl.substitute(foo=foo_normal, report_endpoint=endpoint),
+                script=file_spawn_tmpl.substitute(
+                    foo=foo_normal, report_endpoint=endpoint
+                ),
             )
 
             server_proc.wait(timeout=5)
@@ -136,14 +136,14 @@ class TestPatchSpawn(CmdlineTmpl):
     @unittest.skipIf(sys.platform == "win32", "pipe is different on windows so skip it")
     def test_patch_terminate(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            server_proc, endpoint = ReportServer.start_process(
-                f"{tmpdir}/result.json"
-            )
+            server_proc, endpoint = ReportServer.start_process(f"{tmpdir}/result.json")
 
             self.template(
                 [sys.executable, "cmdline_test.py"],
                 expected_output_file=None,
-                script=file_spawn_tmpl.substitute(foo=foo_infinite, report_endpoint=endpoint),
+                script=file_spawn_tmpl.substitute(
+                    foo=foo_infinite, report_endpoint=endpoint
+                ),
                 send_sig=(signal.SIGTERM, "ready"),
             )
 
