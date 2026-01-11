@@ -39,7 +39,6 @@ class TestTracer(BaseTmpl):
             with VizTracer(
                 output_file=output_path,
                 verbose=0,
-                ignore_multiprocess=False,
                 dump_raw=True,
             ):
                 foo()

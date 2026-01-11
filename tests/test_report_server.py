@@ -99,6 +99,12 @@ class TestReportServer(CmdlineTmpl):
             with self.assertWarns(RuntimeWarning):
                 tracer.save()
 
+    def test_report_server_down(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaises(RuntimeError):
+                with VizTracer(ignore_multiprocess=False) as tracer:
+                    tracer.report_server_process.terminate()
+
     def test_report_server_env_variable(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             report_server_cmd = cmd_with_coverage(
