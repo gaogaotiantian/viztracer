@@ -10,6 +10,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import zlib
 
 from .report_builder import ReportBuilder
 from .util import same_line_print
@@ -176,12 +177,15 @@ class ReportServer:
         conn.settimeout(10)
         while d := conn.recv(1 << 20):
             buffer += d
-        if b"\n" in buffer:
-            data = json.loads(buffer.decode().strip())
+        try:
+            data = json.loads(zlib.decompress(buffer).decode().strip())
             if "output_file" in data:
                 self.output_file = data["output_file"]
             if "payload" in data:
                 self.payloads.append(json.loads(data["payload"]))
+        except Exception as exc:  # pragma: no cover
+            if self.verbose > 0:
+                print(f"Failed to receive report data: {exc}")
 
     def save(self) -> None:
         if not self.payloads:

@@ -14,6 +14,7 @@ import socket
 import subprocess
 import sys
 import warnings
+import zlib
 from typing import Any, Callable, Literal, Sequence, TextIO
 
 from viztracer.snaptrace import Tracer
@@ -117,7 +118,7 @@ class VizTracer(Tracer):
         self.total_entries = 0
         self.gc_start_args: dict[str, int] = {}
 
-        self.report_socket_file: io.TextIOWrapper | None = None
+        self.report_socket_file: io.BufferedRWPair | None = None
         self.report_server_process: subprocess.Popen | None = None
         self.report_endpoint = report_endpoint
         if self.report_endpoint is None:
@@ -251,9 +252,9 @@ class VizTracer(Tracer):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         addr, port = self.report_endpoint.split(":")
         sock.connect((addr, int(port)))
-        self.report_socket_file = sock.makefile("rw")
+        self.report_socket_file = sock.makefile("rwb")
         sock.close()
-        self.report_directory = self.report_socket_file.readline().strip()
+        self.report_directory = self.report_socket_file.readline().decode().strip()
 
     def clean_report_server_process(self) -> None:
         if self.report_server_process is None:
@@ -529,7 +530,9 @@ class VizTracer(Tracer):
             data = {"path": tmp_output_file, "payload": payload.getvalue()}
             if self.report_server_process is not None:
                 data["output_file"] = output_file
-            self.report_socket_file.write(f"{json.dumps(data)}\n")
+            self.report_socket_file.write(
+                zlib.compress(json.dumps(data).encode("utf-8"))
+            )
             self.report_socket_file.flush()
             self.report_socket_file.close()
         except Exception as exc:
