@@ -66,15 +66,5 @@ setuptools.setup(
             extra_compile_args={"win32": []}.get(sys.platform, ["-Werror", "-std=c99"]),
             extra_link_args={"win32": []}.get(sys.platform, ["-lpthread"]),
         ),
-        setuptools.Extension(
-            "viztracer.vcompressor",
-            sources=[
-                "src/viztracer/modules/vcompressor/vcompressor.c",
-                "src/viztracer/modules/vcompressor/vc_dump.c",
-            ],
-            extra_compile_args={"win32": []}.get(
-                sys.platform, ["-Wno-unused-result", "-Werror", "-std=c99"]
-            ),
-        ),
     ],
 )
