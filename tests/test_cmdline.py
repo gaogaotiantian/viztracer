@@ -1041,12 +1041,25 @@ class TestCommandLineBasic(CmdlineTmpl):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             self.template(
-                ["viztracer", "--compress", multithread_file, "-o", f"{tmpdir}/result.xz"],
-                expected_output_file=f"{tmpdir}/result.xz", cleanup=False,
+                [
+                    "viztracer",
+                    "--compress",
+                    multithread_file,
+                    "-o",
+                    f"{tmpdir}/result.xz",
+                ],
+                expected_output_file=f"{tmpdir}/result.xz",
+                cleanup=False,
             )
 
             self.template(
-                ["viztracer", "--decompress", f"{tmpdir}/result.xz", "-o", f"{tmpdir}/result.json"],
+                [
+                    "viztracer",
+                    "--decompress",
+                    f"{tmpdir}/result.xz",
+                    "-o",
+                    f"{tmpdir}/result.json",
+                ],
                 expected_output_file=f"{tmpdir}/result.json",
                 check_func=lambda data: data == original_data,
             )
