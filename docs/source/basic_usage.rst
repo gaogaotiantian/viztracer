@@ -288,10 +288,10 @@ You can compress your report with ``--compress``.
 
 .. code-block:: 
 
-    viztracer --compress result.json -o result.cvf 
+    viztracer --compress result.json -o result.xz
 
 You can also decompress your report with ``--decompress``
 
 .. code-block:: 
 
-    viztracer --decompress result.cvf -o result.json 
+    viztracer --decompress result.xz -o result.json

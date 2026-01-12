@@ -762,17 +762,15 @@ class VizUI:
             return False, "Only support compressing json report"
 
         if not self.options.output_file:
-            output_file = "result.cvf"
+            output_file = "result.xz"
         else:
             output_file = self.options.output_file
 
-        from viztracer.vcompressor import VCompressor
-
-        compressor = VCompressor()
-
         with open(file_to_compress) as f:
+            import lzma
             data = json.load(f)
-            compressor.compress(data, output_file)
+            with lzma.open(output_file, "wt") as cf:
+                json.dump(data, cf)
 
         return True, None
 
@@ -786,14 +784,12 @@ class VizUI:
         else:
             output_file = self.options.output_file
 
-        from viztracer.vcompressor import VCompressor
-
-        compressor = VCompressor()
-
-        data = compressor.decompress(file_to_decompress)
-
         with open(output_file, "w") as f:
-            json.dump(data, f)
+            import lzma
+
+            with lzma.open(file_to_decompress, "rt") as cf:
+                data = json.load(cf)
+                json.dump(data, f)
 
         return True, None
 
