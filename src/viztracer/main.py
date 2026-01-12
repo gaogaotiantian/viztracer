@@ -768,6 +768,7 @@ class VizUI:
 
         with open(file_to_compress) as f:
             import lzma
+
             data = json.load(f)
             with lzma.open(output_file, "wt") as cf:
                 json.dump(data, cf)
