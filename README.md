@@ -276,7 +276,7 @@ check our [sponsor page](https://github.com/sponsors/gaogaotiantian) or contact
 the [author](https://github.com/gaogaotiantian) directly.
 
 <a href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=viztracer" target="_blank">
-    <img src="https://assets.testmu.ai/resources/images/logos/black-logo.png" style="vertical-align: middle;" width="250" />
+    <img src="https://assets.testmu.ai/resources/images/logos/black-logo.png" style="vertical-align: middle;" width="200" />
 </a>
 
 ## Documentation
