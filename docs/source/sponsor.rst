@@ -9,6 +9,6 @@ Thank you to our current sponsors:
 
 .. raw:: html
 
-    <a href="https://www.lambdatest.com/?utm_source=viztracer&utm_medium=sponsor" target="_blank">
-        <img src="https://www.lambdatest.com/blue-logo.png" style="vertical-align: middle;" width="250" height="45" />
+    <a href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=viztracer" target="_blank">
+        <img src="https://assets.testmu.ai/resources/images/logos/black-logo.png" style="vertical-align: middle;" width="200" />
     </a>
