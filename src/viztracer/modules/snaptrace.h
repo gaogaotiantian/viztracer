@@ -108,10 +108,13 @@ typedef struct {
     // otherwise it uses this pid
     long fix_pid;
     unsigned long total_entries;
+    int overflowed;
+    int grow_on_full;
     unsigned int check_flags;
     int verbose;
     char* lib_file_path;
     int max_stack_depth;
+    long max_buffer_entries;
     PyObject* process_name;
     PyObject* include_files;
     PyObject* exclude_files;

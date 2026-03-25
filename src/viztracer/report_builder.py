@@ -338,6 +338,13 @@ class ReportBuilder:
                     )
                     color_print(
                         "WARNING",
+                        (
+                            "    Or, enable --grow_on_overflow to expand the buffer "
+                            "automatically as needed"
+                        ),
+                    )
+                    color_print(
+                        "WARNING",
                         "    Or, you can try the filter options to filter out some data you don't need",
                     )
                     color_print("WARNING", "    use --quiet to shut me up")

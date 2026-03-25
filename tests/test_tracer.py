@@ -90,6 +90,26 @@ class TestCircularBuffer(BaseTmpl):
         entries = tracer.parse()
         self.assertEqual(entries, 10)
 
+    def test_grow_on_overflow(self):
+        tracer = VizTracer(tracer_entries=10, grow_on_overflow=True)
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertGreater(entries, 10)
+        self.assertFalse(tracer.data["viztracer_metadata"]["overflow"])
+
+    def test_grow_on_overflow_max_entries(self):
+        tracer = VizTracer(
+            tracer_entries=10, grow_on_overflow=True, max_tracer_entries=20
+        )
+        tracer.start()
+        fib(10)
+        tracer.stop()
+        entries = tracer.parse()
+        self.assertEqual(entries, 20)
+        self.assertTrue(tracer.data["viztracer_metadata"]["overflow"])
+
 
 class TestTracerFilter(BaseTmpl):
     def test_max_stack_depth(self):

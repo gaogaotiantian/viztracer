@@ -75,6 +75,19 @@ class VizUI:
             default=1000000,
             help="size of circular buffer. How many entries can it store",
         )
+        parser.add_argument(
+            "--grow_on_overflow",
+            action="store_true",
+            default=False,
+            help="grow the trace buffer instead of overwriting old entries when it fills",
+        )
+        parser.add_argument(
+            "--max_tracer_entries",
+            nargs="?",
+            type=int,
+            default=None,
+            help="maximum buffer size to grow to when --grow_on_overflow is enabled",
+        )
         filename_group = parser.add_mutually_exclusive_group()
         filename_group.add_argument(
             "--output_file",
@@ -500,6 +513,12 @@ class VizUI:
                 f"Can't convert {options.min_duration} to time. Format should be 0.3ms or 13us",
             )
 
+        if (
+            options.max_tracer_entries is not None
+            and options.max_tracer_entries < options.tracer_entries
+        ):
+            return False, "--max_tracer_entries can't be smaller than --tracer_entries"
+
         if options.log_torch:
             try:
                 import torch  # type: ignore  # noqa: F401
@@ -543,6 +562,8 @@ class VizUI:
             "log_audit": options.log_audit,
             "log_torch": options.log_torch,
             "pid_suffix": options.pid_suffix,
+            "grow_on_overflow": options.grow_on_overflow,
+            "max_tracer_entries": options.max_tracer_entries,
             "file_info": False,
             "register_global": True,
             "report_endpoint": options.report_endpoint,

@@ -20,6 +20,8 @@ VizTracer
                  log_torch=False,\
                  log_audit=False,\
                  pid_suffix=False,\
+                 grow_on_overflow=False,\
+                 max_tracer_entries=None,\
                  file_info=True,\
                  register_global=True,\
                  trace_self=False,\
@@ -265,6 +267,26 @@ VizTracer
         .. code-block::
 
             viztracer --pid_suffix
+
+    .. py:attribute:: grow_on_overflow
+        :type: bool
+        :value: False
+
+        Whether grow the internal trace buffer instead of overwriting old events
+        when it becomes full.
+
+        Equivalent to
+
+        .. code-block::
+
+            viztracer --grow_on_overflow
+
+    .. py:attribute:: max_tracer_entries
+        :type: Optional[int]
+        :value: None
+
+        Maximum buffer size to grow to when ``grow_on_overflow`` is enabled.
+        ``None`` means there is no explicit cap.
 
     .. py:attribute:: file_info
         :type: bool

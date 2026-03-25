@@ -8,6 +8,9 @@ class Tracer:
 
     include_files: list[str] | None
     exclude_files: list[str] | None
+    grow_on_full: bool
+    max_buffer_entries: int
+    overflowed: bool
 
     def __init__(self, tracer_entries: int, /) -> None: ...
     def start(self) -> None: ...

@@ -65,25 +65,86 @@ get_ts()
 #endif
 }
 
+static inline long
+get_buffered_entry_count(TracerObject* self)
+{
+    if (self->buffer_tail_idx >= self->buffer_head_idx) {
+        return self->buffer_tail_idx - self->buffer_head_idx;
+    }
+    return self->buffer_size - self->buffer_head_idx + self->buffer_tail_idx;
+}
+
+static int
+grow_buffer(TracerObject* self)
+{
+    long curr_entries = self->buffer_size - 1;
+    long new_entries = curr_entries * 2;
+    long buffered_entries = get_buffered_entry_count(self);
+    struct EventNode* new_buffer = NULL;
+
+    if (self->max_buffer_entries > 0 && new_entries > self->max_buffer_entries) {
+        new_entries = self->max_buffer_entries;
+    }
+
+    if (new_entries <= curr_entries) {
+        return -1;
+    }
+
+    new_buffer = (struct EventNode*) PyMem_Calloc(new_entries + 1, sizeof(struct EventNode));
+    if (!new_buffer) {
+        return -1;
+    }
+
+    for (long i = 0; i < buffered_entries; i++) {
+        long src_idx = self->buffer_head_idx + i;
+        if (src_idx >= self->buffer_size) {
+            src_idx -= self->buffer_size;
+        }
+        new_buffer[i] = self->buffer[src_idx];
+    }
+
+    PyMem_FREE(self->buffer);
+    self->buffer = new_buffer;
+    self->buffer_size = new_entries + 1;
+    self->buffer_head_idx = 0;
+    self->buffer_tail_idx = buffered_entries;
+    self->total_entries = buffered_entries;
+
+    return 0;
+}
+
 static inline struct EventNode*
 get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
+    long next_tail_idx = 0;
+    int overwrote = 0;
 
     SNAPTRACE_THREAD_PROTECT_START(self);
-    node = self->buffer + self->buffer_tail_idx;
     // This is actually faster than modulo
-    self->buffer_tail_idx = self->buffer_tail_idx + 1;
-    if (self->buffer_tail_idx >= self->buffer_size) {
-        self->buffer_tail_idx = 0;
+    next_tail_idx = self->buffer_tail_idx + 1;
+    if (next_tail_idx >= self->buffer_size) {
+        next_tail_idx = 0;
     }
-    if (self->buffer_tail_idx == self->buffer_head_idx) {
-        self->buffer_head_idx = self->buffer_head_idx + 1;
-        if (self->buffer_head_idx >= self->buffer_size) {
-            self->buffer_head_idx = 0;
+    if (next_tail_idx == self->buffer_head_idx) {
+        if (!(self->grow_on_full && grow_buffer(self) == 0)) {
+            overwrote = 1;
+            self->overflowed = 1;
+            clear_node(self->buffer + next_tail_idx);
+            self->buffer_head_idx = next_tail_idx + 1;
+            if (self->buffer_head_idx >= self->buffer_size) {
+                self->buffer_head_idx = 0;
+            }
+        } else {
+            next_tail_idx = self->buffer_tail_idx + 1;
+            if (next_tail_idx >= self->buffer_size) {
+                next_tail_idx = 0;
+            }
         }
-        clear_node(self->buffer + self->buffer_tail_idx);
-    } else {
+    }
+    node = self->buffer + self->buffer_tail_idx;
+    self->buffer_tail_idx = next_tail_idx;
+    if (!overwrote) {
         self->total_entries += 1;
     }
     SNAPTRACE_THREAD_PROTECT_END(self);
@@ -1072,6 +1133,11 @@ tracer_start(TracerObject* self, PyObject* Py_UNUSED(unused))
         curr_tracer = self;
     }
 
+    if (self->buffer_head_idx == self->buffer_tail_idx) {
+        self->total_entries = 0;
+        self->overflowed = 0;
+    }
+
     self->collecting = 1;
 #if PY_VERSION_HEX >= 0x030C0000
     if (enable_monitoring(self) != 0) {
@@ -1510,7 +1576,6 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
     SNAPTRACE_THREAD_PROTECT_START(self);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     unsigned long pid = 0;
-    uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
     struct MetadataNode* metadata_node = NULL;
     PyObject* task_dict = NULL;
 
@@ -1698,7 +1763,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
 
     self->buffer_tail_idx = self->buffer_head_idx;
     fseek(fptr, -1, SEEK_CUR);
-    fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s", overflowed? "true": "false");
+    fprintf(fptr, "], \"viztracer_metadata\": {\"overflow\":%s", self->overflowed? "true": "false");
 
     if (self->sync_marker > 0)
     {
@@ -1725,6 +1790,8 @@ tracer_clear(TracerObject* self, PyObject* Py_UNUSED(unused))
         }
     }
     self->buffer_tail_idx = self->buffer_head_idx;
+    self->total_entries = 0;
+    self->overflowed = 0;
 
     Py_RETURN_NONE;
 }
@@ -2079,10 +2146,13 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->collecting = 0;
         self->fix_pid = 0;
         self->total_entries = 0;
+        self->overflowed = 0;
+        self->grow_on_full = 0;
         self->check_flags = 0;
         self->verbose = 0;
         self->lib_file_path = NULL;
         self->max_stack_depth = 0;
+        self->max_buffer_entries = 0;
         self->include_files = NULL;
         self->exclude_files = NULL;
         self->min_duration = 0;
