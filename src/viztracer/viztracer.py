@@ -14,12 +14,12 @@ import socket
 import subprocess
 import sys
 import warnings
-import zlib
 from typing import Any, Callable, Literal, Sequence, TextIO
 
 from viztracer.snaptrace import Tracer
 
 from . import __version__
+from .ipc_compression import ipc_compress
 from .patch import install_all_hooks, uninstall_all_hooks
 from .report_builder import ReportBuilder
 from .report_server import ReportServer
@@ -530,8 +530,9 @@ class VizTracer(Tracer):
             data = {"path": tmp_output_file, "payload": payload.getvalue()}
             if self.report_server_process is not None:
                 data["output_file"] = output_file
+
             self.report_socket_file.write(
-                zlib.compress(json.dumps(data).encode("utf-8"))
+                ipc_compress(json.dumps(data).encode("utf-8"))
             )
             self.report_socket_file.flush()
             self.report_socket_file.close()
