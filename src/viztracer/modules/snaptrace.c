@@ -4,6 +4,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stdlib.h>
+#include <string.h>
 #include <frameobject.h>
 #if _WIN32
 #include <windows.h>
@@ -196,6 +197,53 @@ snaptrace_createthreadinfo(TracerObject* self) {
     info->tid = syscall(SYS_gettid);
 #endif
 
+    // Note [pthread-id-for-kineto-remap]:
+    //
+    // Problem: When VizTracer's `log_torch=True` merges a PyTorch/Kineto
+    // Chrome trace into the VizTracer trace, CUDA runtime events
+    // (e.g. `cudaLaunchKernel`, `cudaStreamSynchronize`) from worker
+    // threads appear on extra unnamed thread rows in Perfetto instead of
+    // on the Python threads that issued them.
+    //
+    // Root cause: VizTracer identifies threads by `SYS_gettid` (Linux
+    // kernel TID), but CUPTI reports `activity->threadId` as
+    // `pthread_self()` truncated to `int32_t`. Kineto's
+    // `handleRuntimeActivity()` (in `CuptiActivityProfiler.cpp`) tries
+    // to remap that to `SYS_gettid` via its `resourceInfo_` map, but
+    // that map is only populated by `recordThreadInfo()`, which is only
+    // called from `ThreadLocalSubqueue`'s constructor, which only runs
+    // on threads that fire `RecordFunction` callbacks. Since
+    // `torch.profiler.profile()` registers callbacks via
+    // `at::addThreadLocalCallback()` (not global), only the thread that
+    // called `profile().__enter__()` gets callbacks -- worker threads
+    // (e.g. `image_executor` from `ThreadPoolExecutor`) never fire
+    // `RecordFunction`, so they are never registered in `resourceInfo_`,
+    // and their CUDA events keep raw `pthread_self()` values as `tid`.
+    // In a single-threaded program this is invisible because the main
+    // thread (which started the profiler) IS registered, so Kineto
+    // remaps its CUDA events correctly. The problem only manifests
+    // when CUDA calls happen on additional worker threads.
+    //
+    // Fix: We record `pthread_self()` for each thread that VizTracer
+    // sees, building a `pthread_self()` -> `SYS_gettid` mapping.
+    // `report_builder.py` uses this mapping to rewrite `tid` values in
+    // the Kineto trace before merging, so CUDA events land on the
+    // correct Python thread rows.
+    //
+    // Kineto truncates `pthread_self()` to lower 32 bits via `int32_t*`
+    // reinterpret cast (see `threadId()` in kineto's `ThreadUtil.cpp`).
+    // We replicate that so our mapping matches Kineto's `tid` values.
+    int32_t pthread_id_i32;
+#if _WIN32
+    pthread_id_i32 = (int32_t)GetCurrentThreadId();
+#else
+    {
+        pthread_t pth = pthread_self();
+        memcpy(&pthread_id_i32, &pth, sizeof(pthread_id_i32));
+    }
+#endif
+    unsigned long pthread_id = (unsigned long)(uint32_t)pthread_id_i32;
+
 #if _WIN32
     TlsSetValue(self->dwTlsIndex, info);
 #else
@@ -227,6 +275,7 @@ snaptrace_createthreadinfo(TracerObject* self) {
         if (node->tid == info->tid) {
             Py_DECREF(node->name);
             node->name = thread_name;
+            node->pthread_id = pthread_id;
             node->thread_info = info;
             info->metadata_node = node;
             found_node = 1;
@@ -244,6 +293,7 @@ snaptrace_createthreadinfo(TracerObject* self) {
         }
         node->name = thread_name;
         node->tid = info->tid;
+        node->pthread_id = pthread_id;
         node->thread_info = info;
         info->metadata_node = node;
         node->next = self->metadata_head;
@@ -1689,6 +1739,34 @@ tracer_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
     return PyLong_FromLongLong(get_base_time_ns());
 }
 
+// See note [pthread-id-for-kineto-remap].
+// Returns a Python dict mapping `pthread_id` (Kineto's truncated `pthread_self()`)
+// to `tid` (`SYS_gettid`) for every thread VizTracer has seen.
+static PyObject*
+tracer_getpthreadidmap(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    PyObject* dict = PyDict_New();
+    if (!dict) {
+        return NULL;
+    }
+    struct MetadataNode* node = self->metadata_head;
+    while (node) {
+        PyObject* key = PyLong_FromUnsignedLong(node->pthread_id);
+        PyObject* val = PyLong_FromUnsignedLong(node->tid);
+        if (!key || !val) {
+            Py_XDECREF(key);
+            Py_XDECREF(val);
+            Py_DECREF(dict);
+            return NULL;
+        }
+        PyDict_SetItem(dict, key, val);
+        Py_DECREF(key);
+        Py_DECREF(val);
+        node = node->next;
+    }
+    return dict;
+}
+
 static PyObject*
 tracer_resetstack(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
@@ -1982,6 +2060,7 @@ static PyMethodDef Tracer_methods[] = {
     {"get_func_args", (PyCFunction)tracer_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)tracer_getts, METH_NOARGS, "get timestamp"},
     {"get_base_time", (PyCFunction)tracer_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
+    {"get_pthread_id_map", (PyCFunction)tracer_getpthreadidmap, METH_NOARGS, "get pthread_self() -> SYS_gettid mapping for Kineto thread ID remapping"},
     {"reset_stack", (PyCFunction)tracer_resetstack, METH_NOARGS, "reset stack"},
     {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},

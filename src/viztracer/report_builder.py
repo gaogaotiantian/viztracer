@@ -41,13 +41,48 @@ def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
             # convert to us
             offset_diff = (torch_offset - base_offset) / 1000
 
+            # See note [pthread-id-for-kineto-remap].
+            # Remap CUPTI thread IDs (`pthread_self()` truncated to `int32_t`)
+            # to `SYS_gettid` values that VizTracer uses.
+            # Our `get_pthread_id_map()` returns unsigned `uint32_t` keys.
+            # Kineto writes `tid` in different formats depending on version:
+            #   - PyTorch <= 2.3: signed `int32_t` (e.g. -780138816)
+            #   - PyTorch >= 2.5: `abs(int32_t)` due to `sanitizeTid()` in
+            #     kineto commit eb1713f ("Prevent Negative TIDs in Trace")
+            # We build a lookup covering all three representations (unsigned,
+            # signed, abs) so the remapping works across PyTorch versions.
+            pthread_id_map: dict[int, int] = args.get('pthread_id_map', {})
+            tid_remap: dict[int, int] = {}
+            for unsigned_key, sys_tid in pthread_id_map.items():
+                signed_key = unsigned_key if unsigned_key < (1 << 31) else unsigned_key - (1 << 32)
+                abs_key = abs(signed_key)
+                tid_remap[unsigned_key] = sys_tid
+                tid_remap[signed_key] = sys_tid
+                tid_remap[abs_key] = sys_tid
+
+            filtered_events = []
             for event in ret['traceEvents']:
                 if 'ts' in event:
                     event['ts'] += offset_diff
+
+                # Remap `tid` from `pthread_self()` to `SYS_gettid`.
+                if 'tid' in event and tid_remap:
+                    tid = event['tid']
+                    if tid in tid_remap:
+                        event['tid'] = tid_remap[tid]
+
                 if event['ph'] == 'M':
                     # Pop metadata timestamp so it won't overwrite
                     # process and thread names
                     event.pop('ts', None)
+                    # Drop thread-name metadata for remapped threads;
+                    # VizTracer already provides correct names.
+                    if event.get('name') == 'thread_name':
+                        tid = event.get('tid')
+                        if tid in pthread_id_map.values():
+                            continue
+                filtered_events.append(event)
+            ret['traceEvents'] = filtered_events
 
             ret.pop("baseTimeNanoseconds", None)
             ret.pop("displayTimeUnit", None)

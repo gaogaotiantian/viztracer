@@ -90,6 +90,7 @@ struct ThreadInfo {
 struct MetadataNode {
     struct MetadataNode* next;
     unsigned long tid;
+    unsigned long pthread_id;  // `pthread_self()` value for this thread, used to remap Kineto/CUPTI thread IDs
     PyObject* name;
     struct ThreadInfo* thread_info;
 };

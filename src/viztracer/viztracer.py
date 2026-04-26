@@ -317,9 +317,15 @@ class VizTracer(Tracer):
 
             if self.log_torch and self.torch_profile is not None:
                 import tempfile
+                # See note [pthread-id-for-kineto-remap].
+                pthread_id_map = self.get_pthread_id_map()
                 with tempfile.NamedTemporaryFile(suffix=".json") as tmpfile:
                     self.torch_profile.export_chrome_trace(tmpfile.name)
-                    rb = ReportBuilder([(tmpfile.name, {'type': 'torch', 'base_offset': self.get_base_time()}), self.data],
+                    rb = ReportBuilder([(tmpfile.name, {
+                        'type': 'torch',
+                        'base_offset': self.get_base_time(),
+                        'pthread_id_map': pthread_id_map,
+                    }), self.data],
                                        verbose, minimize_memory=self.minimize_memory, base_time=self.get_base_time())
                     rb.save(output_file=output_file, file_info=file_info)
             else:
