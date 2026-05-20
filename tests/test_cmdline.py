@@ -1064,16 +1064,35 @@ class TestCommandLineBasic(CmdlineTmpl):
                 check_func=lambda data: data == original_data,
             )
 
-            cwd = os.getcwd()
-            os.chdir(tmpdir)
+            self.template(
+                [
+                    "viztracer",
+                    "--decompress",
+                    f"{tmpdir}/result.xz",
+                ],
+                expected_output_file="result.json",
+                check_func=lambda data: data == original_data,
+            )
 
-            try:
-                self.template(
-                    ["viztracer", "--compress", multithread_file],
-                    expected_output_file=f"{tmpdir}/result.xz",
-                )
-            finally:
-                os.chdir(cwd)
+            self.template(
+                ["viztracer", "--compress", multithread_file],
+                expected_output_file="result.xz",
+            )
+
+            self.template(
+                ["viztracer", "--compress", "non_exist_file.json"],
+                success=False,
+            )
+
+            self.template(
+                ["viztracer", "--compress", f"{tmpdir}/result.xz"],
+                success=False,
+            )
+
+            self.template(
+                ["viztracer", "--decompress", "non_exist_file.json"],
+                success=False,
+            )
 
     def test_show_version(self):
         result = self.template(
