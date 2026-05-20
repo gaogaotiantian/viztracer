@@ -1064,6 +1064,17 @@ class TestCommandLineBasic(CmdlineTmpl):
                 check_func=lambda data: data == original_data,
             )
 
+            cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                self.template(
+                    ["viztracer", "--compress", multithread_file],
+                    expected_output_file=f"{tmpdir}/result.xz",
+                )
+            finally:
+                os.chdir(cwd)
+
     def test_show_version(self):
         result = self.template(
             ["viztracer", "--version"], script=None, expected_output_file=None
