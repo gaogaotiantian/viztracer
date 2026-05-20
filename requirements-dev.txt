@@ -13,7 +13,7 @@ pytest
 coredumpy
 
 # Devtools
-pystack >= 1.6.0; sys_platform == 'linux
+pystack >= 1.6.0; sys_platform == 'linux'
 psutil
 
 # 3rd party packages for test
