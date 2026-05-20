@@ -13,7 +13,7 @@ pytest
 coredumpy
 
 # Devtools
-pystack; sys_platform == 'linux' and python_version < '3.13'
+pystack >= 1.6.0
 psutil
 
 # 3rd party packages for test
