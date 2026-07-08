@@ -317,7 +317,7 @@ VizTracer
         :type: bool
         :value: False
 
-        Whether check the function name before dump. This is useful for dymanically
+        Whether check the function name before dump. This is useful for dynamically
         generated PyMethodDef.
 
     .. py:attribute:: process_name

@@ -171,7 +171,7 @@ def pid_exists(pid):
         exit_code = ctypes.c_ulong()
         out = kernel32.GetExitCodeProcess(process, ctypes.byref(exit_code))
         kernel32.CloseHandle(process)
-        # nonzero return value means the funtion succeeds
+        # nonzero return value means the function succeeds
         if out:
             if exit_code.value == STILL_ACTIVE:
                 # According to documents of GetExitCodeProcess.
