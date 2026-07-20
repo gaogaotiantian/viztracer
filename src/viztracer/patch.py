@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .viztracer import VizTracer
 
 
-def patch_subprocess(viz_args: list[str]) -> None:
+def patch_subprocess(viz_args: list[str], exclude_subprocess: list[str] | None = None) -> None:
     import shlex
     import subprocess
 
@@ -30,6 +30,16 @@ def patch_subprocess(viz_args: list[str]) -> None:
     # Note: viztracer doesn't really work in interactive mode and arg handling is weird.
     # Unlikely to be used in practice anyway so we just skip wrapping interactive python processes.
     interactive_pat = re.compile("-[A-Za-z]*?i[A-Za-z]*$")
+
+    def _should_exclude(args: Sequence[str]) -> bool:
+        """Check if the subprocess command should be excluded from tracing."""
+        if not exclude_subprocess:
+            return False
+        cmd_str = " ".join(str(a) for a in args)
+        for pattern in exclude_subprocess:
+            if pattern in cmd_str:
+                return True
+        return False
 
     def build_command(args: Sequence[str]) -> list[str] | None:
         py_args: list[str] = []
@@ -124,7 +134,9 @@ def patch_subprocess(viz_args: list[str]) -> None:
         if isinstance(new_args, str):
             new_args = shlex.split(new_args, posix=sys.platform != "win32")
         if isinstance(new_args, Sequence):
-            if "python" in os.path.basename(new_args[0]):
+            if _should_exclude(new_args):
+                new_args = None
+            elif "python" in os.path.basename(new_args[0]):
                 new_args = build_command(new_args)
             elif is_python_entry(new_args[0]):
                 new_args = [
@@ -361,7 +373,7 @@ def install_all_hooks(tracer: VizTracer) -> None:
     # multiprocess hook
     if not tracer.ignore_multiprocess:
         patch_multiprocessing(tracer, args)
-        patch_subprocess(args)
+        patch_subprocess(args, exclude_subprocess=tracer.exclude_subprocess)
 
     HookManager().set_tracer(tracer)
 

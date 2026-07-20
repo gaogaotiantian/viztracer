@@ -63,6 +63,7 @@ class VizTracer(Tracer):
         process_name: str | None = None,
         output_file: str = "result.json",
         plugins: Sequence[VizPluginBase | str] | None = None,
+        exclude_subprocess: list[str] | None = None,
     ) -> None:
         super().__init__(tracer_entries)
 
@@ -100,6 +101,7 @@ class VizTracer(Tracer):
         self.file_info = file_info
         self.log_sparse = log_sparse
         self.log_audit = log_audit
+        self.exclude_subprocess = exclude_subprocess
         self.log_torch = log_torch
         self.ignore_multiprocess = ignore_multiprocess
         self.torch_profile = None
