@@ -278,11 +278,11 @@ get_thread_info(TracerObject* self)
 }
 
 static void
-snaptrace_threaddestructor(void* key) {
-    struct ThreadInfo* info = key;
+snaptrace_freethreadinfo(struct ThreadInfo* info) {
+    // ThreadInfo owns Python references, so release it while the tracer is
+    // deallocated with the GIL instead of from an arbitrary TLS destructor.
     struct FunctionNode* tmp = NULL;
     if (info) {
-        PyGILState_STATE state = PyGILState_Ensure();
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
@@ -302,9 +302,10 @@ snaptrace_threaddestructor(void* key) {
         info->stack_top = NULL;
         Py_CLEAR(info->curr_task);
         Py_CLEAR(info->curr_task_frame);
-        info->metadata_node->thread_info = NULL;
+        if (info->metadata_node) {
+            info->metadata_node->thread_info = NULL;
+        }
         PyMem_FREE(info);
-        PyGILState_Release(state);
     }
 }
 
@@ -2015,6 +2016,7 @@ Tracer_New(PyTypeObject* type, PyObject* args, PyObject* kwargs)
         self->buffer_tail_idx = 0;
         self->sync_marker = 0;
         self->metadata_head = NULL;
+        self->thread_key_initialized = 0;
     }
 
     return (PyObject*) self;
@@ -2042,11 +2044,12 @@ Tracer_Init(TracerObject* self, PyObject* args, PyObject* kwargs)
         exit(-1);
     }
 #else
-    if (pthread_key_create(&self->thread_key, snaptrace_threaddestructor)) {
+    if (pthread_key_create(&self->thread_key, NULL)) {
         perror("Failed to create Tss_Key");
         exit(-1);
     }
 #endif
+    self->thread_key_initialized = 1;
 
 #if PY_VERSION_HEX >= 0x030C0000
 #else
@@ -2080,10 +2083,20 @@ Tracer_dealloc(TracerObject* self)
     Py_XDECREF(self->exclude_files);
     PyMem_FREE(self->buffer);
 
+    if (self->thread_key_initialized) {
+#if _WIN32
+        TlsFree(self->dwTlsIndex);
+#else
+        pthread_key_delete(self->thread_key);
+#endif
+        self->thread_key_initialized = 0;
+    }
+
     struct MetadataNode* node = self->metadata_head;
     struct MetadataNode* prev = NULL;
     while (node) {
         prev = node;
+        snaptrace_freethreadinfo(node->thread_info);
         Py_CLEAR(node->name);
         node = node->next;
         PyMem_FREE(prev);

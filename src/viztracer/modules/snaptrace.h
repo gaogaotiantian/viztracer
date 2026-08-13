@@ -101,6 +101,7 @@ typedef struct {
 #else
     pthread_key_t thread_key;
 #endif
+    int thread_key_initialized;
     int collecting;
     // When we do fork_save(), we want to keep the pid. This is a 
     // mechanism for child process to keep the parent's pid. If 

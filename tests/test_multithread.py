@@ -1,6 +1,8 @@
 # Licensed under the Apache License: http://www.apache.org/licenses/LICENSE-2.0
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
+import os
+import subprocess
 import sys
 import threading
 import time
@@ -31,6 +33,41 @@ class MyThreadTraceAware(threading.Thread):
 
 
 class TestMultithread(BaseTmpl):
+    def test_tracer_deallocation_before_worker_thread_exit(self):
+        script = """
+import gc
+import threading
+from viztracer import VizTracer
+
+traced = threading.Event()
+release = threading.Event()
+
+def worker():
+    sum(range(10))
+    traced.set()
+    release.wait()
+
+tracer = VizTracer(verbose=0, register_global=False)
+tracer.start()
+thread = threading.Thread(target=worker)
+thread.start()
+traced.wait()
+tracer.stop()
+del tracer
+gc.collect()
+release.set()
+thread.join()
+"""
+        env = os.environ.copy()
+        env["PYTHONMALLOC"] = "malloc"
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_basic(self):
         tracer = VizTracer(max_stack_depth=4, verbose=0)
         tracer.start()
