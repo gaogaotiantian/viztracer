@@ -281,6 +281,15 @@ snaptrace_threaddestructor(void* key) {
     struct ThreadInfo* info = key;
     struct FunctionNode* tmp = NULL;
     if (info) {
+        // A thread can exit after the interpreter is gone -- for example a
+        // native thread pool that outlives Py_FinalizeEx() and is joined by a
+        // C++ static destructor during exit(). There is no interpreter left
+        // for PyGILState_Ensure() to attach to, so it would dereference
+        // torn-down state and segfault. Leak the per-thread buffers instead;
+        // the process is already on its way out.
+        if (Py_IsFinalizing()) {
+            return;
+        }
         PyGILState_STATE state = PyGILState_Ensure();
         info->paused = 0;
         info->curr_stack_depth = 0;
