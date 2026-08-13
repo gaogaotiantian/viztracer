@@ -659,3 +659,43 @@ class TestThreadingExitOrder(CmdlineTmpl):
             script=threading_exit_order,
             expected_stdout="hello world",
         )
+
+
+class TestThreadDestructorAfterFinalize(CmdlineTmpl):
+    # snaptrace_threaddestructor runs from the TLS destructor when a traced
+    # thread exits, which can be after the interpreter is finalized. It used to
+    # call PyGILState_Ensure() unconditionally and segfault. Daemon threads
+    # still running when the main thread exits reproduce the race.
+    @unittest.skipIf(
+        sys.platform == "win32", "TLS destructor is only registered on POSIX"
+    )
+    def test_thread_exiting_after_finalize(self):
+        thread_destructor_code = """
+            import threading
+            import time
+
+            from viztracer import VizTracer
+
+            def busy():
+                deadline = time.time() + 2.0
+                while time.time() < deadline:
+                    sorted({str(i): [i] for i in range(200)})
+
+            tracer = VizTracer(verbose=0, ignore_c_function=False, ignore_frozen=False)
+            tracer.start()
+            for _ in range(4):
+                threading.Thread(target=busy, daemon=True).start()
+            time.sleep(0.3)
+            tracer.stop()
+            tracer.save()
+            print("saved")
+            """
+        # Whether a worker exits before or after Py_FinalizeEx() is a race, so
+        # repeat to make a reintroduced crash reasonably likely to be caught.
+        for _ in range(10):
+            self.template(
+                [sys.executable, "cmdline_test.py"],
+                script=thread_destructor_code,
+                expected_output_file="result.json",
+                expected_stdout="saved",
+            )
