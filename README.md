@@ -269,6 +269,16 @@ normal sampling profilers.
 
 </details>
 
+## Sponsors
+
+We thank our sponsors to support VizTracer. If you want your logo here,
+check our [sponsor page](https://github.com/sponsors/gaogaotiantian) or contact
+the [author](https://github.com/gaogaotiantian) directly.
+
+<a href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=viztracer" target="_blank">
+    <img src="https://assets.testmu.ai/resources/images/logos/black-logo.png" style="vertical-align: middle;" width="200" />
+</a>
+
 ## Documentation
 
 For full documentation, please see [https://viztracer.readthedocs.io/en/stable](https://viztracer.readthedocs.io/en/stable)
