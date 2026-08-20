@@ -198,6 +198,35 @@ class TestLogSparse(CmdlineTmpl):
             expected_output_file="result.json",
         )
 
+    def test_log_func_args_retval(self):
+        from viztracer import VizTracer, log_sparse
+
+        tracer = VizTracer(
+            log_sparse=True,
+            log_func_args=True,
+            log_func_retval=True,
+            verbose=0,
+        )
+
+        @log_sparse
+        def f(x):
+            return x * x
+
+        self.assertEqual(f(3), 9)
+        tracer.parse()
+        events = [
+            e
+            for e in tracer.data["traceEvents"]
+            if e.get("ph") == "X" and e["name"].startswith("f ")
+        ]
+        self.assertEqual(len(events), 1)
+        args = events[0].get("args") or {}
+        self.assertIn("func_args", args)
+        self.assertIn("x", args["func_args"])
+        self.assertEqual(args["func_args"]["x"], "3")
+        self.assertIn("return_value", args)
+        self.assertEqual(args["return_value"], "9")
+
     def test_stack(self):
         self.template(
             ["viztracer", "-o", "result.json", "--log_sparse", "cmdline_test.py"],

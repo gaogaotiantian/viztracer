@@ -2,6 +2,7 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 import functools
+import inspect
 import multiprocessing
 import os
 import time
@@ -96,6 +97,15 @@ def trace_and_save(
     return inner
 
 
+def _format_func_value(value: Any, log_func_repr: Callable | None) -> str:
+    try:
+        if log_func_repr is not None:
+            return log_func_repr(value)
+        return repr(value)
+    except Exception:
+        return "Not Displayable"
+
+
 def _log_sparse_wrapper(
     func: Callable, stack_depth: int = 0, dynamic_tracer_check: bool = False
 ) -> Callable:
@@ -135,6 +145,19 @@ def _log_sparse_wrapper(
                     "dur": dur,
                     "cat": "FEE",
                 }
+                if local_tracer.log_func_args or local_tracer.log_func_retval:
+                    event_args: dict[str, Any] = {}
+                    fmt = local_tracer.log_func_repr
+                    if local_tracer.log_func_args:
+                        bound = inspect.signature(func).bind(*args, **kwargs)
+                        bound.apply_defaults()
+                        event_args["func_args"] = {
+                            name: _format_func_value(value, fmt)
+                            for name, value in bound.arguments.items()
+                        }
+                    if local_tracer.log_func_retval:
+                        event_args["return_value"] = _format_func_value(ret, fmt)
+                    raw_data["args"] = event_args
                 local_tracer.add_raw(raw_data)
                 return ret
         elif local_tracer.enable and not local_tracer.log_sparse:
