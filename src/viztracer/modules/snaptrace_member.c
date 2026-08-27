@@ -432,6 +432,71 @@ Tracer_trace_self_getter(TracerObject* self, void* closure)
 }
 
 static int
+Tracer_grow_on_full_setter(TracerObject* self, PyObject* value, void* closure)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the attribute");
+        return -1;
+    }
+
+    if (!PyBool_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "grow_on_full must be a boolean");
+        return -1;
+    }
+
+    self->grow_on_full = (value == Py_True);
+
+    return 0;
+}
+
+static PyObject*
+Tracer_grow_on_full_getter(TracerObject* self, void* closure)
+{
+    if (self->grow_on_full) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}
+
+static int
+Tracer_max_buffer_entries_setter(TracerObject* self, PyObject* value, void* closure)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "Cannot delete the attribute");
+        return -1;
+    }
+
+    if (!PyLong_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "max_buffer_entries must be an integer");
+        return -1;
+    }
+
+    self->max_buffer_entries = PyLong_AsLong(value);
+    if (self->max_buffer_entries < 0) {
+        self->max_buffer_entries = 0;
+    }
+
+    return 0;
+}
+
+static PyObject*
+Tracer_max_buffer_entries_getter(TracerObject* self, void* closure)
+{
+    return PyLong_FromLong(self->max_buffer_entries);
+}
+
+static PyObject*
+Tracer_overflowed_getter(TracerObject* self, void* closure)
+{
+    if (self->overflowed) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}
+
+static int
 Tracer_log_func_repr_setter(TracerObject* self, PyObject* value, void* closure)
 {
     if (value == NULL) {
@@ -478,6 +543,9 @@ PyGetSetDef Tracer_getsetters[] = {
     {"log_func_args", (getter)Tracer_log_func_args_getter, (setter)Tracer_log_func_args_setter, "log_func_args", NULL},
     {"log_async", (getter)Tracer_log_async_getter, (setter)Tracer_log_async_setter, "log_async", NULL},
     {"trace_self", (getter)Tracer_trace_self_getter, (setter)Tracer_trace_self_setter, "trace_self", NULL},
+    {"grow_on_full", (getter)Tracer_grow_on_full_getter, (setter)Tracer_grow_on_full_setter, "grow_on_full", NULL},
+    {"max_buffer_entries", (getter)Tracer_max_buffer_entries_getter, (setter)Tracer_max_buffer_entries_setter, "max_buffer_entries", NULL},
+    {"overflowed", (getter)Tracer_overflowed_getter, NULL, "overflowed", NULL},
     {"log_func_repr", (getter)Tracer_log_func_repr_getter, (setter)Tracer_log_func_repr_setter, "log_func_repr", NULL},
     {NULL}
 };

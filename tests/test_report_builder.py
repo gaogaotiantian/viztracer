@@ -89,6 +89,17 @@ class TestReportBuilder(BaseTmpl):
         with io.StringIO() as s:
             rb.save(s)
 
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_overflow_message_mentions_grow_on_overflow(self, mock_stdout):
+        rb = ReportBuilder(
+            {"traceEvents": [], "viztracer_metadata": {"overflow": True}}, verbose=1
+        )
+
+        with io.StringIO() as s:
+            rb.save(s)
+
+        self.assertIn("--grow_on_overflow", mock_stdout.getvalue())
+
     def test_invalid_json(self):
         invalid_json_path = os.path.join(os.path.dirname(__file__), "data", "fib.py")
         with self.assertRaises(Exception):

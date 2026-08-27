@@ -52,6 +52,8 @@ class VizTracer(Tracer):
         log_audit: Sequence[str] | None = None,
         ignore_multiprocess: bool = True,
         pid_suffix: bool = False,
+        grow_on_overflow: bool = False,
+        max_tracer_entries: int | None = None,
         file_info: bool = True,
         register_global: bool = True,
         report_endpoint: str | None = None,
@@ -96,7 +98,10 @@ class VizTracer(Tracer):
             ]
 
         # Members of VizTracer object
+        self.tracer_entries = tracer_entries
         self.pid_suffix = pid_suffix
+        self.grow_on_overflow = grow_on_overflow
+        self.max_tracer_entries = max_tracer_entries
         self.file_info = file_info
         self.log_sparse = log_sparse
         self.log_audit = log_audit
@@ -113,7 +118,6 @@ class VizTracer(Tracer):
         # Members for the collected data
         self.enable = False
         self.parsed = False
-        self.tracer_entries = tracer_entries
         self.data: dict[str, Any] = {}
         self.total_entries = 0
         self.gc_start_args: dict[str, int] = {}
@@ -206,6 +210,42 @@ class VizTracer(Tracer):
             raise ValueError(f"pid_suffix needs to be a boolean, not {pid_suffix}")
 
     @property
+    def grow_on_overflow(self) -> bool:
+        return self.grow_on_full
+
+    @grow_on_overflow.setter
+    def grow_on_overflow(self, grow_on_overflow: bool) -> None:
+        if type(grow_on_overflow) is bool:
+            self.grow_on_full = grow_on_overflow
+        else:
+            raise ValueError(
+                f"grow_on_overflow needs to be a boolean, not {grow_on_overflow}"
+            )
+
+    @property
+    def max_tracer_entries(self) -> int | None:
+        if self.max_buffer_entries <= 0:
+            return None
+        return self.max_buffer_entries
+
+    @max_tracer_entries.setter
+    def max_tracer_entries(self, max_tracer_entries: int | None) -> None:
+        if max_tracer_entries is None:
+            self.max_buffer_entries = 0
+            return
+
+        if type(max_tracer_entries) is not int:
+            raise ValueError(
+                "max_tracer_entries needs to be an integer or None, "
+                f"not {max_tracer_entries}"
+            )
+
+        if max_tracer_entries < self.tracer_entries:
+            raise ValueError("max_tracer_entries can't be smaller than tracer_entries")
+
+        self.max_buffer_entries = max_tracer_entries
+
+    @property
     def init_kwargs(self) -> dict:
         return {
             "tracer_entries": self.tracer_entries,
@@ -225,6 +265,8 @@ class VizTracer(Tracer):
             "log_audit": self.log_audit,
             "log_torch": self.log_torch,
             "pid_suffix": self.pid_suffix,
+            "grow_on_overflow": self.grow_on_overflow,
+            "max_tracer_entries": self.max_tracer_entries,
             "ignore_multiprocess": self.ignore_multiprocess,
             "report_endpoint": self.report_endpoint,
             "min_duration": self.min_duration,
@@ -400,7 +442,7 @@ class VizTracer(Tracer):
                 else:
                     break
             self.total_entries = len(self.data["traceEvents"]) - metadata_count
-            if self.total_entries == self.tracer_entries:
+            if self.overflowed:
                 self.data["viztracer_metadata"]["overflow"] = True
             self.parsed = True
 
