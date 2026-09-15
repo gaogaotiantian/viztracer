@@ -116,7 +116,7 @@ tracer = VizTracer()
 tracer.start()
 # Something happens here
 tracer.stop()
-tracer.save() # also takes output_file as an optional argument
+tracer.save()  # also takes output_file as an optional argument
 ```
 
 Or, you can do it with ```with``` statement
