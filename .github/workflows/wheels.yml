@@ -51,7 +51,7 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
+          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp314-* cp314t-*
           CIBW_SKIP: '*musllinux*'
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_MANYLINUX_*_IMAGE: ${{ matrix.manylinux-image }}
@@ -91,7 +91,7 @@ jobs:
         if: contains(matrix.os, 'macos')
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
+          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp314-* cp314t-*
           CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14
           CIBW_ENABLE: 'cpython-freethreading'
 
@@ -99,14 +99,14 @@ jobs:
         if: matrix.os == 'windows-11-arm'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: cp312-* cp313-* cp313t-* cp314-* cp314t-*
+          CIBW_BUILD: cp312-* cp313-* cp314-* cp314t-*
           CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Build wheels
         if: "!contains(matrix.os, 'macos') && matrix.os != 'windows-11-arm'"
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-*
+          CIBW_BUILD: cp310-* cp311-* cp312-* cp313-* cp314-* cp314t-*
           CIBW_ENABLE: 'cpython-freethreading'
 
       - name: Upload wheels
