@@ -21,7 +21,6 @@ def support_torch():
 
 @package_matrix(["~torch", "torch"] if support_torch() else ["~torch"])
 class TestTorch(CmdlineTmpl):
-    @flaky
     def test_entry(self):
         # We only want to install/uninstall torch once, so do all tests in one function
         with self.subTest("basic"):
@@ -30,6 +29,7 @@ class TestTorch(CmdlineTmpl):
         with self.subTest("cmdline"):
             self.case_cmdline()
 
+    @flaky
     def case_basic(self):
         assert self.pkg_config is not None
 
@@ -83,6 +83,7 @@ class TestTorch(CmdlineTmpl):
                 expected_stderr=".*ModuleNotFoundError.*",
             )
 
+    @flaky
     def case_cmdline(self):
         assert self.pkg_config is not None
 
