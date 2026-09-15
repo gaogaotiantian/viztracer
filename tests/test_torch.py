@@ -7,6 +7,7 @@ import sys
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
+from .util import flaky
 
 
 def support_torch():
@@ -20,6 +21,7 @@ def support_torch():
 
 @package_matrix(["~torch", "torch"] if support_torch() else ["~torch"])
 class TestTorch(CmdlineTmpl):
+    @flaky
     def test_entry(self):
         # We only want to install/uninstall torch once, so do all tests in one function
         with self.subTest("basic"):

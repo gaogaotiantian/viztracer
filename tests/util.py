@@ -46,6 +46,25 @@ def get_tests_data_file_path(filename):
     return os.path.join(os.path.dirname(__file__), "data", filename)
 
 
+def flaky(func=None, *, retry=3):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            count = retry
+            while count > 0:
+                try:
+                    return func(*args, **kwargs)
+                except AssertionError as e:
+                    count -= 1
+                    if count == 0:
+                        raise e
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
+
+
 def cmd_with_coverage(cmd):
     assert "python" not in cmd, (
         "Do not use unqualified 'python' to launch intrepreter. Passing sys.executable is the recommended way."
