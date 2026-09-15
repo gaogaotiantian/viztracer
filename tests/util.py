@@ -57,6 +57,7 @@ def flaky(func=None, *, retry=3):
                     count -= 1
                     if count == 0:
                         raise e
+
         return wrapper
 
     if func is None:
