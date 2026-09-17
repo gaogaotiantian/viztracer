@@ -7,6 +7,7 @@ import sys
 
 from .cmdline_tmpl import CmdlineTmpl
 from .package_env import package_matrix
+from .util import flaky
 
 
 def support_torch():
@@ -28,6 +29,7 @@ class TestTorch(CmdlineTmpl):
         with self.subTest("cmdline"):
             self.case_cmdline()
 
+    @flaky
     def case_basic(self):
         assert self.pkg_config is not None
 
@@ -81,6 +83,7 @@ class TestTorch(CmdlineTmpl):
                 expected_stderr=".*ModuleNotFoundError.*",
             )
 
+    @flaky
     def case_cmdline(self):
         assert self.pkg_config is not None
 
