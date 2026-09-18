@@ -6,7 +6,6 @@ import atexit
 import base64
 import builtins
 import io
-import json
 import multiprocessing.util  # type: ignore
 import os
 import platform
@@ -21,6 +20,7 @@ from typing import Any
 
 from . import __version__
 from .code_monkey import CodeMonkey
+from .json import from_json, to_json_bytes
 from .report_builder import ReportBuilder
 from .util import (
     color_print,
@@ -766,12 +766,12 @@ class VizUI:
         else:
             output_file = self.options.output_file
 
-        with open(file_to_compress) as f:
-            import lzma
+        import lzma
 
-            data = json.load(f)
-            with lzma.open(output_file, "wt") as cf:
-                json.dump(data, cf)
+        with open(file_to_compress, "rb") as f, lzma.open(output_file, "wb") as cf:
+            from shutil import copyfileobj
+
+            copyfileobj(f, cf)
 
         return True, None
 
@@ -785,12 +785,12 @@ class VizUI:
         else:
             output_file = self.options.output_file
 
-        with open(output_file, "w") as f:
-            import lzma
+        import lzma
 
-            with lzma.open(file_to_decompress, "rt") as cf:
-                data = json.load(cf)
-                json.dump(data, f)
+        with open(output_file, "wb") as f, lzma.open(file_to_decompress, "rb") as cf:
+            from shutil import copyfileobj
+
+            copyfileobj(cf, f)
 
         return True, None
 
@@ -849,9 +849,7 @@ class VizUI:
                 "verbose": 1 if self.verbose != 0 else 0,
             }
         )
-        b64s = base64.urlsafe_b64encode(
-            json.dumps(self.init_kwargs).encode("ascii")
-        ).decode("ascii")
+        b64s = base64.urlsafe_b64encode(to_json_bytes(self.init_kwargs)).decode("ascii")
         start_code = (
             f'import viztracer.attach; viztracer.attach.start_attach(\\"{b64s}\\")'
         )

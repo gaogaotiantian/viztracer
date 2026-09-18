@@ -56,3 +56,7 @@ quote-style = "double"
 
 [tool.pytest]
 junit_suite_name = "viztracer"
+
+[[tool.mypy.overrides]]
+module = ["orjson"]
+ignore_missing_imports = true

@@ -2,7 +2,6 @@
 # For details: https://github.com/gaogaotiantian/viztracer/blob/master/NOTICE.txt
 
 
-import json
 import os
 import selectors
 import shutil
@@ -12,6 +11,7 @@ import sys
 import tempfile
 import zlib
 
+from .json import from_json
 from .report_builder import ReportBuilder
 from .util import same_line_print
 
@@ -178,11 +178,11 @@ class ReportServer:
         while d := conn.recv(1 << 20):
             buffer += d
         try:
-            data = json.loads(zlib.decompress(buffer).decode().strip())
+            data = from_json(zlib.decompress(buffer).strip())
             if "output_file" in data:
                 self.output_file = data["output_file"]
             if "payload" in data:
-                self.payloads.append(json.loads(data["payload"]))
+                self.payloads.append(from_json(data["payload"]))
         except Exception as exc:  # pragma: no cover
             if self.verbose > 0:
                 print(f"Failed to receive report data: {exc}")
