@@ -434,13 +434,17 @@ class TestTimestampDisorder(CmdlineTmpl):
     def test_timestamp_overlap(self):
         def check_func(data):
             counter = 0
-            curr_time = 0
+            curr_time_ns = 0
             for event in data["traceEvents"]:
                 if event["ph"] == "X" and event["name"].startswith("g"):
                     counter += 1
-                    self.assertGreaterEqual(event["ts"], curr_time)
-                    self.assertGreaterEqual(event["dur"], 0)
-                    curr_time = event["ts"] + event["dur"]
+                    # Adding microsecond floats can introduce sub-nanosecond
+                    # rounding errors, so compare integer nanoseconds instead.
+                    ts_ns = round(event["ts"] * 1000)
+                    dur_ns = round(event["dur"] * 1000)
+                    self.assertGreaterEqual(ts_ns, curr_time_ns)
+                    self.assertGreaterEqual(dur_ns, 0)
+                    curr_time_ns = ts_ns + dur_ns
 
         self.template(
             ["viztracer", "cmdline_test.py"],
