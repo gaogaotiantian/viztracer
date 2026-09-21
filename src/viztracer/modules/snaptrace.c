@@ -36,6 +36,10 @@ PyObject* sys_monitoring_missing = NULL;
 
 PyObject* curr_task_getters[2] = {0};
 
+#ifdef Py_GIL_DISABLED
+static PyMutex snaptrace_mutex = {0};
+#endif
+
 // =============================================================================
 // Utility function
 // =============================================================================
@@ -70,7 +74,7 @@ get_next_node(TracerObject* self)
 {
     struct EventNode* node = NULL;
 
-    SNAPTRACE_THREAD_PROTECT_START(self);
+    SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
     node = self->buffer + self->buffer_tail_idx;
     // This is actually faster than modulo
     self->buffer_tail_idx = self->buffer_tail_idx + 1;
@@ -86,7 +90,7 @@ get_next_node(TracerObject* self)
     } else {
         self->total_entries += 1;
     }
-    SNAPTRACE_THREAD_PROTECT_END(self);
+    SNAPTRACE_THREAD_PROTECT_END();
 
     return node;
 }
@@ -202,7 +206,7 @@ snaptrace_createthreadinfo(TracerObject* self) {
 #endif
 
     PyGILState_STATE state = PyGILState_Ensure();
-    SNAPTRACE_THREAD_PROTECT_START(self);
+    SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
 
     PyObject* current_thread = PyObject_CallMethod(threading_module, "current_thread", "");
     if (!current_thread) {
@@ -254,7 +258,7 @@ snaptrace_createthreadinfo(TracerObject* self) {
 
 cleanup:
 
-    SNAPTRACE_THREAD_PROTECT_END(self);
+    SNAPTRACE_THREAD_PROTECT_END();
     PyGILState_Release(state);
 
     return info;
@@ -282,6 +286,7 @@ snaptrace_threaddestructor(void* key) {
     struct FunctionNode* tmp = NULL;
     if (info) {
         PyGILState_STATE state = PyGILState_Ensure();
+        SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
         info->paused = 0;
         info->curr_stack_depth = 0;
         info->ignore_stack_depth = 0;
@@ -303,6 +308,7 @@ snaptrace_threaddestructor(void* key) {
         Py_CLEAR(info->curr_task_frame);
         info->metadata_node->thread_info = NULL;
         PyMem_FREE(info);
+        SNAPTRACE_THREAD_PROTECT_END();
         PyGILState_Release(state);
     }
 }
@@ -990,7 +996,7 @@ cleanup:
 static void
 tracer__flush_unfinished(TracerObject* self, int flush_as_finish)
 {
-    SNAPTRACE_THREAD_PROTECT_START(self);
+    SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
 
     struct MetadataNode* meta_node = self->metadata_head;
     while(meta_node) {
@@ -1060,7 +1066,7 @@ tracer__flush_unfinished(TracerObject* self, int flush_as_finish)
         meta_node = meta_node->next;
     }
 
-    SNAPTRACE_THREAD_PROTECT_END(self);
+    SNAPTRACE_THREAD_PROTECT_END();
 }
 
 static PyObject*
@@ -1195,7 +1201,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     PyObject* lst = PyList_New(0);
 
-    SNAPTRACE_THREAD_PROTECT_START(self);
+    SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     PyObject* pid = NULL;
     PyObject* cat_fee = PyUnicode_FromString("FEE");
@@ -1483,7 +1489,7 @@ tracer_load(TracerObject* self, PyObject* Py_UNUSED(unused))
     Py_DECREF(key_return_value);
 
     self->buffer_tail_idx = self->buffer_head_idx;
-    SNAPTRACE_THREAD_PROTECT_END(self);
+    SNAPTRACE_THREAD_PROTECT_END();
     return lst;
 }
 
@@ -1507,7 +1513,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
 
     fprintf(fptr, "{\"traceEvents\":[");
 
-    SNAPTRACE_THREAD_PROTECT_START(self);
+    SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
     struct EventNode* curr = self->buffer + self->buffer_head_idx;
     unsigned long pid = 0;
     uint8_t overflowed = ((self->buffer_tail_idx + 1) % self->buffer_size) == self->buffer_head_idx;
@@ -1708,7 +1714,7 @@ tracer_dump(TracerObject* self, PyObject* args, PyObject* kw)
 
     fprintf(fptr, "}}");
     fclose(fptr);
-    SNAPTRACE_THREAD_PROTECT_END(self);
+    SNAPTRACE_THREAD_PROTECT_END();
     Py_RETURN_NONE;
 }
 

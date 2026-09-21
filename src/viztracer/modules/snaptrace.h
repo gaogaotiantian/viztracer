@@ -19,12 +19,12 @@
 // NOTE: these macros delimit a C scope so any variables accessed after
 // a SNAPTRACE_THREAD_PROTECT_END need to be declared before
 // SNAPTRACE_THREAD_PROTECT_START.
-#define SNAPTRACE_THREAD_PROTECT_START(self) Py_BEGIN_CRITICAL_SECTION(self)
-#define SNAPTRACE_THREAD_PROTECT_END(self) Py_END_CRITICAL_SECTION()
+#define SNAPTRACE_THREAD_PROTECT_START(m) Py_BEGIN_CRITICAL_SECTION_MUTEX(m)
+#define SNAPTRACE_THREAD_PROTECT_END() Py_END_CRITICAL_SECTION()
 #else
 // The default implementation is a no-op.
-#define SNAPTRACE_THREAD_PROTECT_START(self)
-#define SNAPTRACE_THREAD_PROTECT_END(self)
+#define SNAPTRACE_THREAD_PROTECT_START(m)
+#define SNAPTRACE_THREAD_PROTECT_END(m)
 #endif
 
 #ifndef Py_MONITORING_H
