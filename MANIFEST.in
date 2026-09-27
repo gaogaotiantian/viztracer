@@ -2,6 +2,7 @@ include LICENSE
 include NOTICE.txt
 include README.md
 include setup.py
+include setup_helpers.py
 
 recursive-include src/viztracer/html *.css *.js
 recursive-include src/viztracer/modules *.c *.h
