@@ -5,7 +5,6 @@ import builtins
 import gc
 import inspect
 import io
-import json
 import multiprocessing
 import os
 import platform
@@ -20,6 +19,7 @@ from typing import Any, Callable, Literal, Sequence, TextIO
 from viztracer.snaptrace import Tracer
 
 from . import __version__
+from .json import to_json_bytes
 from .patch import install_all_hooks, uninstall_all_hooks
 from .report_builder import ReportBuilder
 from .report_server import ReportServer
@@ -530,9 +530,7 @@ class VizTracer(Tracer):
             data = {"path": tmp_output_file, "payload": payload.getvalue()}
             if self.report_server_process is not None:
                 data["output_file"] = output_file
-            self.report_socket_file.write(
-                zlib.compress(json.dumps(data).encode("utf-8"))
-            )
+            self.report_socket_file.write(zlib.compress(to_json_bytes(data)))
             self.report_socket_file.flush()
             self.report_socket_file.close()
         except Exception as exc:
