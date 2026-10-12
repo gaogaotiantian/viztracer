@@ -64,6 +64,36 @@ class TestReportBuilder(BaseTmpl):
         )
         self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen incomplete"))
 
+    def test_file_info_parentheses_in_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = os.path.join(tmpdir, "Program Files (x86)", "app (copy)")
+            os.makedirs(src_dir)
+            src_path = os.path.join(src_dir, "script.py")
+            with open(src_path, "w") as f:
+                f.write("def foo():\n    pass\n")
+
+            name = f"foo ({src_path}:1)"
+            data = {
+                "traceEvents": [
+                    {
+                        "ph": "X",
+                        "name": name,
+                        "ts": 1,
+                        "dur": 1,
+                        "pid": 1,
+                        "tid": 1,
+                        "cat": "FEE",
+                    }
+                ]
+            }
+            rb = ReportBuilder(data, verbose=0)
+            with io.StringIO() as s:
+                rb.save(s)
+                file_info = json.loads(s.getvalue())["file_info"]
+
+            self.assertEqual(list(file_info["files"]), [src_path])
+            self.assertEqual(file_info["functions"][name], [src_path, 1])
+
     def test_invalid(self):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)

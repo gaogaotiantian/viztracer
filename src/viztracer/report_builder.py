@@ -205,7 +205,7 @@ class ReportBuilder:
         if file_info:
             if "file_info" not in self.combined_json:
                 self.combined_json["file_info"] = {"files": {}, "functions": {}}
-            pattern = re.compile(r".*\((.*):([0-9]*)\)")
+            pattern = re.compile(r".*? \((.*):([0-9]*)\)")
             file_dict = self.combined_json["file_info"]["files"]
             func_dict = self.combined_json["file_info"]["functions"]
             for event in self.combined_json["traceEvents"]:
