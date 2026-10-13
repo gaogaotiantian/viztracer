@@ -5,6 +5,7 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <frameobject.h>
+#include <opcode.h>
 #if _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
@@ -820,6 +821,17 @@ PyObject*
 _ccall_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
     PyCodeObject* code = (PyCodeObject*)args[0];
+    if (Py_TYPE(args[2]) == &PyMethod_Type) {
+        PyObject* co_code = PyCode_GetCode(code);
+        if (co_code == NULL) {
+            return NULL;
+        }
+        unsigned char opcode = PyBytes_AS_STRING(co_code)[PyLong_AsSsize_t(args[1])];
+        Py_DECREF(co_code);
+        if (opcode == CALL_FUNCTION_EX) {
+            Py_RETURN_NONE;
+        }
+    }
     PyObject* cfunc = get_cfunc_from_callable(args[2], args[3]);
     if (!cfunc) {
         Py_RETURN_NONE;
