@@ -254,6 +254,18 @@ class TestTracerFeature(BaseTmpl):
         tracer.parse()
         self.assertEventNumber(tracer.data, 1)
 
+    def test_log_gc_release(self):
+        import gc
+        import weakref
+
+        tracer = VizTracer(log_gc=True, register_global=False)
+        tracer.start()
+        tracer.stop()
+        ref = weakref.ref(tracer)
+        del tracer
+        gc.collect()
+        self.assertIsNone(ref())
+
     def test_min_duration(self):
         tracer = VizTracer(min_duration=100)
         tracer.start()
