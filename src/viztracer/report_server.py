@@ -10,8 +10,8 @@ import socket
 import subprocess
 import sys
 import tempfile
-import zlib
 
+from .ipc_compression import ipc_decompress
 from .report_builder import ReportBuilder
 from .util import same_line_print
 
@@ -178,7 +178,7 @@ class ReportServer:
         while d := conn.recv(1 << 20):
             buffer += d
         try:
-            data = json.loads(zlib.decompress(buffer).decode().strip())
+            data = json.loads(ipc_decompress(buffer).decode().strip())
             if "output_file" in data:
                 self.output_file = data["output_file"]
             if "payload" in data:
