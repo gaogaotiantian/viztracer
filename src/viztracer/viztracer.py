@@ -360,6 +360,8 @@ class VizTracer(Tracer):
 
             self._plugin_manager.event("pre-start")
             if not self.log_sparse:
+                if self.log_gc:
+                    gc.callbacks.append(self.add_garbage_collection)
                 self.enable = True
                 super().start()
 
@@ -370,6 +372,8 @@ class VizTracer(Tracer):
             if not self.log_sparse:
                 self.enable = False
                 super().stop(stop_option)
+                if self.add_garbage_collection in gc.callbacks:
+                    gc.callbacks.remove(self.add_garbage_collection)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
             self._plugin_manager.event("post-stop")
@@ -665,10 +669,6 @@ class VizTracer(Tracer):
     def log_gc(self, log_gc: bool) -> None:
         if isinstance(log_gc, bool):
             self.__log_gc = log_gc
-            if log_gc:
-                gc.callbacks.append(self.add_garbage_collection)
-            elif self.add_garbage_collection in gc.callbacks:
-                gc.callbacks.remove(self.add_garbage_collection)
         else:
             raise TypeError(f"log_gc needs to be True or False, not {log_gc}")
 
