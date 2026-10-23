@@ -72,7 +72,18 @@ class TestReportBuilder(BaseTmpl):
             with open(src_path, "w") as f:
                 f.write("def foo():\n    pass\n")
 
-            name = f"foo ({src_path}:1)"
+            plain_path = os.path.join(tmpdir, "plain.py")
+            with open(plain_path, "w") as f:
+                f.write("def bar():\n    pass\n")
+
+            # The first is a function event from the tracer. The others are user
+            # events, whose names can contain " (" themselves.
+            names = [
+                f"foo ({src_path}:1)",
+                f"step (warmup) ({plain_path}:1)",
+                f"step (warmup) ({src_path}:1)",
+            ]
+            paths = [src_path, plain_path, src_path]
             data = {
                 "traceEvents": [
                     {
@@ -84,6 +95,7 @@ class TestReportBuilder(BaseTmpl):
                         "tid": 1,
                         "cat": "FEE",
                     }
+                    for name in names
                 ]
             }
             rb = ReportBuilder(data, verbose=0)
@@ -91,8 +103,9 @@ class TestReportBuilder(BaseTmpl):
                 rb.save(s)
                 file_info = json.loads(s.getvalue())["file_info"]
 
-            self.assertEqual(list(file_info["files"]), [src_path])
-            self.assertEqual(file_info["functions"][name], [src_path, 1])
+            self.assertEqual(sorted(file_info["files"]), sorted([src_path, plain_path]))
+            for name, path in zip(names, paths):
+                self.assertEqual(file_info["functions"][name], [path, 1])
 
     def test_invalid(self):
         with self.assertRaises(TypeError):
