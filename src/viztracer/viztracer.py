@@ -29,16 +29,9 @@ from .vizevent import VizEvent
 from .vizplugin import VizPluginBase, VizPluginManager
 
 
-def _discard_gc_callback(callback: Callable[[str, dict[str, Any]], None]) -> None:
-    if callback in gc.callbacks:
-        gc.callbacks.remove(callback)
-
-
 # This is the interface of the package. Almost all user should use this
 # class for the functions
 class VizTracer(Tracer):
-    _gc_finalizer: weakref.finalize | None = None
-
     def __init__(
         self,
         tracer_entries: int = 1000000,
@@ -82,6 +75,7 @@ class VizTracer(Tracer):
         self.log_func_args = log_func_args
         self.log_func_retval = log_func_retval
         self.log_async = log_async
+        self._gc_finalizer: weakref.finalize | None = None
         self.log_gc = log_gc
         self.log_print = log_print
         self.trace_self = trace_self
@@ -689,12 +683,15 @@ class VizTracer(Tracer):
         method_ref = weakref.WeakMethod(self.add_garbage_collection)
 
         def callback(phase: str, info: dict[str, Any]) -> None:
-            method = method_ref()
-            if method is not None:
+            if method := method_ref():
                 method(phase, info)
 
+        def discard() -> None:
+            if callback in gc.callbacks:
+                gc.callbacks.remove(callback)
+
         gc.callbacks.append(callback)
-        self._gc_finalizer = weakref.finalize(self, _discard_gc_callback, callback)
+        self._gc_finalizer = weakref.finalize(self, discard)
 
     def add_garbage_collection(self, phase: str, info: dict[str, Any]) -> None:
         if self.enable:

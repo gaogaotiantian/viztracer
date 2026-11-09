@@ -254,7 +254,7 @@ class TestTracerFeature(BaseTmpl):
         tracer.parse()
         self.assertEventNumber(tracer.data, 1)
 
-    def test_log_gc_release(self):
+    def test_log_gc_callback(self):
         import gc
         import weakref
 
@@ -262,27 +262,17 @@ class TestTracerFeature(BaseTmpl):
         gc.collect()
         callback_num = len(gc.callbacks)
         tracer = VizTracer(log_gc=True, register_global=False)
-        self.assertEqual(len(gc.callbacks), callback_num + 1)
-        ref = weakref.ref(tracer)
-        del tracer
-        gc.collect()
-        self.assertIsNone(ref())
-        self.assertEqual(len(gc.callbacks), callback_num)
-
-    def test_log_gc_register_once(self):
-        import gc
-
-        gc.collect()
-        callback_num = len(gc.callbacks)
-        tracer = VizTracer(register_global=False)
-        self.assertEqual(len(gc.callbacks), callback_num)
-        tracer.log_gc = True
         tracer.log_gc = True
         self.assertEqual(len(gc.callbacks), callback_num + 1)
         tracer.log_gc = False
         self.assertEqual(len(gc.callbacks), callback_num)
         tracer.log_gc = True
         self.assertEqual(len(gc.callbacks), callback_num + 1)
+        ref = weakref.ref(tracer)
+        del tracer
+        gc.collect()
+        self.assertIsNone(ref())
+        self.assertEqual(len(gc.callbacks), callback_num)
 
     def test_log_gc_while_tracing(self):
         import gc
