@@ -240,6 +240,28 @@ if __name__ == '__main__':
         _ = list(pool.imap_unordered(foo, [1]))
 """
 
+file_fork_sigmask = """
+import os
+import signal
+import sys
+
+
+def fork_and_check(sigterm_blocked):
+    # SIGTERM should be blocked in both processes after fork only if it was before
+    pid = os.fork()
+    blocked = signal.SIGTERM in signal.pthread_sigmask(signal.SIG_BLOCK, [])
+    if pid == 0:
+        sys.exit(0 if blocked == sigterm_blocked else 1)
+    _, status = os.waitpid(pid, 0)
+    return blocked == sigterm_blocked and os.waitstatus_to_exitcode(status) == 0
+
+
+ok = fork_and_check(False)
+signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+ok = fork_and_check(True) and ok
+sys.exit(0 if ok else 1)
+"""
+
 file_pool_sigterm_before_worker_ready = """
 import ctypes
 import multiprocessing
@@ -713,6 +735,15 @@ class TestMultiprocessing(CmdlineTmpl):
             script=file_pool_with_pickle,
             check_func=check_func,
             concurrency="multiprocessing",
+        )
+
+    @unittest.skipIf("win32" in sys.platform, "Does not support Windows")
+    def test_os_fork_sigmask(self):
+        # viztracer blocks SIGTERM during fork and must restore the mask after
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_fork_sigmask,
         )
 
     @unittest.skipIf("win32" in sys.platform, "Does not support Windows")

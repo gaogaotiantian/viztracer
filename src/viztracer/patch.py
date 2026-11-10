@@ -339,8 +339,7 @@ class HookManager:
         )
 
     def _after_fork_in_parent(self):
-        if self._sigmask_before_fork is not None:
-            signal.pthread_sigmask(signal.SIG_SETMASK, self._sigmask_before_fork)
+        signal.pthread_sigmask(signal.SIG_SETMASK, self._sigmask_before_fork)
 
     def _after_fork(self):
         try:
@@ -361,17 +360,14 @@ class HookManager:
             self._unblock_sigterm_in_child()
 
     def _unblock_sigterm_in_child(self):
-        if (sigmask := self._sigmask_before_fork) is None:
-            return
-        handler = signal.getsignal(signal.SIGTERM)
-        if signal.SIGTERM in sigmask or not callable(handler):
-            signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
-            return
         # Use the default action for a SIGTERM received while blocked, the
-        # SystemExit from the Python-level handler would be ignored here.
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
-        signal.signal(signal.SIGTERM, handler)
+        # SystemExit from a Python-level handler would be ignored here.
+        handler = signal.getsignal(signal.SIGTERM)
+        if callable(handler):
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        signal.pthread_sigmask(signal.SIG_SETMASK, self._sigmask_before_fork)
+        if callable(handler):
+            signal.signal(signal.SIGTERM, handler)
 
     def _audit_callback(self, event: str, args: Any) -> None:  # pragma: no cover
         if (
