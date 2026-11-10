@@ -240,6 +240,63 @@ if __name__ == '__main__':
         _ = list(pool.imap_unordered(foo, [1]))
 """
 
+file_fork_sigmask = """
+import os
+import signal
+import sys
+
+
+def fork_and_check(sigterm_blocked):
+    # SIGTERM should be blocked in both processes after fork only if it was before
+    pid = os.fork()
+    blocked = signal.SIGTERM in signal.pthread_sigmask(signal.SIG_BLOCK, [])
+    if pid == 0:
+        sys.exit(0 if blocked == sigterm_blocked else 1)
+    _, status = os.waitpid(pid, 0)
+    return blocked == sigterm_blocked and os.waitstatus_to_exitcode(status) == 0
+
+
+ok = fork_and_check(False)
+signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+ok = fork_and_check(True) and ok
+sys.exit(0 if ok else 1)
+"""
+
+file_pool_sigterm_before_worker_ready = """
+import ctypes
+import multiprocessing
+import os
+import signal
+import threading
+
+# The forked worker waits in pause() inside fork(), before Python runs anything
+# in the child, so the SIGTERM from Pool.terminate() arrives before it's ready
+libc = ctypes.CDLL(None)
+pause = ctypes.cast(libc.pause, ctypes.c_void_p)
+if hasattr(libc, "pthread_atfork"):
+    libc.pthread_atfork(None, None, pause)
+else:
+    # glibc only exports __register_atfork
+    libc.__register_atfork(None, None, pause, None)
+
+
+def wake_up(pid, done):
+    # pause() returns on a handled signal, the worker should exit after that
+    while not done.wait(0.5):
+        try:
+            os.kill(pid, signal.SIGUSR2)
+        except ProcessLookupError:
+            return
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGUSR2, lambda signum, frame: None)
+    done = threading.Event()
+    with multiprocessing.get_context("fork").Pool(1) as pool:
+        threading.Thread(target=wake_up, args=(pool._pool[0].pid, done), daemon=True).start()
+    done.set()
+"""
+
 file_loky = """
 from loky import get_reusable_executor
 import time
@@ -678,6 +735,25 @@ class TestMultiprocessing(CmdlineTmpl):
             script=file_pool_with_pickle,
             check_func=check_func,
             concurrency="multiprocessing",
+        )
+
+    @unittest.skipIf("win32" in sys.platform, "Does not support Windows")
+    def test_os_fork_sigmask(self):
+        # viztracer blocks SIGTERM during fork and must restore the mask after
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_fork_sigmask,
+        )
+
+    @unittest.skipIf("win32" in sys.platform, "Does not support Windows")
+    def test_multiprocessing_pool_sigterm_before_worker_ready(self):
+        # Pool.terminate() sends SIGTERM to a worker only once, then waits for
+        # it. The worker must not lose a SIGTERM received before it's set up
+        self.template(
+            ["viztracer", "-o", "result.json", "cmdline_test.py"],
+            expected_output_file="result.json",
+            script=file_pool_sigterm_before_worker_ready,
         )
 
     def test_multiprosessing_stack_depth(self):
