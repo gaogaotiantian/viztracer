@@ -13,7 +13,6 @@ import signal
 import subprocess
 import sys
 import textwrap
-import threading
 import weakref
 from multiprocessing import Process
 from typing import TYPE_CHECKING, Any, Callable, Sequence, no_type_check
@@ -310,7 +309,7 @@ class HookManager:
             cls._instance = super().__new__(cls)
             cls._tracer = None
             cls._installed = False
-            cls._fork_state = threading.local()
+            cls._sigmask_before_fork = None
         return cls._instance
 
     def set_tracer(self, tracer: VizTracer | None) -> None:
@@ -335,13 +334,13 @@ class HookManager:
         # an at-fork hook. multiprocessing.Pool.terminate() sends SIGTERM to
         # its workers only once and waits for them, so a lost SIGTERM means a
         # deadlock. Fork with SIGTERM blocked so it stays pending in the child.
-        self._fork_state.sigmask = signal.pthread_sigmask(
+        self._sigmask_before_fork = signal.pthread_sigmask(
             signal.SIG_BLOCK, {signal.SIGTERM}
         )
 
     def _after_fork_in_parent(self):
-        if (sigmask := getattr(self._fork_state, "sigmask", None)) is not None:
-            signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
+        if self._sigmask_before_fork is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, self._sigmask_before_fork)
 
     def _after_fork(self):
         try:
@@ -362,7 +361,7 @@ class HookManager:
             self._unblock_sigterm_in_child()
 
     def _unblock_sigterm_in_child(self):
-        if (sigmask := getattr(self._fork_state, "sigmask", None)) is None:
+        if (sigmask := self._sigmask_before_fork) is None:
             return
         handler = signal.getsignal(signal.SIGTERM)
         if signal.SIGTERM in sigmask or not callable(handler):
