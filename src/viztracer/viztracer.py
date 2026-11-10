@@ -14,6 +14,7 @@ import socket
 import subprocess
 import sys
 import warnings
+import weakref
 import zlib
 from typing import Any, Callable, Literal, Sequence, TextIO
 
@@ -74,6 +75,7 @@ class VizTracer(Tracer):
         self.log_func_args = log_func_args
         self.log_func_retval = log_func_retval
         self.log_async = log_async
+        self._gc_finalizer: weakref.finalize | None = None
         self.log_gc = log_gc
         self.log_print = log_print
         self.trace_self = trace_self
@@ -666,11 +668,30 @@ class VizTracer(Tracer):
         if isinstance(log_gc, bool):
             self.__log_gc = log_gc
             if log_gc:
-                gc.callbacks.append(self.add_garbage_collection)
-            elif self.add_garbage_collection in gc.callbacks:
-                gc.callbacks.remove(self.add_garbage_collection)
+                if self._gc_finalizer is None or not self._gc_finalizer.alive:
+                    self.__register_gc_callback()
+            elif self._gc_finalizer is not None:
+                self._gc_finalizer()
         else:
             raise TypeError(f"log_gc needs to be True or False, not {log_gc}")
+
+    def __register_gc_callback(self) -> None:
+        # gc.callbacks lives as long as the interpreter, so it must not keep
+        # the tracer alive. The callback only has a weak reference to the tracer
+        # and is removed from gc.callbacks when log_gc is turned off or the
+        # tracer is freed.
+        method_ref = weakref.WeakMethod(self.add_garbage_collection)
+
+        def callback(phase: str, info: dict[str, Any]) -> None:
+            if method := method_ref():
+                method(phase, info)
+
+        def discard() -> None:
+            if callback in gc.callbacks:
+                gc.callbacks.remove(callback)
+
+        gc.callbacks.append(callback)
+        self._gc_finalizer = weakref.finalize(self, discard)
 
     def add_garbage_collection(self, phase: str, info: dict[str, Any]) -> None:
         if self.enable:
