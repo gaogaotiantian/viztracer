@@ -9,9 +9,11 @@ import multiprocessing.util
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import textwrap
+import threading
 import weakref
 from multiprocessing import Process
 from typing import TYPE_CHECKING, Any, Callable, Sequence, no_type_check
@@ -308,6 +310,7 @@ class HookManager:
             cls._instance = super().__new__(cls)
             cls._tracer = None
             cls._installed = False
+            cls._fork_state = threading.local()
         return cls._instance
 
     def set_tracer(self, tracer: VizTracer | None) -> None:
@@ -317,24 +320,59 @@ class HookManager:
     def install_hooks(self):
         if not self._installed:
             if hasattr(os, "register_at_fork"):
-                os.register_at_fork(after_in_child=self._after_fork)
+                os.register_at_fork(
+                    before=self._before_fork,
+                    after_in_parent=self._after_fork_in_parent,
+                    after_in_child=self._after_fork,
+                )
             sys.addaudithook(self._audit_callback)
             self._installed = True
 
+    def _before_fork(self):
+        # The child inherits our Python-level SIGTERM handler, but it can't
+        # act on SIGTERM until it's set up. CPython drops signals that arrive
+        # before PyOS_AfterFork_Child() and ignores the SystemExit raised in
+        # an at-fork hook. multiprocessing.Pool.terminate() sends SIGTERM to
+        # its workers only once and waits for them, so a lost SIGTERM means a
+        # deadlock. Fork with SIGTERM blocked so it stays pending in the child.
+        self._fork_state.sigmask = signal.pthread_sigmask(
+            signal.SIG_BLOCK, {signal.SIGTERM}
+        )
+
+    def _after_fork_in_parent(self):
+        if (sigmask := getattr(self._fork_state, "sigmask", None)) is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
+
     def _after_fork(self):
-        if (
-            self._tracer
-            and (tracer := self._tracer())
-            and not tracer.ignore_multiprocess
-        ):
-            if tracer.report_server_process is not None:
-                tracer.report_server_process = None
-            if tracer.report_socket_file is not None:
-                # Reconnect to report server in the forked child process
-                # otherwise it conflicts with the parent's connection
-                tracer.connect_report_server()
-            tracer.register_exit()
-            tracer.start()
+        try:
+            if (
+                self._tracer
+                and (tracer := self._tracer())
+                and not tracer.ignore_multiprocess
+            ):
+                if tracer.report_server_process is not None:
+                    tracer.report_server_process = None
+                if tracer.report_socket_file is not None:
+                    # Reconnect to report server in the forked child process
+                    # otherwise it conflicts with the parent's connection
+                    tracer.connect_report_server()
+                tracer.register_exit()
+                tracer.start()
+        finally:
+            self._unblock_sigterm_in_child()
+
+    def _unblock_sigterm_in_child(self):
+        if (sigmask := getattr(self._fork_state, "sigmask", None)) is None:
+            return
+        handler = signal.getsignal(signal.SIGTERM)
+        if signal.SIGTERM in sigmask or not callable(handler):
+            signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
+            return
+        # Use the default action for a SIGTERM received while blocked, the
+        # SystemExit from the Python-level handler would be ignored here.
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        signal.pthread_sigmask(signal.SIG_SETMASK, sigmask)
+        signal.signal(signal.SIGTERM, handler)
 
     def _audit_callback(self, event: str, args: Any) -> None:  # pragma: no cover
         if (
