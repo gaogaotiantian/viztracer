@@ -378,9 +378,7 @@ class VizTracer(Tracer):
                 super().stop(stop_option)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
-                self.torch_base_times.append(
-                    (time.time_ns(), self.measure_base_time())
-                )
+                self.torch_base_times.append((time.time_ns(), self.measure_base_time()))
             self._plugin_manager.event("post-stop")
             if not self.ignore_multiprocess:
                 uninstall_all_hooks()
