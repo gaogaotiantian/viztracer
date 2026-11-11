@@ -13,6 +13,7 @@ import signal
 import socket
 import subprocess
 import sys
+import time
 import warnings
 import weakref
 import zlib
@@ -105,6 +106,8 @@ class VizTracer(Tracer):
         self.log_torch = log_torch
         self.ignore_multiprocess = ignore_multiprocess
         self.torch_profile = None
+        # (epoch_ns, base_time_ns) samples taken when torch profiler starts and stops
+        self.torch_base_times: list[tuple[int, int]] = []
         self.dump_raw = dump_raw
         self.sanitize_function_name = sanitize_function_name
         self.minimize_memory = minimize_memory
@@ -335,6 +338,7 @@ class VizTracer(Tracer):
                 self.torch_profile = profile(
                     activities=supported_activities()
                 ).__enter__()
+                self.torch_base_times = [(time.time_ns(), self.measure_base_time())]
             if self.log_print:
                 self.overload_print()
             if self.include_files is not None and self.exclude_files is not None:
@@ -374,6 +378,9 @@ class VizTracer(Tracer):
                 super().stop(stop_option)
             if self.torch_profile is not None:
                 self.torch_profile.__exit__(None, None, None)
+                self.torch_base_times.append(
+                    (time.time_ns(), self.measure_base_time())
+                )
             self._plugin_manager.event("post-stop")
             if not self.ignore_multiprocess:
                 uninstall_all_hooks()
@@ -456,7 +463,7 @@ class VizTracer(Tracer):
                         [
                             (
                                 tmpfile.name,
-                                {"type": "torch", "base_offset": self.get_base_time()},
+                                {"type": "torch", "base_offset": self.torch_base_times},
                             ),
                             self.data,
                         ],

@@ -131,8 +131,6 @@ quicktime_init()
     start_ts = (int64_t*)malloc(sizeof(int64_t) * CALIBRATE_SIZE);
     start_ns = (int64_t*)malloc(sizeof(int64_t) * CALIBRATE_SIZE);
 
-    int64_t diff_ns[CALIBRATE_SIZE] = {0};
-
     t0_ts = 0;
     t0_ns = 0;
 
@@ -162,6 +160,17 @@ quicktime_init()
     t0_ns += ns_remainder / CALIBRATE_SIZE;
 
     // Now let's find the base time
+    system_base_time = measure_base_time_ns();
+}
+
+int64_t
+measure_base_time_ns(void)
+{
+    // The epoch clock is adjusted by NTP, but the clock behind get_system_ns()
+    // is not on every platform (CLOCK_MONOTONIC_RAW on macOS, QPC on Windows),
+    // so the offset between them drifts by a few ppm and system_base_time
+    // measured at init gets stale. This measures the current offset.
+    int64_t diff_ns[CALIBRATE_SIZE] = {0};
 
     for (int i = 0; i < CALIBRATE_SIZE; i++)
     {
@@ -173,5 +182,5 @@ quicktime_init()
 
     qsort(diff_ns, CALIBRATE_SIZE, sizeof(int64_t), compare_int64);
 
-    system_base_time = diff_ns[CALIBRATE_SIZE / 2];
+    return diff_ns[CALIBRATE_SIZE / 2];
 }

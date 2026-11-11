@@ -1781,6 +1781,12 @@ tracer_getbasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
 }
 
 static PyObject*
+tracer_measurebasetime(TracerObject* self, PyObject* Py_UNUSED(unused))
+{
+    return PyLong_FromLongLong(measure_base_time_ns());
+}
+
+static PyObject*
 tracer_resetstack(TracerObject* self, PyObject* Py_UNUSED(unused))
 {
     struct ThreadInfo* info = get_thread_info(self);
@@ -2073,6 +2079,7 @@ static PyMethodDef Tracer_methods[] = {
     {"get_func_args", (PyCFunction)tracer_getfunctionarg, METH_NOARGS, "get current function arg"},
     {"getts", (PyCFunction)tracer_getts, METH_NOARGS, "get timestamp"},
     {"get_base_time", (PyCFunction)tracer_getbasetime, METH_NOARGS, "get base time in nanoseconds"},
+    {"measure_base_time", (PyCFunction)tracer_measurebasetime, METH_NOARGS, "measure current base time in nanoseconds"},
     {"reset_stack", (PyCFunction)tracer_resetstack, METH_NOARGS, "reset stack"},
     {"pause", (PyCFunction)tracer_pause, METH_NOARGS, "pause profiling"},
     {"resume", (PyCFunction)tracer_resume, METH_NOARGS, "resume profiling"},

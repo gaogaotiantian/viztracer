@@ -40,6 +40,7 @@ double system_ts_to_us(int64_t ts);
 int64_t system_ts_to_ns(int64_t ts);
 double dur_ts_to_us(int64_t dur);
 int64_t dur_ts_to_ns(int64_t dur);
+int64_t measure_base_time_ns(void);
 
 inline int64_t
 get_base_time_ns(void)
