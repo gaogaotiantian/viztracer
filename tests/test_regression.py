@@ -703,3 +703,99 @@ class TestThreadDestructorAfterFinalize(CmdlineTmpl):
                 expected_output_file="result.json",
                 expected_stdout="saved",
             )
+
+
+class TestStopWhileThreadsTracing(CmdlineTmpl):
+    # stop() flushes the unfinished calls of every thread. Without the GIL, the
+    # other threads can be in a tracing callback updating their own stacks at
+    # the same time, which used to corrupt the stacks and segfault.
+    def test_stop_while_threads_tracing(self):
+        script = """
+            import threading
+            import time
+
+            from viztracer import VizTracer
+
+            done = False
+
+            def busy():
+                while not done:
+                    sorted({str(i): [i] for i in range(50)})
+
+            tracer = VizTracer(verbose=0)
+            threads = [threading.Thread(target=busy) for _ in range(4)]
+            tracer.start()
+            for t in threads:
+                t.start()
+            for _ in range(100):
+                time.sleep(0.001)
+                tracer.stop()
+                tracer.start()
+            tracer.stop()
+            done = True
+            for t in threads:
+                t.join()
+            print("done")
+            """
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file=None,
+            expected_stdout="done",
+        )
+
+    @unittest.skipIf(sys.platform == "win32", "os.fork() is not available on Windows")
+    def test_fork_while_threads_tracing(self):
+        # Other threads can be in a tracing callback when the process forks.
+        # They don't exist in the child, so stop() there must not wait for them.
+        script = """
+            import os
+            import signal
+            import threading
+            import time
+            import warnings
+
+            from viztracer import VizTracer
+
+            warnings.simplefilter("ignore", DeprecationWarning)
+
+            done = False
+
+            def busy():
+                while not done:
+                    sorted({str(i): [i] for i in range(50)})
+
+            tracer = VizTracer(verbose=0, ignore_multiprocess=True)
+            threads = [threading.Thread(target=busy) for _ in range(8)]
+            tracer.start()
+            for t in threads:
+                t.start()
+            hung = False
+            for _ in range(50):
+                time.sleep(0.001)
+                pid = os.fork()
+                if pid == 0:
+                    tracer.stop()
+                    os._exit(0)
+                deadline = time.monotonic() + 10
+                while os.waitpid(pid, os.WNOHANG) == (0, 0):
+                    if time.monotonic() > deadline:
+                        os.kill(pid, signal.SIGKILL)
+                        os.waitpid(pid, 0)
+                        hung = True
+                        break
+                    time.sleep(0.01)
+                if hung:
+                    break
+            tracer.stop()
+            done = True
+            for t in threads:
+                t.join()
+            print("hung" if hung else "done")
+            """
+        self.template(
+            [sys.executable, "cmdline_test.py"],
+            script=script,
+            expected_output_file=None,
+            expected_stdout="done",
+        )

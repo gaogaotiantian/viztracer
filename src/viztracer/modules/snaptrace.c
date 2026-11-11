@@ -323,6 +323,122 @@ snaptrace_threaddestructor(void* key) {
 }
 
 // =============================================================================
+// Free threading: stop() vs. tracing callbacks
+// =============================================================================
+
+// stop() flushes the unfinished calls on the stack of every thread. With the
+// GIL, no other thread can be in a tracing callback at that point. Without it,
+// another thread could be pushing or popping its stack at the same time.
+//
+// To keep locks out of the callbacks, each thread raises its own in_callback
+// for the duration of a callback, and only then checks collecting. stop()
+// clears collecting, and only then waits until no other thread has raised
+// in_callback. Both sides use seq_cst atomics, so at least one of them sees
+// the other's write: either the callback sees collecting == 0 and leaves its
+// stack alone, or stop() sees in_callback and waits for the callback to end.
+
+#ifdef Py_GIL_DISABLED
+
+static inline struct ThreadInfo*
+callback_enter(TracerObject* self)
+{
+    struct ThreadInfo* info = get_thread_info(self);
+    if (info) {
+        _Py_atomic_store_int(&info->in_callback, 1);
+    }
+    return info;
+}
+
+static inline void
+callback_exit(struct ThreadInfo* info)
+{
+    if (info) {
+        _Py_atomic_store_int_release(&info->in_callback, 0);
+    }
+}
+
+static inline int
+is_collecting(TracerObject* self)
+{
+    return _Py_atomic_load_int(&self->collecting);
+}
+
+static void
+stop_collecting(TracerObject* self, struct ThreadInfo* curr_info)
+{
+    int busy = 1;
+
+    _Py_atomic_store_int(&self->collecting, 0);
+
+    while (busy) {
+        busy = 0;
+        // The mutex keeps the thread infos from being freed while we read them
+        SNAPTRACE_THREAD_PROTECT_START(&snaptrace_mutex);
+        struct MetadataNode* node = self->metadata_head;
+        while (node) {
+            struct ThreadInfo* info = node->thread_info;
+            if (info && info != curr_info && _Py_atomic_load_int(&info->in_callback)) {
+                busy = 1;
+                break;
+            }
+            node = node->next;
+        }
+        SNAPTRACE_THREAD_PROTECT_END();
+        if (busy) {
+            // Detach, as the callback may be waiting for a stop-the-world
+            Py_BEGIN_ALLOW_THREADS
+            Py_END_ALLOW_THREADS
+        }
+    }
+}
+
+#if !defined(_WIN32)
+static void
+snaptrace_atfork_child(void)
+{
+    // Only the forking thread survives a fork. The world is stopped before
+    // fork(), but other threads can be parked inside a callback, and they
+    // would never lower in_callback in the child.
+    if (curr_tracer) {
+        struct MetadataNode* node = curr_tracer->metadata_head;
+        while (node) {
+            if (node->thread_info) {
+                node->thread_info->in_callback = 0;
+            }
+            node = node->next;
+        }
+    }
+}
+#endif
+
+#else
+
+static inline struct ThreadInfo*
+callback_enter(TracerObject* Py_UNUSED(self))
+{
+    return NULL;
+}
+
+static inline void
+callback_exit(struct ThreadInfo* Py_UNUSED(info))
+{
+}
+
+static inline int
+is_collecting(TracerObject* self)
+{
+    return self->collecting;
+}
+
+static inline void
+stop_collecting(TracerObject* self, struct ThreadInfo* Py_UNUSED(curr_info))
+{
+    self->collecting = 0;
+}
+
+#endif
+
+// =============================================================================
 // Tracing function, triggered when FEE
 // =============================================================================
 
@@ -335,7 +451,7 @@ snaptrace_threaddestructor(void* key) {
 int
 prepare_before_trace(TracerObject* self, int is_call, struct ThreadInfo** info_out) {
 
-    if (!self->collecting) {
+    if (!is_collecting(self)) {
         return 0;
     }
 
@@ -797,7 +913,9 @@ PyObject*
 _pystart_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
     PyCodeObject* code = (PyCodeObject*)args[0];
+    struct ThreadInfo* info = callback_enter((TracerObject*)self);
     int ret = tracer_pycall_callback((TracerObject*)self, code);
+    callback_exit(info);
     if (ret != 0) {
         return NULL;
     }
@@ -809,7 +927,9 @@ _pyreturn_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
     PyCodeObject* code = (PyCodeObject*)args[0];
     PyObject* arg = args[2];
+    struct ThreadInfo* info = callback_enter((TracerObject*)self);
     int ret = tracer_pyreturn_callback((TracerObject*)self, code, arg);
+    callback_exit(info);
     if (ret != 0) {
         return NULL;
     }
@@ -824,7 +944,9 @@ _ccall_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
     if (!cfunc) {
         Py_RETURN_NONE;
     }
+    struct ThreadInfo* info = callback_enter((TracerObject*)self);
     int ret = tracer_ccall_callback((TracerObject*)self, code, cfunc);
+    callback_exit(info);
     Py_DECREF(cfunc);
     if (ret != 0) {
         return NULL;
@@ -840,7 +962,9 @@ _creturn_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
     if (!cfunc) {
         Py_RETURN_NONE;
     }
+    struct ThreadInfo* info = callback_enter((TracerObject*)self);
     int ret = tracer_creturn_callback((TracerObject*)self, code, cfunc);
+    callback_exit(info);
     Py_DECREF(cfunc);
     if (ret != 0) {
         return NULL;
@@ -1119,7 +1243,7 @@ tracer_stop(TracerObject* self, PyObject* stop_option)
             PyErr_SetString(PyExc_RuntimeError, "VizTracer: Failed to get thread info. This should not happen.");
             return NULL;
         }
-        self->collecting = 0;
+        stop_collecting(self, info);
 
         if (PyUnicode_CheckExact(stop_option) &&
                 strcmp(PyUnicode_AsUTF8(stop_option), "flush_as_finish") == 0) {
@@ -2237,6 +2361,9 @@ PyInit_snaptrace(void)
 
 #ifdef Py_GIL_DISABLED
     PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
+#if !defined(_WIN32)
+    pthread_atfork(NULL, NULL, snaptrace_atfork_child);
+#endif
 #endif
 
     Py_INCREF(&TracerType);
