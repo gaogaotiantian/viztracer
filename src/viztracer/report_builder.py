@@ -12,7 +12,7 @@ import os
 import re
 import tokenize
 from string import Template
-from typing import Any, Sequence, TextIO
+from typing import Any, Iterator, Sequence, TextIO
 
 from . import __version__
 from .util import color_print, same_line_print
@@ -205,28 +205,46 @@ class ReportBuilder:
         if file_info:
             if "file_info" not in self.combined_json:
                 self.combined_json["file_info"] = {"files": {}, "functions": {}}
-            pattern = re.compile(r".*\((.*):([0-9]*)\)")
             file_dict = self.combined_json["file_info"]["files"]
             func_dict = self.combined_json["file_info"]["functions"]
             for event in self.combined_json["traceEvents"]:
                 if event["ph"] == "X":
                     if event["name"] not in func_dict:
                         func_dict[event["name"]] = None
-                        m = pattern.match(event["name"])
-                        if m is not None:
-                            file_name = m.group(1)
-                            lineno = int(m.group(2))
+                        for file_name, lineno in self._file_lineno_candidates(
+                            event["name"]
+                        ):
                             if file_name not in file_dict:
                                 content = self.get_source_from_filename(file_name)
                                 if content is None:
                                     continue
                                 file_dict[file_name] = [content, content.count("\n")]
                             func_dict[event["name"]] = [file_name, lineno]
+                            break
             unknown_func_dict = set(
                 func for func in func_dict if func_dict[func] is None
             )
             for func in unknown_func_dict:
                 del func_dict[func]
+
+    @staticmethod
+    def _file_lineno_candidates(event_name: str) -> Iterator[tuple[str, int]]:
+        """Yield the possible (file name, line number) pairs of an event name.
+
+        An event name looks like ``name (file:lineno)``. The name of a function
+        event never contains `` (`` but the one of a ``log_event()`` can, and the
+        file path can contain parentheses too. Each ``(`` could start the file
+        name, so the candidates are yielded from the leftmost one, which is the
+        right one for function events. The caller keeps the first that exists.
+        """
+        m = re.search(r":([0-9]+)\)$", event_name)
+        if m is None:
+            return
+        lineno = int(m.group(1))
+        start = event_name.find("(")
+        while start != -1 and start < m.start():
+            yield event_name[start + 1 : m.start()], lineno
+            start = event_name.find("(", start + 1)
 
     @classmethod
     def get_source_from_filename(cls, filename: str) -> str | None:
