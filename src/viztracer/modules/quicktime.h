@@ -32,7 +32,6 @@ extern mach_timebase_info_data_t timebase_info;
 #endif
 
 extern double ts_to_ns_factor;
-extern int64_t system_base_time;
 
 void quicktime_init();
 void quicktime_free();
@@ -40,12 +39,7 @@ double system_ts_to_us(int64_t ts);
 int64_t system_ts_to_ns(int64_t ts);
 double dur_ts_to_us(int64_t dur);
 int64_t dur_ts_to_ns(int64_t dur);
-
-inline int64_t
-get_base_time_ns(void)
-{
-    return system_base_time;
-};
+int64_t get_base_time_ns(void);
 
 inline int64_t
 get_system_ts(void)

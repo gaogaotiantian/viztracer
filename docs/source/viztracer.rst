@@ -454,4 +454,6 @@ VizTracer
         :return: the base time of the tracer in ns
         :rtype: int
 
-        Get the base time of the tracer
+        Get the base time of the tracer. It's measured on every call, because on platforms
+        where the timestamp clock is not adjusted by NTP, like macOS, it drifts by a few
+        microseconds per second.
