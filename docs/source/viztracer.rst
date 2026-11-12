@@ -454,13 +454,6 @@ VizTracer
         :return: the base time of the tracer in ns
         :rtype: int
 
-        Get the base time of the tracer
-
-    .. py:method:: measure_base_time()
-
-        :return: the current base time in ns
-        :rtype: int
-
-        Measure the base time now, instead of returning the one measured at import like
-        ``get_base_time()``. On platforms where the timestamp clock is not adjusted by
-        NTP, like macOS, the two can drift apart by a few microseconds per second.
+        Get the base time of the tracer. It's measured on every call, because on platforms
+        where the timestamp clock is not adjusted by NTP, like macOS, it drifts by a few
+        microseconds per second.

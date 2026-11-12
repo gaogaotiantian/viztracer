@@ -23,7 +23,6 @@ mach_timebase_info_data_t timebase_info;
 #define CALIBRATE_SIZE 1000
 
 double ts_to_ns_factor = 1.0;
-int64_t system_base_time = 0;
 int64_t system_base_ts = 0;
 int64_t* start_ts = NULL;
 int64_t* start_ns = NULL;
@@ -158,18 +157,17 @@ quicktime_init()
     // Then finally add the average remainder
     t0_ts += ts_remainder / CALIBRATE_SIZE;
     t0_ns += ns_remainder / CALIBRATE_SIZE;
-
-    // Now let's find the base time
-    system_base_time = measure_base_time_ns();
 }
 
 int64_t
-measure_base_time_ns(void)
+get_base_time_ns(void)
 {
-    // The epoch clock is adjusted by NTP, but the clock behind get_system_ns()
-    // is not on every platform (CLOCK_MONOTONIC_RAW on macOS, QPC on Windows),
-    // so the offset between them drifts by a few ppm and system_base_time
-    // measured at init gets stale. This measures the current offset.
+    // The base time can change while the process is running. The epoch clock
+    // is adjusted by NTP, but the clock behind get_system_ns() is not on every
+    // platform (CLOCK_MONOTONIC_RAW on macOS, QPC on Windows), so the offset
+    // between them drifts by a few ppm. The epoch clock can also be stepped,
+    // and CLOCK_MONOTONIC on Linux stops during suspend. So we measure it
+    // every time instead of once at init.
     int64_t diff_ns[CALIBRATE_SIZE] = {0};
 
     for (int i = 0; i < CALIBRATE_SIZE; i++)
