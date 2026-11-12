@@ -283,6 +283,13 @@ class VizUI:
             help="Do not log any process other than the main process",
         )
         parser.add_argument(
+            "--exclude_subprocess",
+            nargs="*",
+            default=None,
+            help="Do not trace subprocesses that contain any of the specified strings "
+                 "in their command line. Useful for subprocesses that never exit.",
+        )
+        parser.add_argument(
             "--magic_comment",
             action="store_true",
             default=False,
@@ -533,6 +540,7 @@ class VizUI:
             "ignore_c_function": options.ignore_c_function,
             "ignore_frozen": options.ignore_frozen,
             "ignore_multiprocess": options.ignore_multiprocess,
+            "exclude_subprocess": options.exclude_subprocess,
             "log_func_retval": options.log_func_retval,
             "log_func_args": options.log_func_args,
             "log_func_with_objprint": options.log_func_with_objprint,
