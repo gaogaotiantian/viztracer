@@ -85,6 +85,10 @@ struct ThreadInfo {
     PyObject* curr_task;
     PyFrameObject* curr_task_frame;
     struct MetadataNode* metadata_node;
+#ifdef Py_GIL_DISABLED
+    // Non-zero while this thread is in a tracing callback, see stop_collecting()
+    int in_callback;
+#endif
 };
 
 struct MetadataNode {
