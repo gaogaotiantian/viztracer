@@ -33,17 +33,24 @@ def get_json(data: dict[str, Any] | str | tuple[str, dict]) -> dict[str, Any]:
             with open(path, encoding="utf-8") as f:
                 json_str = f.read()
             ret = json.loads(json_str)
+            # base_offset is a list of (epoch_ns, base_time_ns) samples. The base
+            # time drifts slowly on some platforms, so we interpolate between the
+            # first and the last sample, like torch does for its own clock.
             base_offset = args["base_offset"]
+            epoch_0, base_0 = base_offset[0]
+            epoch_1, base_1 = base_offset[-1]
+            drift = (base_1 - base_0) / (epoch_1 - epoch_0) if epoch_1 > epoch_0 else 0
             # torch 2.4.0+ uses baseTimeNanoseconds to store the offset
             # before that they simply use the absolute timestamp which is
             # equivalent to baseTimeNanoseconds = 0
             torch_offset = ret.get("baseTimeNanoseconds", 0)
             # convert to us
-            offset_diff = (torch_offset - base_offset) / 1000
+            offset_diff = (torch_offset - base_0) / 1000
+            epoch_diff = (torch_offset - epoch_0) / 1000
 
             for event in ret["traceEvents"]:
                 if "ts" in event:
-                    event["ts"] += offset_diff
+                    event["ts"] += offset_diff - (epoch_diff + event["ts"]) * drift
                 if event["ph"] == "M":
                     # Pop metadata timestamp so it won't overwrite
                     # process and thread names

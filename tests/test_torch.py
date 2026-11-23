@@ -62,8 +62,12 @@ class TestTorch(CmdlineTmpl):
                             py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 50
                         )
                     else:
-                        # Mac is pure crazy and we don't care about it
-                        pass
+                        # CLOCK_REALTIME on macOS only has 1us resolution, and both
+                        # torch and viztracer rely on it to convert to wall time
+                        self.assertLess(py["ts"], aten["ts"] + 2)
+                        self.assertGreater(
+                            py["ts"] + py["dur"], aten["ts"] + aten["dur"] - 2
+                        )
 
             self.template(
                 [sys.executable, "cmdline_test.py"],
@@ -116,8 +120,14 @@ class TestTorch(CmdlineTmpl):
                             aten["ts"] + aten["dur"] - acceptable_margin,
                         )
                     else:
-                        # Mac is pure crazy and we don't care about it
-                        pass
+                        # CLOCK_REALTIME on macOS only has 1us resolution, and both
+                        # torch and viztracer rely on it to convert to wall time
+                        acceptable_margin = 2
+                        self.assertLess(py["ts"], aten["ts"] + acceptable_margin)
+                        self.assertGreater(
+                            py["ts"] + py["dur"],
+                            aten["ts"] + aten["dur"] - acceptable_margin,
+                        )
 
             self.template(
                 ["viztracer", "--log_torch", "cmdline_test.py"],
