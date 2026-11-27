@@ -64,6 +64,49 @@ class TestReportBuilder(BaseTmpl):
         )
         self.assertIsNone(ReportBuilder.get_source_from_filename("<frozen incomplete"))
 
+    def test_file_info_parentheses_in_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = os.path.join(tmpdir, "Program Files (x86)", "app (copy)")
+            os.makedirs(src_dir)
+            src_path = os.path.join(src_dir, "script.py")
+            with open(src_path, "w") as f:
+                f.write("def foo():\n    pass\n")
+
+            plain_path = os.path.join(tmpdir, "plain.py")
+            with open(plain_path, "w") as f:
+                f.write("def bar():\n    pass\n")
+
+            # The first is a function event from the tracer. The others are user
+            # events, whose names can contain " (" themselves.
+            names = [
+                f"foo ({src_path}:1)",
+                f"step (warmup) ({plain_path}:1)",
+                f"step (warmup) ({src_path}:1)",
+            ]
+            paths = [src_path, plain_path, src_path]
+            data = {
+                "traceEvents": [
+                    {
+                        "ph": "X",
+                        "name": name,
+                        "ts": 1,
+                        "dur": 1,
+                        "pid": 1,
+                        "tid": 1,
+                        "cat": "FEE",
+                    }
+                    for name in names
+                ]
+            }
+            rb = ReportBuilder(data, verbose=0)
+            with io.StringIO() as s:
+                rb.save(s)
+                file_info = json.loads(s.getvalue())["file_info"]
+
+            self.assertEqual(sorted(file_info["files"]), sorted([src_path, plain_path]))
+            for name, path in zip(names, paths):
+                self.assertEqual(file_info["functions"][name], [path, 1])
+
     def test_invalid(self):
         with self.assertRaises(TypeError):
             _ = ReportBuilder(123123)
