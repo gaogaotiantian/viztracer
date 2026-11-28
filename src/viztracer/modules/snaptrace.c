@@ -5,6 +5,7 @@
 #include <Python.h>
 #include <stdlib.h>
 #include <frameobject.h>
+#include <opcode.h>
 #if _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
@@ -793,6 +794,23 @@ PyObject* get_cfunc_from_callable(PyObject* callable, PyObject* self_arg)
     return NULL;
 }
 
+// CPython 3.12+ sends CALL but no C_RETURN for CALL_FUNCTION_EX on a bound C method
+static int
+is_unpaired_c_method_call(PyCodeObject* code, PyObject* offset, PyObject* callable)
+{
+    if (Py_TYPE(callable) != &PyMethod_Type ||
+            !PyCFunction_Check(PyMethod_GET_FUNCTION(callable))) {
+        return 0;
+    }
+    PyObject* co_code = PyCode_GetCode(code);
+    if (co_code == NULL) {
+        return -1;
+    }
+    unsigned char opcode = PyBytes_AS_STRING(co_code)[PyLong_AsSsize_t(offset)];
+    Py_DECREF(co_code);
+    return opcode == CALL_FUNCTION_EX;
+}
+
 PyObject*
 _pystart_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
@@ -820,6 +838,13 @@ PyObject*
 _ccall_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
     PyCodeObject* code = (PyCodeObject*)args[0];
+    int is_unpaired = is_unpaired_c_method_call(code, args[1], args[2]);
+    if (is_unpaired < 0) {
+        return NULL;
+    }
+    if (is_unpaired) {
+        Py_RETURN_NONE;
+    }
     PyObject* cfunc = get_cfunc_from_callable(args[2], args[3]);
     if (!cfunc) {
         Py_RETURN_NONE;
@@ -836,6 +861,13 @@ PyObject*
 _creturn_callback(PyObject* self, PyObject *const *args, Py_ssize_t nargs)
 {
     PyCodeObject* code = (PyCodeObject*)args[0];
+    int is_unpaired = is_unpaired_c_method_call(code, args[1], args[2]);
+    if (is_unpaired < 0) {
+        return NULL;
+    }
+    if (is_unpaired) {
+        Py_RETURN_NONE;
+    }
     PyObject* cfunc = get_cfunc_from_callable(args[2], args[3]);
     if (!cfunc) {
         Py_RETURN_NONE;

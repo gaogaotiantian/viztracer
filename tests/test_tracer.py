@@ -5,10 +5,15 @@ import json
 import os
 import tempfile
 import time
+import types
 
 from viztracer import VizTracer
 
 from .base_tmpl import BaseTmpl
+
+
+def star_call(func, args):
+    return func(*args)
 
 
 def fib(n):
@@ -70,6 +75,21 @@ class TestCTracer(BaseTmpl):
         entries2 = tracer.parse()
 
         self.assertEqual(entries1, entries2)
+
+    def test_star_call_bound_c_method(self):
+        bound_c_method = types.MethodType(max, 0)
+        tracer = VizTracer(verbose=0)
+        tracer.start()
+        star_call(bound_c_method, [1, 2])
+        bound_c_method(1, 2)
+        fib(2)
+        tracer.stop()
+        tracer.parse()
+        names = [
+            event["name"] for event in tracer.data["traceEvents"] if event["ph"] == "X"
+        ]
+        self.assertTrue(any(name.startswith("fib") for name in names))
+        self.assertIn("builtins.max", names)
 
     def test_c_cleanup(self):
         tracer = VizTracer()
