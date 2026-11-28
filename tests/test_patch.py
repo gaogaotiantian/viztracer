@@ -222,3 +222,64 @@ class TestPatchSideEffect(CmdlineTmpl):
             expected_output_file="result.json",
             script=file_after_patch_check,
         )
+
+
+file_exclude_subprocess_tmpl = """
+import subprocess
+import sys
+
+# This subprocess contains the marker and should NOT be traced
+try:
+    output1 = subprocess.check_output(
+        [sys.executable, "-c", "print('__MARKER_EXCLUDED__')"],
+        text=True, timeout=5
+    )
+except subprocess.TimeoutExpired:
+    output1 = "timeout"
+
+# This subprocess does NOT contain the marker and SHOULD be traced
+try:
+    output2 = subprocess.check_output(
+        [sys.executable, "-c", "print('__MARKER_NORMAL__')"],
+        text=True, timeout=5
+    )
+except subprocess.TimeoutExpired:
+    output2 = "timeout"
+
+print(output1.strip())
+print(output2.strip())
+"""
+
+
+class TestExcludeSubprocess(CmdlineTmpl):
+    def test_exclude_subprocess_filters_correctly(self):
+        """Verify that --exclude_subprocess prevents tracing of matching subprocesses."""
+        # Run with exclude_subprocess, the excluded subprocess should not be traced
+        self.template(
+            [
+                sys.executable,
+                "-m",
+                "viztracer",
+                "-o",
+                "result.json",
+                "--exclude_subprocess", 
+                "__MARKER_EXCLUDED__",
+                "--",
+                "cmdline_test.py",
+            ],
+            expected_output_file="result.json",
+            script=file_exclude_subprocess_tmpl,
+            check_func=self._check_excluded,
+        )
+
+    def _check_excluded(self, data):
+        """Verify the trace data is valid and contains expected process events."""
+        self.assertIn("traceEvents", data)
+        # At minimum we should have some trace events from the main process
+        events = data["traceEvents"]
+        self.assertGreater(len(events), 0)
+        # The excluded process marker should NOT appear in any event name
+        event_names = " ".join(
+            e.get("name", "") for e in events if isinstance(e, dict)
+        )
+        self.assertNotIn("__MARKER_EXCLUDED__", event_names)
